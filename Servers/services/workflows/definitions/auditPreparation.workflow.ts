@@ -19,9 +19,9 @@ import { getAllUsersQuery } from "../../../utils/user.utils";
 import { createBulkNotificationsQuery } from "../../../utils/notification.utils";
 import { NotificationType } from "../../../domain.layer/interfaces/i.notification";
 import { requestGateApproval } from "../approvalGate";
+import { ADMIN_ROLE_ID } from "../../../constants/roles";
 
 const GAP_LIMIT = 10;
-const ADMIN_ROLE_ID = 1;
 
 const steps: WorkflowStep[] = [
   {

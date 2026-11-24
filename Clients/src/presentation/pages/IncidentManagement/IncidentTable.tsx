@@ -8,7 +8,7 @@ import {
   Stack,
   Tooltip,
 } from "@mui/material";
-import { AlertTriangle, FileWarning, ClipboardList, Bell } from "lucide-react";
+import { AlertTriangle, Archive, FileWarning, ClipboardList, Bell } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import CustomizableSkeleton from "../../components/Skeletons";
@@ -28,6 +28,7 @@ import StandardTableHead from "../../components/Table/StandardTableHead";
 import StandardTablePagination from "../../components/Table/StandardTablePagination";
 import { TableEmptyStateLayout } from "../../components/Table/TableEmptyStateLayout";
 import { palette } from "../../themes/palette";
+import { toDateOnlyString } from "../../tools/isoDateToString";
 
 dayjs.extend(utc);
 
@@ -66,6 +67,9 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
   onEdit,
   onView,
   onArchive,
+  onRestore,
+  archiveView = "active",
+  hasArchivedIncidents = false,
   canEdit = true,
   canApprove = false,
   paginated = true,
@@ -122,12 +126,13 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
           bValue = b.status?.toLowerCase() || "";
           break;
         case "occurred_date":
-          aValue = a.occurred_date ? new Date(a.occurred_date).getTime() : 0;
-          bValue = b.occurred_date ? new Date(b.occurred_date).getTime() : 0;
+          // "YYYY-MM-DD" strings sort as dates.
+          aValue = toDateOnlyString(a.occurred_date);
+          bValue = toDateOnlyString(b.occurred_date);
           break;
         case "approved_by":
-          aValue = a.approved_by?.toLowerCase() || "";
-          bValue = b.approved_by?.toLowerCase() || "";
+          aValue = AIIncidentManagementModel.approverLabel(a).toLowerCase();
+          bValue = AIIncidentManagementModel.approverLabel(b).toLowerCase();
           break;
         default:
           return 0;
@@ -175,7 +180,12 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                     ...incidentRowHover,
                     ...(archivedId === incident.id?.toString() && incidentTableRowDeletingStyle),
                   }}
-                  onClick={() => onEdit?.(incident.id?.toString(), "edit")}
+                  // An archived incident opens read-only; restore it to edit it.
+                  onClick={() =>
+                    incident.archived
+                      ? onView?.(incident.id?.toString(), "view")
+                      : onEdit?.(incident.id?.toString(), "edit")
+                  }
                 >
                   {isVisible("incident_id") && (
                     <TableCell
@@ -189,10 +199,13 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                             : palette.background.alt,
                       }}
                     >
-                      {jiraLinks?.get(incident.id) ? (
+                      {jiraLinks?.get(incident.id) || incident.archived ? (
                         <Stack direction="row" alignItems="center" flexWrap="wrap" gap="8px">
                           <span>{incident.incident_id}</span>
-                          <JiraIssueChip link={jiraLinks.get(incident.id)!} />
+                          {jiraLinks?.get(incident.id) && (
+                            <JiraIssueChip link={jiraLinks.get(incident.id)!} />
+                          )}
+                          {incident.archived && <Chip label="Archived" size="small" />}
                         </Stack>
                       ) : (
                         <>{incident.incident_id} </>
@@ -275,7 +288,10 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                           sortConfig.key === "occurred_date" ? "background.surface" : "inherit",
                       }}
                     >
-                      {incident.occurred_date ? formatDate(incident.occurred_date) : "-"}
+                      {/* The calendar day itself: never a UTC midnight shown in local time. */}
+                      {toDateOnlyString(incident.occurred_date)
+                        ? formatDate(toDateOnlyString(incident.occurred_date))
+                        : "-"}
                     </TableCell>
                   )}
                   {isVisible("approved_by") && (
@@ -286,7 +302,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                           sortConfig.key === "approved_by" ? "background.surface" : "inherit",
                       }}
                     >
-                      <TooltipCell value={incident.approved_by} />
+                      <TooltipCell value={AIIncidentManagementModel.approverLabel(incident)} />
                     </TableCell>
                   )}
                   {isVisible("actions") && (
@@ -300,15 +316,21 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                           id={incident.id}
                           type="Incident"
                           canEdit={canEdit}
+                          isArchived={!!incident.archived}
                           onEdit={() => onEdit?.(incident.id?.toString(), "edit")}
                           onDelete={() => onArchive?.(incident.id?.toString(), "archive")}
+                          onRestore={
+                            canEdit && onRestore
+                              ? () => onRestore(incident.id?.toString())
+                              : undefined
+                          }
                           onView={() => onView?.(incident.id?.toString(), "view")}
                           onApprove={
                             canApprove ? () => onEdit?.(incident.id?.toString(), "edit") : undefined
                           }
                           onMouseEvent={() => {}}
-                          warningTitle="Are you sure?"
-                          warningMessage="You are about to archive this incident. This action cannot be undone. You can also choose to edit or view the incident instead."
+                          warningTitle="Archive this incident?"
+                          warningMessage="Archived incidents are left out of the default incident list, the dashboard, search and reports. You can restore it later from the Archived only view."
                         />
                       </Stack>
                     </TableCell>
@@ -325,6 +347,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
       archivedId,
       onEdit,
       onArchive,
+      onRestore,
       onView,
       canEdit,
       canApprove,
@@ -340,6 +363,28 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
       <Stack spacing={2}>
         <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
       </Stack>
+    );
+  }
+
+  // "No archived incidents." only when there are none at all; with archived
+  // incidents that the filters or search hide, the usual empty state shows.
+  if (
+    (!sortedRows || sortedRows.length === 0) &&
+    archiveView === "archived" &&
+    !hasArchivedIncidents
+  ) {
+    return (
+      <TableEmptyStateLayout
+        header={
+          <StandardTableHead
+            columns={visibleTableColumns}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+          />
+        }
+      >
+        <EmptyState icon={Archive} message="No archived incidents." />
+      </TableEmptyStateLayout>
     );
   }
 

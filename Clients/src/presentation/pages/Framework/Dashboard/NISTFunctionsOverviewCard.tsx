@@ -28,7 +28,7 @@ interface NISTFunctionsOverviewCardProps {
 
 interface SubcategoryData {
   id: number;
-  subcategory_id: number;
+  subcategory_id: string;
   description: string;
   status: string;
   owner: number | null;

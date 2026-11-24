@@ -801,6 +801,21 @@ export const de: Record<string, string> = {
     "Die Anbieterrecherche durchsucht die Nachrichten dann stattdessen mit dem GDELT Project.",
   "Could not load the search key.": "Der Suchschlüssel konnte nicht geladen werden.",
   "Loading the search key": "Suchschlüssel wird geladen",
+  "Workspace ID": "Workspace-ID",
+  "Only for keys that are not tied to a workspace.":
+    "Nur für Schlüssel, die keinem Workspace zugeordnet sind.",
+  "Workspace ID cannot contain spaces.": "Die Workspace-ID darf keine Leerzeichen enthalten.",
+  "Checking key…": "Schlüssel wird geprüft…",
+  "Could not reach Anthropic to check this key.":
+    "Anthropic war nicht erreichbar, um diesen Schlüssel zu prüfen.",
+  "Could not reach OpenAI to check this key.":
+    "OpenAI war nicht erreichbar, um diesen Schlüssel zu prüfen.",
+  "Could not reach OpenRouter to check this key.":
+    "OpenRouter war nicht erreichbar, um diesen Schlüssel zu prüfen.",
+  "Could not reach the endpoint to check this key.":
+    "Der Endpunkt war nicht erreichbar, um diesen Schlüssel zu prüfen.",
+  "You changed the provider or endpoint, so enter the API key again.":
+    "Sie haben den Anbieter oder den Endpunkt geändert. Geben Sie den API-Schlüssel daher erneut ein.",
 };
 
 export const fr: Record<string, string> = {
@@ -1602,6 +1617,22 @@ export const fr: Record<string, string> = {
     "La recherche sur les fournisseurs cherchera alors dans les actualités avec le GDELT Project.",
   "Could not load the search key.": "Impossible de charger la clé de recherche.",
   "Loading the search key": "Chargement de la clé de recherche",
+  "Workspace ID": "ID de l'espace de travail",
+  "Only for keys that are not tied to a workspace.":
+    "Uniquement pour les clés qui ne sont liées à aucun espace de travail.",
+  "Workspace ID cannot contain spaces.":
+    "L'ID de l'espace de travail ne peut pas contenir d'espaces.",
+  "Checking key…": "Vérification de la clé…",
+  "Could not reach Anthropic to check this key.":
+    "Impossible de joindre Anthropic pour vérifier cette clé.",
+  "Could not reach OpenAI to check this key.":
+    "Impossible de joindre OpenAI pour vérifier cette clé.",
+  "Could not reach OpenRouter to check this key.":
+    "Impossible de joindre OpenRouter pour vérifier cette clé.",
+  "Could not reach the endpoint to check this key.":
+    "Impossible de joindre le point de terminaison pour vérifier cette clé.",
+  "You changed the provider or endpoint, so enter the API key again.":
+    "Vous avez changé de fournisseur ou de point de terminaison : saisissez à nouveau la clé API.",
 };
 
 export const es: Record<string, string> = {
@@ -2397,4 +2428,19 @@ export const es: Record<string, string> = {
     "La investigación de proveedores buscará entonces en las noticias con el GDELT Project.",
   "Could not load the search key.": "No se pudo cargar la clave de búsqueda.",
   "Loading the search key": "Cargando la clave de búsqueda",
+  "Workspace ID": "ID del espacio de trabajo",
+  "Only for keys that are not tied to a workspace.":
+    "Solo para claves que no están vinculadas a un espacio de trabajo.",
+  "Workspace ID cannot contain spaces.": "El ID del espacio de trabajo no puede contener espacios.",
+  "Checking key…": "Comprobando la clave…",
+  "Could not reach Anthropic to check this key.":
+    "No se pudo contactar con Anthropic para comprobar esta clave.",
+  "Could not reach OpenAI to check this key.":
+    "No se pudo contactar con OpenAI para comprobar esta clave.",
+  "Could not reach OpenRouter to check this key.":
+    "No se pudo contactar con OpenRouter para comprobar esta clave.",
+  "Could not reach the endpoint to check this key.":
+    "No se pudo contactar con el endpoint para comprobar esta clave.",
+  "You changed the provider or endpoint, so enter the API key again.":
+    "Cambiaste el proveedor o el endpoint, así que vuelve a introducir la clave de API.",
 };

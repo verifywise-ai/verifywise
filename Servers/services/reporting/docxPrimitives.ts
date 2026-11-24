@@ -277,6 +277,14 @@ export function createEmptyState(message: string): Paragraph {
   });
 }
 
+/** A short secondary line under a table (e.g. what the table leaves out). */
+export function createNote(message: string): Paragraph {
+  return new Paragraph({
+    spacing: { before: 80, after: 200 },
+    children: [new TextRun({ text: message, size: 18, color: COLORS.textSecondary })],
+  });
+}
+
 /** A bulleted line: an optional bold label, then the text. */
 export function createBullet(text: string, label?: string): Paragraph {
   return new Paragraph({

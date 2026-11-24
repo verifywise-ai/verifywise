@@ -2,12 +2,26 @@
 // Spread into ../translations.ts. Other areas stay in that file for now.
 
 export const de: Record<string, string> = {
+  "Active + archived": "Aktiv + archiviert",
+  "Archived only": "Nur archiviert",
+  "Incident restored.": "Vorfall wiederhergestellt.",
+  "Could not restore the incident. Please try again.":
+    "Der Vorfall konnte nicht wiederhergestellt werden. Bitte versuchen Sie es erneut.",
+  "Archive this incident?": "Diesen Vorfall archivieren?",
+  "Archived incidents are left out of the default incident list, the dashboard, search and reports. You can restore it later from the Archived only view.":
+    "Archivierte Vorfälle erscheinen nicht in der Standardliste der Vorfälle, im Dashboard, in der Suche und in Berichten. Sie können den Vorfall später in der Ansicht „Nur archiviert“ wiederherstellen.",
+  "No archived incidents.": "Keine archivierten Vorfälle.",
+  "Restore incident": "Vorfall wiederherstellen",
+  "No incidents to link. Incidents appear here when they belong to this use case and are not archived.":
+    "Keine Vorfälle zum Verknüpfen. Vorfälle erscheinen hier, wenn sie zu diesem Anwendungsfall gehören und nicht archiviert sind.",
   "The selected use case is no longer available.":
     "Der ausgewählte Anwendungsfall ist nicht mehr verfügbar.",
   "The selected affected model is no longer available.":
     "Das ausgewählte betroffene Modell ist nicht mehr verfügbar.",
   "The selected owner is no longer available.":
     "Der ausgewählte Verantwortliche ist nicht mehr verfügbar.",
+  "The selected reporter is no longer available.":
+    "Die ausgewählte meldende Person ist nicht mehr verfügbar.",
   "Add new incident": "Neuen Vorfall hinzufügen",
   "Log new incidents": "Neue Vorfälle erfassen",
   "Assign owners and track resolution": "Verantwortliche zuweisen und Lösung verfolgen",
@@ -55,11 +69,25 @@ export const de: Record<string, string> = {
 };
 
 export const fr: Record<string, string> = {
+  "Active + archived": "Actifs + archivés",
+  "Archived only": "Archivés uniquement",
+  "Incident restored.": "Incident restauré.",
+  "Could not restore the incident. Please try again.":
+    "Impossible de restaurer l'incident. Veuillez réessayer.",
+  "Archive this incident?": "Archiver cet incident ?",
+  "Archived incidents are left out of the default incident list, the dashboard, search and reports. You can restore it later from the Archived only view.":
+    "Les incidents archivés n'apparaissent pas dans la liste par défaut des incidents, le tableau de bord, la recherche et les rapports. Vous pourrez le restaurer plus tard depuis la vue « Archivés uniquement ».",
+  "No archived incidents.": "Aucun incident archivé.",
+  "Restore incident": "Restaurer l'incident",
+  "No incidents to link. Incidents appear here when they belong to this use case and are not archived.":
+    "Aucun incident à lier. Les incidents apparaissent ici lorsqu'ils appartiennent à ce cas d'usage et ne sont pas archivés.",
   "The selected use case is no longer available.":
     "Le cas d'usage sélectionné n'est plus disponible.",
   "The selected affected model is no longer available.":
     "Le modèle concerné sélectionné n'est plus disponible.",
   "The selected owner is no longer available.": "Le responsable sélectionné n'est plus disponible.",
+  "The selected reporter is no longer available.":
+    "La personne déclarante sélectionnée n'est plus disponible.",
   "Add new incident": "Ajouter un nouvel incident",
   "Log new incidents": "Consigner de nouveaux incidents",
   "Assign owners and track resolution": "Attribuer des responsables et suivre la résolution",
@@ -107,12 +135,26 @@ export const fr: Record<string, string> = {
 };
 
 export const es: Record<string, string> = {
+  "Active + archived": "Activos + archivados",
+  "Archived only": "Solo archivados",
+  "Incident restored.": "Incidente restaurado.",
+  "Could not restore the incident. Please try again.":
+    "No se pudo restaurar el incidente. Inténtelo de nuevo.",
+  "Archive this incident?": "¿Archivar este incidente?",
+  "Archived incidents are left out of the default incident list, the dashboard, search and reports. You can restore it later from the Archived only view.":
+    "Los incidentes archivados no aparecen en la lista predeterminada de incidentes, el panel, la búsqueda ni los informes. Puede restaurarlo más tarde desde la vista «Solo archivados».",
+  "No archived incidents.": "No hay incidentes archivados.",
+  "Restore incident": "Restaurar incidente",
+  "No incidents to link. Incidents appear here when they belong to this use case and are not archived.":
+    "No hay incidentes para vincular. Los incidentes aparecen aquí cuando pertenecen a este caso de uso y no están archivados.",
   "The selected use case is no longer available.":
     "El caso de uso seleccionado ya no está disponible.",
   "The selected affected model is no longer available.":
     "El modelo afectado seleccionado ya no está disponible.",
   "The selected owner is no longer available.":
     "El responsable seleccionado ya no está disponible.",
+  "The selected reporter is no longer available.":
+    "La persona informante seleccionada ya no está disponible.",
   "Add new incident": "Añadir nuevo incidente",
   "Log new incidents": "Registrar nuevos incidentes",
   "Assign owners and track resolution": "Asignar responsables y seguir la resolución",

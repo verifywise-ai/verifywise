@@ -20,6 +20,7 @@ import { translate, type SupportedLang } from "../utils/i18n.utils";
 import { getUserLanguage } from "../utils/userPreference.utils";
 import { deadlineNoticeKey } from "../utils/deadline.utils";
 import { formatReviewDate } from "../utils/policyReviewDate.utils";
+import { incidentPagePath } from "../utils/incidentLinks.utils";
 
 /**
  * Build a frontend-compatible URL for a given entity type and id.
@@ -101,6 +102,22 @@ const localizeNotification = async (
   };
 };
 
+/** Publish a stored notification to Redis for real-time (SSE) delivery. */
+export const publishInAppNotification = async (
+  organizationId: number,
+  stored: INotificationJSON,
+): Promise<void> => {
+  await redisClient.publish(
+    "in-app-notifications",
+    JSON.stringify({
+      organizationId,
+      userId: stored.user_id,
+      notification: stored,
+      timestamp: new Date().toISOString(),
+    }),
+  );
+};
+
 /**
  * Send a notification to a user via both in-app storage and real-time SSE
  * Optionally also sends an email notification. Keyed title, message and
@@ -122,15 +139,7 @@ export const sendInAppNotification = async (
     const storedNotification = await createNotificationQuery(notification, organizationId);
 
     // 2. Publish to Redis for real-time delivery
-    await redisClient.publish(
-      "in-app-notifications",
-      JSON.stringify({
-        organizationId,
-        userId: notification.user_id,
-        notification: storedNotification,
-        timestamp: new Date().toISOString(),
-      }),
-    );
+    await publishInAppNotification(organizationId, storedNotification);
 
     logger.info(
       `📤 In-app notification sent to user ${notification.user_id}: ${notification.title}`,
@@ -1121,6 +1130,98 @@ export const notifyVendorReviewDue = async (
       },
     },
   );
+};
+
+/** Marks the in-app rows of the critical incident escalation (metadata.workflow_action). */
+export const CRITICAL_INCIDENT_ESCALATION_ACTION = "incident_critical_escalation";
+
+/** An incident severity in `lang`; an unknown value is returned as stored. */
+export const incidentSeverityLabel = (lang: string | undefined, severity: string): string => {
+  switch (severity) {
+    case "Minor":
+      return translate(lang, "Minor");
+    case "Serious":
+      return translate(lang, "Serious");
+    case "Very serious":
+      return translate(lang, "Very serious");
+    default:
+      return severity;
+  }
+};
+
+/** What reaching one Admin about a critical incident consists of. */
+export interface CriticalIncidentEscalation {
+  /** The in-app row, already in the Admin's language. */
+  notification: ICreateNotification;
+  /** The email; `to` is null when the Admin has no address. */
+  email: {
+    to: string | null;
+    subject: string;
+    template: string;
+    variables: Record<string, string>;
+  };
+}
+
+/**
+ * Builds the notice that a critical incident needs a response, for one
+ * Admin: an in-app row (system type, linked to the incident) and an email.
+ * Title, message, subject and the severity label are in the Admin's
+ * language; the email body stays English. Nothing is stored or sent: the
+ * incident response workflow stores the row as its claim and delivers it
+ * after commit (see notifyAdminsOfCriticalIncident). The row's metadata names
+ * the run and the incident.
+ */
+export const buildCriticalIncidentEscalation = async (
+  adminId: number,
+  incident: {
+    id: number;
+    reference: string;
+    useCase: string;
+    severity: string;
+    type: string;
+    ownerName?: string | null;
+  },
+  workflowRunId: number,
+  baseUrl: string,
+): Promise<CriticalIncidentEscalation> => {
+  const lang = await getUserLanguage(adminId);
+  const admin = await getUserById(adminId);
+  const actionUrl = incidentPagePath(incident.id);
+  return {
+    notification: {
+      user_id: adminId,
+      type: NotificationType.SYSTEM,
+      title: translate(lang, "Critical incident needs a response"),
+      message: translate(lang, 'Incident {reference} in "{useCase}" was rated {severity}.', {
+        reference: incident.reference,
+        useCase: incident.useCase,
+        severity: incidentSeverityLabel(lang, incident.severity),
+      }),
+      entity_name: incident.reference,
+      action_url: actionUrl,
+      metadata: {
+        workflow_action: CRITICAL_INCIDENT_ESCALATION_ACTION,
+        workflow_run_id: workflowRunId,
+        incident_id: incident.id,
+      },
+    },
+    email: {
+      to: admin?.email || null,
+      subject: translate(lang, "Critical incident: {reference}", {
+        reference: incident.reference,
+      }),
+      template: EMAIL_TEMPLATES.INCIDENT_CRITICAL_ESCALATION,
+      variables: {
+        admin_name: admin?.name ? `${admin.name}` : "Admin",
+        incident_reference: incident.reference,
+        use_case: incident.useCase,
+        severity: incident.severity,
+        incident_type: incident.type,
+        owner_name: incident.ownerName || "No owner",
+        incident_url: `${baseUrl}${actionUrl}`,
+      },
+    },
+  };
 };
 
 /**

@@ -91,7 +91,7 @@ export const aiDetectionSettingsContent: ArticleContent = {
     },
     {
       type: "paragraph",
-      text: "Select which LLM key to use from the dropdown. LLM keys are managed in **Settings → LLM keys** at the organization level. If no keys are configured, the dropdown shows a message directing you to set one up.",
+      text: "Select which LLM key to use from the dropdown. LLM keys are managed in **Settings → API keys** at the organization level. If no keys are configured, the dropdown shows a message directing you to set one up.",
     },
     {
       type: "callout",

@@ -17,3 +17,11 @@ export const NOTICE_TEXT = {
 /** The run-level message for a report that was produced with unreadable parts. */
 export const gapsMessage = (details: string[]): string =>
   `Report generated with gaps: ${details.join("; ")} ${NOTICE_TEXT.failedSuffix.replace(/\.$/, "")}.`;
+
+/**
+ * The line under a report's incident table when archived incidents were left
+ * out (they are by default). Shared by report-pdf.ejs (through the render
+ * data) and docxGenerator.
+ */
+export const archivedIncidentsNote = (count: number): string =>
+  `${count} archived ${count === 1 ? "incident is" : "incidents are"} not included.`;

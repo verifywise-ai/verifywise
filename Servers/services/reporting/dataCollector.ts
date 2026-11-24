@@ -4,6 +4,7 @@
  * Following VerifyWise clean architecture patterns
  */
 
+import { formatIncidentDay } from "../../utils/validations/incidentManagementValidation.utils";
 import { background, brand, riskMark, status, text } from "../../tools/design-tokens/palette";
 import {
   ReportData,
@@ -1706,43 +1707,49 @@ export class ReportDataCollector {
   /**
    * Collect incident management section data
    * For organizational reports: all incidents
-   * For use case reports: incidents linked to project
+   * For use case reports: incidents linked to the use case (project_id)
+   * Archived incidents are left out of both; `archivedIncidents` counts the
+   * ones left out, so the report can say so.
    */
   private async collectIncidentManagement(
     isOrganizational: boolean,
   ): Promise<IncidentManagementSectionData> {
     try {
-      let incidentsQuery: string;
+      let scope: string;
       let replacements: Record<string, any> = {};
 
       if (isOrganizational) {
-        // Get all incidents for organizational reports
-        incidentsQuery = `
-          SELECT aim.*
-          FROM ai_incident_managements aim
-          WHERE aim.organization_id = :organizationId
-          ORDER BY aim.created_at DESC
-        `;
+        scope = "aim.organization_id = :organizationId";
         replacements = { organizationId: this.organizationId };
       } else {
-        // Get only project-linked incidents for use case reports.
-        // ai_project is a varchar column, so bind the project id as text.
-        incidentsQuery = `
-          SELECT aim.*
-          FROM ai_incident_managements aim
-          WHERE aim.organization_id = :organizationId AND aim.ai_project = :projectId
-          ORDER BY aim.created_at DESC
-        `;
-        replacements = { organizationId: this.organizationId, projectId: String(this.projectId) };
+        // Use case reports: the incidents linked to the use case by
+        // project_id (ai_project is free text, not the use case's id).
+        scope = "aim.organization_id = :organizationId AND aim.project_id = :projectId";
+        replacements = { organizationId: this.organizationId, projectId: Number(this.projectId) };
       }
 
-      const incidents = (await sequelize.query(incidentsQuery, {
-        replacements,
-        type: QueryTypes.SELECT,
-      })) as any[];
+      const incidents = (await sequelize.query(
+        `SELECT aim.*,
+            NULLIF(TRIM(CONCAT_WS(' ', ru.name, ru.surname)), '') AS reporter_name
+          FROM ai_incident_managements aim
+          LEFT JOIN users ru ON ru.id = aim.reporter_id
+            AND EXISTS (SELECT 1 FROM organization_members rom
+                         WHERE rom.user_id = ru.id AND rom.organization_id = aim.organization_id)
+          WHERE ${scope} AND aim.archived IS NOT TRUE
+          ORDER BY aim.created_at DESC`,
+        { replacements, type: QueryTypes.SELECT },
+      )) as any[];
+      const archivedRows = (await sequelize.query(
+        `SELECT COUNT(*)::int AS archived
+          FROM ai_incident_managements aim
+          WHERE ${scope} AND aim.archived IS TRUE`,
+        { replacements, type: QueryTypes.SELECT },
+      )) as { archived?: number }[];
+      const archived = Number(archivedRows[0]?.archived ?? 0) || 0;
 
       return {
         totalIncidents: incidents.length,
+        archivedIncidents: archived,
         incidents: incidents.map((inc) => ({
           id: inc.id,
           incidentId: inc.incident_id || `INC-${inc.id}`,
@@ -1751,20 +1758,25 @@ export class ReportDataCollector {
           type: inc.type || "Unknown",
           severity: inc.severity || "Unknown",
           status: inc.status || "Unknown",
+          // date_detected is a DATE ("YYYY-MM-DD"): format that day itself,
+          // never its midnight in the server's time zone (a day early west
+          // of UTC).
           reportedDate: inc.date_detected
-            ? new Date(inc.date_detected).toLocaleDateString()
+            ? formatIncidentDay(inc.date_detected)
             : inc.created_at
               ? new Date(inc.created_at).toLocaleDateString()
               : undefined,
           resolvedDate: undefined,
           // `reporter` is who filed the incident. There is no assignee column,
           // and the filer is not the person accountable for the incident.
-          reporter: inc.reporter || undefined,
+          // The reporter user's current full name, else the stored text
+          // (Jira imports, older rows, a deleted user).
+          reporter: inc.reporter_name || inc.reporter || undefined,
         })),
       };
     } catch (error) {
       console.error("[ReportDataCollector] Error collecting incident management:", error);
-      return { totalIncidents: 0, incidents: [] };
+      return { totalIncidents: 0, archivedIncidents: 0, incidents: [] };
     }
   }
 }

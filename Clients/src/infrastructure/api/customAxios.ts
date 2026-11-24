@@ -33,6 +33,7 @@ import {
 } from "../../application/utils/clearSession";
 import { extractUserToken } from "../../application/tools/extractToken";
 import { storageService } from "../storage";
+import { CLIENT_DATE_HEADER, clientDate } from "./clientDate";
 import { AlertProps } from "../../presentation/types/alert.types";
 import { translateKey } from "../../i18n/domTranslator";
 import type {
@@ -298,6 +299,8 @@ CustomAxios.interceptors.request.use(
     if (lang) {
       config.headers["Accept-Language"] = lang;
     }
+
+    config.headers[CLIENT_DATE_HEADER] = clientDate();
 
     // Enable credentials for auth-related endpoints
     if (

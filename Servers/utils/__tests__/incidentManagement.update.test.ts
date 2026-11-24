@@ -22,8 +22,9 @@ describe("diffIncidentColumns", () => {
     status: "Closed",
     description: "Unchanged",
     // As pg returns a TIMESTAMP WITHOUT TIME ZONE value (server-local wall clock).
-    approval_date: new Date(2026, 9, 1),
-    occurred_date: new Date(2026, 8, 20),
+    // DATE columns read back as "YYYY-MM-DD".
+    approval_date: "2026-10-01",
+    occurred_date: "2026-09-20",
     project_id: 3,
     approved_by: "Jane Doe",
     archived: false,

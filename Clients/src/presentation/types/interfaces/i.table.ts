@@ -328,7 +328,13 @@ export interface IncidentTableProps {
   onEdit?: (id: string, mode: string) => void;
   onView?: (id: string, mode: string) => void;
   onArchive?: (id: string, mode: string) => void;
-  /** False hides edit and archive in the row menu (no incident.edit). */
+  /** Restores an archived incident; offered on archived rows with incident.edit. */
+  onRestore?: (id: string) => void;
+  /** The page's archive view, for the empty state: "archived" lists only archived incidents. */
+  archiveView?: "active" | "all" | "archived";
+  /** Whether the organization has any archived incident (before filters and search). */
+  hasArchivedIncidents?: boolean;
+  /** False hides edit, archive and restore in the row menu (no incident.edit). */
   canEdit?: boolean;
   /**
    * The role may record approval (incident.approve). Without incident.edit the

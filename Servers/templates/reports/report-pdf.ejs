@@ -1181,6 +1181,9 @@ const isE23 = typeof e23 !== 'undefined' && !!e23;
         <p class="empty-state-text">No incidents have been reported.</p>
       </div>
       <% } %>
+      <% if (sections.incidentManagement.archivedIncidents > 0) { %>
+      <p class="subsection-note"><%= archivedIncidentsNote(sections.incidentManagement.archivedIncidents) %></p>
+      <% } %>
     </div>
     <% } %>
     <% } %>

@@ -1286,7 +1286,7 @@ export const aiIncidentEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/ai-incident-managements',
     summary: "Create New Incident",
-    description: "Needs incident.create. Required: ai_project, type, severity, occurred_date, date_detected, reporter and description (5 to 32,767 characters). status defaults to Open and approval_status to Pending when omitted. type, severity, status and approval_status must be one of their listed values; ai_project, reporter and model_system_version are at most 255 characters; dates are YYYY-MM-DD (or an ISO date-time), not later than today in UTC+14 (the furthest-ahead time zone, so today anywhere is accepted), and date_detected is on or after occurred_date. categories_of_harm is optional: a list (or a comma-separated string) of Health, Safety, Rights, Property, Environment. approved_by and approval_date are set by the server and ignored in the request. A caller without incident.approve always gets approval_status Pending with no approval_notes. A caller with incident.approve may send Approved or Rejected; the server then records the caller's name as approved_by and now as approval_date.",
+    description: "Needs incident.create. Required: ai_project, type, severity, occurred_date, date_detected, reporter (or reporter_id) and description (5 to 32,767 characters). status defaults to Open and approval_status to Pending when omitted. type, severity, status and approval_status must be one of their listed values; ai_project, reporter and model_system_version are at most 255 characters; dates are YYYY-MM-DD (or an ISO date-time), not later than today in UTC+14 (the furthest-ahead time zone, so today anywhere is accepted), and date_detected is on or after occurred_date. categories_of_harm is optional: a list (or a comma-separated string) of Health, Safety, Rights, Property, Environment. The reporter is required: a reporter_id (a user of your organization; the server writes their full name into reporter) or a non-empty reporter text. Dates are stored and returned as YYYY-MM-DD. approved_by, approved_by_id and approval_date are set by the server and ignored in the request. A caller without incident.approve always gets approval_status Pending with no approval_notes. A caller with incident.approve may send Approved or Rejected; the server then records the caller's name as approved_by, their id as approved_by_id and today (UTC) as approval_date.",
     requiresAuth: true,
     requestBody: {
       "ai_project": "string (required)",
@@ -1296,7 +1296,8 @@ export const aiIncidentEndpoints: Endpoint[] = [
       "approval_status": "Pending | Approved | Rejected | Not required (optional)",
       "occurred_date": "string (required)",
       "date_detected": "string (required)",
-      "reporter": "string (required)",
+      "reporter": "string (optional)",
+      "reporter_id": "integer (optional)",
       "model_system_version": "string (optional)",
       "description": "string (required)",
       "categories_of_harm": "array (optional)",
@@ -1331,7 +1332,7 @@ export const aiIncidentEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/ai-incident-managements/{id}',
     summary: "Update Incident By Id",
-    description: "Needs incident.edit or incident.approve, then per field: changing approval_status or approval_notes needs incident.approve, changing any other field (archived included) needs incident.edit. A field sent with its stored value is not a change. approved_by and approval_date are set by the server and ignored in the request: when approval_status changes to Approved or Rejected, approved_by is the caller's name and approval_date is now; when it changes to Pending or Not required, both are cleared. Changed fields follow the create rules (enums, lengths, dates; harm categories an update adds must be listed values, stored ones outside the list may stay); a required field cannot be set to null or an empty string, and the dates the incident ends up with must keep date_detected on or after occurred_date. Fields left out are not changed.",
+    description: "Needs incident.edit or incident.approve, then per field: changing approval_status or approval_notes needs incident.approve, changing any other field (archived included) needs incident.edit. A field sent with its stored value is not a change. An archived incident takes only { \"archived\": false } (restore); any other change answers 409 (\"Restore this incident before editing it.\") and nothing is written. approved_by, approved_by_id and approval_date are set by the server and ignored in the request: when approval_status changes to Approved or Rejected, approved_by is the caller's name, approved_by_id their id and approval_date today (UTC, YYYY-MM-DD); when it changes to Pending or Not required, all three are cleared. A changed reporter_id must be a user of your organization (400 INVALID_REFERENCE otherwise) and sets reporter to their full name; a changed reporter text without reporter_id clears reporter_id. Changed fields follow the create rules (enums, lengths, dates; harm categories an update adds must be listed values, stored ones outside the list may stay); a required field cannot be set to null or an empty string, and the dates the incident ends up with must keep date_detected on or after occurred_date. Fields left out are not changed.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -1342,7 +1343,7 @@ export const aiIncidentEndpoints: Endpoint[] = [
       { status: 401, description: "Unauthorized" },
       { status: 403, description: "The role holds neither incident.edit nor incident.approve, or the request changes a field that needs the key it lacks (\"Your role does not allow editing this incident's details.\" / \"Your role does not allow approving or rejecting incidents.\"). Nothing is written." },
       { status: 404, description: "Incident not found" },
-      { status: 409, description: "The incident changed since expected_updated_at" },
+      { status: 409, description: "The incident changed since expected_updated_at, or the incident is archived and the request changes more than archived (code INCIDENT_ARCHIVED)" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Incidents",
@@ -1351,14 +1352,17 @@ export const aiIncidentEndpoints: Endpoint[] = [
     method: 'DELETE',
     path: '/ai-incident-managements/{id}',
     summary: "Delete Incident By Id",
+    description: "Permanently deletes the incident. A deletion entry is recorded in its change history, and the incident_deleted automation is sent after the delete commits.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
     responses: [
       { status: 200, description: "Deleted successfully" },
+      { status: 400, description: "The id is not a positive integer" },
       { status: 401, description: "Unauthorized" },
       { status: 403, description: "The role does not hold incident.delete" },
+      { status: 404, description: "Incident not found in the organization. Nothing is deleted and no automation is sent." },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Incidents",
@@ -1367,14 +1371,17 @@ export const aiIncidentEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/ai-incident-managements/{id}/archive',
     summary: "Archive Incident By Id",
+    description: "Archives the incident through the incident update path: the row is locked, the change is recorded in change history (\"Archived\") and the incident_updated automation is sent after commit. Archiving an archived incident changes nothing. The request body is ignored. To restore, send { \"archived\": false } to PATCH /ai-incident-managements/{id}.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
     responses: [
-      { status: 200, description: "Success" },
+      { status: 200, description: "The incident after the change" },
+      { status: 400, description: "The id is not a positive integer" },
       { status: 401, description: "Unauthorized" },
       { status: 403, description: "The role does not hold incident.edit" },
+      { status: 404, description: "Incident not found in the organization" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Incidents",
@@ -2276,9 +2283,14 @@ export const ceMarkingEndpoints: Endpoint[] = [
     parameters: [
       { name: 'projectId', in: 'path', type: 'integer', required: true, description: "The projectId" },
     ],
+    requestBody: {
+      "linkedIncidents": "array (optional)",
+    },
     responses: [
       { status: 200, description: "Success" },
+      { status: 400, description: "linkedIncidents is not a list of positive integer ids (\"Linked incidents must be a list of incident ids.\"), or names an incident that does not exist in the organization (\"Some linked incidents do not exist in your organization.\"). Nothing is written." },
       { status: 401, description: "Unauthorized" },
+      { status: 404, description: "Use case or CE marking record not found" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "CE Marking",
@@ -10012,6 +10024,7 @@ export const reportingscheduledReportsEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/reporting/scheduled-reports',
     summary: "List Scheduled Reports",
+    description: "Scheduled reports of the caller's organization. Admins see all; other roles see organization-wide schedules and those of projects they own, are a member of or reach through a group.",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -13336,6 +13349,62 @@ export const v1V1lifecycleSettingsEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Llm Keys endpoints
+export const v1V1llmKeysEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/v1/llm-keys',
+    summary: "Create an LLM key, checked with its provider first",
+    description: "Checks the key with its provider before saving: one free request (Anthropic GET /v1/models/{model}, OpenAI GET /v1/models, OpenRouter GET /api/v1/key, Custom GET {url}/models) sent with the key and its custom headers, 8 second timeout. A refusal is a 400 with data.code workspace_required, invalid_key or model_unavailable. When the provider cannot be reached (network error, timeout, 5xx, 429, or a Custom URL the outbound policy refuses) the answer is a 409 with data.code unreachable, unless the body sets skip_verification: true, which saves the key unchecked. A rejected key is never saved, even with skip_verification. data.reason, when present, names a more specific cause: bad_characters (400, the key has characters no key can have), cannot_list_models (409, a 401/403 saying the key lacks the permission to list models) or model_not_listed (409, a Custom endpoint whose /models list lacks the model; ids equal to model:latest or ending in /model count as listed). With no model the check uses the default model the Advisor uses. Anthropic keys not tied to a workspace need the anthropic-workspace-id custom header.",
+    requiresAuth: true,
+    requestBody: {
+      "name": "Anthropic | OpenAI | OpenRouter | Custom (required)",
+      "key": "string (required)",
+      "model": "string (required)",
+      "url": "string (optional)",
+      "custom_headers": "object (optional, nullable)",
+      "skip_verification": "boolean (optional)",
+    },
+    responses: [
+      { status: 201, description: "Created; the key is not returned" },
+      { status: 400, description: "Invalid body, or the provider rejected the key: data is { message, code } with code workspace_required, invalid_key or model_unavailable" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - requires the llmKeys.admin permission (Admin by default)" },
+      { status: 409, description: "The provider could not be reached to check the key: data is { message, code: unreachable }. Resend with skip_verification: true to save anyway." },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Llm Keys",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/llm-keys/{id}',
+    summary: "Update an LLM key, checked with its provider first",
+    description: "Checks the key with its provider before saving when the body changes the provider, key, URL, model or headers (unsent fields keep their stored values). A change of provider or endpoint must send the key again (otherwise 400, before any provider call), and drops the stored custom headers unless the body sends custom_headers. A url without a name applies only to a Custom key: one free request (Anthropic GET /v1/models/{model}, OpenAI GET /v1/models, OpenRouter GET /api/v1/key, Custom GET {url}/models) sent with the key and its custom headers, 8 second timeout. A refusal is a 400 with data.code workspace_required, invalid_key or model_unavailable. When the provider cannot be reached (network error, timeout, 5xx, 429, or a Custom URL the outbound policy refuses) the answer is a 409 with data.code unreachable, unless the body sets skip_verification: true, which saves the key unchecked. A rejected key is never saved, even with skip_verification. data.reason, when present, names a more specific cause: bad_characters (400, the key has characters no key can have), cannot_list_models (409, a 401/403 saying the key lacks the permission to list models) or model_not_listed (409, a Custom endpoint whose /models list lacks the model; ids equal to model:latest or ending in /model count as listed). With no model the check uses the default model the Advisor uses. Anthropic keys not tied to a workspace need the anthropic-workspace-id custom header.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    requestBody: {
+      "name": "Anthropic | OpenAI | OpenRouter | Custom (optional)",
+      "key": "string (optional)",
+      "model": "string (optional)",
+      "url": "string (optional)",
+      "custom_headers": "object (optional, nullable)",
+      "skip_verification": "boolean (optional)",
+    },
+    responses: [
+      { status: 200, description: "Updated; the key is not returned" },
+      { status: 400, description: "Invalid body, or the provider rejected the key: data is { message, code } with code workspace_required, invalid_key or model_unavailable" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - requires the llmKeys.admin permission (Admin by default)" },
+      { status: 404, description: "No LLM key with this id in the organization" },
+      { status: 409, description: "The provider could not be reached to check the key: data is { message, code: unreachable }. Resend with skip_verification: true to save anyway." },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Llm Keys",
+  },
+];
+
 // v1: V1/Model Inventories endpoints
 export const v1V1modelInventoriesEndpoints: Endpoint[] = [
   {
@@ -13712,12 +13781,12 @@ export const v1V1scheduledReportsEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/v1/scheduled-reports/{id}',
     summary: "Get Scheduled Report",
-    description: "One scheduled report of the caller's organization, with its template version's parameters_config.",
+    description: "One scheduled report of the caller's organization, with its template version's parameters_config. Admins read any schedule; other roles read organization-wide schedules and those of projects they own, are a member of or reach through a group, and get 404 for the rest.",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
       { status: 401, description: "Unauthorized" },
-      { status: 404, description: "Scheduled report not found in this organization" },
+      { status: 404, description: "Scheduled report not found in this organization, or not readable by the caller" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "v1: V1/Scheduled Reports",
@@ -14542,6 +14611,7 @@ export const allEndpoints = {
   v1V1importedFrameworkAssessments: v1V1importedFrameworkAssessmentsEndpoints,
   v1V1intakeFormReviewTime: v1V1intakeFormReviewTimeEndpoints,
   v1V1lifecycleSettings: v1V1lifecycleSettingsEndpoints,
+  v1V1llmKeys: v1V1llmKeysEndpoints,
   v1V1modelInventories: v1V1modelInventoriesEndpoints,
   v1V1modelRisks: v1V1modelRisksEndpoints,
   v1V1policyTemplates: v1V1policyTemplatesEndpoints,

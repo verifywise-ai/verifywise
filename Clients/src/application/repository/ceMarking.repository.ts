@@ -7,7 +7,10 @@
  * @module application/repository/ceMarking
  */
 
-import { ceMarkingService } from "../../infrastructure/api/ceMarkingService";
+import {
+  ceMarkingService,
+  type CEMarkingIncidentOption,
+} from "../../infrastructure/api/ceMarkingService";
 import type {
   CEMarkingData,
   ConformityStepsUpdatePayload,
@@ -107,6 +110,38 @@ export const getAllEvidences = () => ceMarkingService.getAllEvidences();
  * Get all available incidents
  */
 export const getAllIncidents = () => ceMarkingService.getAllIncidents();
+
+/**
+ * The incidents the "Link incidents" picker offers for a use case: its
+ * non-archived incidents (by `project_id`, the incident's link to the use
+ * case), plus any incident already linked, so it can still be unlinked.
+ * Incidents without a use case link are only listed when already linked.
+ */
+export const filterLinkableIncidents = (
+  incidents: CEMarkingIncidentOption[],
+  projectId: string | number,
+  linkedIncidentIds: number[] = [],
+): CEMarkingIncidentOption[] => {
+  const useCaseId = Number(projectId);
+  return incidents.filter(
+    (incident) =>
+      linkedIncidentIds.includes(incident.id) ||
+      (!incident.archived &&
+        incident.project_id != null &&
+        Number(incident.project_id) === useCaseId),
+  );
+};
+
+/** getAllIncidents narrowed by filterLinkableIncidents. */
+export const getLinkableIncidents = async (
+  projectId: string | number,
+  linkedIncidentIds: number[] = [],
+): Promise<CEMarkingIncidentOption[]> =>
+  filterLinkableIncidents(
+    (await ceMarkingService.getAllIncidents()) || [],
+    projectId,
+    linkedIncidentIds,
+  );
 
 /**
  * Update linked policies

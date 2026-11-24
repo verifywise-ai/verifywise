@@ -55,4 +55,20 @@ export interface SubmitForApprovalConfig {
   riskLevel: "info" | "warning" | "danger";
   description: string;
   inputParams: Record<string, unknown>;
+  /**
+   * The requester's local date ("YYYY-MM-DD") when they proposed the action,
+   * already checked (acceptedClientDate). Set by the server, never from the
+   * model. Stored with the params as REQUESTER_CLIENT_DATE_PARAM and passed
+   * to the executor, so a day the action records (an incident's occurred
+   * date) is the requester's, not the approver's.
+   */
+  requesterClientDate?: string;
 }
+
+/**
+ * The executor param carrying the requester's local date at proposal time
+ * (SubmitForApprovalConfig.requesterClientDate). Server-set: the tool bridge
+ * drops every underscore param the model sends, and the write tool wrapper
+ * drops this one from the caller's params.
+ */
+export const REQUESTER_CLIENT_DATE_PARAM = "_requesterClientDate";

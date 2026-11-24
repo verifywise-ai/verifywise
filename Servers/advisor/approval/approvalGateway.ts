@@ -12,6 +12,7 @@ import { storeConfirmation, resolveConfirmation } from "../confirmation/confirma
 import { writeToolExecutors } from "../confirmation/createWriteTool";
 import type { ConfirmationRequest, ConfirmationToolResult } from "../confirmation/types";
 import type { SubmitForApprovalConfig, ApprovalContext, StateHistoryEntry } from "./types";
+import { REQUESTER_CLIENT_DATE_PARAM } from "./types";
 import { sequelize } from "../../database/db";
 import { getUserRoleInOrganization } from "../../utils/userPermission.utils";
 import { QueryTypes } from "sequelize";
@@ -70,6 +71,13 @@ export interface ApprovalSubmitResult {
  */
 export const WORKFLOW_GATE_TOOL = "workflow_gate";
 
+/** The params stored for an action and passed to its executor. */
+function executorParams(config: SubmitForApprovalConfig): Record<string, unknown> {
+  return config.requesterClientDate
+    ? { ...config.inputParams, [REQUESTER_CLIENT_DATE_PARAM]: config.requesterClientDate }
+    : config.inputParams;
+}
+
 // ── Helpers ─────────────────────────────────────────────────────
 
 function deriveActionType(toolName: string): string {
@@ -109,7 +117,7 @@ async function insertApprovalRecord(
         organizationId: config.organizationId,
         actionType: deriveActionType(config.toolName),
         toolName: config.toolName,
-        inputParams: JSON.stringify(config.inputParams),
+        inputParams: JSON.stringify(executorParams(config)),
         riskLevel: config.riskLevel,
         state,
         ruleMatched: extra?.ruleMatched || null,
@@ -349,7 +357,7 @@ async function submitForApprovalImpl(
 
     let result: unknown;
     try {
-      const paramsWithUser = { ...config.inputParams, _userId: config.userId };
+      const paramsWithUser = { ...executorParams(config), _userId: config.userId };
       result = await executor(paramsWithUser, config.organizationId);
       const failure = executionFailureMessage(result);
       if (failure) throw new Error(failure);

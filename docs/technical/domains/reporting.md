@@ -1060,13 +1060,13 @@ All endpoints are auth-protected and org-scoped.
 | PATCH | `/api/reporting/templates/:id` | Update a template (see [Template Write Path](#template-write-path)) |
 | DELETE | `/api/reporting/templates/:id` | Delete a template — soft (`is_active = false`), surfaced in the UI as **Delete** since nothing restores it (see [Templates Tab](#frontend-status)) |
 | POST | `/api/reporting/templates/:id/run` | Run a template once, ad hoc, with no schedule row (see [Run Now](#run-now-ad-hoc-template-runs)) |
-| GET | `/api/reporting/scheduled-reports` | List scheduled reports |
+| GET | `/api/reporting/scheduled-reports` | List scheduled reports the caller may read: Admins see all, others see organization-wide schedules and those of projects they own, are a member of or reach through a group (same rule as runs, `utils/reportVisibility.utils.ts`) |
 | POST | `/api/reporting/scheduled-reports` | Create a scheduled report (recipients are format-validated here) |
 | PATCH | `/api/reporting/scheduled-reports/:id` | Update a scheduled report (see [Updating a Schedule](#updating-a-schedule)) |
 | POST | `/api/reporting/scheduled-reports/:id/run-now` | Trigger an immediate run of an existing schedule |
-| POST | `/api/reporting/scheduled-reports/:id/pause` | Pause schedule |
+| POST | `/api/reporting/scheduled-reports/:id/pause` | Pause schedule (same scope gate as resume: `assertReportScopeAllowed` on the row's scope) |
 | POST | `/api/reporting/scheduled-reports/:id/resume` | Resume schedule |
-| DELETE | `/api/reporting/scheduled-reports/:id` | Soft-delete a scheduled report |
+| DELETE | `/api/reporting/scheduled-reports/:id` | Soft-delete a scheduled report (same scope gate as resume) |
 | GET | `/api/reporting/runs` | List report runs — **paginated**, returns `{rows, total, limit, offset}`, and filterable by `?archived=true\|false` (see [Run Listing is Paginated](#run-listing-is-paginated) and [Run Archiving](#run-archiving)) |
 | GET | `/api/reporting/runs/:id` | Get a run (org-scoped **and** membership-scoped — see [One Rule, Applied to Every Per-Run Endpoint](#one-rule-applied-to-every-per-run-endpoint)) |
 | GET | `/api/reporting/runs/:id/download` | Download a run's output (same gate, then org-scoped run and org-scoped file) |
@@ -1074,6 +1074,8 @@ All endpoints are auth-protected and org-scoped.
 | PATCH | `/api/reporting/runs/:id/archive` | Move a run into the Archive tab (see [Run Archiving](#run-archiving)) |
 | PATCH | `/api/reporting/runs/:id/restore` | Move a run back into the Generate tab |
 | DELETE | `/api/reporting/runs/:id` | Permanently delete a run |
+
+Every write to an existing schedule (PATCH, run-now, pause, resume, delete) first loads it as the caller sees it, under the same visibility rule as the read endpoints (`utils/reportVisibility.utils.ts`). A schedule the caller cannot read is treated like a missing one: PATCH and run-now answer 404, and pause, resume and delete answer a 200 no-op that writes nothing, as they do for another organization's id. A 403 is left only for a schedule the caller can already see but may not change, such as an organization-wide schedule for a non-Admin, so no write endpoint confirms that an id exists.
 
 ### Template Write Path
 
@@ -1211,11 +1213,11 @@ The rule, in order: Admin and SuperAdmin bypass it entirely. `"organization"` sc
 | Controller function | Scope evaluated |
 |---|---|
 | `createScheduledReport` | `body.scope`, `body.projectId` |
-| `updateScheduledReport` | the **effective post-patch** scope/projectId — the row's stored values with the patch applied, computed even when the patch itself carries neither field, since `deliveryConfig` alone can redirect who receives the report |
-| `runScheduledReportNow` and `resumeScheduledReport` | the stored schedule's `scope` and `project_id` |
+| `updateScheduledReport` | the stored schedule's `scope` and `project_id` **and** the effective post-patch scope/projectId — the row's stored values with the patch applied, computed even when the patch itself carries neither field, since `deliveryConfig` alone can redirect who receives the report. The stored scope is checked too so an Editor cannot move an organization-wide schedule into a project of theirs |
+| `runScheduledReportNow`, `pauseScheduledReport`, `resumeScheduledReport`, `deleteScheduledReport` | the stored schedule's `scope` and `project_id` |
 | `runTemplateNow` | the resolved scope — an omitted body defaults to `"organization"`, the widest case, so an absent scope is refused for a non-Admin rather than silently permitted |
 
-**Refusal is 403, not 404.** This diverges from the read side deliberately: the read side hides a denied run behind a 404 to avoid confirming another organization's id exists over a sequential id space, but every produce-side call already knows its own organization's row — there is nothing to hide, and the client needs to distinguish "malformed request" (400) from "not allowed" (403). Validation is ordered before authorization on every one of these endpoints, so a malformed body still gets its 400 even for a caller who would otherwise be refused.
+**Refusal is 403 only for a schedule the caller can see.** A write to an existing schedule first loads it under the read side's visibility rule. A schedule the caller cannot read (another project's) answers exactly like a missing id: 404 for PATCH and run-now, a 200 no-op for pause, resume and delete, so the sequential id space is not an oracle. A schedule the caller can see but may not produce, such as an organization-wide one for a non-Admin, is refused with 403, which reveals nothing they could not already read. Body validation that needs no stored row runs first, so a malformed body still gets its 400; checks against the stored row (scope invariants, the report kind) run after the lookup, so an unreadable schedule gets its 404 first.
 
 **Every field a PATCH can touch is covered, not only `scope` and `projectId`.** `updateScheduledReport` fetches the row unconditionally and authorizes against its post-patch scope on every PATCH — including one that touches only `deliveryConfig`. A PATCH carrying `{ deliveryConfig: { attachFile: true, recipients: [...] } }` and nothing else can redirect a project schedule's email recipients without ever mentioning `scope` or `projectId`; fetching the row (and therefore authorizing) only when those two fields were present in the body left exactly that path ungated. `resumeScheduledReport` is gated the same way, since resuming re-enables delivery on whatever scope the schedule already has.
 
@@ -1237,7 +1239,7 @@ The wizard (`ConfigureReportWizard.tsx`) now:
 
 | Operation | Access |
 |-----------|--------|
-| Writes (create/update/run-now/pause/resume/delete scheduled reports) | Admin / Editor via `authorize` middleware, additionally scope-gated by `assertReportScopeAllowed` — organization scope requires Admin, project scope requires ownership or membership (Admin/SuperAdmin unrestricted); refusal is **403** — see [One Rule, Applied to Every Produce-Side Endpoint](#one-rule-applied-to-every-produce-side-endpoint) |
+| Writes (create/update/run-now/pause/resume/delete scheduled reports) | Admin / Editor via `authorize` middleware, additionally scope-gated by `assertReportScopeAllowed` — organization scope requires Admin, project scope requires ownership, membership or a group attached to the use case (Admin/SuperAdmin unrestricted); a schedule the caller cannot read answers like a missing id (404, or a 200 no-op for pause/resume/delete), refusal of a visible one is **403** — see [One Rule, Applied to Every Produce-Side Endpoint](#one-rule-applied-to-every-produce-side-endpoint) |
 | Template writes (create / update / archive) | Admin / Editor (via `authorize` middleware) |
 | Reads (section catalog, templates, scheduled reports, runs) | Any authenticated user (JWT) |
 | Any single run — fetch, download, analyses, archive, restore, delete | Authenticated + org-scoped + project-membership-scoped via `canViewRunQuery` (Admin/SuperAdmin unrestricted); denial is 404 — see [One Rule, Applied to Every Per-Run Endpoint](#one-rule-applied-to-every-per-run-endpoint) |
@@ -1346,7 +1348,7 @@ It seeds whether or not any organization has added E-23; without the framework t
 | POST | `/api/v1/report-templates/:id/duplicate` | Copy a system template or one of the organization's own into the caller's organization, with its metadata and the latest version's whole config (sections, AI blocks, framework selection, report kind, format, branding, schedule and delivery defaults). The server names it `"<name> (copy)"`, then `"(copy 2)"`, `"(copy 3)"`, ... past any slug the organization already holds, archived templates included (the slug index covers them); a slug taken by a concurrent copy is retried up to three times. 404 for a template the organization cannot see or an archived one (`reportTemplate.edit`) |
 | POST | `/api/v1/report-templates/:id/run` | Run a template now, with `reportParameters` for kinds that take them (`reportTemplate.edit`) |
 | GET | `/api/v1/report-templates/:id/last-parameters` | Answers from the organization's latest `success` or `partial_success` run of the template that the caller may see (the same two statuses the prior glance reads), for the wizard prefill. Period and `isFinal` are left out; the old `periodEnd` comes back separately so the next period starts the day after it (`reportTemplate.edit`) |
-| GET | `/api/v1/scheduled-reports/:id` | One schedule of the organization with its template version's `parameters_config`, which the legacy list lacks; the schedule edit dialog uses it to show and save the stored report details (`report_parameters`). Same read access as the legacy list: any signed-in member, no scope gate. 404 for a missing, other-organization or non-integer id |
+| GET | `/api/v1/scheduled-reports/:id` | One schedule of the organization with its template version's `parameters_config`, which the legacy list lacks; the schedule edit dialog uses it to show and save the stored report details (`report_parameters`). Same read rule as the list and as runs: Admins read any schedule, others organization-wide schedules and those of projects they own, are a member of or reach through a group. 404 for a missing, other-organization, unreadable or non-integer id |
 | GET | `/api/v1/report-runs/:id/download/fix-it-list` | Download the run's internal fix-it list. Same visibility gate and organization checks as the formal report download |
 | POST | `/api/v1/scheduled-reports` | Create a schedule; accepts `reportParameters` and the `quarterly` frequency (`scheduledReport.edit`) |
 | PATCH | `/api/v1/scheduled-reports/:id` | Update a schedule; accepts `reportParameters` and the `quarterly` frequency (`scheduledReport.edit`) |

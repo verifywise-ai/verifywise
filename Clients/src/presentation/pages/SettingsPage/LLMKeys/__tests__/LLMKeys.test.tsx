@@ -273,4 +273,311 @@ describe("LLMKeys", () => {
       expect(screen.queryByRole("heading", { name: "Add API key" })).not.toBeInTheDocument(),
     );
   });
+
+  describe("check on save", () => {
+    /** The error the network layer throws: `response` is the response body. */
+    const checkError = (code: string, message: string) =>
+      Object.assign(new Error(message), {
+        status: code === "unreachable" ? 409 : 400,
+        response: {
+          message: code === "unreachable" ? "Conflict" : "Bad Request",
+          data: { message, code },
+        },
+      });
+
+    /** Opens the add form on Anthropic, with its recommended model selected. */
+    const openAnthropicForm = async (user: ReturnType<typeof userEvent.setup>) => {
+      renderWithProviders(<LLMKeys />);
+      await waitFor(() => expect(screen.getByText("No LLM keys yet")).toBeInTheDocument());
+      await user.click(screen.getByText("Add API key"));
+      await user.click(screen.getByText("Anthropic"));
+      await user.type(screen.getByLabelText(/^API key/), "sk-ant-usr-abc");
+    };
+
+    it("masks the API key input", async () => {
+      const user = userEvent.setup();
+      await openAnthropicForm(user);
+      expect(screen.getByLabelText(/^API key/)).toHaveAttribute("type", "password");
+    });
+
+    it("sends the Anthropic workspace ID as the anthropic-workspace-id header", async () => {
+      const user = userEvent.setup();
+      await openAnthropicForm(user);
+      expect(
+        screen.getByText("Only for keys that are not tied to a workspace."),
+      ).toBeInTheDocument();
+      await user.type(screen.getByLabelText(/^Workspace ID/), " wrkspc_01abc ");
+
+      mockCreateLLMKey.mockResolvedValue({ data: { data: {} } });
+      await user.click(screen.getByText("Add key"));
+
+      await waitFor(() => expect(mockCreateLLMKey).toHaveBeenCalled());
+      const [{ body }] = mockCreateLLMKey.mock.calls[0];
+      expect(body.custom_headers).toEqual({ "anthropic-workspace-id": "wrkspc_01abc" });
+      expect(body.skip_verification).toBeUndefined();
+    });
+
+    it("refuses a workspace ID with spaces", async () => {
+      const user = userEvent.setup();
+      await openAnthropicForm(user);
+      await user.type(screen.getByLabelText(/^Workspace ID/), "wrkspc 01");
+      expect(screen.getByText("Workspace ID cannot contain spaces.")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Add key" })).toBeDisabled();
+    });
+
+    it("shows a workspace refusal under the workspace field and keeps the form open", async () => {
+      const user = userEvent.setup();
+      await openAnthropicForm(user);
+      const message =
+        "This Anthropic key is not tied to a workspace. Create the key inside a workspace in the Anthropic Console, or enter the workspace ID.";
+      mockCreateLLMKey.mockRejectedValue(checkError("workspace_required", message));
+
+      await user.click(screen.getByText("Add key"));
+
+      expect(await screen.findByText(message)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^Workspace ID/)).toHaveAttribute("aria-invalid", "true");
+      expect(screen.getByRole("heading", { name: "Add API key" })).toBeInTheDocument();
+      expect(screen.queryByText("API key added successfully")).not.toBeInTheDocument();
+    });
+
+    it("shows a rejected key under the API key field", async () => {
+      const user = userEvent.setup();
+      await openAnthropicForm(user);
+      const message = "The provider rejected this key. Check that you copied all of it.";
+      mockCreateLLMKey.mockRejectedValue(checkError("invalid_key", message));
+
+      await user.click(screen.getByText("Add key"));
+
+      expect(await screen.findByText(message)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^API key/)).toHaveAttribute("aria-invalid", "true");
+    });
+
+    it("clears the refusal when the field changes", async () => {
+      const user = userEvent.setup();
+      await openAnthropicForm(user);
+      const message = "The provider rejected this key. Check that you copied all of it.";
+      mockCreateLLMKey.mockRejectedValue(checkError("invalid_key", message));
+      await user.click(screen.getByText("Add key"));
+      await screen.findByText(message);
+
+      await user.type(screen.getByLabelText(/^API key/), "d");
+      expect(screen.queryByText(message)).not.toBeInTheDocument();
+    });
+
+    it("offers Save anyway when the provider could not be reached, and resends with skip_verification", async () => {
+      const user = userEvent.setup();
+      await openAnthropicForm(user);
+      mockCreateLLMKey.mockRejectedValueOnce(
+        checkError("unreachable", "Could not reach Anthropic to check this key."),
+      );
+
+      await user.click(screen.getByText("Add key"));
+      expect(
+        await screen.findByText("Could not reach Anthropic to check this key."),
+      ).toBeInTheDocument();
+
+      mockCreateLLMKey.mockResolvedValueOnce({ data: { data: {} } });
+      await user.click(screen.getByText("Save anyway"));
+
+      await waitFor(() => expect(mockCreateLLMKey).toHaveBeenCalledTimes(2));
+      expect(mockCreateLLMKey.mock.calls[1][0].body.skip_verification).toBe(true);
+      await waitFor(() =>
+        expect(screen.queryByRole("heading", { name: "Add API key" })).not.toBeInTheDocument(),
+      );
+    });
+
+    it("says it is checking the key while saving", async () => {
+      const user = userEvent.setup();
+      await openAnthropicForm(user);
+      mockCreateLLMKey.mockReturnValue(new Promise(() => undefined));
+
+      await user.click(screen.getByText("Add key"));
+      expect(await screen.findByText("Checking key…")).toBeInTheDocument();
+    });
+
+    it("reads the workspace ID back when editing an Anthropic key", async () => {
+      mockGetLLMKeys.mockResolvedValue({
+        data: {
+          data: [
+            buildKey({
+              custom_headers: { "anthropic-workspace-id": "wrkspc_saved", "x-other": "kept" },
+            }),
+          ],
+        },
+      });
+      const user = userEvent.setup();
+      renderWithProviders(<LLMKeys />);
+      await waitFor(() => expect(screen.getByText("Anthropic")).toBeInTheDocument());
+      const editIcon = screen
+        .getAllByRole("button")
+        .find((btn) => btn.querySelector("svg.lucide-edit, svg.lucide-square-pen"));
+      await user.click(editIcon!);
+
+      expect(screen.getByLabelText(/^Workspace ID/)).toHaveValue("wrkspc_saved");
+
+      await user.type(screen.getByLabelText(/^API key/), "sk-ant-new");
+      mockEditLLMKey.mockResolvedValue({ data: { data: {} } });
+      await user.click(screen.getByText("Save changes"));
+
+      await waitFor(() => expect(mockEditLLMKey).toHaveBeenCalled());
+      expect(mockEditLLMKey.mock.calls[0][0].body.custom_headers).toEqual({
+        "x-other": "kept",
+        "anthropic-workspace-id": "wrkspc_saved",
+      });
+    });
+
+    it("has no workspace field for other providers", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<LLMKeys />);
+      await waitFor(() => expect(screen.getByText("No LLM keys yet")).toBeInTheDocument());
+      await user.click(screen.getByText("Add API key"));
+      await user.click(screen.getByText("OpenAI"));
+      expect(screen.queryByLabelText(/^Workspace ID/)).not.toBeInTheDocument();
+    });
+
+    it("shows a soft warning in the server's words and still offers Save anyway", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<LLMKeys />);
+      await waitFor(() => expect(screen.getByText("No LLM keys yet")).toBeInTheDocument());
+      await user.click(screen.getByText("Add API key"));
+      await user.click(screen.getByText("Custom"));
+      await user.type(screen.getByLabelText(/Endpoint URL/), "https://proxy.example.com/v1");
+      await user.type(screen.getByLabelText(/Model name/), "llama-3");
+      await user.type(screen.getByLabelText(/^API key/), "sk-custom");
+      mockCreateLLMKey.mockRejectedValueOnce(
+        checkError("unreachable", "llama-3 is not in this endpoint's model list."),
+      );
+
+      await user.click(screen.getByText("Add key"));
+
+      expect(
+        await screen.findByText("llama-3 is not in this endpoint's model list."),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Save anyway")).toBeInTheDocument();
+    });
+
+    it("keeps the form open and shows the server's message for another refusal", async () => {
+      const user = userEvent.setup();
+      await openAnthropicForm(user);
+      mockCreateLLMKey.mockRejectedValue(
+        Object.assign(new Error("Endpoint URL is required for Custom provider"), {
+          status: 400,
+          response: {
+            message: "Bad Request",
+            data: "Endpoint URL is required for Custom provider",
+          },
+        }),
+      );
+      await user.click(screen.getByText("Add key"));
+
+      expect(
+        await screen.findByText("Endpoint URL is required for Custom provider"),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("heading", { name: "Add API key" })).toBeInTheDocument();
+    });
+
+    it("shows a generic message for a server or network failure", async () => {
+      const user = userEvent.setup();
+      await openAnthropicForm(user);
+      mockCreateLLMKey.mockRejectedValue(
+        Object.assign(new Error("Network Error"), { status: undefined, response: undefined }),
+      );
+      await user.click(screen.getByText("Add key"));
+      expect(await screen.findByText("Failed to add API key")).toBeInTheDocument();
+    });
+
+    it("sends no custom headers for a new OpenAI key", async () => {
+      const user = userEvent.setup();
+      renderWithProviders(<LLMKeys />);
+      await waitFor(() => expect(screen.getByText("No LLM keys yet")).toBeInTheDocument());
+      await user.click(screen.getByText("Add API key"));
+      await user.click(screen.getByText("OpenAI"));
+      await user.type(screen.getByLabelText(/^API key/), "sk-proj-1");
+      mockCreateLLMKey.mockResolvedValue({ data: { data: {} } });
+      await user.click(screen.getByText("Add key"));
+      await waitFor(() => expect(mockCreateLLMKey).toHaveBeenCalled());
+      expect(mockCreateLLMKey.mock.calls[0][0].body.custom_headers).toBeNull();
+    });
+
+    const editFirstKey = async (user: ReturnType<typeof userEvent.setup>) => {
+      const editIcon = screen
+        .getAllByRole("button")
+        .find((btn) => btn.querySelector("svg.lucide-edit, svg.lucide-square-pen"));
+      await user.click(editIcon!);
+    };
+
+    it("drops a Custom key's headers when it is switched to OpenAI, and asks for the key again", async () => {
+      mockGetLLMKeys.mockResolvedValue({
+        data: {
+          data: [
+            buildKey({
+              name: "Custom",
+              url: "https://proxy.example.com/v1",
+              model: "llama-3",
+              custom_headers: { Authorization: "Bearer old-secret" },
+            }),
+          ],
+        },
+      });
+      const user = userEvent.setup();
+      renderWithProviders(<LLMKeys />);
+      await waitFor(() => expect(screen.getByText("Custom endpoint")).toBeInTheDocument());
+      await editFirstKey(user);
+      expect(
+        screen.queryByText("You changed the provider or endpoint, so enter the API key again."),
+      ).not.toBeInTheDocument();
+
+      await user.click(screen.getByText("OpenAI"));
+      expect(
+        screen.getByText("You changed the provider or endpoint, so enter the API key again."),
+      ).toBeInTheDocument();
+
+      await user.type(screen.getByLabelText(/^API key/), "sk-proj-new");
+      mockEditLLMKey.mockResolvedValue({ data: { data: {} } });
+      await user.click(screen.getByText("Save changes"));
+      await waitFor(() => expect(mockEditLLMKey).toHaveBeenCalled());
+      expect(mockEditLLMKey.mock.calls[0][0].body.custom_headers).toBeNull();
+    });
+
+    it("keeps an OpenAI key's own headers on edit", async () => {
+      mockGetLLMKeys.mockResolvedValue({
+        data: {
+          data: [
+            buildKey({
+              name: "OpenAI",
+              model: "gpt-4o",
+              custom_headers: { "OpenAI-Organization": "org-1" },
+            }),
+          ],
+        },
+      });
+      const user = userEvent.setup();
+      renderWithProviders(<LLMKeys />);
+      await waitFor(() => expect(screen.getByText("OpenAI")).toBeInTheDocument());
+      await editFirstKey(user);
+      await user.type(screen.getByLabelText(/^API key/), "sk-proj-new");
+      mockEditLLMKey.mockResolvedValue({ data: { data: {} } });
+      await user.click(screen.getByText("Save changes"));
+      await waitFor(() => expect(mockEditLLMKey).toHaveBeenCalled());
+      expect(mockEditLLMKey.mock.calls[0][0].body.custom_headers).toEqual({
+        "OpenAI-Organization": "org-1",
+      });
+    });
+
+    it("asks for the key again when a Custom endpoint URL changes", async () => {
+      mockGetLLMKeys.mockResolvedValue({
+        data: {
+          data: [buildKey({ name: "Custom", url: "https://proxy.example.com/v1", model: "m" })],
+        },
+      });
+      const user = userEvent.setup();
+      renderWithProviders(<LLMKeys />);
+      await waitFor(() => expect(screen.getByText("Custom endpoint")).toBeInTheDocument());
+      await editFirstKey(user);
+      await user.type(screen.getByLabelText(/Endpoint URL/), "/x");
+      expect(
+        screen.getByText("You changed the provider or endpoint, so enter the API key again."),
+      ).toBeInTheDocument();
+    });
+  });
 });

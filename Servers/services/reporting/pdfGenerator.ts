@@ -4,7 +4,7 @@
  * Following VerifyWise clean architecture patterns
  */
 
-import { NOTICE_TEXT } from "./noticeText";
+import { archivedIncidentsNote, NOTICE_TEXT } from "./noticeText";
 import { chromium, Browser, Page } from "playwright";
 import * as ejs from "ejs";
 import * as path from "path";
@@ -118,6 +118,7 @@ export function renderReportHtml(reportData: ReportData): string {
     // One analyzer-label map, shared with docxGenerator.
     analysisLabels: ANALYSIS_LABELS,
     noticeText: NOTICE_TEXT,
+    archivedIncidentsNote,
     frameworkRequirementCharts: buildFrameworkRequirementCharts(reportData),
     // Include helper for CSS inclusion
     include: (filePath: string) => {

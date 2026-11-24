@@ -8,7 +8,7 @@
  */
 
 import { sequelize } from "../../database/db";
-import { QueryTypes } from "sequelize";
+import { QueryTypes, Transaction } from "sequelize";
 import logger from "../../utils/logger/fileLogger";
 import { getWorkflow } from "./registry";
 import {
@@ -30,6 +30,7 @@ async function logWorkflowAudit(
   toState: string,
   ruleName: string,
   metadata: Record<string, unknown>,
+  transaction?: Transaction,
 ): Promise<void> {
   try {
     await sequelize.query(
@@ -48,9 +49,13 @@ async function logWorkflowAudit(
           metadata: JSON.stringify(metadata),
         },
         type: QueryTypes.INSERT,
+        transaction,
       },
     );
   } catch (error) {
+    // Inside a caller's transaction a failed insert aborts it; let the
+    // caller see that rather than carry on in an aborted transaction.
+    if (transaction) throw error;
     logger.error(`[workflow] audit insert failed for ${workflowRunId}:`, error);
   }
 }
@@ -98,9 +103,16 @@ async function persistRun(
 }
 
 /**
- * Create a new workflow run row in the DB and return the row id.
+ * Create a new workflow run row in the DB and return the row id. With
+ * `transaction`, the row and its audit entry are written on it (the caller
+ * commits), so a caller holding a lock in that transaction needs no second
+ * pooled connection.
  */
-async function createRun(workflow: WorkflowDefinition, params: WorkflowRunParams): Promise<number> {
+async function createRun(
+  workflow: WorkflowDefinition,
+  params: WorkflowRunParams,
+  transaction?: Transaction,
+): Promise<number> {
   const rows = (await sequelize.query(
     `INSERT INTO ai_workflow_runs
        (organization_id, workflow_type, trigger_name, trigger_payload, state, current_step, results, started_by)
@@ -116,14 +128,22 @@ async function createRun(workflow: WorkflowDefinition, params: WorkflowRunParams
         userId: params.userId ?? null,
       },
       type: QueryTypes.SELECT,
+      transaction,
     },
   )) as Array<{ id: number }>;
   const id = rows[0].id;
-  await logWorkflowAudit(params.organizationId, id, "pending", `workflow.${workflow.id}.created`, {
-    workflow: workflow.id,
-    triggerName: workflow.triggerName,
-    triggerPayload: params.triggerPayload || {},
-  });
+  await logWorkflowAudit(
+    params.organizationId,
+    id,
+    "pending",
+    `workflow.${workflow.id}.created`,
+    {
+      workflow: workflow.id,
+      triggerName: workflow.triggerName,
+      triggerPayload: params.triggerPayload || {},
+    },
+    transaction,
+  );
   return id;
 }
 
@@ -262,6 +282,26 @@ async function executeStepLoop(
         },
       );
       i = target;
+    } else if (outcome.type === "end") {
+      // Nothing left to do: record why, run no further step, complete.
+      record.status = "skipped";
+      record.output = { reason: outcome.reason, ended: true };
+      await logWorkflowAudit(
+        organizationId,
+        workflowRunId,
+        "step_ended",
+        `workflow.${workflow.id}.step.${step.id}`,
+        { reason: outcome.reason ?? null },
+      );
+      await persistRun(workflowRunId, organizationId, "completed", i, records);
+      await logWorkflowAudit(
+        organizationId,
+        workflowRunId,
+        "completed",
+        `workflow.${workflow.id}.completed`,
+        { endedAt: step.id, reason: outcome.reason ?? null },
+      );
+      return buildRun(workflow, workflowRunId, params, "completed", i, records);
     } else if (outcome.type === "pause") {
       record.status = "completed"; // the step did its job by pausing
       record.output = { paused: true, reason: outcome.reason, approvalId: outcome.approvalId };

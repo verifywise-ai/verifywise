@@ -16,22 +16,36 @@ import {
   INCIDENT_DATE_COLUMNS,
   INCIDENT_FK_COLUMNS,
   isSameIncidentValue,
+  toIncidentDateValue,
 } from "./validations/incidentManagementValidation.utils";
 
 /**
  * Base SELECT for incident queries. LEFT JOINs resolve the issue #4583
- * foreign keys (model_inventory_id / project_id / assignee_id) into
- * display names for API consumers. CONCAT_WS skips NULL parts.
+ * foreign keys (model_inventory_id / project_id / assignee_id) and the
+ * reporter / approver users into display names for API consumers.
+ * CONCAT_WS skips NULL parts. reporter_name / approved_by_name are the
+ * user's name only while they are a member of the incident's organization
+ * (as Wise Search matches them); they are null when the id is null (older
+ * rows, Jira imports, a deleted user) or the user has left: readers fall back
+ * to the reporter / approved_by text.
  */
 const INCIDENT_SELECT = `
   SELECT i.*,
     CONCAT_WS(' ', mi.provider, mi.model) AS model_inventory_name,
     p.project_title AS project_title,
-    CONCAT_WS(' ', u.name, u.surname) AS assignee_name
+    CONCAT_WS(' ', u.name, u.surname) AS assignee_name,
+    NULLIF(TRIM(CONCAT_WS(' ', ru.name, ru.surname)), '') AS reporter_name,
+    NULLIF(TRIM(CONCAT_WS(' ', au.name, au.surname)), '') AS approved_by_name
   FROM ai_incident_managements i
   LEFT JOIN model_inventories mi ON mi.id = i.model_inventory_id
   LEFT JOIN projects p ON p.id = i.project_id
-  LEFT JOIN users u ON u.id = i.assignee_id`;
+  LEFT JOIN users u ON u.id = i.assignee_id
+  LEFT JOIN users ru ON ru.id = i.reporter_id
+    AND EXISTS (SELECT 1 FROM organization_members rom
+                 WHERE rom.user_id = ru.id AND rom.organization_id = i.organization_id)
+  LEFT JOIN users au ON au.id = i.approved_by_id
+    AND EXISTS (SELECT 1 FROM organization_members aom
+                 WHERE aom.user_id = au.id AND aom.organization_id = i.organization_id)`;
 
 /** Optional server-side filters for the incident list (issue #4583). */
 export interface IncidentListFilters {
@@ -112,14 +126,14 @@ export const createNewIncidentQuery = async (
     const result = await sequelize.query(
       `INSERT INTO ai_incident_managements (
         organization_id, ai_project, model_inventory_id, project_id, assignee_id, type,
-        severity, status, occurred_date, date_detected, reporter, approval_status,
-        approved_by, categories_of_harm, affected_persons_groups, description, relationship_causality,
+        severity, status, occurred_date, date_detected, reporter, reporter_id, approval_status,
+        approved_by, approved_by_id, categories_of_harm, affected_persons_groups, description, relationship_causality,
         immediate_mitigations, planned_corrective_actions, model_system_version, interim_report, approval_date, approval_notes,
         created_at, updated_at, archived, is_demo
       ) VALUES (
         :organization_id, :ai_project, :model_inventory_id, :project_id, :assignee_id, :type,
-        :severity, :status, :occurred_date, :date_detected, :reporter, :approval_status,
-        :approved_by, :categories_of_harm, :affected_persons_groups, :description, :relationship_causality,
+        :severity, :status, :occurred_date, :date_detected, :reporter, :reporter_id, :approval_status,
+        :approved_by, :approved_by_id, :categories_of_harm, :affected_persons_groups, :description, :relationship_causality,
         :immediate_mitigations, :planned_corrective_actions, :model_system_version, :interim_report, :approval_date, :approval_notes,
         :created_at, :updated_at, :archived, :is_demo
       ) RETURNING *`,
@@ -133,11 +147,14 @@ export const createNewIncidentQuery = async (
           type: incident.type,
           severity: incident.severity,
           status: incident.status,
-          occurred_date: incident.occurred_date ? incident.occurred_date : null,
-          date_detected: incident.date_detected ? incident.date_detected : null,
+          // DATE columns: always "YYYY-MM-DD" (a Date is its UTC day).
+          occurred_date: toIncidentDateValue(incident.occurred_date),
+          date_detected: toIncidentDateValue(incident.date_detected),
           reporter: incident.reporter ?? null,
+          reporter_id: toIncidentReferenceValue(incident.reporter_id),
           approval_status: incident.approval_status ?? null,
           approved_by: incident.approved_by ?? null,
+          approved_by_id: toIncidentReferenceValue(incident.approved_by_id),
           categories_of_harm: JSON.stringify(incident.categories_of_harm || []),
           affected_persons_groups: incident.affected_persons_groups ?? null,
           description: incident.description ?? null,
@@ -146,7 +163,7 @@ export const createNewIncidentQuery = async (
           planned_corrective_actions: incident.planned_corrective_actions ?? null,
           model_system_version: incident.model_system_version ?? null,
           interim_report: incident.interim_report ?? false,
-          approval_date: incident.approval_date ? incident.approval_date : null,
+          approval_date: toIncidentDateValue(incident.approval_date),
           approval_notes: incident.approval_notes ?? null,
           created_at,
           updated_at: created_at,
@@ -224,8 +241,10 @@ export const UPDATABLE_INCIDENT_COLUMNS = [
   "occurred_date",
   "date_detected",
   "reporter",
+  "reporter_id",
   "approval_status",
   "approved_by",
+  "approved_by_id",
   "categories_of_harm",
   "affected_persons_groups",
   "description",
@@ -256,7 +275,7 @@ export const toIncidentReferenceValue = (value: unknown): unknown =>
 const toColumnValue = (column: IncidentColumn, value: unknown): unknown => {
   if (column === "archived") return Boolean(value);
   if (INCIDENT_FK_COLUMNS.has(column)) return toIncidentReferenceValue(value);
-  if (INCIDENT_DATE_COLUMNS.has(column) && value === "") return null;
+  if (INCIDENT_DATE_COLUMNS.has(column)) return toIncidentDateValue(value);
   return value ?? null;
 };
 
@@ -301,6 +320,28 @@ export const incidentWriteNeeds = (
 };
 
 /**
+ * The full name ("name surname") of a member of the organization, `User #<id>`
+ * (as change history does) when they have no name, or null when the user is
+ * not a member of the organization. Used to check a reporter_id and to write
+ * the reporter / approver text columns from a user id.
+ */
+export const getIncidentMemberName = async (
+  userId: number,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<string | null> => {
+  const rows = (await sequelize.query(
+    `SELECT NULLIF(TRIM(CONCAT_WS(' ', u.name, u.surname)), '') AS full_name
+       FROM users u
+       JOIN organization_members om ON om.user_id = u.id AND om.organization_id = :organizationId
+      WHERE u.id = :userId`,
+    { replacements: { userId, organizationId }, type: QueryTypes.SELECT, transaction },
+  )) as Array<{ full_name: string | null }>;
+  if (rows.length === 0) return null;
+  return rows[0].full_name ?? `User #${userId}`;
+};
+
+/**
  * The name recorded as an incident's approver: the acting user's
  * "name surname", as the incident list shows owners. Falls back to
  * `User #<id>` (as change history does) when the user has no name.
@@ -309,16 +350,8 @@ export const getIncidentApproverName = async (
   userId: number,
   organizationId: number,
   transaction?: Transaction,
-): Promise<string> => {
-  const rows = (await sequelize.query(
-    `SELECT NULLIF(TRIM(CONCAT_WS(' ', u.name, u.surname)), '') AS full_name
-       FROM users u
-       JOIN organization_members om ON om.user_id = u.id AND om.organization_id = :organizationId
-      WHERE u.id = :userId`,
-    { replacements: { userId, organizationId }, type: QueryTypes.SELECT, transaction },
-  )) as Array<{ full_name: string | null }>;
-  return rows[0]?.full_name ?? `User #${userId}`;
-};
+): Promise<string> =>
+  (await getIncidentMemberName(userId, organizationId, transaction)) ?? `User #${userId}`;
 
 /**
  * Writes `changed` (from diffIncidentColumns) plus updated_at and returns
@@ -412,14 +445,23 @@ export const enqueueIncidentUpdatedAutomations = async (
   });
 };
 
+/**
+ * Deletes an incident and returns the deleted row, or null when there is no
+ * such incident in the organization (nothing is deleted and nothing is sent).
+ * The organization's `incident_deleted` automation is enqueued only after the
+ * transaction commits, so a rolled-back delete never sends it. Change history
+ * is the caller's (services/incidentManagement.service.ts deleteIncident).
+ */
 export const deleteIncidentByIdQuery = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
-) => {
+): Promise<Record<string, unknown> | null> => {
   try {
     // A Jira-imported incident keeps its link row, marked so the issue is
-    // never imported again (the FK then nulls incident_id).
+    // never imported again (the FK then nulls incident_id). The link is
+    // written before the incident (lock order link -> incident, as the
+    // Jira status sync takes them).
     await sequelize.query(
       `UPDATE jira_incident_links
           SET state = 'deleted_in_verifywise', state_reason = NULL, updated_at = now()
@@ -432,8 +474,12 @@ export const deleteIncidentByIdQuery = async (
         replacements: { organizationId, id },
         transaction,
       },
-    )) as [AIIncidentManagementModel[], number];
+    )) as [Record<string, unknown>[], number];
     const deletedIncident = result[0][0];
+    // Missing, or in another organization: no automation, so no blank
+    // "incident deleted" email.
+    if (!deletedIncident) return null;
+
     const automations = (await sequelize.query(
       `SELECT
               pat.key AS trigger_key,
@@ -454,24 +500,19 @@ export const deleteIncidentByIdQuery = async (
       const automation = automations[0][0];
       if (automation["trigger_key"] === "incident_deleted") {
         const params = automation.params!;
-
-        // Build replacements
-        const replacements = buildIncidentReplacements({
-          ...deletedIncident,
-        });
-
-        // Replace variables in subject and body
+        const replacements = buildIncidentReplacements({ ...deletedIncident });
         const processedParams = {
           ...params,
           subject: replaceTemplateVariables(params.subject || "", replacements),
           body: replaceTemplateVariables(params.body || "", replacements),
           automation_id: automation.automation_id,
         };
-
-        // Enqueue with processed params
-        await enqueueAutomationAction(automation.action_key, {
-          ...processedParams,
-          organizationId,
+        // After commit: a delete that rolls back must not send "incident deleted".
+        transaction.afterCommit(() => {
+          enqueueAutomationAction(automation.action_key, {
+            ...processedParams,
+            organizationId,
+          }).catch((error) => logger.error(`[incident] incident_deleted enqueue failed: ${error}`));
         });
       } else {
         console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
@@ -480,46 +521,6 @@ export const deleteIncidentByIdQuery = async (
     return deletedIncident;
   } catch (error) {
     console.error("Error deleting incident:", error);
-    throw error;
-  }
-};
-
-/**
- * Archive an incident by ID
- */
-
-export const archiveIncidentByIdQuery = async (
-  id: number,
-  organizationId: number,
-  transaction: Transaction,
-) => {
-  const updated_at = new Date();
-  try {
-    await sequelize.query(
-      `UPDATE ai_incident_managements
-         SET archived = true,
-             updated_at = :updated_at
-         WHERE organization_id = :organizationId AND id = :id`,
-      {
-        replacements: { organizationId, id, updated_at },
-        transaction,
-      },
-    );
-
-    const result = await sequelize.query(
-      `${INCIDENT_SELECT}
-       WHERE i.organization_id = :organizationId AND i.id = :id`,
-      {
-        replacements: { organizationId, id },
-        mapToModel: true,
-        model: AIIncidentManagementModel,
-        transaction,
-      },
-    );
-
-    return result[0];
-  } catch (error) {
-    console.error("Error archiving incident:", error);
     throw error;
   }
 };

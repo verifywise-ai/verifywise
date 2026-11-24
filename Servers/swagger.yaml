@@ -31,6 +31,31 @@ components:
         type: integer
         example: 42
   schemas:
+    LLMKeyVerificationError:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Bad Request'
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+              description: 'Translated, ready to show'
+            code:
+              type: string
+              enum:
+                - workspace_required
+                - invalid_key
+                - model_unavailable
+                - unreachable
+            reason:
+              type: string
+              enum:
+                - bad_characters
+                - cannot_list_models
+                - model_not_listed
     Error:
       type: object
       properties:
@@ -3670,12 +3695,23 @@ components:
           $ref: '#/components/schemas/IncidentStatus'
         occurred_date:
           type: string
-          format: date-time
+          format: date
+          description: 'Calendar day, YYYY-MM-DD.'
         date_detected:
           type: string
-          format: date-time
+          format: date
+          description: 'Calendar day, YYYY-MM-DD.'
         reporter:
           type: string
+          description: 'Reporter name: the reporter_id user''s full name when one is set, else free text (Jira imports, incidents created before reporter_id).'
+        reporter_id:
+          type: integer
+          nullable: true
+          description: 'The reporter (a user of the organization), or null.'
+        reporter_name:
+          type: string
+          nullable: true
+          description: 'The reporter_id user''s current full name, or null. Fall back to reporter.'
         categories_of_harm:
           type: array
           items:
@@ -3706,10 +3742,20 @@ components:
         approved_by:
           type: string
           nullable: true
+          description: 'Name of the user who recorded the approval decision (set by the server).'
+        approved_by_id:
+          type: integer
+          nullable: true
+          description: 'The user who recorded the approval decision (set by the server), or null.'
+        approved_by_name:
+          type: string
+          nullable: true
+          description: 'The approved_by_id user''s current full name, or null. Fall back to approved_by.'
         approval_date:
           type: string
-          format: date-time
+          format: date
           nullable: true
+          description: 'Day the approval decision was recorded (UTC), YYYY-MM-DD. Set by the server.'
         approval_notes:
           type: string
           nullable: true
@@ -3728,7 +3774,6 @@ components:
         - status
         - occurred_date
         - date_detected
-        - reporter
         - approval_status
         - categories_of_harm
         - description
@@ -3744,16 +3789,24 @@ components:
           $ref: '#/components/schemas/IncidentStatus'
         occurred_date:
           type: string
-          format: date-time
+          format: date
+          description: 'YYYY-MM-DD (an ISO date-time is accepted; its date part is used).'
         date_detected:
           type: string
-          format: date-time
+          format: date
+          description: 'YYYY-MM-DD (an ISO date-time is accepted; its date part is used).'
         reporter:
           type: string
+          description: 'Reporter name. Required on create unless reporter_id is sent; ignored when reporter_id is sent (the server writes that user''s full name).'
+        reporter_id:
+          type: integer
+          nullable: true
+          description: 'The reporter, a user of your organization (400 INVALID_REFERENCE otherwise).'
         approval_status:
           $ref: '#/components/schemas/IncidentApprovalStatus'
         approved_by:
           type: string
+          description: 'Ignored: set by the server.'
         categories_of_harm:
           oneOf:
             -
@@ -3786,7 +3839,8 @@ components:
           default: false
         approval_date:
           type: string
-          format: date-time
+          format: date
+          description: 'Ignored: set by the server.'
         approval_notes:
           type: string
     UpdateIncidentRequest:
@@ -3803,16 +3857,24 @@ components:
           $ref: '#/components/schemas/IncidentStatus'
         occurred_date:
           type: string
-          format: date-time
+          format: date
+          description: 'YYYY-MM-DD (an ISO date-time is accepted; its date part is used).'
         date_detected:
           type: string
-          format: date-time
+          format: date
+          description: 'YYYY-MM-DD (an ISO date-time is accepted; its date part is used).'
         reporter:
           type: string
+          description: 'Reporter name. Required on create unless reporter_id is sent; ignored when reporter_id is sent (the server writes that user''s full name).'
+        reporter_id:
+          type: integer
+          nullable: true
+          description: 'The reporter, a user of your organization (400 INVALID_REFERENCE otherwise).'
         approval_status:
           $ref: '#/components/schemas/IncidentApprovalStatus'
         approved_by:
           type: string
+          description: 'Ignored: set by the server.'
         categories_of_harm:
           oneOf:
             -
@@ -3842,7 +3904,8 @@ components:
           type: boolean
         approval_date:
           type: string
-          format: date-time
+          format: date
+          description: 'Ignored: set by the server.'
         approval_notes:
           type: string
     Framework:
@@ -8019,6 +8082,8 @@ tags:
     name: 'v1: V1/Intake Form Review Time'
   -
     name: 'v1: V1/Lifecycle Settings'
+  -
+    name: 'v1: V1/Llm Keys'
   -
     name: 'v1: V1/Model Inventories'
   -
@@ -16664,6 +16729,7 @@ paths:
   /reporting/scheduled-reports:
     get:
       summary: 'List Scheduled Reports'
+      description: 'Scheduled reports of the caller''s organization. Admins see all; other roles see organization-wide schedules and those of projects they own, are a member of or reach through a group.'
       responses:
         '200':
           description: Success
@@ -20415,7 +20481,7 @@ paths:
       tags:
         - Incidents
       summary: 'Create New Incident'
-      description: 'Needs incident.create. Required: ai_project, type, severity, occurred_date, date_detected, reporter and description (5 to 32,767 characters). status defaults to Open and approval_status to Pending when omitted. type, severity, status and approval_status must be one of their listed values; ai_project, reporter and model_system_version are at most 255 characters; dates are YYYY-MM-DD (or an ISO date-time), not later than today in UTC+14 (the furthest-ahead time zone, so today anywhere is accepted), and date_detected is on or after occurred_date. categories_of_harm is optional: a list (or a comma-separated string) of Health, Safety, Rights, Property, Environment. approved_by and approval_date are set by the server and ignored in the request. A caller without incident.approve always gets approval_status Pending with no approval_notes. A caller with incident.approve may send Approved or Rejected; the server then records the caller''s name as approved_by and now as approval_date.'
+      description: 'Needs incident.create. Required: ai_project, type, severity, occurred_date, date_detected, reporter (or reporter_id) and description (5 to 32,767 characters). status defaults to Open and approval_status to Pending when omitted. type, severity, status and approval_status must be one of their listed values; ai_project, reporter and model_system_version are at most 255 characters; dates are YYYY-MM-DD (or an ISO date-time), not later than today in UTC+14 (the furthest-ahead time zone, so today anywhere is accepted), and date_detected is on or after occurred_date. categories_of_harm is optional: a list (or a comma-separated string) of Health, Safety, Rights, Property, Environment. The reporter is required: a reporter_id (a user of your organization; the server writes their full name into reporter) or a non-empty reporter text. Dates are stored and returned as YYYY-MM-DD. approved_by, approved_by_id and approval_date are set by the server and ignored in the request. A caller without incident.approve always gets approval_status Pending with no approval_notes. A caller with incident.approve may send Approved or Rejected; the server then records the caller''s name as approved_by, their id as approved_by_id and today (UTC) as approval_date.'
       operationId: createNewIncident
       security:
         -
@@ -20431,7 +20497,6 @@ paths:
                 - severity
                 - occurred_date
                 - date_detected
-                - reporter
                 - description
               properties:
                 ai_project:
@@ -20460,6 +20525,10 @@ paths:
                 reporter:
                   type: string
                   maxLength: 255
+                  description: 'Required unless reporter_id is sent.'
+                reporter_id:
+                  type: integer
+                  description: 'A user of your organization; the server writes their full name into reporter.'
                 model_system_version:
                   type: string
                   maxLength: 255
@@ -20512,7 +20581,7 @@ paths:
       tags:
         - Incidents
       summary: 'Update Incident By Id'
-      description: 'Needs incident.edit or incident.approve, then per field: changing approval_status or approval_notes needs incident.approve, changing any other field (archived included) needs incident.edit. A field sent with its stored value is not a change. approved_by and approval_date are set by the server and ignored in the request: when approval_status changes to Approved or Rejected, approved_by is the caller''s name and approval_date is now; when it changes to Pending or Not required, both are cleared. Changed fields follow the create rules (enums, lengths, dates; harm categories an update adds must be listed values, stored ones outside the list may stay); a required field cannot be set to null or an empty string, and the dates the incident ends up with must keep date_detected on or after occurred_date. Fields left out are not changed.'
+      description: 'Needs incident.edit or incident.approve, then per field: changing approval_status or approval_notes needs incident.approve, changing any other field (archived included) needs incident.edit. A field sent with its stored value is not a change. An archived incident takes only { "archived": false } (restore); any other change answers 409 ("Restore this incident before editing it.") and nothing is written. approved_by, approved_by_id and approval_date are set by the server and ignored in the request: when approval_status changes to Approved or Rejected, approved_by is the caller''s name, approved_by_id their id and approval_date today (UTC, YYYY-MM-DD); when it changes to Pending or Not required, all three are cleared. A changed reporter_id must be a user of your organization (400 INVALID_REFERENCE otherwise) and sets reporter to their full name; a changed reporter text without reporter_id clears reporter_id. Changed fields follow the create rules (enums, lengths, dates; harm categories an update adds must be listed values, stored ones outside the list may stay); a required field cannot be set to null or an empty string, and the dates the incident ends up with must keep date_detected on or after occurred_date. Fields left out are not changed.'
       operationId: updateIncidentById
       security:
         -
@@ -20541,13 +20610,14 @@ paths:
         '404':
           description: 'Incident not found'
         '409':
-          description: 'The incident changed since expected_updated_at'
+          description: 'The incident changed since expected_updated_at, or the incident is archived and the request changes more than archived (code INCIDENT_ARCHIVED)'
         '500':
           description: 'Internal server error'
     delete:
       tags:
         - Incidents
       summary: 'Delete Incident By Id'
+      description: 'Permanently deletes the incident. A deletion entry is recorded in its change history, and the incident_deleted automation is sent after the delete commits.'
       operationId: deleteIncidentById
       security:
         -
@@ -20562,10 +20632,14 @@ paths:
       responses:
         '200':
           description: 'Deleted successfully'
+        '400':
+          description: 'The id is not a positive integer'
         '401':
           description: Unauthorized
         '403':
           description: 'The role does not hold incident.delete'
+        '404':
+          description: 'Incident not found in the organization. Nothing is deleted and no automation is sent.'
         '500':
           description: 'Internal server error'
   '/ai-incident-managements/{id}/archive':
@@ -20573,6 +20647,7 @@ paths:
       tags:
         - Incidents
       summary: 'Archive Incident By Id'
+      description: 'Archives the incident through the incident update path: the row is locked, the change is recorded in change history ("Archived") and the incident_updated automation is sent after commit. Archiving an archived incident changes nothing. The request body is ignored. To restore, send { "archived": false } to PATCH /ai-incident-managements/{id}.'
       operationId: archiveIncidentById
       security:
         -
@@ -20591,11 +20666,15 @@ paths:
               type: object
       responses:
         '200':
-          description: Success
+          description: 'The incident after the change'
+        '400':
+          description: 'The id is not a positive integer'
         '401':
           description: Unauthorized
         '403':
           description: 'The role does not hold incident.edit'
+        '404':
+          description: 'Incident not found in the organization'
         '500':
           description: 'Internal server error'
   '/ce-marking/{projectId}':
@@ -20641,11 +20720,20 @@ paths:
           application/json:
             schema:
               type: object
+              properties:
+                linkedIncidents:
+                  type: array
+                  description: 'Replaces the linked incidents. Each entry is a positive integer id (a number or a string of digits) of an incident in the caller''s organization; duplicates are ignored. totalIncidents is then set to the number of linked incidents.'
+                  items: {type: integer}
       responses:
         '200':
           description: Success
+        '400':
+          description: 'linkedIncidents is not a list of positive integer ids ("Linked incidents must be a list of incident ids."), or names an incident that does not exist in the organization ("Some linked incidents do not exist in your organization."). Nothing is written.'
         '401':
           description: Unauthorized
+        '404':
+          description: 'Use case or CE marking record not found'
         '500':
           description: 'Internal server error'
   /search:
@@ -29577,14 +29665,14 @@ paths:
   '/v1/scheduled-reports/{id}':
     get:
       summary: 'Get Scheduled Report'
-      description: 'One scheduled report of the caller''s organization, with its template version''s parameters_config.'
+      description: 'One scheduled report of the caller''s organization, with its template version''s parameters_config. Admins read any schedule; other roles read organization-wide schedules and those of projects they own, are a member of or reach through a group, and get 404 for the rest.'
       responses:
         '200':
           description: Success
         '401':
           description: Unauthorized
         '404':
-          description: 'Scheduled report not found in this organization'
+          description: 'Scheduled report not found in this organization, or not readable by the caller'
         '500':
           description: 'Internal server error'
       tags:
@@ -30119,6 +30207,130 @@ paths:
       tags:
         - 'v1: Vendor Risk Findings'
       operationId: dismissVendorRiskFinding
+      security:
+        -
+          bearerAuth: []
+  /v1/llm-keys:
+    post:
+      summary: 'Create an LLM key, checked with its provider first'
+      description: 'Checks the key with its provider before saving: one free request (Anthropic GET /v1/models/{model}, OpenAI GET /v1/models, OpenRouter GET /api/v1/key, Custom GET {url}/models) sent with the key and its custom headers, 8 second timeout. A refusal is a 400 with data.code workspace_required, invalid_key or model_unavailable. When the provider cannot be reached (network error, timeout, 5xx, 429, or a Custom URL the outbound policy refuses) the answer is a 409 with data.code unreachable, unless the body sets skip_verification: true, which saves the key unchecked. A rejected key is never saved, even with skip_verification. data.reason, when present, names a more specific cause: bad_characters (400, the key has characters no key can have), cannot_list_models (409, a 401/403 saying the key lacks the permission to list models) or model_not_listed (409, a Custom endpoint whose /models list lacks the model; ids equal to model:latest or ending in /model count as listed). With no model the check uses the default model the Advisor uses. Anthropic keys not tied to a workspace need the anthropic-workspace-id custom header.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - key
+                - model
+              properties:
+                name:
+                  type: string
+                  enum: [Anthropic, OpenAI, OpenRouter, Custom]
+                key:
+                  type: string
+                model:
+                  type: string
+                url:
+                  type: string
+                  description: 'Required for Custom; ignored for the other providers.'
+                custom_headers:
+                  type: object
+                  nullable: true
+                  additionalProperties: {type: string}
+                  description: 'Sent with every request, for every provider (e.g. anthropic-workspace-id).'
+                skip_verification:
+                  type: boolean
+                  description: 'Save even when the provider could not be reached. Has no effect on a rejected key.'
+      responses:
+        '201':
+          description: 'Created; the key is not returned'
+        '400':
+          description: 'Invalid body, or the provider rejected the key: data is { message, code } with code workspace_required, invalid_key or model_unavailable'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLMKeyVerificationError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: 'Forbidden - requires the llmKeys.admin permission (Admin by default)'
+        '409':
+          description: 'The provider could not be reached to check the key: data is { message, code: unreachable }. Resend with skip_verification: true to save anyway.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLMKeyVerificationError'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Llm Keys'
+      operationId: createLLMKeyV1
+      security:
+        -
+          bearerAuth: []
+  '/v1/llm-keys/{id}':
+    patch:
+      summary: 'Update an LLM key, checked with its provider first'
+      description: 'Checks the key with its provider before saving when the body changes the provider, key, URL, model or headers (unsent fields keep their stored values). A change of provider or endpoint must send the key again (otherwise 400, before any provider call), and drops the stored custom headers unless the body sends custom_headers. A url without a name applies only to a Custom key: one free request (Anthropic GET /v1/models/{model}, OpenAI GET /v1/models, OpenRouter GET /api/v1/key, Custom GET {url}/models) sent with the key and its custom headers, 8 second timeout. A refusal is a 400 with data.code workspace_required, invalid_key or model_unavailable. When the provider cannot be reached (network error, timeout, 5xx, 429, or a Custom URL the outbound policy refuses) the answer is a 409 with data.code unreachable, unless the body sets skip_verification: true, which saves the key unchecked. A rejected key is never saved, even with skip_verification. data.reason, when present, names a more specific cause: bad_characters (400, the key has characters no key can have), cannot_list_models (409, a 401/403 saying the key lacks the permission to list models) or model_not_listed (409, a Custom endpoint whose /models list lacks the model; ids equal to model:latest or ending in /model count as listed). With no model the check uses the default model the Advisor uses. Anthropic keys not tied to a workspace need the anthropic-workspace-id custom header.'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  enum: [Anthropic, OpenAI, OpenRouter, Custom]
+                key:
+                  type: string
+                model:
+                  type: string
+                url:
+                  type: string
+                  description: 'Required for Custom; ignored for the other providers.'
+                custom_headers:
+                  type: object
+                  nullable: true
+                  additionalProperties: {type: string}
+                  description: 'Sent with every request, for every provider (e.g. anthropic-workspace-id).'
+                skip_verification:
+                  type: boolean
+                  description: 'Save even when the provider could not be reached. Has no effect on a rejected key.'
+      responses:
+        '200':
+          description: 'Updated; the key is not returned'
+        '400':
+          description: 'Invalid body, or the provider rejected the key: data is { message, code } with code workspace_required, invalid_key or model_unavailable'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLMKeyVerificationError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: 'Forbidden - requires the llmKeys.admin permission (Admin by default)'
+        '404':
+          description: 'No LLM key with this id in the organization'
+        '409':
+          description: 'The provider could not be reached to check the key: data is { message, code: unreachable }. Resend with skip_verification: true to save anyway.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLMKeyVerificationError'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Llm Keys'
+      operationId: updateLLMKeyV1
       security:
         -
           bearerAuth: []

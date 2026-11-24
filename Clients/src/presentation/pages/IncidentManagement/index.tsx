@@ -32,12 +32,19 @@ import { StatusTileCards } from "../../components/Cards/StatusTileCards";
 import PageTour from "../../components/PageTour";
 import IncidentManagementSteps from "./IncidentManagementSteps";
 import { AIIncidentManagementModel } from "../../../domain/models/Common/incidentManagement/incidentManagement.model";
+import { dateOnlyToLocalDay, toDateOnlyString, toLocalDateOnly } from "../../tools/isoDateToString";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import { FilterColumn } from "../../components/Table/FilterBy";
 import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
+import Select from "../../components/Inputs/Select";
+import {
+  INCIDENT_ARCHIVE_VIEW_OPTIONS,
+  incidentsForArchiveView,
+  type IncidentArchiveView,
+} from "./archiveView";
 
 import Alert from "../../components/Alert";
 import { useJiraIncidentLinks } from "../../../application/hooks/useJiraIncidentLinks";
@@ -103,6 +110,7 @@ const INCIDENT_SAVE_ERROR_FIELDS: UserFacingFieldErrors = {
     project_id: "The selected use case is no longer available.",
     model_inventory_id: "The selected affected model is no longer available.",
     assignee_id: "The selected owner is no longer available.",
+    reporter_id: "The selected reporter is no longer available.",
   },
 };
 
@@ -120,13 +128,12 @@ const toDrawerValues = (incident: AIIncidentManagementModel): NewIncidentFormVal
   type: incident.type || "",
   severity: incident.severity || "",
   status: incident.status || "",
-  occurred_date: incident.occurred_date
-    ? new Date(incident.occurred_date).toISOString().split("T")[0]
-    : new Date().toISOString().split("T")[0],
-  date_detected: incident.date_detected
-    ? new Date(incident.date_detected).toISOString().split("T")[0]
-    : new Date().toISOString().split("T")[0],
+  // Calendar days as sent ("YYYY-MM-DD"); the user's own today when missing.
+  occurred_date: toDateOnlyString(incident.occurred_date) || toLocalDateOnly(new Date()),
+  date_detected: toDateOnlyString(incident.date_detected) || toLocalDateOnly(new Date()),
   reporter: incident.reporter,
+  reporter_id: incident.reporter_id ?? "",
+  reporter_name: incident.reporter_name ?? null,
   categories_of_harm: incident.categories_of_harm || [],
   description: incident.description,
   affected_persons_groups: incident.affected_persons_groups || "",
@@ -136,13 +143,12 @@ const toDrawerValues = (incident: AIIncidentManagementModel): NewIncidentFormVal
   model_system_version: incident.model_system_version,
   interim_report: incident.interim_report || false,
   approval_status: incident.approval_status,
-  approved_by: incident.approved_by,
+  // Read-only: the approver's full name, else the stored text.
+  approved_by: AIIncidentManagementModel.approverLabel(incident),
   // The stored approval date as a calendar date, or null when
   // there is none: never invent one, or a save would look like
   // an explicit approval change to the server.
-  approval_date: incident.approval_date
-    ? new Date(incident.approval_date).toISOString().split("T")[0]
-    : null,
+  approval_date: toDateOnlyString(incident.approval_date) || null,
   approval_notes: incident.approval_notes,
   expected_updated_at: incident.updated_at
     ? new Date(incident.updated_at).toISOString()
@@ -180,6 +186,9 @@ const IncidentManagement: React.FC = () => {
 
   // Card filter state
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+
+  // Active, active + archived, or archived incidents
+  const [archiveView, setArchiveView] = useState<IncidentArchiveView>("active");
 
   // Auto-dismiss info alerts after 3 seconds
   useEffect(() => {
@@ -365,7 +374,10 @@ const IncidentManagement: React.FC = () => {
         case "status":
           return item.status;
         case "occurred_date":
-          return item.occurred_date;
+          // Local midnight of the stored day, so "is today" and "is past"
+          // compare with the user's calendar (new Date("YYYY-MM-DD") is UTC
+          // midnight, the day before west of UTC).
+          return dateOnlyToLocalDay(item.occurred_date);
         default:
           return null;
       }
@@ -382,17 +394,18 @@ const IncidentManagement: React.FC = () => {
   } = useFilterBy<AIIncidentManagementModel>(getIncidentFieldValue);
 
   /** -------------------- FILTERING -------------------- */
-  // Archived incidents never show, so the filter chips count only the rest
-  const nonArchivedIncidents = useMemo(
-    () => incidentsData.filter((i) => !i.archived),
-    [incidentsData],
+  // The incidents of the chosen view (active by default), so the filter
+  // chips count only what the table can show.
+  const viewIncidents = useMemo(
+    () => incidentsForArchiveView(incidentsData, archiveView),
+    [incidentsData, archiveView],
   );
 
   const filteredData = useMemo(() => {
     // Apply card filter by status
     let result = selectedStatus
-      ? nonArchivedIncidents.filter((i) => i.status === selectedStatus)
-      : nonArchivedIncidents;
+      ? viewIncidents.filter((i) => i.status === selectedStatus)
+      : viewIncidents;
 
     // Apply FilterBy conditions
     result = filterIncidentData(result);
@@ -403,13 +416,14 @@ const IncidentManagement: React.FC = () => {
       result = result.filter(
         (i) =>
           (i.id || "").toString().toLowerCase().includes(search) ||
+          (i.incident_id || "").toLowerCase().includes(search) ||
           (i.ai_project || "").toLowerCase().includes(search) ||
-          (i.reporter || "").toLowerCase().includes(search),
+          AIIncidentManagementModel.reporterLabel(i).toLowerCase().includes(search),
       );
     }
 
     return result;
-  }, [filterIncidentData, nonArchivedIncidents, searchTerm, selectedStatus]);
+  }, [filterIncidentData, viewIncidents, searchTerm, selectedStatus]);
 
   /** -------------------- FETCHING -------------------- */
   const fetchIncidentsData = async (showLoading = true) => {
@@ -526,10 +540,13 @@ const IncidentManagement: React.FC = () => {
 
   // Roles with neither incident.edit nor incident.approve open the incident
   // read-only; the drawer then enables only the fields the role may change.
+  // An archived incident always opens read-only (the server refuses edits to
+  // it until it is restored), including from a ?incidentId= link.
   const handleEditIncident = async (id: string, mode: string) => {
     setSelectedIncidentId(id);
     setModalMode(canEditIncidents || canApproveIncidents || !permissionsSettled ? mode : "view");
     const data = await fetchIncidentDataForSelectedId(id);
+    if (data?.archived) setModalMode("view");
     if (data) setIsNewIncidentModalOpen(true);
   };
 
@@ -540,20 +557,32 @@ const IncidentManagement: React.FC = () => {
     if (data) setIsNewIncidentModalOpen(true);
   };
 
-  const handleArchiveIncident = async (id: string, mode: string) => {
+  /**
+   * Archives (`archived: true`) or restores (`archived: false`) an incident.
+   * Both are reversible and recorded in the incident's change history.
+   */
+  const setIncidentArchived = async (id: string, archived: boolean) => {
     try {
       setSelectedIncidentId(id);
-      setModalMode(mode);
       setArchiveId(id);
 
-      // Optimistically remove from local state for snappy UI feedback
-      setIncidentsData((prevData) => prevData.filter((item) => item.id?.toString() !== id));
+      // Optimistic: flag the row so the current view updates at once
+      setIncidentsData((prevData) =>
+        prevData.map((item) =>
+          item.id?.toString() === id ? new AIIncidentManagementModel({ ...item, archived }) : item,
+        ),
+      );
 
-      //API route to match your backend: /:id/archive
-      await archiveIncidentById({
-        routeUrl: `/ai-incident-managements/${id}`,
-        body: {},
-      });
+      // Archive has its own route; restoring is an ordinary update of
+      // `archived` (PATCH /:id), which needs incident.edit as archiving does.
+      if (archived) {
+        await archiveIncidentById({ routeUrl: `/ai-incident-managements/${id}`, body: {} });
+      } else {
+        await updateEntityById({
+          routeUrl: `/ai-incident-managements/${id}`,
+          body: { archived: false },
+        });
+      }
 
       // Re-fetch to ensure consistent state
       await fetchIncidentsData(false);
@@ -563,17 +592,22 @@ const IncidentManagement: React.FC = () => {
 
       setAlert({
         variant: "success",
-        body: "Incident archived successfully.",
+        body: archived ? "Incident archived successfully." : "Incident restored.",
       });
     } catch (error) {
-      console.error("❌ Error archiving incident:", error);
+      logEngine({
+        type: "error",
+        message: `Failed to ${archived ? "archive" : "restore"} incident: ${error}`,
+      });
 
       // Revert optimistic update
       await fetchIncidentsData(false);
 
       setAlert({
         variant: "error",
-        body: "Failed to archive incident. Please try again.",
+        body: archived
+          ? "Failed to archive incident. Please try again."
+          : "Could not restore the incident. Please try again.",
       });
     } finally {
       setSelectedIncidentId(null);
@@ -581,6 +615,9 @@ const IncidentManagement: React.FC = () => {
       setArchiveId(null);
     }
   };
+
+  const handleArchiveIncident = (id: string) => setIncidentArchived(id, true);
+  const handleRestoreIncident = (id: string) => setIncidentArchived(id, false);
 
   const handleCloseModal = () => {
     setIsNewIncidentModalOpen(false);
@@ -720,9 +757,9 @@ const IncidentManagement: React.FC = () => {
         type: incident.type || "-",
         severity: incident.severity || "-",
         status: incident.status || "-",
-        occurred_date: incident.occurred_date || "-",
-        date_detected: incident.date_detected || "-",
-        reporter: incident.reporter || "-",
+        occurred_date: toDateOnlyString(incident.occurred_date) || "-",
+        date_detected: toDateOnlyString(incident.date_detected) || "-",
+        reporter: AIIncidentManagementModel.reporterLabel(incident) || "-",
         approval_status: incident.approval_status || "-",
       };
     });
@@ -749,6 +786,7 @@ const IncidentManagement: React.FC = () => {
         }
         summaryCards={
           /* TODO: Refactor to always show cards (like Model Inventory) to prevent layout shift and beacon positioning issues */
+          // Counted from the chosen view, the same set a card click filters.
           incidentsData.length > 0 ? (
             <StatusTileCards
               items={[
@@ -756,48 +794,46 @@ const IncidentManagement: React.FC = () => {
                   key: IncidentManagementStatus.OPEN,
                   label: "Open",
                   color: chartTheme.incidentStatus.open,
-                  count: incidentsData.filter(
-                    (i) => i.status === IncidentManagementStatus.OPEN && !i.archived,
-                  ).length,
+                  count: viewIncidents.filter((i) => i.status === IncidentManagementStatus.OPEN)
+                    .length,
                 },
                 {
                   key: IncidentManagementStatus.INVESTIGATED,
                   label: "Investigating",
                   color: chartTheme.incidentStatus.investigating,
-                  count: incidentsData.filter(
-                    (i) => i.status === IncidentManagementStatus.INVESTIGATED && !i.archived,
+                  count: viewIncidents.filter(
+                    (i) => i.status === IncidentManagementStatus.INVESTIGATED,
                   ).length,
                 },
                 {
                   key: IncidentManagementStatus.MITIGATED,
                   label: "Mitigated",
                   color: chartTheme.incidentStatus.mitigated,
-                  count: incidentsData.filter(
-                    (i) => i.status === IncidentManagementStatus.MITIGATED && !i.archived,
+                  count: viewIncidents.filter(
+                    (i) => i.status === IncidentManagementStatus.MITIGATED,
                   ).length,
                 },
                 {
                   key: IncidentManagementStatus.CLOSED,
                   label: "Closed",
                   color: chartTheme.incidentStatus.closed,
-                  count: incidentsData.filter(
-                    (i) => i.status === IncidentManagementStatus.CLOSED && !i.archived,
-                  ).length,
+                  count: viewIncidents.filter((i) => i.status === IncidentManagementStatus.CLOSED)
+                    .length,
                 },
                 {
                   key: IncidentManagementStatus.SUSPENDED,
                   label: "Suspended",
                   color: chartTheme.incidentStatus.suspended,
-                  count: incidentsData.filter(
-                    (i) => i.status === IncidentManagementStatus.SUSPENDED && !i.archived,
+                  count: viewIncidents.filter(
+                    (i) => i.status === IncidentManagementStatus.SUSPENDED,
                   ).length,
                 },
                 {
                   key: IncidentManagementStatus.EMERGENCY_ACTION,
                   label: "Emergency action",
                   color: chartTheme.incidentStatus.emergency,
-                  count: incidentsData.filter(
-                    (i) => i.status === IncidentManagementStatus.EMERGENCY_ACTION && !i.archived,
+                  count: viewIncidents.filter(
+                    (i) => i.status === IncidentManagementStatus.EMERGENCY_ACTION,
                   ).length,
                 },
               ]}
@@ -840,12 +876,20 @@ const IncidentManagement: React.FC = () => {
           sx={incidentFilterRow}
         >
           <Stack direction="row" spacing={2} alignItems="center">
+            <Select
+              id="incident-archive-view"
+              value={archiveView}
+              items={INCIDENT_ARCHIVE_VIEW_OPTIONS}
+              onChange={(event) => setArchiveView(event.target.value as IncidentArchiveView)}
+              sx={{ width: "170px" }}
+            />
+
             <TableFilter
               columns={incidentFilterColumns}
               onFilterChange={handleIncidentFilterChange}
               defaultConditions={incidentFilterConditions}
               defaultLogic={incidentFilterLogic}
-              data={nonArchivedIncidents}
+              data={viewIncidents}
               getFieldValue={getIncidentFieldValue}
             />
 
@@ -893,7 +937,10 @@ const IncidentManagement: React.FC = () => {
           isLoading={isLoading}
           onEdit={handleEditIncident}
           onArchive={handleArchiveIncident}
+          onRestore={handleRestoreIncident}
           onView={handleViewIncident}
+          archiveView={archiveView}
+          hasArchivedIncidents={incidentsData.some((i) => !!i.archived)}
           canEdit={canEditIncidents}
           canApprove={canApproveIncidents}
           archivedId={archiveId}

@@ -78,6 +78,14 @@ describe("customAxios", () => {
       });
       expect(config.withCredentials).toBe(true);
     });
+
+    it("sends the user's local date, for days the server records for them", async () => {
+      const config = await (CustomAxios.interceptors.request as any).handlers[0].fulfilled({
+        headers: {} as any,
+        url: "/ai-incident-managements/1",
+      });
+      expect(config.headers["X-Client-Date"]).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
   });
 
   describe("showAlert / setShowAlertCallback", () => {

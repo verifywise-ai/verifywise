@@ -43,6 +43,7 @@ import StandardModal from "../../../components/Modals/StandardModal";
 import Field from "../../../components/Inputs/Field";
 import DatePicker from "../../../components/Inputs/Datepicker";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import { toDateOnlyString } from "../../../tools/isoDateToString";
 import VWTooltip from "../../../components/VWTooltip";
 import Checkbox from "../../../components/Inputs/Checkbox";
 import {
@@ -53,7 +54,7 @@ import {
   updateRegistration,
   getAllPolicies,
   getAllEvidences,
-  getAllIncidents,
+  getLinkableIncidents,
   updateLinkedPolicies,
   updateLinkedEvidences,
   updateLinkedIncidents,
@@ -668,10 +669,12 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
     setIsIncidentsModalOpen(true);
     setLoadingIncidents(true);
     try {
-      const incidents = await getAllIncidents();
+      const linked = data?.linkedIncidents || [];
+      // This use case's non-archived incidents, plus any already linked.
+      const incidents = await getLinkableIncidents(projectId, linked);
       setAvailableIncidents(incidents || []);
       // Set currently linked incidents as selected
-      setSelectedIncidents(data?.linkedIncidents || []);
+      setSelectedIncidents(linked);
     } catch {
       showAlert("Failed to load incidents", "error");
     } finally {
@@ -1947,7 +1950,8 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
           <Box sx={{ maxHeight: "400px", overflowY: "auto" }}>
             {availableIncidents.length === 0 ? (
               <Typography sx={{ textAlign: "center", py: 4, color: theme.palette.text.secondary }}>
-                No incidents available. Create incidents in the Incident Management section first.
+                No incidents to link. Incidents appear here when they belong to this use case and
+                are not archived.
               </Typography>
             ) : (
               <Stack spacing={0}>
@@ -2011,7 +2015,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                               •
                             </Typography>
                             <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
-                              Occurred: {formatDate(incident.occurred_date)}
+                              Occurred: {formatDate(toDateOnlyString(incident.occurred_date))}
                             </Typography>
                           </>
                         )}
