@@ -144,7 +144,7 @@ export const ControlCategories: ControlCategoryRegistration[] = [
   {
     order_no: 13,
     title: "General-purpose AI models",
-    article: "Art. 51-55",
+    article: "Art. 51-56",
     controls: GeneralPurposeAImodels,
   },
   {
@@ -162,7 +162,7 @@ export const ControlCategories: ControlCategoryRegistration[] = [
   {
     order_no: 16,
     title: "Provider technical requirements",
-    article: "Art. 9-12, 15, 18-19",
+    article: "Art. 9-15, 18-19",
     controls: ProviderDocumentation,
   },
   {
