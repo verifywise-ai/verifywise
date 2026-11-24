@@ -785,8 +785,8 @@ export const de: Record<string, string> = {
   "Vendor research searches the news with this key.":
     "Die Anbieterrecherche durchsucht die Nachrichten mit diesem Schlüssel.",
   "Get a key at brave.com/search/api": "Einen Schlüssel erhalten Sie unter brave.com/search/api",
-  "Brave charges about $5 per 1,000 searches after $5 of free credit a month. A research run makes about 8.":
-    "Brave berechnet etwa 5 $ pro 1.000 Suchen nach einem kostenlosen Guthaben von 5 $ pro Monat. Eine Recherche macht etwa 8.",
+  "Brave charges about $5 per 1,000 searches after $5 of free credit a month. A research run makes about 20 to 30.":
+    "Brave berechnet etwa 5 $ pro 1.000 Suchen nach einem kostenlosen Guthaben von 5 $ pro Monat. Eine Recherche macht etwa 20 bis 30.",
   "Brave rejected this key. Check that you copied all of it.":
     "Brave hat diesen Schlüssel abgelehnt. Prüfen Sie, ob Sie ihn vollständig kopiert haben.",
   "Could not reach Brave to check this key.":
@@ -1587,8 +1587,8 @@ export const fr: Record<string, string> = {
   "Vendor research searches the news with this key.":
     "La recherche sur les fournisseurs cherche dans les actualités avec cette clé.",
   "Get a key at brave.com/search/api": "Obtenez une clé sur brave.com/search/api",
-  "Brave charges about $5 per 1,000 searches after $5 of free credit a month. A research run makes about 8.":
-    "Brave facture environ 5 $ les 1 000 recherches après 5 $ de crédit gratuit par mois. Une recherche en effectue environ 8.",
+  "Brave charges about $5 per 1,000 searches after $5 of free credit a month. A research run makes about 20 to 30.":
+    "Brave facture environ 5 $ les 1 000 recherches après 5 $ de crédit gratuit par mois. Une recherche en effectue environ 20 à 30.",
   "Brave rejected this key. Check that you copied all of it.":
     "Brave a refusé cette clé. Vérifiez que vous l'avez copiée en entier.",
   "Could not reach Brave to check this key.":
@@ -2382,8 +2382,8 @@ export const es: Record<string, string> = {
   "Vendor research searches the news with this key.":
     "La investigación de proveedores busca en las noticias con esta clave.",
   "Get a key at brave.com/search/api": "Obtenga una clave en brave.com/search/api",
-  "Brave charges about $5 per 1,000 searches after $5 of free credit a month. A research run makes about 8.":
-    "Brave cobra unos 5 $ por cada 1000 búsquedas tras 5 $ de crédito gratuito al mes. Una investigación hace unas 8.",
+  "Brave charges about $5 per 1,000 searches after $5 of free credit a month. A research run makes about 20 to 30.":
+    "Brave cobra unos 5 $ por cada 1000 búsquedas tras 5 $ de crédito gratuito al mes. Una investigación hace unas 20 a 30.",
   "Brave rejected this key. Check that you copied all of it.":
     "Brave rechazó esta clave. Compruebe que la copió completa.",
   "Could not reach Brave to check this key.":

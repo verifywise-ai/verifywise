@@ -258,7 +258,7 @@ const SearchKey = () => {
           </Typography>
           <Typography sx={{ ...textStyles.bodySmall, color: "text.tertiary" }}>
             {t(
-              "Brave charges about $5 per 1,000 searches after $5 of free credit a month. A research run makes about 8.",
+              "Brave charges about $5 per 1,000 searches after $5 of free credit a month. A research run makes about 20 to 30.",
             )}
           </Typography>
         </Stack>

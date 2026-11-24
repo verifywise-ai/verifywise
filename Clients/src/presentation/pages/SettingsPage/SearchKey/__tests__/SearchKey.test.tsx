@@ -140,7 +140,7 @@ describe("SearchKey", () => {
     expect(link.getAttribute("rel")).toContain("noreferrer");
     expect(
       within(dialog).getByText(
-        "Brave charges about $5 per 1,000 searches after $5 of free credit a month. A research run makes about 8.",
+        "Brave charges about $5 per 1,000 searches after $5 of free credit a month. A research run makes about 20 to 30.",
       ),
     ).toBeInTheDocument();
   });
