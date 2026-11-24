@@ -7,9 +7,12 @@ import {
   dismissVendorRiskFinding,
   getLatestVendorResearch,
   getVendorResearchConfig,
+  getVendorResearchSearchKey,
   getVendorResearchSettings,
   listVendorRiskFindings,
   readVendorResearchError,
+  removeVendorResearchSearchKey,
+  saveVendorResearchSearchKey,
   saveVendorResearchSettings,
   startVendorResearch,
 } from "../vendorResearch.repository";
@@ -20,12 +23,13 @@ import type {
 } from "../../../domain/interfaces/i.vendorResearch";
 
 vi.mock("../../../infrastructure/api/networkServices", () => ({
-  apiServices: { get: vi.fn(), post: vi.fn(), put: vi.fn() },
+  apiServices: { get: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() },
 }));
 
 const mockGet = vi.mocked(apiServices.get);
 const mockPost = vi.mocked(apiServices.post);
 const mockPut = vi.mocked(apiServices.put);
+const mockDelete = vi.mocked(apiServices.delete);
 
 /** A success body as the server sends it: `{ message, data }`. */
 const success = (data: unknown, status = 200) => ({
@@ -503,5 +507,72 @@ describe("readVendorResearchError", () => {
     ["a string", "boom"],
   ])("gives an empty detail, and does not throw, for %s", (_, unrelated) => {
     expect(readVendorResearchError(unrelated)).toEqual({});
+  });
+});
+
+describe("the Brave search key", () => {
+  const stored = { provider: "brave", configured: true, last4: "1234" } as const;
+  const none = { provider: "brave", configured: false, last4: null } as const;
+
+  it("reads /v1/vendor-research/search-key and unwraps it", async () => {
+    mockGet.mockResolvedValue(success(stored));
+
+    await expect(getVendorResearchSearchKey()).resolves.toEqual(stored);
+    expect(mockGet).toHaveBeenCalledWith("/v1/vendor-research/search-key");
+  });
+
+  it("puts the key with the global error toast off and unwraps what was stored", async () => {
+    mockPut.mockResolvedValue(success(stored));
+
+    await expect(saveVendorResearchSearchKey({ key: "BSA-secret" })).resolves.toEqual(stored);
+    expect(mockPut).toHaveBeenCalledWith(
+      "/v1/vendor-research/search-key",
+      { key: "BSA-secret" },
+      { suppressGlobalErrorToast: true },
+    );
+  });
+
+  it("sends skipCheck when it is asked for", async () => {
+    mockPut.mockResolvedValue(success(stored));
+
+    await saveVendorResearchSearchKey({ key: "BSA-secret", skipCheck: true });
+    expect(mockPut).toHaveBeenCalledWith(
+      "/v1/vendor-research/search-key",
+      { key: "BSA-secret", skipCheck: true },
+      { suppressGlobalErrorToast: true },
+    );
+  });
+
+  it.each(["invalid_key", "unreachable"])(
+    "rethrows a 422 whose code is %s, readable by readVendorResearchError",
+    async (code) => {
+      mockPut.mockRejectedValue(
+        serverRefusal(422, "Unprocessable Entity", {
+          message: "Unprocessable Entity",
+          data: { message: "Brave said no.", code },
+        }),
+      );
+
+      const error = await saveVendorResearchSearchKey({ key: "BSA-x" }).catch(
+        (thrown: unknown) => thrown,
+      );
+      expect(error).toBeInstanceOf(APIError);
+      expect(readVendorResearchError(error)).toEqual({ status: 422, code });
+    },
+  );
+
+  it("deletes the key at /v1/vendor-research/search-key and unwraps what is left", async () => {
+    mockDelete.mockResolvedValue(success(none));
+
+    await expect(removeVendorResearchSearchKey()).resolves.toEqual(none);
+    expect(mockDelete).toHaveBeenCalledWith("/v1/vendor-research/search-key");
+  });
+
+  it("rethrows a failed delete as an APIError with its status", async () => {
+    mockDelete.mockRejectedValue(serverRefusal(403, "Forbidden", { message: "Forbidden" }));
+
+    const error = await removeVendorResearchSearchKey().catch((thrown: unknown) => thrown);
+    expect(error).toBeInstanceOf(APIError);
+    expect((error as APIError).status).toBe(403);
   });
 });

@@ -172,6 +172,33 @@ export const organizationSettingsContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'search-api-key',
+      level: 2,
+      text: 'Search API key for vendor research',
+    },
+    {
+      type: 'paragraph',
+      text: 'Vendor research searches the web and the news for risks about your vendors. An Anthropic research key uses Claude\'s own web search. Any other research key, such as an OpenAI or OpenRouter key, has no search of its own: without a Brave search key it gets news only from the GDELT Project, which sometimes refuses requests, so a run can end with no news. For reliable news on such a key, add a Brave Search API key.',
+    },
+    {
+      type: 'ordered-list',
+      items: [
+        { text: 'Get a key at brave.com/search/api. Brave asks for a card when you sign up.' },
+        { text: 'Go to **Settings → API keys**. Below the LLM keys, find the **Search API key** section and select **Add key**.' },
+        { text: 'Paste the key and save. VerifyWise checks the key with Brave first. If Brave rejects it, check that you copied all of it. If Brave cannot be reached, you can select **Save anyway**.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Brave charges about $5 per 1,000 searches after $5 of free credit a month, and a research run makes about 20 to 30 searches. The section shows only the last four characters of the key. Use **Replace key** to change it and **Remove** to delete it; without a key, research gets its news from the GDELT Project again. An Anthropic research key keeps Claude\'s search and uses Brave only when Claude\'s search is not available. Only Admins see this section.',
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      text: 'Brave does not allow its search text to be kept. VerifyWise stores the links Brave returned and its own reading of the pages it opens, never Brave\'s titles or excerpts. When a finding rests on a search result whose page could not be read, that source shows only its link and the note "Based on a search excerpt; the source page could not be read."',
+    },
+    {
+      type: 'heading',
       id: 'faq',
       level: 2,
       text: 'Frequently asked questions',

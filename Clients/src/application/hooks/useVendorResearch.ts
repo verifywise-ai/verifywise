@@ -12,9 +12,12 @@ import {
   dismissVendorRiskFinding,
   getLatestVendorResearch,
   getVendorResearchConfig,
+  getVendorResearchSearchKey,
   getVendorResearchSearchStatus,
   getVendorResearchSettings,
   listVendorRiskFindings,
+  removeVendorResearchSearchKey,
+  saveVendorResearchSearchKey,
   saveVendorResearchSettings,
   startVendorResearch,
 } from "../repository/vendorResearch.repository";
@@ -28,6 +31,7 @@ import type {
   FindingStatus,
   VendorResearchConfig,
   VendorResearchRun,
+  VendorResearchSearchKey,
   VendorResearchSearchStatus,
   VendorResearchSettings,
   VendorRiskFinding,
@@ -130,6 +134,7 @@ interface FindingsFilter {
 const configKey = () => [...VENDOR_RESEARCH_KEY, "config"] as const;
 const settingsKey = () => [...VENDOR_RESEARCH_KEY, "settings"] as const;
 const searchStatusKey = () => [...VENDOR_RESEARCH_KEY, "searchStatus"] as const;
+const searchKeyKey = () => [...VENDOR_RESEARCH_KEY, "searchKey"] as const;
 const latestKey = (vendorId: number | null) =>
   [...VENDOR_RESEARCH_KEY, "latest", vendorId] as const;
 
@@ -188,6 +193,49 @@ export function useSaveVendorResearchSettings() {
     onError: (error) => {
       if (error.status === 404) void invalidateLLMKeyQueries(queryClient);
     },
+  });
+}
+
+/**
+ * The organization's Brave search key: whether one is stored and its last 4 characters. Admin only
+ * (the server answers everyone else with a 403), so the caller passes `enabled` as false for anyone
+ * else.
+ */
+export function useVendorResearchSearchKey(enabled = true) {
+  return useQuery<VendorResearchSearchKey>({
+    queryKey: searchKeyKey(),
+    queryFn: getVendorResearchSearchKey,
+    enabled,
+  });
+}
+
+/** A stored or removed key changes the search of every non-Anthropic key, so both are read again. */
+function useInvalidateSearchKey() {
+  const queryClient = useQueryClient();
+  return useCallback(
+    (saved: VendorResearchSearchKey) => {
+      queryClient.setQueryData(searchKeyKey(), saved);
+      void queryClient.invalidateQueries({ queryKey: searchKeyKey() });
+      void queryClient.invalidateQueries({ queryKey: searchStatusKey() });
+    },
+    [queryClient],
+  );
+}
+
+/** Saves the Brave key. A refused key rejects with the 422 `code` readable by `readVendorResearchError`. */
+export function useSaveVendorResearchSearchKey() {
+  const onSaved = useInvalidateSearchKey();
+  return useMutation<VendorResearchSearchKey, APIError, { key: string; skipCheck?: boolean }>({
+    mutationFn: (body) => saveVendorResearchSearchKey(body),
+    onSuccess: onSaved,
+  });
+}
+
+export function useRemoveVendorResearchSearchKey() {
+  const onRemoved = useInvalidateSearchKey();
+  return useMutation<VendorResearchSearchKey, APIError, void>({
+    mutationFn: () => removeVendorResearchSearchKey(),
+    onSuccess: onRemoved,
   });
 }
 

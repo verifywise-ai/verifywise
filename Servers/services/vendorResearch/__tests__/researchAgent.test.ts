@@ -11,6 +11,7 @@ import {
   ResearchCategory,
   type VrdbSourceId,
 } from "../../../domain.layer/interfaces/i.vendorResearch";
+import * as braveSearchModule from "../../webResearch/braveSearch";
 import * as gdeltSearchModule from "../../webResearch/gdeltSearch";
 import { GDELT_ASK_MS, type GdeltFailureKind } from "../../webResearch/gdeltSearch";
 import * as guardedFetchModule from "../../webResearch/guardedFetch";
@@ -25,6 +26,7 @@ import {
   SearchKind,
   SearchResult,
 } from "../../webResearch/webSearch";
+import * as webCacheModule from "../../webResearch/webCache";
 import type { WebCache } from "../../webResearch/webCache";
 import { memoryCache, settle } from "../../webResearch/__tests__/helpers/memoryCache";
 import * as gatherModule from "../gather";
@@ -3851,6 +3853,167 @@ describe("createVendorResearcher: the search engine of each run", () => {
       });
 
       expect(model.calls[1].system).toBe(buildLoopSystemPrompt());
+    });
+  });
+
+  describe("with the organization's Brave key", () => {
+    const BRAVE_KEY = "BSA-test-key-0001";
+    /** A result of Brave, whose text may not be kept. */
+    const BRAVE_HIT = result("https://news.example/acme-fine", { transient: true });
+    const BRAVE: SearchSpec = { engine: "brave", braveKey: BRAVE_KEY };
+    const CLAUDE_THEN_BRAVE: SearchSpec = { engine: "anthropic", braveKey: BRAVE_KEY };
+
+    /** Stand-ins for the three builders, Brave's with the key it was built with. */
+    function threeBuilders(options: {
+      claude?: ReturnType<typeof engineOf>;
+      brave?: () => SearchResult[];
+      gdelt?: ReturnType<typeof engineOf>;
+    }) {
+      const spies = builders(options.claude, options.gdelt);
+      const braveSearch = jest.fn<Promise<SearchResult[]>, [string, SearchKind, AbortSignal?]>(
+        async () => (options.brave ?? (() => [BRAVE_HIT]))(),
+      );
+      const braveEngine: SearchEngine = {
+        id: "brave",
+        kinds: ["web", "news"],
+        newsWindowMonths: null,
+        search: braveSearch,
+      };
+      const createBraveEngine = jest
+        .spyOn(braveSearchModule, "createBraveEngine")
+        .mockImplementation(() => braveEngine);
+      return { ...spies, braveSearch, createBraveEngine };
+    }
+
+    it("searches with Brave on the organization's key, reports it, and marks its results", async () => {
+      const spies = threeBuilders({});
+
+      const outcome = await researcherOf(searchOnce())({
+        target: WITHOUT_DOMAIN,
+        model: MODEL,
+        now: NOW,
+        search: BRAVE,
+      });
+
+      expect(spies.createBraveEngine).toHaveBeenCalledWith({ apiKey: BRAVE_KEY });
+      expect(spies.braveSearch).toHaveBeenCalledTimes(1);
+      expect(spies.gdelt.search).not.toHaveBeenCalled();
+      expect(spies.createProviderSearchEngine).not.toHaveBeenCalled();
+      expect(outcome.searchEngine).toBe("brave");
+      expect(outcome.transientText).toBe(true);
+      expect(outcome.entries).toEqual([
+        expect.objectContaining({ url: BRAVE_HIT.url, kind: "result", transient: true }),
+      ]);
+    });
+
+    it("moves to GDELT when Brave refuses the key, and reports gdelt", async () => {
+      const spies = threeBuilders({
+        brave: () => {
+          throw new SearchUnavailableError();
+        },
+      });
+
+      const outcome = await researcherOf(searchTwice())({
+        target: WITHOUT_DOMAIN,
+        model: MODEL,
+        now: NOW,
+        search: BRAVE,
+      });
+
+      expect(spies.braveSearch).toHaveBeenCalledTimes(1);
+      expect(searchedQueries(spies.gdelt)).toEqual(["Acme data breach", "Acme lawsuit"]);
+      expect(outcome.searchEngine).toBe("gdelt");
+      expect(outcome.transientText).toBeUndefined();
+      expect(outcome.entries.every((entry) => entry.transient === undefined)).toBe(true);
+    });
+
+    it("puts Brave between Claude and GDELT for a key of Anthropic: Claude refused, Brave answers", async () => {
+      const spies = threeBuilders({ claude: refusedClaude() });
+
+      const outcome = await researcherOf(searchTwice())({
+        target: WITHOUT_DOMAIN,
+        model: MODEL,
+        now: NOW,
+        search: CLAUDE_THEN_BRAVE,
+      });
+
+      expect(spies.claude.search).toHaveBeenCalledTimes(1);
+      expect(spies.braveSearch).toHaveBeenCalledTimes(2);
+      expect(spies.gdelt.search).not.toHaveBeenCalled();
+      expect(outcome.searchEngine).toBe("brave");
+    });
+
+    it("reports gdelt for a key of Anthropic when Claude and then Brave are refused", async () => {
+      const spies = threeBuilders({
+        claude: refusedClaude(),
+        brave: () => {
+          throw new SearchUnavailableError();
+        },
+      });
+
+      const outcome = await researcherOf(searchTwice())({
+        target: WITHOUT_DOMAIN,
+        model: MODEL,
+        now: NOW,
+        search: CLAUDE_THEN_BRAVE,
+      });
+
+      expect(spies.braveSearch).toHaveBeenCalledTimes(1);
+      expect(searchedQueries(spies.gdelt)).toEqual(["Acme data breach", "Acme lawsuit"]);
+      expect(outcome.searchEngine).toBe("gdelt");
+    });
+
+    it("keeps Claude's search while it answers, and reports anthropic", async () => {
+      const spies = threeBuilders({});
+
+      const outcome = await researcherOf(searchOnce())({
+        target: WITHOUT_DOMAIN,
+        model: MODEL,
+        now: NOW,
+        search: CLAUDE_THEN_BRAVE,
+      });
+
+      expect(spies.braveSearch).not.toHaveBeenCalled();
+      expect(outcome.searchEngine).toBe("anthropic");
+    });
+
+    it("searches GDELT for a Brave spec without a key", async () => {
+      const spies = threeBuilders({});
+
+      const outcome = await researcherOf(searchOnce())({
+        target: WITHOUT_DOMAIN,
+        model: MODEL,
+        now: NOW,
+        search: { engine: "brave" },
+      });
+
+      expect(spies.createBraveEngine).not.toHaveBeenCalled();
+      expect(spies.gdelt.search).toHaveBeenCalledTimes(1);
+      expect(outcome.searchEngine).toBe("gdelt");
+    });
+
+    it("never keeps Brave's answers in the cache, for a Brave run or behind Claude", async () => {
+      const { cache, writes } = memoryCache();
+      const spies = threeBuilders({ claude: refusedClaude() });
+      const cached = jest.spyOn(webCacheModule, "withSearchCache");
+
+      for (const search of [BRAVE, BRAVE, CLAUDE_THEN_BRAVE]) {
+        await researcherOf(searchOnce(), { cache })({
+          target: WITHOUT_DOMAIN,
+          model: MODEL,
+          now: NOW,
+          organizationId: 7,
+          search,
+        });
+        await settle();
+      }
+
+      // Each run asked Brave: nothing was served from a cache.
+      expect(spies.braveSearch).toHaveBeenCalledTimes(3);
+      expect(writes.filter(({ kind }) => kind === "search")).toEqual([]);
+      // The cache wraps Claude's engine alone.
+      expect(cached).toHaveBeenCalledTimes(1);
+      expect(cached.mock.calls[0][0]).toBe(spies.claude.engine);
     });
   });
 });

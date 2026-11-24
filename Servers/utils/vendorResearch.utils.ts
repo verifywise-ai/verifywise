@@ -1,6 +1,8 @@
 import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import { asyncLocalStorage } from "./context/context";
+import { decrypt, encrypt } from "./encryption.utils";
+import logger from "./logger/fileLogger";
 import {
   CategorySummaryEntry,
   DismissReason,
@@ -846,6 +848,65 @@ export const saveVendorResearchSettingsQuery = async (
     },
   )) as SettingsRow[];
   return settingsOf(rows[0]);
+};
+
+// ---------------------------------------------------------------------------
+// Brave Search key
+// ---------------------------------------------------------------------------
+
+/**
+ * The organization's Brave Search API key, decrypted, or null when it has none. A stored value that
+ * no longer decrypts (the deployment's encryption key changed) reads as no key: the research falls
+ * back to the other searches, and the settings page offers to enter the key again. Only the name of
+ * the error is logged; the message of a crypto error can carry input.
+ */
+export const getBraveKeyQuery = async (organizationId: number): Promise<string | null> => {
+  const rows = (await sequelize.query(
+    `SELECT brave_api_key_encrypted FROM vendor_research_settings
+     WHERE organization_id = :organizationId`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  )) as Array<{ brave_api_key_encrypted: string | null }>;
+  const stored = rows[0]?.brave_api_key_encrypted;
+  if (!stored) return null;
+  try {
+    return decrypt(stored);
+  } catch (error) {
+    logger.error(
+      `Stored Brave Search key of organization ${organizationId} could not be decrypted: ${
+        (error as Error)?.name ?? "error"
+      }`,
+    );
+    return null;
+  }
+};
+
+/**
+ * Stores the organization's Brave Search key, encrypted, or clears it (`null`). The settings row is
+ * created when the organization has none; the key and the research choices share it, and this
+ * statement touches no other choice.
+ */
+export const saveBraveKeyQuery = async (
+  organizationId: number,
+  plainKey: string | null,
+  userId: number,
+): Promise<void> => {
+  await sequelize.query(
+    `INSERT INTO vendor_research_settings
+       (organization_id, brave_api_key_encrypted, updated_by, updated_at)
+     VALUES (:organizationId, :encrypted, :userId, NOW())
+     ON CONFLICT (organization_id) DO UPDATE SET
+       brave_api_key_encrypted = EXCLUDED.brave_api_key_encrypted,
+       updated_by = EXCLUDED.updated_by,
+       updated_at = EXCLUDED.updated_at
+     WHERE vendor_research_settings.organization_id = :organizationId`,
+    {
+      replacements: {
+        organizationId,
+        encrypted: plainKey ? encrypt(plainKey) : null,
+        userId,
+      },
+    },
+  );
 };
 
 // ---------------------------------------------------------------------------

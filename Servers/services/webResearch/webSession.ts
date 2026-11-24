@@ -143,6 +143,14 @@ export interface LedgerEntry<C extends string = string> {
    * redirect): the source is classified by it, as the vendor's site is decided by it.
    */
   answeredUrl?: string;
+  /**
+   * True for a search result whose engine allows its text to be used during the run and not kept
+   * (Brave Search, see `SearchResult.transient`): its title, snippet and date are the engine's, and
+   * the pipeline stores none of them. A page read in its place drops the mark and keeps nothing of
+   * the result: its title is the page's own (or the host of its address) and its date the page's
+   * own or none. Absent for every other source.
+   */
+  transient?: true;
 }
 
 export type CallFailure = "search_unavailable" | Exclude<ReadFailureReason, "not_allowed">;
@@ -747,6 +755,7 @@ export function createWebSession<C extends string>(options: WebSessionOptions<C>
         title: result.title,
         content: result.snippet,
         publishedAt,
+        ...(result.transient === true ? { transient: true as const } : {}),
       });
       results.push({ ...result, url: key, publishedAt });
     }
@@ -973,31 +982,45 @@ export function createWebSession<C extends string>(options: WebSessionOptions<C>
     if (settled !== key) ledger.delete(key);
     ledger.set(
       settled,
-      earlier
-        ? {
-            ...earlier,
-            url: settled,
-            category,
-            kind: "page",
-            onVendorSite: ownPage,
-            content: excerpt,
-            // The date that admitted the read, so that the analysis holds the source to the
-            // window of its new category by the same date.
-            publishedAt: page.publishedAt ?? earlier.publishedAt,
-            ...(elsewhere === null ? {} : { canonicalUrl: elsewhere }),
-            ...(redirected ? { answeredUrl: answered } : {}),
-          }
-        : {
+      earlier?.transient === true
+        ? // Nothing of a result whose text may not be kept (see `LedgerEntry.transient`): the
+          // page's own title, or the host of its address, and the page's own date or none.
+          {
             category,
             kind: "page",
             onVendorSite: ownPage,
             url: settled,
-            title: page.title,
+            title: page.title.trim() === "" ? hostOf(settled) : page.title,
             content: excerpt,
             publishedAt: page.publishedAt,
             ...(elsewhere === null ? {} : { canonicalUrl: elsewhere }),
             ...(redirected ? { answeredUrl: answered } : {}),
-          },
+          }
+        : earlier
+          ? {
+              ...earlier,
+              url: settled,
+              category,
+              kind: "page",
+              onVendorSite: ownPage,
+              content: excerpt,
+              // The date that admitted the read, so that the analysis holds the source to the
+              // window of its new category by the same date.
+              publishedAt: page.publishedAt ?? earlier.publishedAt,
+              ...(elsewhere === null ? {} : { canonicalUrl: elsewhere }),
+              ...(redirected ? { answeredUrl: answered } : {}),
+            }
+          : {
+              category,
+              kind: "page",
+              onVendorSite: ownPage,
+              url: settled,
+              title: page.title,
+              content: excerpt,
+              publishedAt: page.publishedAt,
+              ...(elsewhere === null ? {} : { canonicalUrl: elsewhere }),
+              ...(redirected ? { answeredUrl: answered } : {}),
+            },
     );
     if (parts.length > 1) {
       const held: HeldPage = {

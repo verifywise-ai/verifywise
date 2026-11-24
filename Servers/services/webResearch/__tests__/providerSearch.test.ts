@@ -1632,4 +1632,81 @@ describe("withFallback", () => {
       expect(wrapper.usedId()).toBe("gdelt");
     });
   });
+
+  describe("nested: Claude, then Brave, then GDELT", () => {
+    const BRAVE_ANSWER: SearchResult[] = [
+      {
+        title: "Brave result",
+        url: "https://brave.example.com/a",
+        snippet: "",
+        publishedAt: null,
+        source: "brave.example.com",
+        transient: true,
+      },
+    ];
+    const chain = (
+      claudeAnswers: Array<SearchResult[] | Error>,
+      braveAnswers: Array<SearchResult[] | Error>,
+      gdeltAnswers: Array<SearchResult[] | Error> = [FALLBACK_ANSWER],
+    ) => {
+      const claude = fakeEngine({
+        id: "anthropic",
+        kinds: ["web", "news"],
+        newsWindowMonths: null,
+        answers: claudeAnswers,
+      });
+      const brave = fakeEngine({
+        id: "brave",
+        kinds: ["web", "news"],
+        newsWindowMonths: null,
+        answers: braveAnswers,
+      });
+      const gdelt = gdeltLike(gdeltAnswers);
+      return withFallback(claude.engine, withFallback(brave.engine, gdelt.engine));
+    };
+
+    it("credits Brave when Claude is refused and Brave answers", async () => {
+      const engine = chain([new SearchUnavailableError()], [BRAVE_ANSWER]);
+
+      await expect(engine.search("acme", "web")).resolves.toEqual(BRAVE_ANSWER);
+      expect(engine.usedId()).toBe("brave");
+      expect(engine.id).toBe("brave");
+    });
+
+    it("credits GDELT when Claude and then Brave are refused", async () => {
+      const engine = chain([new SearchUnavailableError()], [new SearchUnavailableError()]);
+
+      await expect(engine.search("acme", "news")).resolves.toEqual(FALLBACK_ANSWER);
+      expect(engine.usedId()).toBe("gdelt");
+      expect(engine.id).toBe("gdelt");
+    });
+
+    it("credits Brave when it answered and was refused later, and GDELT answered nothing", async () => {
+      const engine = chain(
+        [new SearchUnavailableError()],
+        [BRAVE_ANSWER, new SearchUnavailableError()],
+        [new SearchEngineError()],
+      );
+
+      await engine.search("acme", "web");
+      await expect(engine.search("acme again", "news")).rejects.toBeInstanceOf(SearchEngineError);
+      // The live engine is GDELT, but only Brave's answers are in the run.
+      expect(engine.id).toBe("gdelt");
+      expect(engine.usedId()).toBe("brave");
+    });
+
+    it("credits Claude while Claude answers", async () => {
+      const engine = chain([PRIMARY_ANSWER], [BRAVE_ANSWER]);
+
+      await engine.search("acme", "web");
+      expect(engine.usedId()).toBe("anthropic");
+    });
+
+    it("passes the mark of a result whose text may not be kept through both wrappers", async () => {
+      const engine = chain([new SearchUnavailableError()], [BRAVE_ANSWER]);
+
+      const [result] = await engine.search("acme", "web");
+      expect(result.transient).toBe(true);
+    });
+  });
 });
