@@ -20,12 +20,12 @@ Apply migrations on their own with `npm run migrate-db` after `npm run build`. F
 
 Names match the `scripts` section of `Servers/package.json`.
 
-| Command | What it runs |
-| --- | --- |
-| `npm run build` | `tsc`. `prebuild` compiles design tokens; `postbuild` copies runtime files into `dist/`. |
-| `npm run watch` | `tsc-watch`. On success: `postbuild`, then the API and the BullMQ worker. |
-| `npm run migrate-db` | `npx sequelize db:migrate --debug` |
-| `npm run test:unit` | Jest unit tests. Ignores `tests/integration/` and `helpers/`. `npm run test` is this script. |
-| `npm run test:integration` | Jest tests in `tests/integration/`, one file at a time, with the integration global setup. |
+| Command                    | What it runs                                                                                 |
+| -------------------------- | -------------------------------------------------------------------------------------------- |
+| `npm run build`            | `tsc`. `prebuild` compiles design tokens; `postbuild` copies runtime files into `dist/`.     |
+| `npm run watch`            | `tsc-watch`. On success: `postbuild`, then the API and the BullMQ worker.                    |
+| `npm run migrate-db`       | `npx sequelize db:migrate --debug`                                                           |
+| `npm run test:unit`        | Jest unit tests. Ignores `tests/integration/` and `helpers/`. `npm run test` is this script. |
+| `npm run test:integration` | Jest tests in `tests/integration/`, one file at a time, with the integration global setup.   |
 
 `npm run test` does not include integration tests.
