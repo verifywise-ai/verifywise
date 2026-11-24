@@ -5,7 +5,7 @@
  * - kind `web` asks the LLM Context endpoint (`/llm/context`), whose answer holds passages of each
  *   page (`grounding.generic[].snippets`) and the page's age (`sources[url].age[1]`, YYYY-MM-DD).
  *   Not every plan has it: Brave answers a 400 with `error.code` OPTION_NOT_IN_PLAN to a key whose
- *   plan does not. That search, and every later web search of the key in this process, asks the web
+ *   plan does not. That search, and every later web search of the engine (one run), asks the web
  *   search endpoint (`/web/search`) instead, whose answer holds the description of each page
  *   (`web.results[].description`) and its age (`page_age`).
  * - kind `news` asks the news endpoint (`/news/search`), with `text_decorations=false` so the text
@@ -32,7 +32,9 @@
  *   plan does not pay for the request), is a SearchUnavailableError, so `withFallback` answers the
  *   rest of the run from the next engine;
  * - a 400 OPTION_NOT_IN_PLAN from LLM Context moves the web searches of the engine to web search (see
- *   above); from web search or news, it is a SearchUnavailableError, like a 402;
+ *   above); from web search or news, the plan cannot answer that kind at all: the search fails with
+ *   a SearchEngineError, and so does every later search of that kind of the engine, with no request,
+ *   while the other kind still searches on Brave;
  * - a 429 whose `X-RateLimit-Remaining` shows 0 in any entry after the first (the first is the
  *   per-second window, the others the longer ones, such as the month) is a quota that is used up: a
  *   SearchUnavailableError at once, with no wait;
@@ -515,7 +517,8 @@ export interface BraveEngineDeps {
  * The search engine on Brave Search, with an organization's key: kind `web` on the LLM Context
  * endpoint, kind `news` on the news endpoint (see the module comment). The engine uses the queue of
  * its key, shared by every engine of that key, so the requests of all the runs are spaced for the
- * key's rate. It keeps nothing between searches.
+ * key's rate. Between searches it keeps only what it learned of the key's plan (see the module
+ * comment), for its own life: one run.
  */
 export function createBraveEngine(deps: BraveEngineDeps): SearchEngine {
   const { apiKey } = deps;
@@ -597,6 +600,8 @@ export function createBraveEngine(deps: BraveEngineDeps): SearchEngine {
 
   /** False once LLM Context answered that the key's plan does not hold it. */
   let contextInPlan = true;
+  /** The kinds the key's plan cannot answer on any endpoint, learned during the run. */
+  const kindsOutOfPlan = new Set<SearchKind>();
 
   return {
     id: "brave",
@@ -605,20 +610,24 @@ export function createBraveEngine(deps: BraveEngineDeps): SearchEngine {
     async search(query, kind, signal) {
       try {
         if ((kind !== "web" && kind !== "news") || signal?.aborted) throw new SearchEngineError();
+        if (kindsOutOfPlan.has(kind)) throw new SearchEngineError();
         const first: BraveEndpoint =
           kind === "web" && !contextInPlan ? "webSearch" : endpointOf(kind);
         try {
           return await ask(query, first, signal);
         } catch (error) {
           if (!(error instanceof NotInPlan)) throw error;
+          // The plan cannot answer this kind on any endpoint: only this kind is lost for the run.
+          if (first !== "context") {
+            kindsOutOfPlan.add(kind);
+            throw new SearchEngineError();
+          }
           // A plan without LLM Context: the web is searched on web search from now on.
-          if (first !== "context") throw new SearchUnavailableError();
           contextInPlan = false;
           try {
             return await ask(query, "webSearch", signal);
           } catch (again) {
-            // A plan that holds neither web endpoint will not answer the rest of the run either.
-            if (again instanceof NotInPlan) throw new SearchUnavailableError();
+            if (again instanceof NotInPlan) kindsOutOfPlan.add(kind);
             throw again;
           }
         }

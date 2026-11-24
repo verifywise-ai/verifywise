@@ -200,7 +200,10 @@ describe("checkBraveKey", () => {
         () => answer(200, { web: { results: [] } }),
         () => answer(200, { results: [] }),
       );
-      await expect(checkBraveKey(KEY, { fetchImpl: fetch })).resolves.toEqual({ ok: true });
+      const sleep = jest.fn(async () => undefined);
+      await expect(checkBraveKey(KEY, { fetchImpl: fetch, sleep })).resolves.toEqual({ ok: true });
+      // The follow-up waits out the per-key gap, so a free plan's 429 does not pass it.
+      expect(sleep).toHaveBeenCalledWith(1_100);
       const asked = fetch.mock.calls.map(([url]) => new URL(url).pathname).sort();
       expect(asked).toEqual(["/res/v1/llm/context", "/res/v1/news/search", "/res/v1/web/search"]);
       const webSearch = fetch.mock.calls.find(([url]) => url.includes("/web/search"));
@@ -210,25 +213,45 @@ describe("checkBraveKey", () => {
       );
     });
 
-    it("refuses the key when web search is not in the plan either", async () => {
+    const noWait = { sleep: async () => undefined };
+
+    it("accepts the key when the web is out of the plan but news passes", async () => {
       const fetch = withoutContext(
         () => answer(400, braveError(400, "OPTION_NOT_IN_PLAN")),
         () => answer(200, { results: [] }),
       );
-      await expect(checkBraveKey(KEY, { fetchImpl: fetch })).resolves.toEqual({
+      await expect(checkBraveKey(KEY, { fetchImpl: fetch, ...noWait })).resolves.toEqual({
+        ok: true,
+      });
+    });
+
+    it("accepts the key when news is out of the plan but the web passes", async () => {
+      const fetch = endpoints(
+        () => answer(200, {}),
+        () => answer(400, braveError(400, "OPTION_NOT_IN_PLAN")),
+      );
+      await expect(checkBraveKey(KEY, { fetchImpl: fetch, ...noWait })).resolves.toEqual({
+        ok: true,
+      });
+    });
+
+    it("refuses the key when no kind is in the plan", async () => {
+      const notInPlan = () => answer(400, braveError(400, "OPTION_NOT_IN_PLAN"));
+      const fetch = withoutContext(notInPlan, notInPlan);
+      await expect(checkBraveKey(KEY, { fetchImpl: fetch, ...noWait })).resolves.toEqual({
         ok: false,
         code: "invalid_key",
       });
     });
 
-    it("refuses the key when the news endpoint is not in the plan", async () => {
-      const fetch = endpoints(
-        () => answer(200, {}),
+    it("cannot check a key whose other kind is unreachable", async () => {
+      const fetch = withoutContext(
         () => answer(400, braveError(400, "OPTION_NOT_IN_PLAN")),
+        () => new Error("network"),
       );
-      await expect(checkBraveKey(KEY, { fetchImpl: fetch })).resolves.toEqual({
+      await expect(checkBraveKey(KEY, { fetchImpl: fetch, ...noWait })).resolves.toEqual({
         ok: false,
-        code: "invalid_key",
+        code: "unreachable",
       });
     });
   });

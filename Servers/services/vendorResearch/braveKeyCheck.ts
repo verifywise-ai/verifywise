@@ -7,6 +7,8 @@
  * both, at the same time and for one result each, with the addresses `braveUrlOf` builds for a run.
  * A plan without LLM Context (a 400 with `error.code` OPTION_NOT_IN_PLAN) is searched on web search
  * by a run, so that answer is followed by a check of web search, whose verdict stands for the web.
+ * The follow-up waits BRAVE_MIN_GAP_MS first: a free plan allows one request a second, and a 429
+ * would pass the check without showing that web search is in the plan.
  * Each request goes through `safeFetch` with an 8 second limit and reads at most MAX_BODY_BYTES.
  *
  * How one answer is read: Brave refuses a wrong key with `error.code === "SUBSCRIPTION_TOKEN_INVALID"`
@@ -14,8 +16,10 @@
  * these is a refusal. A 2xx is a pass, and so is a 429: the key works and is only over its rate.
  * Anything else (a network error, a timeout, a 5xx, another 422) is "could not check".
  *
- * The key is valid only when both endpoints pass, invalid when either refuses it, and otherwise
- * "could not check", which the caller may still save.
+ * The key is invalid when either endpoint refuses it. A kind the plan cannot answer at all (still
+ * OPTION_NOT_IN_PLAN) only takes that kind from a run, which searches the other on Brave: the key is
+ * valid when every kind passes or is out of the plan and at least one passes, invalid when both are
+ * out of the plan, and otherwise "could not check", which the caller may still save.
  *
  * The key is never logged, and neither is the answer: only the status or the error's name.
  */
@@ -24,6 +28,7 @@ import logger from "../../utils/logger/fileLogger";
 import {
   BRAVE_API_BASE,
   BRAVE_INVALID_TOKEN_CODE,
+  BRAVE_MIN_GAP_MS,
   BRAVE_NOT_IN_PLAN_CODE,
   braveEndpointUrlOf,
   braveErrorCodeOf,
@@ -59,7 +64,11 @@ export interface BraveKeyCheckDeps {
   /** Defaults to `safeFetch`; tests pass a fake. */
   fetchImpl?: (url: string, init?: RequestInit) => Promise<Response>;
   timeoutMs?: number;
+  /** The wait before the follow-up check of web search; tests pass one that does not wait. */
+  sleep?: (ms: number) => Promise<void>;
 }
+
+const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
 /**
  * Whether the text can be a key: 10 to 200 characters, each printable ASCII other than the space
@@ -121,20 +130,27 @@ export const checkBraveKey = async (
   if (!isPlausibleBraveKey(key)) return { ok: false, code: "invalid_key" };
   const fetchImpl = deps.fetchImpl ?? safeFetch;
   const timeoutMs = deps.timeoutMs ?? BRAVE_KEY_CHECK_TIMEOUT_MS;
+  const sleep = deps.sleep ?? wait;
 
   const verdicts = await Promise.all(
     BRAVE_KEY_CHECK_URLS.map(async (url) => {
       const verdict = await checkEndpoint(url, key, fetchImpl, timeoutMs);
       // A plan without LLM Context: a run searches the web on web search, so that is checked.
       if (verdict === "not_in_plan" && url === BRAVE_KEY_CHECK_URLS[0]) {
+        await sleep(BRAVE_MIN_GAP_MS);
         return checkEndpoint(BRAVE_WEB_SEARCH_CHECK_URL, key, fetchImpl, timeoutMs);
       }
       return verdict;
     }),
   );
-  // An endpoint the plan does not hold, with no other to ask, cannot be searched: a refusal.
-  if (verdicts.includes("not_in_plan")) return { ok: false, code: "invalid_key" };
   if (verdicts.includes("refused")) return { ok: false, code: "invalid_key" };
-  if (verdicts.every((verdict) => verdict === "pass")) return { ok: true };
+  // A plan that answers no kind at all is of no use to a run.
+  if (verdicts.every((verdict) => verdict === "not_in_plan")) {
+    return { ok: false, code: "invalid_key" };
+  }
+  // A kind out of the plan only takes that kind from a run; the other still searches on Brave.
+  if (verdicts.every((verdict) => verdict === "pass" || verdict === "not_in_plan")) {
+    return { ok: true };
+  }
   return { ok: false, code: "unreachable" };
 };

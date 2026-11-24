@@ -260,16 +260,28 @@ describe("createBraveEngine", () => {
       expect(urlOf(fetch, 1).searchParams.get("q")?.split(" ")).toHaveLength(50);
     });
 
-    it("takes a plan that holds neither web endpoint as a key that cannot search", async () => {
-      const fetch = answering(notInPlan(), notInPlan());
+    it("loses only the web for a plan that holds neither web endpoint, and keeps news", async () => {
+      const fetch = answering(notInPlan(), notInPlan(), json({ type: "news", results: [] }));
       const { engine } = engineWith(fetch);
-      await expect(engine.search("query", "web")).rejects.toBeInstanceOf(SearchUnavailableError);
+      const first = engine.search("query", "web");
+      await expect(first).rejects.toBeInstanceOf(SearchEngineError);
+      await expect(first).rejects.not.toBeInstanceOf(SearchUnavailableError);
+      // Later web searches fail without a request; news still asks Brave.
+      await expect(engine.search("again", "web")).rejects.toBeInstanceOf(SearchEngineError);
+      await expect(engine.search("query", "news")).resolves.toEqual([]);
+      expect(fetch).toHaveBeenCalledTimes(3);
+      expect(urlOf(fetch, 2).pathname).toBe("/res/v1/news/search");
     });
 
-    it("takes a news endpoint outside the plan as a key that cannot search", async () => {
-      const fetch = answering(notInPlan());
+    it("loses only news for a plan without the news endpoint, and keeps the web", async () => {
+      const fetch = answering(notInPlan(), json(contextBody([])));
       const { engine } = engineWith(fetch);
-      await expect(engine.search("query", "news")).rejects.toBeInstanceOf(SearchUnavailableError);
+      const first = engine.search("query", "news");
+      await expect(first).rejects.toBeInstanceOf(SearchEngineError);
+      await expect(first).rejects.not.toBeInstanceOf(SearchUnavailableError);
+      await expect(engine.search("again", "news")).rejects.toBeInstanceOf(SearchEngineError);
+      await expect(engine.search("query", "web")).resolves.toEqual([]);
+      expect(fetch).toHaveBeenCalledTimes(2);
     });
 
     it("fails another 400 as one search, with LLM Context still asked next time", async () => {
