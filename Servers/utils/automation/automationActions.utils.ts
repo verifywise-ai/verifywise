@@ -10,6 +10,7 @@ import { sequelize } from "../../database/db";
 import { enqueueAutomationAction } from "../../services/automations/automationProducer";
 import logger from "../logger/fileLogger";
 import { replaceTemplateVariables } from "./automation.utils";
+import { runInSavepoint } from "../../config/changeHistory.config";
 
 /** One action row of an active automation. */
 export interface IAutomationActionRow {
@@ -49,7 +50,7 @@ export async function getActiveAutomationActionsQuery(
  * of the old query, ordered by aa."order" alone. Automations that existed then
  * are flagged legacy_first_action_only (migrations
  * 20261114200100-legacy-automation-first-action for risk and policy,
- * 20261124120000-legacy-automation-first-action-entities for the rest) so
+ * 20261124112309-legacy-automation-first-action-entities for the rest) so
  * they keep that behaviour until someone saves them in the editor.
  *
  * Keeps every row of the other automations and, of the legacy rows of the
@@ -61,7 +62,9 @@ export function keepLegacyFirstActionOnly(actions: IAutomationActionRow[]): IAut
   const legacy = actions.filter((action) => action.legacy_first_action_only);
   if (legacy.length === 0) return actions;
   const first = legacy.reduce((best, action) => {
-    const order = (row: IAutomationActionRow) => Number(row.order ?? 0);
+    // NULL sorts last under ORDER BY aa."order" ASC, as in the old query.
+    const order = (row: IAutomationActionRow) =>
+      row.order == null ? Number.POSITIVE_INFINITY : Number(row.order);
     if (order(action) !== order(best)) return order(action) < order(best) ? action : best;
     return action.automation_id < best.automation_id ? action : best;
   });
@@ -136,24 +139,50 @@ export async function enqueueAutomationActions(
  * builder never sees a row that is not there).
  *
  * With a transaction, the actions are read inside it and enqueued once it
- * commits. `afterCommit: false` enqueues at once instead, for callers that
- * always did so. `logContext` (e.g. "task_added, task 12") names the event in
- * a failure log; it defaults to the trigger key.
+ * commits, so a rolled-back write sends nothing and a slow queue never holds
+ * the write's locks. Without one (a caller that runs after its own commit),
+ * they are enqueued at once. A failed enqueue is logged and never fails the
+ * write (enqueueAutomationActions).
+ *
+ * `contained` is for a caller that must not fail because of its automations:
+ * the reads run in a savepoint (runInSavepoint), and a failure there is rolled
+ * back to it and logged, enqueueing nothing, instead of throwing (a failed
+ * statement would otherwise abort the caller's whole transaction). `logContext` (e.g.
+ * "task_added, task 12") names the event in a failure log; it defaults to the
+ * trigger key.
  */
 export async function runEventAutomations(
   organizationId: number,
   triggerKey: string,
   buildReplacements: () => Record<string, any> | Promise<Record<string, any>>,
-  options: { transaction?: Transaction; afterCommit?: boolean; logContext?: string } = {},
+  options: { transaction?: Transaction; contained?: boolean; logContext?: string } = {},
 ): Promise<void> {
-  const { transaction, afterCommit = true, logContext = triggerKey } = options;
-  const actions = await getEventAutomationActionsQuery(organizationId, triggerKey, transaction);
-  if (actions.length === 0) return;
+  const { transaction, contained = false, logContext = triggerKey } = options;
+  const read = async () => {
+    const actions = await getEventAutomationActionsQuery(organizationId, triggerKey, transaction);
+    if (actions.length === 0) return null;
+    return { actions, replacements: await buildReplacements() };
+  };
+
+  let event: Awaited<ReturnType<typeof read>>;
+  if (contained) {
+    try {
+      event = await runInSavepoint(read, transaction, "automation_lookup");
+    } catch (error) {
+      logger.error(
+        `[automation] ${triggerKey} lookup failed, nothing enqueued (${logContext}): ${String(error)}`,
+      );
+      return;
+    }
+  } else {
+    event = await read();
+  }
+  if (!event) return;
   await enqueueAutomationActions(
-    actions,
-    await buildReplacements(),
+    event.actions,
+    event.replacements,
     organizationId,
-    afterCommit ? transaction : undefined,
+    transaction,
     logContext,
   );
 }

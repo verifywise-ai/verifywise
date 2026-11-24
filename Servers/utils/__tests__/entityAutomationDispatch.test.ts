@@ -1,8 +1,8 @@
 /**
  * Entity events run every action of every active automation of their trigger
  * (audit I-L5); an automation flagged legacy_first_action_only keeps only the
- * event's first action, as before. Each event keeps its timing: incidents and
- * vendors enqueue once the transaction commits, training and tasks at once.
+ * event's first action, as before. The actions are enqueued only once the
+ * write's transaction commits.
  * Model, use case and incident-updated events are covered in their own tests.
  */
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
@@ -102,19 +102,16 @@ beforeEach(() => {
 
 type Event = {
   key: string;
-  afterCommit: boolean;
   run: (tx: any) => Promise<unknown>;
 };
 
 const EVENTS: Event[] = [
   {
     key: "training_added",
-    afterCommit: false,
     run: (tx) => createNewTrainingRegistarQuery({ training_name: "T" } as any, 1, tx),
   },
   {
     key: "training_updated",
-    afterCommit: false,
     run: (tx) =>
       updateTrainingRegistarByIdQuery(5, { status: "Done" } as any, 1, tx, {
         id: 5,
@@ -123,12 +120,10 @@ const EVENTS: Event[] = [
   },
   {
     key: "training_deleted",
-    afterCommit: false,
     run: (tx) => deleteTrainingRegistarByIdQuery(5, 1, tx),
   },
   {
     key: "task_added",
-    afterCommit: false,
     run: (tx) =>
       createNewTaskQuery(
         {
@@ -144,22 +139,19 @@ const EVENTS: Event[] = [
   },
   {
     key: "incident_added",
-    afterCommit: true,
     run: (tx) => createNewIncidentQuery({ description: "Something happened" } as any, 1, tx),
   },
   {
     key: "incident_deleted",
-    afterCommit: true,
     run: (tx) => deleteIncidentByIdQuery(9, 1, tx),
   },
   {
     key: "vendor_deleted",
-    afterCommit: true,
     run: (tx) => deleteVendorByIdQuery(4, 1, tx, 2),
   },
 ];
 
-describe.each(EVENTS)("$key", ({ key, afterCommit, run }) => {
+describe.each(EVENTS)("$key", ({ key, run }) => {
   it("reads the trigger's actions inside the transaction", async () => {
     const tx = fakeTx();
     await run(tx);
@@ -193,23 +185,15 @@ describe.each(EVENTS)("$key", ({ key, afterCommit, run }) => {
     expect(subjects()).toEqual(["3-1", "8-1"]);
   });
 
-  it(
-    afterCommit ? "enqueues only once the transaction commits" : "enqueues at once, as before",
-    async () => {
-      const tx = fakeTx();
-      await run(tx);
-      await settle();
-      if (afterCommit) {
-        expect(mockEnqueue).not.toHaveBeenCalled();
-        tx.commit();
-        await settle();
-        expect(mockEnqueue).toHaveBeenCalledTimes(3);
-      } else {
-        expect(mockEnqueue).toHaveBeenCalledTimes(3);
-        expect(tx.afterCommit).not.toHaveBeenCalled();
-      }
-    },
-  );
+  it("enqueues only once the transaction commits", async () => {
+    const tx = fakeTx();
+    await run(tx);
+    await settle();
+    expect(mockEnqueue).not.toHaveBeenCalled();
+    tx.commit();
+    await settle();
+    expect(mockEnqueue).toHaveBeenCalledTimes(3);
+  });
 
   it("one failed enqueue never stops the others or the write", async () => {
     mockEnqueue.mockRejectedValueOnce(new Error("queue down"));

@@ -27,6 +27,9 @@ import { enqueueAutomationAction } from "../../services/automations/automationPr
 import logger from "../logger/fileLogger";
 
 const query = sequelize.query as unknown as jest.Mock<(...args: any[]) => Promise<any>>;
+/** The SQL statements run, in order. */
+const statements = () => query.mock.calls.map(([sql]) => String(sql));
+const indexOf = (re: RegExp) => statements().findIndex((sql) => re.test(sql));
 const enqueue = enqueueAutomationAction as unknown as jest.Mock<(...args: any[]) => Promise<any>>;
 
 /** A transaction double that collects afterCommit hooks so a test can fire them. */
@@ -85,19 +88,19 @@ describe("deleteProjectByIdQuery lock order", () => {
 });
 
 describe("deleteProjectByIdQuery project_deleted automation", () => {
-  it("queues the automation at once by default (core path unchanged)", async () => {
+  /** Deletes project 111 and fires the commit hooks; returns the enqueued subjects. */
+  const deleteAndCommit = async () => {
     const tx = fakeTransaction();
-
     await expect(deleteProjectByIdQuery(111, 5, tx as any)).resolves.toBe(true);
+    tx.hooks.forEach((hook) => hook());
+    await new Promise((resolve) => setImmediate(resolve));
+    return enqueue.mock.calls.map(([, data]) => (data as any).subject);
+  };
 
-    expect(enqueue).toHaveBeenCalledTimes(1);
-    expect(tx.afterCommit).not.toHaveBeenCalled();
-  });
-
-  it("with enqueueAutomationAfterCommit, queues it only when the transaction commits", async () => {
+  it("queues the automation only when the transaction commits", async () => {
     const tx = fakeTransaction();
 
-    await deleteProjectByIdQuery(111, 5, tx as any, { enqueueAutomationAfterCommit: true });
+    await deleteProjectByIdQuery(111, 5, tx as any);
 
     // Nothing is queued while the transaction can still roll back.
     expect(enqueue).not.toHaveBeenCalled();
@@ -109,30 +112,18 @@ describe("deleteProjectByIdQuery project_deleted automation", () => {
   });
 
   it("never throws from the after-commit hook when queueing fails, and still runs the rest", async () => {
-    const tx = fakeTransaction();
     automationRows = [actionRow(1, 1), actionRow(1, 2)];
     enqueue.mockRejectedValueOnce(new Error("redis down"));
 
-    await deleteProjectByIdQuery(111, 5, tx as any, { enqueueAutomationAfterCommit: true });
-    expect(() => tx.hooks[0]()).not.toThrow();
-    await new Promise((resolve) => setImmediate(resolve));
-
+    expect(await deleteAndCommit()).toEqual(["1-1", "1-2"]);
     expect(logger.error).toHaveBeenCalledWith(
       expect.stringContaining("project_deleted, project 111"),
     );
-    expect(enqueue).toHaveBeenCalledTimes(2);
   });
 
   it("queues every action of every active automation, in order", async () => {
     automationRows = [actionRow(1, 1), actionRow(1, 2), actionRow(4, 1)];
-
-    await deleteProjectByIdQuery(111, 5, fakeTransaction() as any);
-
-    expect(enqueue.mock.calls.map(([, data]) => (data as any).subject)).toEqual([
-      "1-1",
-      "1-2",
-      "4-1",
-    ]);
+    expect(await deleteAndCommit()).toEqual(["1-1", "1-2", "4-1"]);
   });
 
   it("keeps a legacy-flagged automation to the event's first action", async () => {
@@ -142,17 +133,10 @@ describe("deleteProjectByIdQuery project_deleted automation", () => {
       actionRow(4, 1),
       actionRow(4, 2),
     ];
-
-    await deleteProjectByIdQuery(111, 5, fakeTransaction() as any);
-
-    expect(enqueue.mock.calls.map(([, data]) => (data as any).subject)).toEqual([
-      "1-1",
-      "4-1",
-      "4-2",
-    ]);
+    expect(await deleteAndCommit()).toEqual(["1-1", "4-1", "4-2"]);
   });
 
-  it("reads the actions inside the transaction, for the project_deleted trigger", async () => {
+  it("reads the actions and the owner's name in a savepoint of the transaction", async () => {
     const tx = fakeTransaction();
     await deleteProjectByIdQuery(111, 5, tx as any);
     const lookup = query.mock.calls.find(([sql]) =>
@@ -162,5 +146,27 @@ describe("deleteProjectByIdQuery project_deleted automation", () => {
       replacements: { organizationId: 5, triggerKey: "project_deleted" },
       transaction: tx,
     });
+    const open = indexOf(/^SAVEPOINT automation_lookup_\d+$/);
+    expect(open).toBeGreaterThan(indexOf(/^DELETE FROM projects WHERE/));
+    expect(open).toBeLessThan(indexOf(/FROM automation_triggers/));
+    expect(indexOf(/AS full_name/)).toBeLessThan(indexOf(/^RELEASE SAVEPOINT automation_lookup_/));
+    expect(indexOf(/^ROLLBACK TO SAVEPOINT/)).toBe(-1);
+  });
+
+  it("contains a failed lookup: the delete succeeds and nothing is queued", async () => {
+    query.mockImplementation(async (sql: string) => {
+      if (sql.startsWith("DELETE FROM projects WHERE")) return [{ id: 111, owner: 3 }];
+      if (sql.includes("FROM automation_triggers")) throw new Error("relation missing");
+      return [];
+    });
+
+    expect(await deleteAndCommit()).toEqual([]);
+    // Rolled back to the savepoint, so the delete's transaction can still commit.
+    expect(indexOf(/^ROLLBACK TO SAVEPOINT automation_lookup_/)).toBeGreaterThan(
+      indexOf(/FROM automation_triggers/),
+    );
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining("project_deleted lookup failed"),
+    );
   });
 });

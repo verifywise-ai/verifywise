@@ -720,7 +720,6 @@ const agentDeleteUseCase = createWriteToolFn({
           userId: userId ?? null,
           alreadyLocked: true,
           archiveRisksLinkedOnlyHere: true,
-          enqueueAutomationAfterCommit: true,
         },
       );
       if (!deleted) {

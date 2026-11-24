@@ -42,14 +42,13 @@ export const createNewTrainingRegistarQuery = async (
   );
   const createdTrainingRegistar = result[0];
   // Every action of every active automation; one flagged legacy keeps only the
-  // event's first. Enqueued at once, as before.
+  // event's first. Enqueued once the transaction commits.
   await runEventAutomations(
     organizationId,
     "training_added",
     () => buildTrainingReplacements({ ...createdTrainingRegistar.dataValues }),
     {
       transaction,
-      afterCommit: false,
       logContext: `training_added, training ${createdTrainingRegistar.id}`,
     },
   );
@@ -156,7 +155,7 @@ export const updateTrainingRegistarByIdQuery = async (
   // Not in this organization: nothing was updated, so no automation runs.
   if (!updatedTrainingRegistar) return null as any;
   // Every action of every active automation; one flagged legacy keeps only the
-  // event's first. Enqueued at once, as before.
+  // event's first. Enqueued once the transaction commits.
   await runEventAutomations(
     organizationId,
     "training_updated",
@@ -166,7 +165,6 @@ export const updateTrainingRegistarByIdQuery = async (
       }),
     {
       transaction,
-      afterCommit: false,
       logContext: `training_updated, training ${id}`,
     },
   );
@@ -200,14 +198,13 @@ export const deleteTrainingRegistarByIdQuery = async (
   // Not in this organization: nothing was deleted, so no automation runs.
   if (!deletedTrainingRegistar) return false;
   // Every action of every active automation; one flagged legacy keeps only the
-  // event's first. Enqueued at once, as before.
+  // event's first. Enqueued once the transaction commits.
   await runEventAutomations(
     organizationId,
     "training_deleted",
     () => buildTrainingReplacements(deletedTrainingRegistar),
     {
       transaction,
-      afterCommit: false,
       logContext: `training_deleted, training ${id}`,
     },
   );

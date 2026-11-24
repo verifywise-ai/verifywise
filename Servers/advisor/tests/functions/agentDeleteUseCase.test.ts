@@ -61,7 +61,6 @@ describe("agent_delete_use_case executor", () => {
       userId: 5,
       alreadyLocked: true,
       archiveRisksLinkedOnlyHere: true,
-      enqueueAutomationAfterCommit: true,
     });
     expect(lock.mock.invocationCallOrder[0]).toBeLessThan(deleteShared.mock.invocationCallOrder[0]);
     expect(tx.commit).toHaveBeenCalledTimes(1);

@@ -77,9 +77,7 @@ describe("deleteProjectWithSideEffects", () => {
     expect(lock).toHaveBeenCalledWith(111, 5, tx);
     expect(withdraw).toHaveBeenCalledWith(900, 5, tx, { releaseUseCase: false });
     expect(record).toHaveBeenCalledWith(111, 8, 5, tx);
-    expect(del).toHaveBeenCalledWith(111, 5, tx, {
-      enqueueAutomationAfterCommit: false,
-    });
+    expect(del).toHaveBeenCalledWith(111, 5, tx);
     expect(order(lock)).toBeLessThan(order(pending));
     expect(order(pending)).toBeLessThan(order(withdraw));
     expect(order(withdraw)).toBeLessThan(order(record));
@@ -90,13 +88,10 @@ describe("deleteProjectWithSideEffects", () => {
     await deleteProjectWithSideEffects(111, 5, tx, {
       userId: 8,
       alreadyLocked: true,
-      enqueueAutomationAfterCommit: true,
     });
 
     expect(lock).not.toHaveBeenCalled();
-    expect(del).toHaveBeenCalledWith(111, 5, tx, {
-      enqueueAutomationAfterCommit: true,
-    });
+    expect(del).toHaveBeenCalledWith(111, 5, tx);
   });
 
   it("can skip the approval withdrawal and the history (demo data)", async () => {

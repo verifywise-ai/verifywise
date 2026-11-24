@@ -20,7 +20,9 @@ import { enqueueAutomationAction } from "../../services/automations/automationPr
 import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
 
 const query = sequelize.query as unknown as jest.Mock<(...args: any[]) => Promise<any>>;
-const transaction = {} as any;
+/** Commit hooks registered by the automation dispatch. */
+const commitHooks: Array<() => unknown> = [];
+const transaction = { afterCommit: (hook: () => unknown) => commitHooks.push(hook) } as any;
 
 /**
  * Route each SQL statement to a canned result; members 7 and 6 exist, and
@@ -261,7 +263,11 @@ describe("updateProjectByIdQuery members handling", () => {
   it("still fires the project-updated automation when a field changed", async () => {
     query.mockReset();
     mockDb({ automationActive: true });
+    commitHooks.length = 0;
     await updateProjectByIdQuery(1, { project_title: "P" } as any, undefined, 1, transaction);
+    // Queued only once the transaction commits.
+    expect(enqueueAutomationAction).not.toHaveBeenCalled();
+    commitHooks.forEach((hook) => hook());
     expect(enqueueAutomationAction).toHaveBeenCalledTimes(1);
   });
 

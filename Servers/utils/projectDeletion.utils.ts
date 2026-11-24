@@ -20,8 +20,6 @@ export interface DeleteProjectOptions {
   withdrawApproval?: boolean;
   /** Record the deletion in the use-case change history (default true). */
   recordHistory?: boolean;
-  /** Queue the project_deleted automation only after the transaction commits. */
-  enqueueAutomationAfterCommit?: boolean;
   /**
    * Archive the active risks linked to this use case and to no other before
    * the links go (default false). An archived risk with no use case link is
@@ -52,7 +50,7 @@ export interface DeleteProjectOptions {
  *    then archive the risks linked only to this use case
  *    (archiveRisksLinkedOnlyHere), while its projects_risks rows still exist;
  * 5. deleteProjectByIdQuery: children, the project row, the project_deleted
- *    automation (after commit when asked). It locks the project as its own
+ *    automation (after commit). It locks the project as its own
  *    first statement too, a no-op here.
  *
  * Callers: the core "Delete use case" (legacy route never archives, v1 route
@@ -73,7 +71,6 @@ export async function deleteProjectWithSideEffects(
     alreadyLocked = false,
     withdrawApproval = true,
     recordHistory = true,
-    enqueueAutomationAfterCommit = false,
     archiveRisksLinkedOnlyHere = false,
   } = options;
 
@@ -119,8 +116,6 @@ export async function deleteProjectWithSideEffects(
 
   // deleteProjectByIdQuery takes the lock again as its first statement; the
   // row is already locked by this transaction, so that is one cheap no-op.
-  const deleted = await deleteProjectByIdQuery(projectId, organizationId, transaction, {
-    enqueueAutomationAfterCommit,
-  });
+  const deleted = await deleteProjectByIdQuery(projectId, organizationId, transaction);
   return { deleted, withdrawnApprovalId, archivedRiskIds };
 }

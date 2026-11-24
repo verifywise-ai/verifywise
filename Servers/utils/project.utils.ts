@@ -634,7 +634,7 @@ export const createNewProjectQuery = async (
   }
 
   // Every action of every active automation; one flagged legacy keeps only the
-  // event's first. Enqueued at once, as before.
+  // event's first. Enqueued once the transaction commits.
   await runEventAutomations(
     organizationId,
     "project_added",
@@ -647,7 +647,7 @@ export const createNewProjectQuery = async (
           transaction,
         ),
       }),
-    { transaction, afterCommit: false, logContext: `project_added, project ${createdProject.id}` },
+    { transaction, logContext: `project_added, project ${createdProject.id}` },
   );
 
   return createdProject;
@@ -853,7 +853,7 @@ export const updateProjectByIdQuery = async (
   // No project column changed (e.g. members only): nothing for "project updated"
   // to report, even when a caller stamped last_updated. Otherwise every action
   // of every active automation; one flagged legacy keeps only the event's
-  // first. Enqueued at once, as before.
+  // first. Enqueued once the transaction commits.
   if (changesProjectColumns) {
     await runEventAutomations(
       organizationId,
@@ -867,7 +867,7 @@ export const updateProjectByIdQuery = async (
             transaction,
           ),
         }),
-      { transaction, afterCommit: false, logContext: `project_updated, project ${id}` },
+      { transaction, logContext: `project_updated, project ${id}` },
     );
   }
   return {
@@ -1006,18 +1006,14 @@ export const lockUseCaseWorkflowQuery = async (
 
 /**
  * Delete a project and everything that hangs off it. The project row is
- * locked (FOR UPDATE) before any child row is touched. Pass
- * `enqueueAutomationAfterCommit` when the caller's transaction may still roll
- * back after this returns (for example a batch removal): the project_deleted
- * automation is then queued only once the transaction commits, so it never
- * fires for a project that survived a rollback. Without it the automation is
- * queued right away, as before.
+ * locked (FOR UPDATE) before any child row is touched. The project_deleted
+ * automations are queued only once the transaction commits, so they never
+ * fire for a project that survived a rollback.
  */
 export const deleteProjectByIdQuery = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
-  options: { enqueueAutomationAfterCommit?: boolean } = {},
 ): Promise<boolean> => {
   // The project lock comes before any child row. If the caller already holds
   // it (deleteProjectWithSideEffects), this is a cheap no-op.
@@ -1071,34 +1067,20 @@ export const deleteProjectByIdQuery = async (
   );
   const deletedProject = result[0];
 
-  // Automation trigger is optional - wrap in try-catch to prevent automation failures
-  // from blocking the core project deletion operation
-  try {
-    // Only proceed with automation if we have a valid deleted project. Every
-    // action of every active automation; one flagged legacy keeps only the
-    // event's first. Queued after commit with enqueueAutomationAfterCommit,
-    // at once without it.
-    if (deletedProject && (deletedProject.owner || deletedProject.external_owner_name)) {
-      await runEventAutomations(
-        organizationId,
-        "project_deleted",
-        async () =>
-          buildProjectReplacements({
-            ...deletedProject,
-            owner_name: await resolveProjectOwnerName(deletedProject, "Unknown", transaction),
-          }),
-        {
-          transaction,
-          afterCommit: !!options.enqueueAutomationAfterCommit,
-          logContext: `project_deleted, project ${id}`,
-        },
-      );
-    }
-  } catch (automationError) {
-    // Log but don't throw - automation failure shouldn't block project deletion
-    console.warn(
-      `[deleteProjectByIdQuery] Automation trigger failed for project ${id}:`,
-      automationError instanceof Error ? automationError.message : automationError,
+  // The automation is optional: its lookup runs in a savepoint (contained),
+  // so a failure there is logged and never aborts the delete's transaction.
+  // Every action of every active automation; one flagged legacy keeps only
+  // the event's first. Queued once the transaction commits.
+  if (deletedProject && (deletedProject.owner || deletedProject.external_owner_name)) {
+    await runEventAutomations(
+      organizationId,
+      "project_deleted",
+      async () =>
+        buildProjectReplacements({
+          ...deletedProject,
+          owner_name: await resolveProjectOwnerName(deletedProject, "Unknown", transaction),
+        }),
+      { transaction, contained: true, logContext: `project_deleted, project ${id}` },
     );
   }
 

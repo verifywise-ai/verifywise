@@ -159,7 +159,7 @@ export const createNewTaskQuery = async (
   }
 
   // Every action of every active automation; one flagged legacy keeps only the
-  // event's first. Enqueued at once, as before.
+  // event's first. Enqueued once the transaction commits.
   await runEventAutomations(
     organizationId,
     "task_added",
@@ -168,7 +168,7 @@ export const createNewTaskQuery = async (
         ...createdTask.dataValues,
         ...(await taskPeopleNames(createdTask.dataValues, transaction)),
       }),
-    { transaction, afterCommit: false, logContext: `task_added, task ${createdTask.id}` },
+    { transaction, logContext: `task_added, task ${createdTask.id}` },
   );
 
   return createdTask;
@@ -626,7 +626,7 @@ export const updateTaskByIdQuery = async (
     (updatedTask.dataValues as any)["assignees"] = existingAssignees.map((a: any) => a.user_id);
   }
   // Every action of every active automation; one flagged legacy keeps only the
-  // event's first. Enqueued at once, as before.
+  // event's first. Enqueued once the transaction commits.
   await runEventAutomations(
     organizationId,
     "task_updated",
@@ -635,7 +635,7 @@ export const updateTaskByIdQuery = async (
         ...updatedTask.dataValues,
         ...(await taskPeopleNames(updatedTask.dataValues, transaction)),
       }),
-    { transaction, afterCommit: false, logContext: `task_updated, task ${id}` },
+    { transaction, logContext: `task_updated, task ${id}` },
   );
 
   return updatedTask;
@@ -745,7 +745,7 @@ export const deleteTaskByIdQuery = async ({
   );
   (deletedTask as any)["assignees"] = existingAssignees.map((a: any) => a.user_id);
   // Every action of every active automation; one flagged legacy keeps only the
-  // event's first. Enqueued at once, as before.
+  // event's first. Enqueued once the transaction commits.
   await runEventAutomations(
     organizationId,
     "task_deleted",
@@ -754,7 +754,7 @@ export const deleteTaskByIdQuery = async ({
         ...deletedTask,
         ...(await taskPeopleNames(deletedTask, transaction)),
       }),
-    { transaction, afterCommit: false, logContext: `task_deleted, task ${id}` },
+    { transaction, logContext: `task_deleted, task ${id}` },
   );
 
   return true;
