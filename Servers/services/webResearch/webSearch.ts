@@ -43,9 +43,10 @@ export class SearchEngineError extends Error {
 
 /**
  * Who an engine is, as the run record and the cache name it: the search of the Claude and OpenAI
- * providers, the news of the GDELT Project, or a replay of a recording.
+ * providers, Brave Search with an organization's key, the news of the GDELT Project, or a replay
+ * of a recording.
  */
-export type SearchEngineId = "anthropic" | "openai" | "gdelt" | "replay";
+export type SearchEngineId = "anthropic" | "openai" | "brave" | "gdelt" | "replay";
 
 export interface SearchEngine {
   /** Which engine this is. A wrapper reports the engine that answers now. */

@@ -12,8 +12,14 @@
  */
 import { safeFetch } from "../../utils/safeOutboundUrl";
 import logger from "../../utils/logger/fileLogger";
+import {
+  BRAVE_API_BASE,
+  BRAVE_INVALID_TOKEN_CODE,
+  braveErrorCodeOf,
+  readCappedBody,
+} from "../webResearch/braveSearch";
 
-export const BRAVE_API_BASE = "https://api.search.brave.com/res/v1";
+export { BRAVE_API_BASE };
 export const BRAVE_KEY_CHECK_TIMEOUT_MS = 8000;
 /** An answer larger than this is not read. */
 export const MAX_BODY_BYTES = 1024 * 1024;
@@ -21,7 +27,6 @@ export const MIN_BRAVE_KEY_LENGTH = 10;
 export const MAX_BRAVE_KEY_LENGTH = 200;
 
 const CHECK_URL = `${BRAVE_API_BASE}/web/search?q=test&count=1`;
-const INVALID_TOKEN_CODE = "SUBSCRIPTION_TOKEN_INVALID";
 
 /**
  * Why a key was not accepted: `invalid_key` means the text cannot be a key or Brave refused it;
@@ -52,41 +57,6 @@ export const isPlausibleBraveKey = (key: unknown): key is string => {
   return true;
 };
 
-/** Reads at most MAX_BODY_BYTES, cancelling the stream past that; a larger answer reads as "". */
-const readCapped = async (response: Response): Promise<string> => {
-  const length = Number(response.headers.get("content-length"));
-  if (Number.isFinite(length) && length > MAX_BODY_BYTES) {
-    await response.body?.cancel().catch(() => undefined);
-    return "";
-  }
-  const reader = response.body?.getReader();
-  if (!reader) return "";
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    total += value.byteLength;
-    if (total > MAX_BODY_BYTES) {
-      await reader.cancel().catch(() => undefined);
-      return "";
-    }
-    chunks.push(value);
-  }
-  return Buffer.concat(chunks).toString("utf8");
-};
-
-/** The `error.code` of a Brave error answer, or null when the body is not one. */
-const errorCodeOf = (body: string): string | null => {
-  try {
-    const parsed = JSON.parse(body) as { error?: { code?: unknown } };
-    const code = parsed?.error?.code;
-    return typeof code === "string" ? code : null;
-  } catch {
-    return null;
-  }
-};
-
 const unreachable: BraveKeyCheckResult = { ok: false, code: "unreachable" };
 const invalidKey: BraveKeyCheckResult = { ok: false, code: "invalid_key" };
 
@@ -110,8 +80,9 @@ export const checkBraveKey = async (
     return unreachable;
   }
 
-  const body = await readCapped(response).catch(() => "");
-  if (errorCodeOf(body) === INVALID_TOKEN_CODE) return invalidKey;
+  // A larger answer, or one that cannot be read, is read as "".
+  const body = (await readCappedBody(response, MAX_BODY_BYTES).catch(() => "")) ?? "";
+  if (braveErrorCodeOf(body) === BRAVE_INVALID_TOKEN_CODE) return invalidKey;
   if (response.status === 401 || response.status === 403) return invalidKey;
   // A key that is rate limited is a key Brave knows.
   if (response.status === 429) return { ok: true };

@@ -1,0 +1,478 @@
+/**
+ * Search of the web and the news through the Brave Search API, with an organization's own Brave key:
+ * the engine of the research keys that have no web search of their own, ahead of GDELT.
+ *
+ * - kind `web` asks the LLM Context endpoint (`/llm/context`), whose answer holds passages of each
+ *   page (`grounding.generic[].snippets`) and the page's age (`sources[url].age[1]`, YYYY-MM-DD).
+ * - kind `news` asks the news endpoint (`/news/search`), with `text_decorations=false` so the text
+ *   comes without highlighting, and `page_age` for the date.
+ * - Both are asked with `safesearch=moderate` (news defaults to strict) and ten results.
+ * - A query is cut to the endpoint's limits, words first and then characters: 75 words and 600
+ *   characters for LLM Context, 50 words and 400 characters for news.
+ *
+ * Brave's terms (§3(b)(i)) allow the output of a call to be used, not kept: this engine is never
+ * wrapped in `withSearchCache`, and what it answers is used during the run only (the run keeps no
+ * title or snippet of it; see the plan of 2026-11-23). Nothing is logged here, and no error holds
+ * the key, the query or the answer: every failure is a SearchEngineError with its fixed message.
+ *
+ * The request goes through `safeFetch` (the outbound policy, an agent that checks every resolved
+ * address, redirects refused), with the key in `X-Subscription-Token`. `guardedFetch` is not used:
+ * it cannot send that header and does not read the body of an error, which is where Brave says that
+ * a key is wrong. Each request has 15 seconds and reads at most 2 MB; the requests of one engine are
+ * spaced 1.1 seconds apart, since the free plan allows one a second.
+ *
+ * Errors:
+ * - a key Brave refuses (`error.code` SUBSCRIPTION_TOKEN_INVALID, or a 401 or 403) is a
+ *   SearchUnavailableError, so `withFallback` answers the rest of the run from the next engine;
+ * - a 429 is waited out once, for the first entry of `X-RateLimit-Reset` in seconds but no more than
+ *   2 seconds, and asked again; a second 429 is a SearchEngineError;
+ * - anything else (a network error, the time limit, an abort, another status, a body that is too
+ *   large, not JSON or of another shape) is a SearchEngineError.
+ */
+import { safeFetch } from "../../utils/safeOutboundUrl";
+import { MAX_SNIPPET_CHARS, cleanText, cutAtCodePoint } from "../vendorResearch/text";
+import { SearchUnavailableError } from "./providerSearch";
+import { parsePublicUrl } from "./publicUrl";
+import {
+  MAX_RESULTS,
+  type SearchEngine,
+  SearchEngineError,
+  type SearchKind,
+  type SearchQueue,
+  type SearchResult,
+  createSearchQueue,
+  sleepUnlessAborted,
+} from "./webSearch";
+
+export const BRAVE_API_BASE = "https://api.search.brave.com/res/v1";
+/** The `error.code` of a key Brave does not know. */
+export const BRAVE_INVALID_TOKEN_CODE = "SUBSCRIPTION_TOKEN_INVALID";
+/** The gap between two requests of one engine: the free plan allows one request a second. */
+export const BRAVE_MIN_GAP_MS = 1_100;
+export const BRAVE_REQUEST_TIMEOUT_MS = 15_000;
+export const BRAVE_MAX_BODY_BYTES = 2 * 1024 * 1024;
+/** The longest wait after a 429, whatever `X-RateLimit-Reset` asks. */
+export const BRAVE_MAX_RATE_LIMIT_WAIT_MS = 2_000;
+/** The results asked for, of either endpoint. */
+const COUNT = 10;
+/** The most passages the LLM Context endpoint gives back, in tokens. */
+const MAX_CONTEXT_TOKENS = 4096;
+/** The entries of an answer that are read: more than COUNT, so that dropped ones leave room. */
+const MAX_ENTRIES_READ = 50;
+/** How the passages of one page are joined into a snippet. */
+const PASSAGE_JOINER = " … ";
+
+/** The limits Brave sets on a query, per endpoint (its API reference, read on 2026-11-23). */
+export const BRAVE_QUERY_LIMITS: Readonly<Record<SearchKind, { words: number; chars: number }>> = {
+  web: { words: 75, chars: 600 },
+  news: { words: 50, chars: 400 },
+};
+
+const ENDPOINTS: Readonly<Record<SearchKind, string>> = {
+  web: `${BRAVE_API_BASE}/llm/context`,
+  news: `${BRAVE_API_BASE}/news/search`,
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const isWhiteSpace = (code: number): boolean =>
+  code === 0x20 || (code >= 0x09 && code <= 0x0d) || code === 0xa0 || code === 0x3000;
+
+/**
+ * The words of a text: runs of characters that are not white space, found by one pass over it.
+ */
+function wordsOf(text: string): string[] {
+  const words: string[] = [];
+  let start = -1;
+  for (let i = 0; i <= text.length; i += 1) {
+    const space = i === text.length || isWhiteSpace(text.charCodeAt(i));
+    if (space && start !== -1) {
+      words.push(text.slice(start, i));
+      start = -1;
+    } else if (!space && start === -1) {
+      start = i;
+    }
+  }
+  return words;
+}
+
+/**
+ * The query as the endpoint of `kind` takes it: control characters and lone surrogates out, its
+ * first words up to the endpoint's count, then cut to its characters without splitting a pair.
+ */
+export function braveQueryOf(query: string, kind: SearchKind): string {
+  const { words, chars } = BRAVE_QUERY_LIMITS[kind];
+  // The query is bounded before the words are found, so the work does not grow with its length.
+  const bounded = cleanText(cutAtCodePoint(query, chars * 4));
+  return cutAtCodePoint(wordsOf(bounded).slice(0, words).join(" "), chars).trimEnd();
+}
+
+/** The address of a request: the endpoint of `kind` and its parameters. */
+export function braveUrlOf(query: string, kind: SearchKind): string {
+  const params = new URLSearchParams({ q: query, count: String(COUNT) });
+  if (kind === "web") {
+    params.set("maximum_number_of_urls", String(COUNT));
+    params.set("maximum_number_of_tokens", String(MAX_CONTEXT_TOKENS));
+  } else {
+    params.set("text_decorations", "false");
+  }
+  params.set("safesearch", "moderate");
+  return `${ENDPOINTS[kind]}?${params.toString()}`;
+}
+
+/** The entities a text from a page is likely to hold; any other is left as it is. */
+const ENTITIES: Readonly<Record<string, string>> = {
+  amp: "&",
+  lt: "<",
+  gt: ">",
+  quot: '"',
+  apos: "'",
+  nbsp: " ",
+  hellip: "…",
+  mdash: "—",
+  ndash: "–",
+};
+/** The longest entity read, `&` and `;` included: `&#x10FFFF;`. */
+const MAX_ENTITY_CHARS = 10;
+
+/** The character an entity's name stands for (`amp`, `#39`, `#x27`), or null. */
+function entityOf(name: string): string | null {
+  if (name.startsWith("#")) {
+    const hex = name[1] === "x" || name[1] === "X";
+    const digits = name.slice(hex ? 2 : 1);
+    if (digits === "") return null;
+    for (const digit of digits.toLowerCase()) {
+      const ok = (digit >= "0" && digit <= "9") || (hex && digit >= "a" && digit <= "f");
+      if (!ok) return null;
+    }
+    const code = Number.parseInt(digits, hex ? 16 : 10);
+    if (!Number.isFinite(code) || code <= 0 || code > 0x10ffff) return null;
+    return String.fromCodePoint(code);
+  }
+  return Object.prototype.hasOwnProperty.call(ENTITIES, name) ? ENTITIES[name] : null;
+}
+
+/** Whether the character after a `<` starts a tag: a letter, `/` or `!`. */
+const startsTag = (char: string | undefined): boolean =>
+  char !== undefined &&
+  (char === "/" || char === "!" || (char >= "a" && char <= "z") || (char >= "A" && char <= "Z"));
+
+/**
+ * The text without HTML tags and with its entities read, in one pass: a tag runs from a `<` that
+ * starts one to the next `>`, and is left as it is when no `>` follows (there is then none further
+ * on, so no later `<` is looked at again). An entity is looked for within MAX_ENTITY_CHARS of its
+ * `&`. Brave is asked for plain text; this only guards against a page that slipped markup in.
+ */
+export function plainTextOf(text: string): string {
+  let out = "";
+  let i = 0;
+  let tagsClosed = true;
+  while (i < text.length) {
+    const char = text[i];
+    if (char === "<" && tagsClosed && startsTag(text[i + 1])) {
+      const end = text.indexOf(">", i + 1);
+      if (end === -1) {
+        tagsClosed = false;
+      } else {
+        out += " ";
+        i = end + 1;
+        continue;
+      }
+    }
+    if (char === "&") {
+      // Only the window of an entity is looked at, so that many `&` cost no more than the text.
+      const end = text.slice(i + 1, i + MAX_ENTITY_CHARS).indexOf(";") + i + 1;
+      if (end > i) {
+        const decoded = entityOf(text.slice(i + 1, end));
+        if (decoded !== null) {
+          out += decoded;
+          i = end + 1;
+          continue;
+        }
+      }
+    }
+    out += char;
+    i += 1;
+  }
+  return out;
+}
+
+/**
+ * Third-party text as one line of plain text cut to `max` units: anything that is not a text is
+ * empty. A text far longer than it may be is cut first, so the work does not grow with the body.
+ */
+function oneLine(value: unknown, max: number): string {
+  if (typeof value !== "string") return "";
+  const bounded = cutAtCodePoint(value, max * 4);
+  return cutAtCodePoint(wordsOf(cleanText(plainTextOf(bounded))).join(" "), max).trimEnd();
+}
+
+/** A YYYY-MM-DD that is a day of the calendar (no 30 February), or null. */
+function dayOf(value: unknown): string | null {
+  if (typeof value !== "string" || value.length < 10) return null;
+  const day = value.slice(0, 10);
+  for (let i = 0; i < 10; i += 1) {
+    const char = day[i];
+    const ok = i === 4 || i === 7 ? char === "-" : char >= "0" && char <= "9";
+    if (!ok) return null;
+  }
+  const [year, month, date] = day.split("-").map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, date));
+  const same =
+    parsed.getUTCFullYear() === year &&
+    parsed.getUTCMonth() === month - 1 &&
+    parsed.getUTCDate() === date;
+  return same ? day : null;
+}
+
+/** The address of an entry when it passes the policy of a public address, or null. */
+function publicUrlOf(value: unknown): URL | null {
+  if (typeof value !== "string") return null;
+  try {
+    return parsePublicUrl(value);
+  } catch {
+    return null;
+  }
+}
+
+/** A host name as a source: one line, or the host of the address when Brave gave none. */
+const sourceOf = (hostname: unknown, url: URL): string => oneLine(hostname, 255) || url.hostname;
+
+/** One result of either endpoint, before the list is de-duplicated and cut. */
+interface Candidate {
+  url: URL;
+  title: unknown;
+  snippet: string;
+  publishedAt: string | null;
+  source: string;
+}
+
+/** The results of an LLM Context answer. Throws a SearchEngineError for one of another shape. */
+function webCandidatesOf(body: unknown): Candidate[] {
+  if (!isRecord(body) || !isRecord(body.grounding)) throw new SearchEngineError();
+  const generic = body.grounding.generic;
+  if (generic === undefined) return [];
+  if (!Array.isArray(generic)) throw new SearchEngineError();
+  const sources = isRecord(body.sources) ? body.sources : {};
+  const candidates: Candidate[] = [];
+  for (const entry of generic.slice(0, MAX_ENTRIES_READ)) {
+    if (!isRecord(entry)) continue;
+    const url = publicUrlOf(entry.url);
+    if (url === null) continue;
+    const known =
+      typeof entry.url === "string" && Object.prototype.hasOwnProperty.call(sources, entry.url);
+    const source = known ? sources[entry.url as string] : undefined;
+    const meta = isRecord(source) ? source : {};
+    const passages = Array.isArray(entry.snippets) ? entry.snippets.slice(0, MAX_ENTRIES_READ) : [];
+    // Each passage is plain text already: the joined text is only cut, not read again.
+    const snippet = cutAtCodePoint(
+      passages
+        .map((passage) => oneLine(passage, MAX_SNIPPET_CHARS))
+        .filter((passage) => passage !== "")
+        .join(PASSAGE_JOINER),
+      MAX_SNIPPET_CHARS,
+    ).trimEnd();
+    candidates.push({
+      url,
+      title: entry.title,
+      snippet,
+      publishedAt: Array.isArray(meta.age) ? dayOf(meta.age[1]) : null,
+      source: sourceOf(meta.hostname, url),
+    });
+  }
+  return candidates;
+}
+
+/** The results of a news answer. Throws a SearchEngineError for one of another shape. */
+function newsCandidatesOf(body: unknown): Candidate[] {
+  if (!isRecord(body)) throw new SearchEngineError();
+  const results = body.results;
+  if (results === undefined) return [];
+  if (!Array.isArray(results)) throw new SearchEngineError();
+  const candidates: Candidate[] = [];
+  for (const entry of results.slice(0, MAX_ENTRIES_READ)) {
+    if (!isRecord(entry)) continue;
+    const url = publicUrlOf(entry.url);
+    if (url === null) continue;
+    const meta = isRecord(entry.meta_url) ? entry.meta_url : {};
+    candidates.push({
+      url,
+      title: entry.title,
+      snippet: oneLine(entry.description, MAX_SNIPPET_CHARS),
+      publishedAt: dayOf(entry.page_age),
+      source: sourceOf(meta.hostname, url),
+    });
+  }
+  return candidates;
+}
+
+/**
+ * The results of an answer of the endpoint of `kind`: each address once, at most MAX_RESULTS, a
+ * result with no title named after its source.
+ */
+export function parseBraveBody(body: unknown, kind: SearchKind): SearchResult[] {
+  const candidates = kind === "web" ? webCandidatesOf(body) : newsCandidatesOf(body);
+  const results: SearchResult[] = [];
+  const seen = new Set<string>();
+  for (const candidate of candidates) {
+    if (results.length >= MAX_RESULTS) break;
+    const url = candidate.url.href;
+    if (seen.has(url)) continue;
+    seen.add(url);
+    results.push({
+      title: oneLine(candidate.title, MAX_SNIPPET_CHARS) || candidate.source,
+      url,
+      snippet: candidate.snippet,
+      publishedAt: candidate.publishedAt,
+      source: candidate.source,
+    });
+  }
+  return results;
+}
+
+/**
+ * The body of an answer as text, reading at most `maxBytes`; null for a larger one, whose stream is
+ * cancelled. Shared with the key check (vendorResearch/braveKeyCheck.ts).
+ */
+export async function readCappedBody(response: Response, maxBytes: number): Promise<string | null> {
+  const length = Number(response.headers.get("content-length"));
+  if (Number.isFinite(length) && length > maxBytes) {
+    await response.body?.cancel().catch(() => undefined);
+    return null;
+  }
+  const reader = response.body?.getReader();
+  if (!reader) return "";
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel().catch(() => undefined);
+      return null;
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+/** The `error.code` of a Brave error answer, or null when the body is not one. */
+export function braveErrorCodeOf(body: string): string | null {
+  try {
+    const parsed: unknown = JSON.parse(body);
+    const code = isRecord(parsed) && isRecord(parsed.error) ? parsed.error.code : undefined;
+    return typeof code === "string" ? code : null;
+  } catch {
+    return null;
+  }
+}
+
+/** The wait after a 429: the first entry of `X-RateLimit-Reset`, in seconds, at most 2 seconds. */
+export function rateLimitWaitMsOf(header: string | null): number {
+  const first = header === null ? "" : header.split(",", 1)[0].trim();
+  const seconds = first === "" ? Number.NaN : Number(first);
+  if (!Number.isFinite(seconds) || seconds < 0) return BRAVE_MAX_RATE_LIMIT_WAIT_MS;
+  return Math.min(seconds * 1000, BRAVE_MAX_RATE_LIMIT_WAIT_MS);
+}
+
+/** A 429: the request may be asked once more after the wait. */
+class RateLimited extends Error {
+  constructor(readonly waitMs: number) {
+    super("Rate limited");
+    this.name = "RateLimited";
+  }
+}
+
+export interface BraveEngineDeps {
+  /** The organization's Brave Search API key. It is sent in a header and nowhere else. */
+  apiKey: string;
+  /** Replaces `safeFetch`, for tests. */
+  fetchImpl?: (url: string, init?: RequestInit) => Promise<Response>;
+  /** Replaces the queue of this engine (one request every BRAVE_MIN_GAP_MS), for tests. */
+  queue?: SearchQueue;
+  /** Replaces the wait after a 429, for tests. */
+  sleep?: (ms: number, signal?: AbortSignal) => Promise<void>;
+  /** Replaces the time limit of a request (BRAVE_REQUEST_TIMEOUT_MS), for tests. */
+  timeoutMs?: number;
+}
+
+/**
+ * The search engine on Brave Search, with an organization's key: kind `web` on the LLM Context
+ * endpoint, kind `news` on the news endpoint (see the module comment). The engine has its own queue,
+ * so the requests of one run are spaced for the key's rate. It keeps nothing between searches.
+ */
+export function createBraveEngine(deps: BraveEngineDeps): SearchEngine {
+  const { apiKey } = deps;
+  const fetchImpl = deps.fetchImpl ?? safeFetch;
+  const queue = deps.queue ?? createSearchQueue({ minGapMs: BRAVE_MIN_GAP_MS });
+  const sleep = deps.sleep ?? sleepUnlessAborted;
+  const timeoutMs = deps.timeoutMs ?? BRAVE_REQUEST_TIMEOUT_MS;
+
+  /** One request, within the time limit and the caller's signal, and its answer read. */
+  const request = async (
+    url: string,
+    kind: SearchKind,
+    signal: AbortSignal | undefined,
+  ): Promise<SearchResult[]> => {
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    const timer = setTimeout(abort, timeoutMs);
+    if (signal?.aborted) abort();
+    else signal?.addEventListener("abort", abort, { once: true });
+    try {
+      const response = await fetchImpl(url, {
+        method: "GET",
+        headers: { Accept: "application/json", "X-Subscription-Token": apiKey },
+        signal: controller.signal,
+      });
+      const text = await readCappedBody(response, BRAVE_MAX_BODY_BYTES);
+      if (text === null) throw new SearchEngineError();
+      if (braveErrorCodeOf(text) === BRAVE_INVALID_TOKEN_CODE) throw new SearchUnavailableError();
+      if (response.status === 401 || response.status === 403) throw new SearchUnavailableError();
+      if (response.status === 429) {
+        throw new RateLimited(rateLimitWaitMsOf(response.headers.get("x-ratelimit-reset")));
+      }
+      if (response.status !== 200) throw new SearchEngineError();
+      // An abort that came while the body was read is no answer.
+      if (controller.signal.aborted) throw new SearchEngineError();
+      let body: unknown;
+      try {
+        body = JSON.parse(text);
+      } catch {
+        throw new SearchEngineError();
+      }
+      return parseBraveBody(body, kind);
+    } finally {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", abort);
+    }
+  };
+
+  return {
+    id: "brave",
+    kinds: ["web", "news"],
+    newsWindowMonths: null,
+    async search(query, kind, signal) {
+      try {
+        if ((kind !== "web" && kind !== "news") || signal?.aborted) throw new SearchEngineError();
+        const q = braveQueryOf(query, kind);
+        if (q === "") throw new SearchEngineError();
+        const url = braveUrlOf(q, kind);
+        try {
+          return await queue(() => request(url, kind, signal), signal);
+        } catch (error) {
+          if (!(error instanceof RateLimited)) throw error;
+          await sleep(error.waitMs, signal);
+          return await queue(() => request(url, kind, signal), signal);
+        }
+      } catch (error) {
+        // A refused key stays one, so that `withFallback` moves on; everything else is the fixed
+        // error, with nothing of the key, the query or the answer in it.
+        if (error instanceof SearchUnavailableError) throw new SearchUnavailableError();
+        throw new SearchEngineError();
+      }
+    },
+  };
+}
