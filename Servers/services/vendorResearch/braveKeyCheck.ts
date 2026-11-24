@@ -5,6 +5,8 @@
  * A run asks two endpoints (see webResearch/braveSearch.ts): LLM Context (`/llm/context`) for the
  * web and `/news/search` for the news. A plan can hold one and not the other, so the check asks
  * both, at the same time and for one result each, with the addresses `braveUrlOf` builds for a run.
+ * A plan without LLM Context (a 400 with `error.code` OPTION_NOT_IN_PLAN) is searched on web search
+ * by a run, so that answer is followed by a check of web search, whose verdict stands for the web.
  * Each request goes through `safeFetch` with an 8 second limit and reads at most MAX_BODY_BYTES.
  *
  * How one answer is read: Brave refuses a wrong key with `error.code === "SUBSCRIPTION_TOKEN_INVALID"`
@@ -22,6 +24,8 @@ import logger from "../../utils/logger/fileLogger";
 import {
   BRAVE_API_BASE,
   BRAVE_INVALID_TOKEN_CODE,
+  BRAVE_NOT_IN_PLAN_CODE,
+  braveEndpointUrlOf,
   braveErrorCodeOf,
   braveUrlOf,
   readCappedBody,
@@ -40,6 +44,8 @@ const CHECKED_KINDS: readonly SearchKind[] = ["web", "news"];
 export const BRAVE_KEY_CHECK_URLS: readonly string[] = CHECKED_KINDS.map((kind) =>
   braveUrlOf("test", kind, 1),
 );
+/** The web search address, asked when the plan has no LLM Context. */
+export const BRAVE_WEB_SEARCH_CHECK_URL = braveEndpointUrlOf("test", "webSearch", 1);
 
 /**
  * Why a key was not accepted: `invalid_key` means the text cannot be a key or Brave refused it;
@@ -71,7 +77,7 @@ export const isPlausibleBraveKey = (key: unknown): key is string => {
 };
 
 /** What one endpoint said of the key. */
-type EndpointVerdict = "pass" | "refused" | "unreachable";
+type EndpointVerdict = "pass" | "refused" | "unreachable" | "not_in_plan";
 
 /** Asks one endpoint with the key and reads its answer. */
 const checkEndpoint = async (
@@ -95,7 +101,9 @@ const checkEndpoint = async (
 
   // A larger answer, or one that cannot be read, is read as "".
   const body = (await readCappedBody(response, MAX_BODY_BYTES).catch(() => "")) ?? "";
-  if (braveErrorCodeOf(body) === BRAVE_INVALID_TOKEN_CODE) return "refused";
+  const errorCode = braveErrorCodeOf(body);
+  if (errorCode === BRAVE_INVALID_TOKEN_CODE) return "refused";
+  if (response.status === 400 && errorCode === BRAVE_NOT_IN_PLAN_CODE) return "not_in_plan";
   if (response.status === 401 || response.status === 402 || response.status === 403) {
     return "refused";
   }
@@ -115,8 +123,17 @@ export const checkBraveKey = async (
   const timeoutMs = deps.timeoutMs ?? BRAVE_KEY_CHECK_TIMEOUT_MS;
 
   const verdicts = await Promise.all(
-    BRAVE_KEY_CHECK_URLS.map((url) => checkEndpoint(url, key, fetchImpl, timeoutMs)),
+    BRAVE_KEY_CHECK_URLS.map(async (url) => {
+      const verdict = await checkEndpoint(url, key, fetchImpl, timeoutMs);
+      // A plan without LLM Context: a run searches the web on web search, so that is checked.
+      if (verdict === "not_in_plan" && url === BRAVE_KEY_CHECK_URLS[0]) {
+        return checkEndpoint(BRAVE_WEB_SEARCH_CHECK_URL, key, fetchImpl, timeoutMs);
+      }
+      return verdict;
+    }),
   );
+  // An endpoint the plan does not hold, with no other to ask, cannot be searched: a refusal.
+  if (verdicts.includes("not_in_plan")) return { ok: false, code: "invalid_key" };
   if (verdicts.includes("refused")) return { ok: false, code: "invalid_key" };
   if (verdicts.every((verdict) => verdict === "pass")) return { ok: true };
   return { ok: false, code: "unreachable" };

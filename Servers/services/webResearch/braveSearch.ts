@@ -4,11 +4,15 @@
  *
  * - kind `web` asks the LLM Context endpoint (`/llm/context`), whose answer holds passages of each
  *   page (`grounding.generic[].snippets`) and the page's age (`sources[url].age[1]`, YYYY-MM-DD).
+ *   Not every plan has it: Brave answers a 400 with `error.code` OPTION_NOT_IN_PLAN to a key whose
+ *   plan does not. That search, and every later web search of the key in this process, asks the web
+ *   search endpoint (`/web/search`) instead, whose answer holds the description of each page
+ *   (`web.results[].description`) and its age (`page_age`).
  * - kind `news` asks the news endpoint (`/news/search`), with `text_decorations=false` so the text
  *   comes without highlighting, and `page_age` for the date.
  * - Both are asked with `safesearch=moderate` (news defaults to strict) and ten results.
  * - A query is cut to the endpoint's limits, words first and then characters: 75 words and 600
- *   characters for LLM Context, 50 words and 400 characters for news.
+ *   characters for LLM Context, 50 words and 400 characters for web search and news.
  *
  * Brave's terms (§3(b)(i)) allow the output of a call to be used, not kept: this engine is never
  * wrapped in `withSearchCache`, and what it answers is used during the run only (the run keeps no
@@ -27,6 +31,8 @@
  * - a key Brave refuses (`error.code` SUBSCRIPTION_TOKEN_INVALID, or a 401 or 403), or a 402 (the
  *   plan does not pay for the request), is a SearchUnavailableError, so `withFallback` answers the
  *   rest of the run from the next engine;
+ * - a 400 OPTION_NOT_IN_PLAN from LLM Context moves the web searches of the engine to web search (see
+ *   above); from web search or news, it is a SearchUnavailableError, like a 402;
  * - a 429 whose `X-RateLimit-Remaining` shows 0 in any entry after the first (the first is the
  *   per-second window, the others the longer ones, such as the month) is a quota that is used up: a
  *   SearchUnavailableError at once, with no wait;
@@ -55,6 +61,8 @@ import {
 export const BRAVE_API_BASE = "https://api.search.brave.com/res/v1";
 /** The `error.code` of a key Brave does not know. */
 export const BRAVE_INVALID_TOKEN_CODE = "SUBSCRIPTION_TOKEN_INVALID";
+/** The `error.code` of an endpoint the key's plan does not hold (a 400). */
+export const BRAVE_NOT_IN_PLAN_CODE = "OPTION_NOT_IN_PLAN";
 /** The gap between two requests of one engine: the free plan allows one request a second. */
 export const BRAVE_MIN_GAP_MS = 1_100;
 export const BRAVE_REQUEST_TIMEOUT_MS = 15_000;
@@ -76,10 +84,27 @@ export const BRAVE_QUERY_LIMITS: Readonly<Record<SearchKind, { words: number; ch
   news: { words: 50, chars: 400 },
 };
 
-const ENDPOINTS: Readonly<Record<SearchKind, string>> = {
-  web: `${BRAVE_API_BASE}/llm/context`,
+/**
+ * The endpoints a search asks: `context` (LLM Context) for the web, `webSearch` for the web when the
+ * key's plan has no LLM Context, `news` for the news.
+ */
+export type BraveEndpoint = "context" | "webSearch" | "news";
+
+const ENDPOINTS: Readonly<Record<BraveEndpoint, string>> = {
+  context: `${BRAVE_API_BASE}/llm/context`,
+  webSearch: `${BRAVE_API_BASE}/web/search`,
   news: `${BRAVE_API_BASE}/news/search`,
 };
+
+/** The query limits of each endpoint: web search takes what news takes. */
+const ENDPOINT_QUERY_LIMITS: Readonly<Record<BraveEndpoint, { words: number; chars: number }>> = {
+  context: BRAVE_QUERY_LIMITS.web,
+  webSearch: BRAVE_QUERY_LIMITS.news,
+  news: BRAVE_QUERY_LIMITS.news,
+};
+
+/** The endpoint a search of `kind` asks first. */
+const endpointOf = (kind: SearchKind): BraveEndpoint => (kind === "web" ? "context" : "news");
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -110,7 +135,12 @@ function wordsOf(text: string): string[] {
  * first words up to the endpoint's count, then cut to its characters without splitting a pair.
  */
 export function braveQueryOf(query: string, kind: SearchKind): string {
-  const { words, chars } = BRAVE_QUERY_LIMITS[kind];
+  return queryFor(query, BRAVE_QUERY_LIMITS[kind]);
+}
+
+/** The query as an endpoint takes it (see `braveQueryOf`). */
+function queryFor(query: string, limits: { words: number; chars: number }): string {
+  const { words, chars } = limits;
   // The query is bounded before the words are found, so the work does not grow with its length.
   const bounded = cleanText(cutAtCodePoint(query, chars * 4));
   return cutAtCodePoint(wordsOf(bounded).slice(0, words).join(" "), chars).trimEnd();
@@ -121,15 +151,24 @@ export function braveQueryOf(query: string, kind: SearchKind): string {
  * (ten for a search; the key check asks for one).
  */
 export function braveUrlOf(query: string, kind: SearchKind, count: number = COUNT): string {
+  return braveEndpointUrlOf(query, endpointOf(kind), count);
+}
+
+/** The address of a request to `endpoint` (see `braveUrlOf`). */
+export function braveEndpointUrlOf(
+  query: string,
+  endpoint: BraveEndpoint,
+  count: number = COUNT,
+): string {
   const params = new URLSearchParams({ q: query, count: String(count) });
-  if (kind === "web") {
+  if (endpoint === "context") {
     params.set("maximum_number_of_urls", String(count));
     params.set("maximum_number_of_tokens", String(MAX_CONTEXT_TOKENS));
   } else {
     params.set("text_decorations", "false");
   }
   params.set("safesearch", "moderate");
-  return `${ENDPOINTS[kind]}?${params.toString()}`;
+  return `${ENDPOINTS[endpoint]}?${params.toString()}`;
 }
 
 /** The entities a text from a page is likely to hold; any other is left as it is. */
@@ -295,10 +334,19 @@ function webCandidatesOf(body: unknown): Candidate[] {
   return candidates;
 }
 
-/** The results of a news answer. Throws a SearchEngineError for one of another shape. */
-function newsCandidatesOf(body: unknown): Candidate[] {
+/**
+ * The results of a news answer (`results`), or of a web search answer (`web.results`, absent when
+ * nothing was found). Throws a SearchEngineError for one of another shape.
+ */
+function listCandidatesOf(body: unknown, endpoint: "webSearch" | "news"): Candidate[] {
   if (!isRecord(body)) throw new SearchEngineError();
-  const results = body.results;
+  let results: unknown;
+  if (endpoint === "news") {
+    results = body.results;
+  } else {
+    if (body.web !== undefined && !isRecord(body.web)) throw new SearchEngineError();
+    results = isRecord(body.web) ? body.web.results : undefined;
+  }
   if (results === undefined) return [];
   if (!Array.isArray(results)) throw new SearchEngineError();
   const candidates: Candidate[] = [];
@@ -322,8 +370,11 @@ function newsCandidatesOf(body: unknown): Candidate[] {
  * The results of an answer of the endpoint of `kind`: each address once, at most MAX_RESULTS, a
  * result with no title named after its source.
  */
-export function parseBraveBody(body: unknown, kind: SearchKind): SearchResult[] {
-  const candidates = kind === "web" ? webCandidatesOf(body) : newsCandidatesOf(body);
+export function parseBraveBody(body: unknown, kind: SearchKind | BraveEndpoint): SearchResult[] {
+  // A kind reads the answer of the endpoint it asks first.
+  const endpoint: BraveEndpoint = kind === "web" ? "context" : kind;
+  const candidates =
+    endpoint === "context" ? webCandidatesOf(body) : listCandidatesOf(body, endpoint);
   const results: SearchResult[] = [];
   const seen = new Set<string>();
   for (const candidate of candidates) {
@@ -406,6 +457,14 @@ export function quotaExhaustedOf(header: string | null): boolean {
     });
 }
 
+/** A 400 OPTION_NOT_IN_PLAN: the key's plan does not hold the endpoint. */
+class NotInPlan extends Error {
+  constructor() {
+    super("Not in plan");
+    this.name = "NotInPlan";
+  }
+}
+
 /** A 429: the request may be asked once more after the wait. */
 class RateLimited extends Error {
   constructor(readonly waitMs: number) {
@@ -468,7 +527,7 @@ export function createBraveEngine(deps: BraveEngineDeps): SearchEngine {
   /** One request, within the time limit and the caller's signal, and its answer read. */
   const request = async (
     url: string,
-    kind: SearchKind,
+    endpoint: BraveEndpoint,
     signal: AbortSignal | undefined,
   ): Promise<SearchResult[]> => {
     const controller = new AbortController();
@@ -484,7 +543,9 @@ export function createBraveEngine(deps: BraveEngineDeps): SearchEngine {
       });
       const text = await readCappedBody(response, BRAVE_MAX_BODY_BYTES);
       if (text === null) throw new SearchEngineError();
-      if (braveErrorCodeOf(text) === BRAVE_INVALID_TOKEN_CODE) throw new SearchUnavailableError();
+      const errorCode = braveErrorCodeOf(text);
+      if (errorCode === BRAVE_INVALID_TOKEN_CODE) throw new SearchUnavailableError();
+      if (response.status === 400 && errorCode === BRAVE_NOT_IN_PLAN_CODE) throw new NotInPlan();
       if (response.status === 401 || response.status === 402 || response.status === 403) {
         throw new SearchUnavailableError();
       }
@@ -503,12 +564,39 @@ export function createBraveEngine(deps: BraveEngineDeps): SearchEngine {
       } catch {
         throw new SearchEngineError();
       }
-      return parseBraveBody(body, kind);
+      return parseBraveBody(body, endpoint);
     } finally {
       clearTimeout(timer);
       signal?.removeEventListener("abort", abort);
     }
   };
+
+  /** One search on `endpoint`, a 429 waited out once. */
+  const ask = async (
+    query: string,
+    endpoint: BraveEndpoint,
+    signal: AbortSignal | undefined,
+  ): Promise<SearchResult[]> => {
+    const q = queryFor(query, ENDPOINT_QUERY_LIMITS[endpoint]);
+    if (q === "") throw new SearchEngineError();
+    const url = braveEndpointUrlOf(q, endpoint);
+    try {
+      return await queue(() => request(url, endpoint, signal), signal);
+    } catch (error) {
+      if (!(error instanceof RateLimited)) throw error;
+      await sleep(error.waitMs, signal);
+      try {
+        return await queue(() => request(url, endpoint, signal), signal);
+      } catch (again) {
+        // A key still over its rate after the wait will not answer the rest of the run either.
+        if (again instanceof RateLimited) throw new SearchUnavailableError();
+        throw again;
+      }
+    }
+  };
+
+  /** False once LLM Context answered that the key's plan does not hold it. */
+  let contextInPlan = true;
 
   return {
     id: "brave",
@@ -517,19 +605,20 @@ export function createBraveEngine(deps: BraveEngineDeps): SearchEngine {
     async search(query, kind, signal) {
       try {
         if ((kind !== "web" && kind !== "news") || signal?.aborted) throw new SearchEngineError();
-        const q = braveQueryOf(query, kind);
-        if (q === "") throw new SearchEngineError();
-        const url = braveUrlOf(q, kind);
+        const first: BraveEndpoint =
+          kind === "web" && !contextInPlan ? "webSearch" : endpointOf(kind);
         try {
-          return await queue(() => request(url, kind, signal), signal);
+          return await ask(query, first, signal);
         } catch (error) {
-          if (!(error instanceof RateLimited)) throw error;
-          await sleep(error.waitMs, signal);
+          if (!(error instanceof NotInPlan)) throw error;
+          // A plan without LLM Context: the web is searched on web search from now on.
+          if (first !== "context") throw new SearchUnavailableError();
+          contextInPlan = false;
           try {
-            return await queue(() => request(url, kind, signal), signal);
+            return await ask(query, "webSearch", signal);
           } catch (again) {
-            // A key still over its rate after the wait will not answer the rest of the run either.
-            if (again instanceof RateLimited) throw new SearchUnavailableError();
+            // A plan that holds neither web endpoint will not answer the rest of the run either.
+            if (again instanceof NotInPlan) throw new SearchUnavailableError();
             throw again;
           }
         }

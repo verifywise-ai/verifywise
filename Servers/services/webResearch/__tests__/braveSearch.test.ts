@@ -185,6 +185,111 @@ describe("createBraveEngine", () => {
     });
   });
 
+  describe("web on a plan without LLM Context", () => {
+    const notInPlan = () =>
+      json({ type: "ErrorResponse", error: { status: 400, code: "OPTION_NOT_IN_PLAN" } }, 400);
+    const webSearchBody = (results: unknown[]) => ({ type: "search", web: { results } });
+
+    it("asks web search after OPTION_NOT_IN_PLAN and maps its results", async () => {
+      const fetch = answering(
+        notInPlan(),
+        json(
+          webSearchBody([
+            {
+              title: "Trust Center",
+              url: "https://trust.example.com/",
+              description: "Security &amp; compliance reports.",
+              page_age: "2026-11-02T10:00:00",
+              meta_url: { hostname: "trust.example.com" },
+            },
+          ]),
+        ),
+      );
+      const { engine } = engineWith(fetch);
+      const results = await engine.search("Example SOC 2 report", "web");
+      expect(fetch).toHaveBeenCalledTimes(2);
+      expect(urlOf(fetch, 0).pathname).toBe("/res/v1/llm/context");
+      const second = urlOf(fetch, 1);
+      expect(second.pathname).toBe("/res/v1/web/search");
+      expect(second.searchParams.get("text_decorations")).toBe("false");
+      expect(second.searchParams.get("safesearch")).toBe("moderate");
+      expect(second.searchParams.get("count")).toBe("10");
+      expect(results).toEqual([
+        {
+          title: "Trust Center",
+          url: "https://trust.example.com/",
+          snippet: "Security & compliance reports.",
+          publishedAt: "2026-11-02",
+          source: "trust.example.com",
+          transient: true,
+        },
+      ]);
+    });
+
+    it("asks web search straight away for the later web searches, and news as before", async () => {
+      const fetch = answering(
+        notInPlan(),
+        json(webSearchBody([])),
+        json(webSearchBody([])),
+        json({ type: "news", results: [] }),
+      );
+      const { engine } = engineWith(fetch);
+      await engine.search("first", "web");
+      await engine.search("second", "web");
+      await engine.search("third", "news");
+      expect(fetch.mock.calls.map((_, i) => urlOf(fetch, i).pathname)).toEqual([
+        "/res/v1/llm/context",
+        "/res/v1/web/search",
+        "/res/v1/web/search",
+        "/res/v1/news/search",
+      ]);
+    });
+
+    it("reads a web search answer with no web section as no results", async () => {
+      const fetch = answering(notInPlan(), json({ type: "search" }));
+      const { engine } = engineWith(fetch);
+      await expect(engine.search("nothing", "web")).resolves.toEqual([]);
+    });
+
+    it("cuts the query to the limits of web search", async () => {
+      const fetch = answering(notInPlan(), json(webSearchBody([])));
+      const { engine } = engineWith(fetch);
+      const long = Array.from({ length: 80 }, (_, i) => `w${i}`).join(" ");
+      await engine.search(long, "web");
+      expect(urlOf(fetch, 0).searchParams.get("q")?.split(" ")).toHaveLength(75);
+      expect(urlOf(fetch, 1).searchParams.get("q")?.split(" ")).toHaveLength(50);
+    });
+
+    it("takes a plan that holds neither web endpoint as a key that cannot search", async () => {
+      const fetch = answering(notInPlan(), notInPlan());
+      const { engine } = engineWith(fetch);
+      await expect(engine.search("query", "web")).rejects.toBeInstanceOf(SearchUnavailableError);
+    });
+
+    it("takes a news endpoint outside the plan as a key that cannot search", async () => {
+      const fetch = answering(notInPlan());
+      const { engine } = engineWith(fetch);
+      await expect(engine.search("query", "news")).rejects.toBeInstanceOf(SearchUnavailableError);
+    });
+
+    it("fails another 400 as one search, with LLM Context still asked next time", async () => {
+      const fetch = answering(
+        json({ type: "ErrorResponse", error: { status: 400, code: "OTHER" } }, 400),
+        json(contextBody([])),
+      );
+      const { engine } = engineWith(fetch);
+      await expect(engine.search("query", "web")).rejects.toBeInstanceOf(SearchEngineError);
+      await engine.search("query", "web");
+      expect(urlOf(fetch, 1).pathname).toBe("/res/v1/llm/context");
+    });
+
+    it("fails a web search answer whose web section is no object", async () => {
+      const fetch = answering(notInPlan(), json({ type: "search", web: [] }));
+      const { engine } = engineWith(fetch);
+      await expect(engine.search("query", "web")).rejects.toBeInstanceOf(SearchEngineError);
+    });
+  });
+
   describe("news", () => {
     it("asks the news endpoint without text decorations", async () => {
       const fetch = answering(json(newsBody([])));

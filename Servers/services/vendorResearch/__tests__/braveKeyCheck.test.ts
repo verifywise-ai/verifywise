@@ -183,6 +183,56 @@ describe("checkBraveKey", () => {
     });
   });
 
+  describe("a plan without LLM Context", () => {
+    /** LLM Context answers OPTION_NOT_IN_PLAN; web search and news answer with their replies. */
+    const withoutContext = (webSearch: Reply, news: Reply) =>
+      jest.fn(async (url: string, _init?: RequestInit) => {
+        let reply: Response | Error;
+        if (url.startsWith(`${BRAVE_API_BASE}/news/`)) reply = news();
+        else if (url.startsWith(`${BRAVE_API_BASE}/web/search`)) reply = webSearch();
+        else reply = answer(400, braveError(400, "OPTION_NOT_IN_PLAN"));
+        if (reply instanceof Error) throw reply;
+        return reply;
+      });
+
+    it("checks web search instead and reads the key as valid when it passes", async () => {
+      const fetch = withoutContext(
+        () => answer(200, { web: { results: [] } }),
+        () => answer(200, { results: [] }),
+      );
+      await expect(checkBraveKey(KEY, { fetchImpl: fetch })).resolves.toEqual({ ok: true });
+      const asked = fetch.mock.calls.map(([url]) => new URL(url).pathname).sort();
+      expect(asked).toEqual(["/res/v1/llm/context", "/res/v1/news/search", "/res/v1/web/search"]);
+      const webSearch = fetch.mock.calls.find(([url]) => url.includes("/web/search"));
+      expect(new URL(webSearch![0]).searchParams.get("count")).toBe("1");
+      expect(webSearch![1]?.headers).toEqual(
+        expect.objectContaining({ "X-Subscription-Token": KEY }),
+      );
+    });
+
+    it("refuses the key when web search is not in the plan either", async () => {
+      const fetch = withoutContext(
+        () => answer(400, braveError(400, "OPTION_NOT_IN_PLAN")),
+        () => answer(200, { results: [] }),
+      );
+      await expect(checkBraveKey(KEY, { fetchImpl: fetch })).resolves.toEqual({
+        ok: false,
+        code: "invalid_key",
+      });
+    });
+
+    it("refuses the key when the news endpoint is not in the plan", async () => {
+      const fetch = endpoints(
+        () => answer(200, {}),
+        () => answer(400, braveError(400, "OPTION_NOT_IN_PLAN")),
+      );
+      await expect(checkBraveKey(KEY, { fetchImpl: fetch })).resolves.toEqual({
+        ok: false,
+        code: "invalid_key",
+      });
+    });
+  });
+
   it("reads another 422 as unreachable, not as a verdict on the key", async () => {
     const fetchImpl = fakeFetch(() => answer(422, braveError(422, "VALIDATION")));
 
