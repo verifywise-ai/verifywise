@@ -133,4 +133,28 @@ describe("researchSearchStatus", () => {
   it("does not say recent runs found no news without a recent run", () => {
     expect(researchSearchStatus([], []).recentRunsFoundNoNews).toBe(false);
   });
+
+  describe("with a Brave key", () => {
+    const keys = [
+      { id: 5, name: "OpenRouter", url: "https://openrouter.ai/api/v1/" },
+      { id: 2, name: "Anthropic", url: "https://api.anthropic.com" },
+      { id: 1, name: "Anthropic", url: "https://proxy.example.com" },
+    ];
+
+    it("names Brave for every key with no search of its own, and keeps Claude's for Anthropic's own", () => {
+      const status = researchSearchStatus(keys, [], true);
+      expect(status.engines).toEqual({
+        default: "brave",
+        byKey: { 5: "brave", 2: "anthropic", 1: "brave" },
+      });
+      expect(status.braveConfigured).toBe(true);
+    });
+
+    it("names GDELT without one, and says there is none", () => {
+      const status = researchSearchStatus(keys, []);
+      expect(status.engines.byKey).toEqual({ 5: "gdelt", 2: "anthropic", 1: "gdelt" });
+      expect(status.braveConfigured).toBe(false);
+      expect(researchSearchStatus(keys, [], false).braveConfigured).toBe(false);
+    });
+  });
 });

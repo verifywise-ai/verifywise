@@ -414,6 +414,19 @@ export function withFallback(primary: SearchEngine, fallback: SearchEngine): Fal
       fallbackAnswered = true;
       return results;
     },
-    usedId: () => (fallbackAnswered ? fallback.id : primaryAnswered ? primary.id : null),
+    usedId: () =>
+      fallbackAnswered ? answeredId(fallback) : primaryAnswered ? answeredId(primary) : null,
   };
+}
+
+/**
+ * The id of the engine that answered, for an engine that has answered a search: a wrapper of
+ * `withFallback` says which of its two answered (its `usedId`), since its `id` is only the live
+ * one. Claude refused, then Brave answering, is `brave`; Brave refused after it answered, then GDELT
+ * answering, is `gdelt`; Brave answering and then refused, with GDELT answering nothing, is `brave`
+ * and not the `gdelt` that the live id would say.
+ */
+function answeredId(engine: SearchEngine): SearchEngineId | null {
+  const usedId = (engine as Partial<FallbackEngine>).usedId;
+  return typeof usedId === "function" ? (usedId.call(engine) ?? engine.id) : engine.id;
 }

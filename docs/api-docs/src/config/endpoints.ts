@@ -14157,7 +14157,7 @@ export const vendorResearchEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/v1/vendor-research/search-status',
     summary: "Get Research Search Status",
-    description: "Which search a research run gets from each LLM key of the organization (anthropic: Claude's own web search; gdelt: the news of the GDELT Project), the search of the default key (the newest; null without a key), and whether the organization's latest finished runs of the last 30 days that say something about the news (up to 3) all got none. Names keys by id only. Admins only.",
+    description: "Which search a research run gets from each LLM key of the organization (anthropic: Claude's own web search; brave: Brave Search with the organization's Brave key, for a key with no search of its own when one is stored; gdelt: the news of the GDELT Project), the search of the default key (the newest; null without a key), whether the organization has a Brave Search key (braveConfigured; never the key), and whether the organization's latest finished runs of the last 30 days that say something about the news (up to 3) all got none. Names keys by id only. Admins only.",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },

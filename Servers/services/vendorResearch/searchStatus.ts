@@ -1,6 +1,8 @@
 /**
  * What the research settings window shows about search: which search each of the organization's
- * LLM keys gets (see searchEngineOf.ts), and whether the organization's recent runs got no news.
+ * LLM keys gets (see searchEngineOf.ts; a key with no search of its own gets Brave when the
+ * organization has a Brave key), whether it has a Brave key, and whether the organization's recent
+ * runs got no news.
  *
  * A key that is not Anthropic's own gets its news from GDELT alone, and GDELT can refuse a server
  * (it answers some hosts with HTTP 429 to every request). A run then reads the vendor's own pages
@@ -18,7 +20,7 @@ import type {
 } from "../../domain.layer/interfaces/i.vendorResearch";
 import { RESEARCH_CATEGORIES } from "../../domain.layer/interfaces/i.vendorResearch";
 import { SITE_CATEGORIES } from "./categories";
-import { searchEngineOf, type KeyRowForSearch, type SearchEngineChoice } from "./searchEngineOf";
+import { searchEngineWith, type KeyRowForSearch, type SearchEngineChoice } from "./searchEngineOf";
 import { NOTES } from "./summary";
 
 /** How many of the latest runs that say something about the news are judged; all must have none. */
@@ -91,18 +93,26 @@ export interface ResearchSearchStatus {
    * RECENT_NEWS_RUNS, of the last RECENT_RUN_DAYS days) all got none; false when there is none.
    */
   recentRunsFoundNoNews: boolean;
+  /**
+   * True when the organization has a Brave Search key that can be read: a key with no search of its
+   * own then searches with Brave (`brave`) instead of GDELT. Never the key itself.
+   */
+  braveConfigured: boolean;
 }
 
 /**
  * The search status of an organization. `keys` come newest first, the order of the key list;
- * `recentSummaries` are the category summaries of its latest finished runs, newest first.
+ * `recentSummaries` are the category summaries of its latest finished runs, newest first;
+ * `braveConfigured` says whether it has a Brave Search key.
  */
 export function researchSearchStatus(
   keys: readonly (KeyRowForSearch & { id: number })[],
   recentSummaries: readonly unknown[],
+  braveConfigured = false,
 ): ResearchSearchStatus {
+  const brave = braveConfigured === true;
   const byKey: Record<number, SearchEngineChoice> = {};
-  for (const key of keys) byKey[key.id] = searchEngineOf(key);
+  for (const key of keys) byKey[key.id] = searchEngineWith(key, brave);
   const newest = keys[0];
   const judged = recentSummaries
     .map(runNewsOutcome)
@@ -111,5 +121,6 @@ export function researchSearchStatus(
   return {
     engines: { default: newest === undefined ? null : byKey[newest.id], byKey },
     recentRunsFoundNoNews: judged.length > 0 && judged.every((outcome) => outcome === "no_news"),
+    braveConfigured: brave,
   };
 }

@@ -326,6 +326,8 @@ export function parseBraveBody(body: unknown, kind: SearchKind): SearchResult[] 
       snippet: candidate.snippet,
       publishedAt: candidate.publishedAt,
       source: candidate.source,
+      // Brave's terms allow its output to be used during the run, never kept (see webSearch.ts).
+      transient: true,
     });
   }
   return results;

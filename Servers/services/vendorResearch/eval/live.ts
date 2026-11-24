@@ -7,6 +7,8 @@
  * The run searches as the product does for that key: with the web search of the key's provider
  * (billed to the key) when it has one, and with the news of the GDELT Project, which needs no key,
  * for every other key and when the organization has no word of its search (see searchEngineOf.ts).
+ * It never searches with Brave, even for an organization with a Brave key: it writes what the web
+ * answered and its trace to files, and Brave's answers may not be kept.
  * The engine is built for the vendor's name alone: the other names that its home page would add
  * in a real run are not known yet. The calls that the search of the key makes to its model are
  * told to the trace of the run, so that `--trace` shows them with the rest.
@@ -28,6 +30,7 @@ import { getVendorResearchConfig } from "../config";
 import { resolveOrgModel } from "../pipeline";
 import { sharedRecordsLookup } from "../records";
 import { type RunHooks, createRunSearch } from "../researchAgent";
+import { withoutBrave } from "../searchEngineOf";
 import { buildTarget } from "../target";
 import { createTraceRecorder } from "../trace";
 import { type LookupStore, createVrdbLookup, databaseLookupStore } from "../vrdb/lookup";
@@ -52,7 +55,9 @@ export async function runLive(
   const live = {
     // The engine of the key of the organization; GDELT when it says none.
     engine: createRunSearch({
-      search: resolved.search,
+      // Never Brave: this run writes what the web answered (`--record`) and its trace (`--trace`)
+      // to files, and Brave's answers may not be kept. A Brave run searches GDELT here instead.
+      search: withoutBrave(resolved.search),
       model: resolved.model,
       modelId: resolved.modelId,
       target: buildTarget({

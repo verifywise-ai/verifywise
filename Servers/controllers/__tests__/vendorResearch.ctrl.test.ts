@@ -297,6 +297,7 @@ beforeEach(() => {
   mockGetRunTraceQuery.mockResolvedValue(null);
   mockGetDecisionCountsQuery.mockResolvedValue([]);
   mockRecentSummaries.mockResolvedValue([]);
+  mockGetBraveKey.mockResolvedValue(null);
   mockGetSettingsQuery.mockResolvedValue({
     researchKeyId: null,
     analysisKeyId: null,
@@ -811,9 +812,29 @@ describe("getResearchSearchStatus", () => {
     expect(bodyOf(res).data).toEqual({
       engines: { default: "gdelt", byKey: { 7: "gdelt", 3: "anthropic" } },
       recentRunsFoundNoNews: false,
+      braveConfigured: false,
     });
     expect(sentOf(res)).not.toContain("SENTINEL");
     expect(sentOf(res)).not.toContain("openrouter.ai");
+  });
+
+  it("answers Brave for a key with no search of its own when the organization has a Brave key, and never the Brave key", async () => {
+    mockGetLLMKeysQuery.mockResolvedValue([
+      { id: 7, name: "OpenRouter", url: "https://openrouter.ai/api/v1", key: "sk-SENTINEL-77a1" },
+      { id: 3, name: "Anthropic", url: null, key: "sk-ant-SENTINEL-3c" },
+    ] as any);
+    mockGetBraveKey.mockResolvedValueOnce("BSA-SENTINEL-brave-key");
+    const res = createMockRes();
+
+    await getResearchSearchStatus(createMockReq(), res);
+
+    expect(mockGetBraveKey).toHaveBeenCalledWith(ORG);
+    expect(bodyOf(res).data).toEqual({
+      engines: { default: "brave", byKey: { 7: "brave", 3: "anthropic" } },
+      recentRunsFoundNoNews: false,
+      braveConfigured: true,
+    });
+    expect(sentOf(res)).not.toContain("SENTINEL");
   });
 
   it("answers that recent runs found no news when their news searches all failed", async () => {
@@ -825,6 +846,7 @@ describe("getResearchSearchStatus", () => {
     expect(bodyOf(res).data).toEqual({
       engines: { default: null, byKey: {} },
       recentRunsFoundNoNews: true,
+      braveConfigured: false,
     });
   });
 

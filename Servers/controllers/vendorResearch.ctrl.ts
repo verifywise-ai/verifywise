@@ -549,10 +549,13 @@ export async function getResearchSearchStatus(req: Request, res: Response): Prom
   });
 
   try {
-    const [llmKeys, summaries] = await Promise.all([
+    const [llmKeys, summaries, braveKey] = await Promise.all([
       getLLMKeysQuery(req.organizationId!),
       listRecentRunSummariesQuery(req.organizationId!, RECENT_RUNS_READ, RECENT_RUN_DAYS),
+      // Only whether there is one: the key itself goes no further than this line.
+      getBraveKeyQuery(req.organizationId!),
     ]);
+    const braveConfigured = typeof braveKey === "string" && braveKey !== "";
     const keys = llmKeys
       .filter((key) => typeof key.id === "number")
       .map((key) => ({ id: key.id as number, name: key.name, url: key.url }));
@@ -565,7 +568,9 @@ export async function getResearchSearchStatus(req: Request, res: Response): Prom
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
-    return res.status(200).json(STATUS_CODE[200](researchSearchStatus(keys, summaries)));
+    return res
+      .status(200)
+      .json(STATUS_CODE[200](researchSearchStatus(keys, summaries, braveConfigured)));
   } catch (error) {
     await logFailure({
       eventType: "Read",

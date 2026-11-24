@@ -29,6 +29,14 @@ export interface SearchResult {
   publishedAt: string | null;
   /** The publisher's name or domain, for news; null for web results. */
   source: string | null;
+  /**
+   * True when the engine's terms allow its text (the title and the snippet) to be used during the
+   * run and not kept: Brave Search (see braveSearch.ts). The web session marks the ledger entry of
+   * such a result (`LedgerEntry.transient`), and the pipeline stores nothing of its text: not in
+   * the evidence of the run, a finding's sources or the trace. It is carried by each result, not by
+   * the engine, so that a result keeps its mark through a wrapper that has switched engines since.
+   */
+  transient?: boolean;
 }
 
 export const MAX_RESULTS = 10;

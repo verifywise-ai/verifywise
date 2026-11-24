@@ -321,3 +321,33 @@ describe("createTraceRecorder", () => {
     );
   });
 });
+
+describe("withholdRejectionText", () => {
+  it("stores every rejection with an empty text, the ones before and after the call", () => {
+    const trace = createTraceRecorder();
+    trace.rejected({ stage: "validation", reason: "no_citation", text: "BRAVESENTINEL before" });
+    trace.withholdRejectionText();
+    trace.rejected({
+      stage: "dedupe",
+      reason: "repeat",
+      category: "x",
+      text: "BRAVESENTINEL after",
+    });
+    trace.rejected({ stage: "cap", reason: "cap" });
+
+    const { rejected } = trace.snapshot();
+
+    expect(rejected).toEqual([
+      { stage: "validation", reason: "no_citation", text: "" },
+      { stage: "dedupe", reason: "repeat", category: "x", text: "" },
+      { stage: "cap", reason: "cap" },
+    ]);
+  });
+
+  it("keeps the text when it is not called", () => {
+    const trace = createTraceRecorder();
+    trace.rejected({ stage: "validation", reason: "no_citation", text: "kept" });
+
+    expect(trace.snapshot().rejected[0].text).toBe("kept");
+  });
+});

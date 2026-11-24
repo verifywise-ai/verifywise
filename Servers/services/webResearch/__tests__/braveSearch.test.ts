@@ -148,6 +148,7 @@ describe("createBraveEngine", () => {
           snippet: "One. … Two.",
           publishedAt: "2026-11-20",
           source: "news.example.com",
+          transient: true,
         },
         {
           title: "Other",
@@ -155,6 +156,7 @@ describe("createBraveEngine", () => {
           snippet: "",
           publishedAt: null,
           source: "other.example.org",
+          transient: true,
         },
       ]);
     });
@@ -224,6 +226,7 @@ describe("createBraveEngine", () => {
           snippet: "The regulator fined Acme on Monday.",
           publishedAt: "2026-11-16",
           source: "press.example.com",
+          transient: true,
         },
         {
           title: "Acme results",
@@ -231,6 +234,7 @@ describe("createBraveEngine", () => {
           snippet: "Quarterly results.",
           publishedAt: null,
           source: "wire.example.net",
+          transient: true,
         },
       ]);
     });

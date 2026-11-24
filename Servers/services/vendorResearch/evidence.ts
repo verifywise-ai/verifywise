@@ -65,7 +65,7 @@ function isUsableUrl(url: string): boolean {
  * The cleaned publication date, or null when nothing is left of it or it is longer than
  * MAX_PUBLISHED_AT_CHARS. A real date is much shorter than that.
  */
-function cleanPublishedAt(publishedAt: string | null): string | null {
+export function cleanPublishedAt(publishedAt: string | null): string | null {
   if (publishedAt === null) return null;
   const cleaned = cleanText(publishedAt);
   return cleaned === "" || cleaned.length > MAX_PUBLISHED_AT_CHARS ? null : cleaned;
@@ -365,4 +365,44 @@ export function provenanceOf(
     if (Object.keys(found).length > 0) provenance.set(entry.url, found);
   }
   return provenance;
+}
+
+/**
+ * The addresses of the ledger's search results whose text may not be kept (`LedgerEntry.transient`,
+ * Brave Search). A page read in a result's place is no longer one: its entry is the page's own.
+ */
+export function transientUrlsOf(
+  entries: readonly LedgerEntry<ResearchCategory>[],
+): ReadonlySet<string> {
+  return new Set(
+    entries
+      .filter((entry) => entry.kind === "result" && entry.transient === true)
+      .map((entry) => entry.url),
+  );
+}
+
+/**
+ * The pack as the run stores it (its `evidence` column): a search result whose text may not be
+ * kept (`transientUrls`) keeps its id, category, kind, vendor mark and address, with no title, no
+ * text and no date, which were all the engine's. The model is shown the pack as it was built; only
+ * the stored copy is cut. Pages and every other source are kept as they are.
+ */
+export function storedEvidenceOf(
+  pack: readonly EvidenceSource[],
+  transientUrls: ReadonlySet<string>,
+): EvidenceSource[] {
+  return pack.map((source) =>
+    source.kind === "result" && transientUrls.has(source.url)
+      ? {
+          id: source.id,
+          category: source.category,
+          kind: source.kind,
+          onVendorSite: source.onVendorSite,
+          url: source.url,
+          title: "",
+          content: "",
+          publishedAt: null,
+        }
+      : source,
+  );
 }

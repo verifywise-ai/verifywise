@@ -117,6 +117,7 @@ import {
   getFindingsForVendorQuery,
   getKnownSourceKeysQuery,
   getSnapshotsQuery,
+  getBraveKeyQuery,
   getVendorResearchSettingsQuery,
   insertFindingsQuery,
   markRunRunningQuery,
@@ -133,7 +134,14 @@ import { analyse } from "./analysis";
 import { researchableCategories } from "./categories";
 import type { Credibility } from "./credibility";
 import { type EdgarFilerResolver, createEdgarFilerResolver } from "./edgarFiler";
-import { type SourceProvenance, buildEvidencePack, isBlockedEntry, provenanceOf } from "./evidence";
+import {
+  type SourceProvenance,
+  buildEvidencePack,
+  isBlockedEntry,
+  provenanceOf,
+  storedEvidenceOf,
+  transientUrlsOf,
+} from "./evidence";
 import { selectKeys } from "./keySelection";
 import { buildMateriality } from "./materiality";
 import { type PolicyPage, comparePages, snapshotsToKeep } from "./policySnapshots";
@@ -141,7 +149,7 @@ import { CREDIBILITY_PROMPT_VERSION } from "./prompts";
 // Types only: the researcher is injected, so loading the pipeline loads no web module.
 import type { ResearchResult, VendorResearcher } from "./researchAgent";
 import type { AnyResearchOutput } from "./schema";
-import { type SearchSpec, searchEngineOf } from "./searchEngineOf";
+import { type SearchSpec, searchSpecOf } from "./searchEngineOf";
 import { changeKeysOf, forgottenIn, keysOfSources, splitKnownSources } from "./sourceMemory";
 import { REGISTRY_VERSION } from "./sourceRegistry/entries";
 import { summariseCategories, workedCategories } from "./summary";
@@ -258,7 +266,8 @@ export interface ResolvedModels extends ResolvedModel {
   analysis?: ResolvedModel;
   /**
    * How the research searches the web, told from the key of the research (see searchEngineOf.ts):
-   * with the web search of the key's provider, or with the news of the GDELT Project. The analysis
+   * with the web search of the key's provider, with Brave Search on the organization's key, or
+   * with the news of the GDELT Project. The analysis
    * searches nothing, so its model has none. Without it the researcher searches the news.
    */
   search?: SearchSpec;
@@ -280,15 +289,34 @@ async function readChoice(organizationId: number): Promise<VendorResearchKeyChoi
 }
 
 /**
+ * The organization's Brave Search key, read for a run; null when it has none. A key that cannot be
+ * read (a stored value that no longer decrypts reads as none already) must not fail the run: it
+ * searches as an organization without one, and the log says only that, with the name of the error.
+ */
+async function readBraveKey(organizationId: number): Promise<string | null> {
+  try {
+    const key = await getBraveKeyQuery(organizationId);
+    return typeof key === "string" && key !== "" ? key : null;
+  } catch (error) {
+    logger.warn(
+      `vendor research (org ${organizationId}): the Brave search key could not be read, so the run searches without it (error ${errorName(error)})`,
+    );
+    return null;
+  }
+}
+
+/**
  * The models for a run, from the keys the organization chose or, for a choice that was not made,
  * its newest key; null when the organization has no key. The research model also says how the
- * research searches, which depends on its key alone: only the name and the address of the key are
- * looked at for that. Never logs the key.
+ * research searches: from the name and the address of its key (searchEngineOf.ts), and whether the
+ * organization has a Brave Search key, which a key without a search of its own searches with, and
+ * which a key of Anthropic falls back to before GDELT. Never logs a key.
  */
 export async function resolveOrgModel(organizationId: number): Promise<ResolvedModels | null> {
-  const [keys, choice] = await Promise.all([
+  const [keys, choice, braveKey] = await Promise.all([
     getLLMKeysWithKeyQuery(organizationId),
     readChoice(organizationId),
+    readBraveKey(organizationId),
   ]);
   const selected = selectKeys(keys, choice);
   if (selected === null) return null;
@@ -298,9 +326,7 @@ export async function resolveOrgModel(organizationId: number): Promise<ResolvedM
   });
   const research: ResolvedModels = {
     ...modelOf(selected.research),
-    search: {
-      engine: searchEngineOf({ name: selected.research.name, url: selected.research.url }),
-    },
+    search: searchSpecOf({ name: selected.research.name, url: selected.research.url }, braveKey),
   };
   return selected.analysis === null
     ? research
@@ -485,9 +511,10 @@ function finishInput(
 
 /**
  * The engine a run records, from the id its researcher reports for the searches it made: one of the
- * three that the table holds, or none. `replay`, the engine of the evaluation, is no search that a
- * person ran, and an id that is none of the three would be refused by the table and cost the run
- * its end, so both leave the run with none, like a researcher that does not say or searched nothing.
+ * four that the table holds (RUN_SEARCH_ENGINES), or none. `replay`, the engine of the evaluation,
+ * is no search that a person ran, and an id that is none of the four would be refused by the table
+ * and cost the run its end, so both leave the run with none, like a researcher that does not say or
+ * searched nothing.
  */
 function recordedEngineOf(reported: unknown): RunSearchEngine | null {
   return RUN_SEARCH_ENGINES.find((engine) => engine === reported) ?? null;
@@ -776,6 +803,11 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
   // The run timed out while the research was going: nothing more is spent on it.
   if (progress.abandoned.signal.aborted) return stop(TIMED_OUT_ERROR);
   trace.stopped(found.stoppedBecause);
+  // Search results whose text may not be kept (Brave Search): the model is shown them, and the run
+  // stores none of their text, in its evidence, its findings or its trace. The model saw them, so
+  // the text of a candidate it wrote is kept out of the trace for the whole run.
+  const transientUrls = transientUrlsOf(found.entries);
+  if (found.transientText === true || transientUrls.size > 0) trace.withholdRejectionText();
   progress.coverage = {
     ...progress.coverage,
     sources: found.coverage?.sources ?? [],
@@ -888,7 +920,8 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
     return stop(WEB_UNREACHABLE_NOTE, summaryOf([], new Set(), []));
   }
 
-  progress.evidence = pack.length > 0 ? pack : null;
+  // The stored copy keeps nothing of a result whose text may not be kept; the model sees `pack`.
+  progress.evidence = pack.length > 0 ? storedEvidenceOf(pack, transientUrls) : null;
   if (pack.length === 0) {
     // The web answered and nothing usable came back (for a scheduled run: nothing that is new), so
     // there is nothing to ask the model about.
@@ -933,6 +966,8 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
     trace,
     // The reader of the research, so that a finding that rests on snippets has a page read.
     readPage: found.readPage,
+    // A finding keeps a quote of such a result only when the page read for it holds the quote.
+    transientUrls,
     verifier: deps.verifier === true,
     // Aborted when the run timed out: the analysis, the verifier and the EDGAR lookups stop.
     signal: progress.abandoned.signal,

@@ -10,6 +10,7 @@ import {
   checkSnippetFindings,
   quoteIsOnPage,
   verifySnippetFindings,
+  withholdSearchText,
 } from "../verifySnippets";
 
 const TARGET = buildTarget({
@@ -846,5 +847,141 @@ describe("checkSnippetFindings", () => {
       ["Second.", null],
       ["Third.", { outcome: "confirmed", url: OTHER }],
     ]);
+  });
+});
+
+describe("search results whose text may not be kept (Brave Search)", () => {
+  const titled = (url: string, text: string, title: string, publishedAt: string | null) =>
+    jest.fn<ReturnType<PageReader>, Parameters<PageReader>>(async (asked) => {
+      if (asked !== url) throw new PageReadError("not_found");
+      return { url, title, publishedAt, text, links: [] };
+    });
+
+  it("keeps the quote a page read here holds, with the page's own title and date", async () => {
+    const pack = [source(PUBLISHER)];
+    const [checked] = await checkSnippetFindings({
+      findings: [finding([PUBLISHER])],
+      pack,
+      target: TARGET,
+      readPage: titled(PUBLISHER, HOLDING, "Reuters: Acme breach", "2026-09-11"),
+      transientUrls: new Set([PUBLISHER]),
+    });
+
+    expect(checked.verdict).toEqual({ outcome: "confirmed", url: PUBLISHER });
+    expect(checked.finding.sources).toEqual([
+      { url: PUBLISHER, title: "Reuters: Acme breach", quote: QUOTE, published_at: "2026-09-11" },
+    ]);
+  });
+
+  it("names the source after its host when the page has no title", async () => {
+    const [checked] = await checkSnippetFindings({
+      findings: [finding([PUBLISHER])],
+      pack: [source(PUBLISHER)],
+      target: TARGET,
+      readPage: titled(PUBLISHER, HOLDING, "", null),
+      transientUrls: new Set([PUBLISHER]),
+    });
+
+    expect(checked.finding.sources[0]).toEqual(
+      expect.objectContaining({ title: "www.reuters.com", quote: QUOTE, published_at: null }),
+    );
+  });
+
+  it.each([
+    [
+      "the page does not hold the quote",
+      "Acme Analytics is looking into an incident.",
+      "not_on_page",
+    ],
+    ["the page cannot be read", null, "unread"],
+  ])("stores the address only when %s", async (_label, text, outcome) => {
+    const readPage =
+      text === null ? readerOf({}) : titled(PUBLISHER, text, "Reuters: Acme breach", "2026-09-11");
+    const [checked] = await checkSnippetFindings({
+      findings: [finding([PUBLISHER])],
+      pack: [source(PUBLISHER)],
+      target: TARGET,
+      readPage,
+      transientUrls: new Set([PUBLISHER]),
+    });
+
+    expect(checked.verdict?.outcome).toBe(outcome);
+    expect(checked.finding.snippet_only).toBe(true);
+    expect(checked.finding.sources).toEqual([
+      { url: PUBLISHER, title: "", quote: "", published_at: null, quote_withheld: true },
+    ]);
+  });
+
+  it("withholds such a source of a finding that cites a page too, which is not checked", async () => {
+    const page = source(OWN, { kind: "page", onVendorSite: true });
+    const [checked] = await checkSnippetFindings({
+      findings: [finding([OWN, PUBLISHER])],
+      pack: [page, source(PUBLISHER)],
+      target: TARGET,
+      readPage: readerOf({}),
+      transientUrls: new Set([PUBLISHER]),
+    });
+
+    expect(checked.verdict).toBeNull();
+    expect(checked.finding.sources).toEqual([
+      expect.objectContaining({
+        url: OWN,
+        quote: QUOTE,
+        title: "Acme Analytics confirms a breach",
+      }),
+      { url: PUBLISHER, title: "", quote: "", published_at: null, quote_withheld: true },
+    ]);
+  });
+
+  it("withholds a second such source that was not read, and keeps the one whose page confirmed", async () => {
+    const [checked] = await checkSnippetFindings({
+      findings: [finding([PUBLISHER, OTHER])],
+      pack: [source(PUBLISHER), source(OTHER)],
+      target: TARGET,
+      readPage: titled(PUBLISHER, HOLDING, "Reuters: Acme breach", null),
+      transientUrls: new Set([PUBLISHER, OTHER]),
+    });
+
+    expect(checked.finding.sources).toEqual([
+      expect.objectContaining({ url: PUBLISHER, quote: QUOTE, title: "Reuters: Acme breach" }),
+      { url: OTHER, title: "", quote: "", published_at: null, quote_withheld: true },
+    ]);
+  });
+
+  it("changes nothing without such sources", async () => {
+    const original = finding([PUBLISHER]);
+    const [checked] = await checkSnippetFindings({
+      findings: [original],
+      pack: [source(PUBLISHER)],
+      target: TARGET,
+      readPage: titled(PUBLISHER, HOLDING, "Reuters: Acme breach", "2026-09-11"),
+    });
+
+    expect(checked.finding).toBe(original);
+  });
+
+  describe("withholdSearchText", () => {
+    it("stores the address only without a confirmed page, and returns the same finding without such sources", () => {
+      const original = finding([PUBLISHER, OTHER]);
+
+      const withheld = withholdSearchText(original, new Set([OTHER]));
+
+      expect(withheld.sources).toEqual([
+        original.sources[0],
+        { url: OTHER, title: "", quote: "", published_at: null, quote_withheld: true },
+      ]);
+      expect(original.sources[1].quote).toBe(QUOTE);
+      expect(withholdSearchText(original, new Set())).toBe(original);
+    });
+
+    it("cleans and cuts the page's title, and drops a date that is not one", () => {
+      const withheld = withholdSearchText(finding([PUBLISHER]), new Set([PUBLISHER]), () => ({
+        title: `${"x".repeat(400)}`,
+        publishedAt: "y".repeat(100),
+      }));
+
+      expect(withheld.sources[0].title).toHaveLength(300);
+      expect(withheld.sources[0].published_at).toBeNull();
+    });
   });
 });

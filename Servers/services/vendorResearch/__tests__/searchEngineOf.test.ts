@@ -1,5 +1,12 @@
 import { detectProvider } from "../../../advisor/llmModelFactory";
-import { type SearchSpec, searchEngineOf } from "../searchEngineOf";
+import { inspect } from "util";
+import {
+  type SearchSpec,
+  searchEngineOf,
+  searchEngineWith,
+  searchSpecOf,
+  withoutBrave,
+} from "../searchEngineOf";
 
 /** A row of `llm_keys` as the settings of an organization store it, for the fields this reads. */
 const row = (name: string | null | undefined, url: string | null | undefined) => ({ name, url });
@@ -138,14 +145,79 @@ describe("searchEngineOf", () => {
 
   it("is a closed set for the spec of a run", () => {
     const anthropic: SearchSpec = { engine: "anthropic" };
+    const brave: SearchSpec = { engine: "brave" };
     const gdelt: SearchSpec = { engine: "gdelt" };
     // @ts-expect-error OpenAI has no engine here until its terms are read.
     const openai: SearchSpec = { engine: "openai" };
 
-    expect([anthropic.engine, gdelt.engine, openai.engine]).toEqual([
+    expect([anthropic.engine, brave.engine, gdelt.engine, openai.engine]).toEqual([
       "anthropic",
+      "brave",
       "gdelt",
       "openai",
     ]);
+  });
+});
+
+describe("searchEngineWith", () => {
+  it("turns GDELT into Brave when the organization has a Brave key", () => {
+    expect(searchEngineWith(row("OpenRouter", STORED.openrouter), true)).toBe("brave");
+    expect(searchEngineWith(row("OpenAI", STORED.openai), true)).toBe("brave");
+    expect(searchEngineWith(row("Anthropic", "https://gateway.example/anthropic"), true)).toBe(
+      "brave",
+    );
+  });
+
+  it("keeps Claude's search for a key of Anthropic on its own API", () => {
+    expect(searchEngineWith(row("Anthropic", STORED.anthropic), true)).toBe("anthropic");
+    expect(searchEngineWith(row("Anthropic", STORED.anthropic), false)).toBe("anthropic");
+  });
+
+  it("is searchEngineOf without a Brave key", () => {
+    expect(searchEngineWith(row("OpenRouter", STORED.openrouter), false)).toBe("gdelt");
+  });
+});
+
+describe("searchSpecOf", () => {
+  const BRAVE_KEY = "BSA-this-must-not-travel";
+
+  it("searches with Brave, with the key, for a key with no search of its own", () => {
+    const spec = searchSpecOf(row("OpenRouter", STORED.openrouter), BRAVE_KEY);
+    expect(spec.engine).toBe("brave");
+    expect(spec.braveKey).toBe(BRAVE_KEY);
+  });
+
+  it("keeps Claude's search for a key of Anthropic, with the Brave key for the fallback", () => {
+    const spec = searchSpecOf(row("Anthropic", STORED.anthropic), BRAVE_KEY);
+    expect(spec.engine).toBe("anthropic");
+    expect(spec.braveKey).toBe(BRAVE_KEY);
+  });
+
+  it.each([null, ""])("has no Brave key and no Brave engine with %p", (stored) => {
+    const spec = searchSpecOf(row("OpenRouter", STORED.openrouter), stored);
+    expect(spec).toEqual({ engine: "gdelt" });
+    expect(spec.braveKey).toBeUndefined();
+  });
+
+  it("leaves the key out of a JSON copy, a log, a spread and the list of its keys", () => {
+    const spec = searchSpecOf(row("OpenRouter", STORED.openrouter), BRAVE_KEY);
+
+    expect(JSON.stringify(spec)).not.toContain(BRAVE_KEY);
+    expect(inspect(spec, { depth: 5 })).not.toContain(BRAVE_KEY);
+    expect(`${JSON.stringify({ ...spec })}`).not.toContain(BRAVE_KEY);
+    expect(Object.keys(spec)).toEqual(["engine"]);
+  });
+});
+
+describe("withoutBrave", () => {
+  it("searches GDELT in place of Brave, and drops the Brave fallback of Claude's search", () => {
+    const brave = searchSpecOf(row("OpenRouter", STORED.openrouter), "BSA-key-0001");
+    const claude = searchSpecOf(row("Anthropic", STORED.anthropic), "BSA-key-0001");
+
+    expect(withoutBrave(brave)).toEqual({ engine: "gdelt" });
+    expect(withoutBrave(brave)?.braveKey).toBeUndefined();
+    expect(withoutBrave(claude)).toEqual({ engine: "anthropic" });
+    expect(withoutBrave(claude)?.braveKey).toBeUndefined();
+    expect(withoutBrave(undefined)).toBeUndefined();
   });
 });

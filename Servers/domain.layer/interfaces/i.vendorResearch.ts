@@ -270,9 +270,18 @@ export interface EvidenceSource {
  */
 export interface FindingSource {
   url: string;
+  /** Empty when `quote_withheld`. */
   title: string;
+  /** Empty when `quote_withheld`. */
   quote: string;
   published_at: string | null;
+  /**
+   * True when the source is a search result whose engine allows its text to be used during the
+   * run and not kept (Brave Search), and its page could not be read or did not hold the quote: the
+   * finding keeps the address only, with no title, quote or date. A result whose page was read and
+   * holds the quote keeps the quote, with the page's own title and date, and has no mark.
+   */
+  quote_withheld?: boolean;
   category?: SourceCategory;
   /** The key of independence, as the basis has it: the registry entry, the database, or "vendor". */
   publisher?: string;
@@ -445,11 +454,13 @@ export interface RunProgress {
 /**
  * The search a run's searches went to, as the run records it: Claude's own web search
  * (`anthropic`), the web search of OpenAI (`openai`, which no run uses yet: its keys search the
- * news today), or the news of the GDELT Project (`gdelt`: the search of every key with no search of
- * its own, and where a run of an Anthropic key goes once the key is refused a search). The CHECK
- * constraint of `vendor_research_runs.search_engine` holds the same three words.
+ * news today), Brave Search on the organization's own key (`brave`: the search of a key with no
+ * search of its own when the organization has a Brave key, and where a run of an Anthropic key goes
+ * once the key is refused a search), or the news of the GDELT Project (`gdelt`: the search of every
+ * other key, and the last fallback). The CHECK constraint of `vendor_research_runs.search_engine`
+ * holds the same four words.
  */
-export const RUN_SEARCH_ENGINES = ["anthropic", "openai", "gdelt"] as const;
+export const RUN_SEARCH_ENGINES = ["anthropic", "openai", "gdelt", "brave"] as const;
 export type RunSearchEngine = (typeof RUN_SEARCH_ENGINES)[number];
 
 /** A row of `vendor_research_runs`. */

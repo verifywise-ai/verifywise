@@ -43,6 +43,7 @@ import {
   RunProgress,
 } from "../../domain.layer/interfaces/i.vendorResearch";
 import { GDELT_ASK_MS, type GdeltFailureKind, createGdeltEngine } from "../webResearch/gdeltSearch";
+import { createBraveEngine } from "../webResearch/braveSearch";
 import { createProviderSearchEngine, withFallback } from "../webResearch/providerSearch";
 import { PageReader, createPageReader } from "../webResearch/readPage";
 import type { PageRenderer } from "../webResearch/renderPage";
@@ -150,6 +151,13 @@ export interface ResearchResult {
    * researcher that does not say leaves it out.
    */
   searchEngine?: SearchEngineId | null;
+  /**
+   * True when a search of the run answered with a result whose text may not be kept (Brave Search,
+   * see `SearchResult.transient`), whatever engine the run is credited to: the model has seen that
+   * text, so the pipeline keeps the text of the model's rejected candidates out of the trace. A
+   * researcher that does not say leaves it out.
+   */
+  transientText?: boolean;
 }
 
 /** The outcome of a search turn of the loop, as the counter of searches names it. */
@@ -221,6 +229,37 @@ export interface RunSearch {
 }
 
 /**
+ * The engine of a run that also notes whether any search answered with a result whose text may not
+ * be kept (`SearchResult.transient`). It is the engine itself in every other way.
+ */
+function noteTransient(searching: RunSearch): RunSearch & { sawTransient(): boolean } {
+  const { engine } = searching;
+  let saw = false;
+  return {
+    engine: {
+      get id() {
+        return engine.id;
+      },
+      get kinds() {
+        return engine.kinds;
+      },
+      get newsWindowMonths() {
+        return engine.newsWindowMonths;
+      },
+      async search(query, kind, signal) {
+        const results = await engine.search(query, kind, signal);
+        if (Array.isArray(results) && results.some((result) => result?.transient === true)) {
+          saw = true;
+        }
+        return results;
+      },
+    },
+    used: () => searching.used(),
+    sawTransient: () => saw,
+  };
+}
+
+/**
  * An engine that notes whether it was asked, to report the engine a run searched with. It is the
  * engine itself in every other way: it reports its id, kinds and window as the engine does now.
  */
@@ -247,7 +286,10 @@ function noteUse(engine: SearchEngine): RunSearch {
 }
 
 export interface RunSearchInput {
-  /** How the key of the research searches; the news of the GDELT Project when absent. */
+  /**
+   * How the key of the research searches, with the organization's Brave key when it has one; the
+   * news of the GDELT Project when absent.
+   */
   search?: SearchSpec;
   /**
    * The model made from the key of the research. The search of Claude calls it, so that the call
@@ -289,8 +331,15 @@ export interface RunSearchInput {
 }
 
 /**
- * The search engine of one run, from the key it researches with.
+ * The search engine of one run, from the key it researches with and the organization's Brave key.
  *
+ * - **Brave Search** for a key with no search of its own when the organization has a Brave key
+ *   (`search.engine` is `brave`), with the news of GDELT behind it for a Brave key that is refused
+ *   (see `withFallback`). For a key of Anthropic, Brave stands between Claude's search and GDELT.
+ *   Its answers are never cached, since Brave's terms allow them to be used and not kept; the
+ *   engine marks them `transient` (see braveSearch.ts). `used()` names the engine that answered
+ *   through the nesting: `brave` after Claude was refused, `gdelt` after Brave was refused too.
+ *   A model that cannot be called as Claude's search searches with Brave too, when there is a key.
  * - **Claude's web search** for a key of Anthropic (`search.engine` is `anthropic`). Each search is
  *   a call to the model of the key, and is told to the trace as a model call for the search. With a
  *   cache and an organization the answers are kept for that organization (see `withSearchCache`),
@@ -315,8 +364,20 @@ export function createRunSearch(input: RunSearchInput): RunSearch {
     ...(input.onFailed === undefined ? {} : { onFailed: input.onFailed }),
   });
   const { model } = input;
-  if (input.search?.engine !== "anthropic" || typeof model !== "object" || model === null) {
-    return noteUse(gdelt);
+  const braveKey = input.search?.braveKey;
+  // Brave answers before GDELT when the organization has a key; a key Brave refuses moves the run
+  // on to GDELT. It is never put behind the cache: Brave's answers may not be kept.
+  const brave =
+    typeof braveKey === "string" && braveKey !== ""
+      ? withFallback(createBraveEngine({ apiKey: braveKey }), gdelt)
+      : null;
+  const engineOf = input.search?.engine;
+  // A key of Anthropic whose model cannot run Claude's search searches as a key without one.
+  const claudeUsable = engineOf === "anthropic" && typeof model === "object" && model !== null;
+  if (!claudeUsable) {
+    return (engineOf === "brave" || engineOf === "anthropic") && brave !== null
+      ? { engine: brave, used: brave.usedId }
+      : noteUse(gdelt);
   }
   const claude = createProviderSearchEngine({
     provider: "anthropic",
@@ -338,7 +399,7 @@ export function createRunSearch(input: RunSearchInput): RunSearch {
     input.cache === undefined
       ? claude
       : withSearchCache(claude, input.cache, { organizationId: input.organizationId });
-  const engine = withFallback(kept, gdelt);
+  const engine = withFallback(kept, brave ?? gdelt);
   return { engine, used: engine.usedId };
 }
 
@@ -585,12 +646,12 @@ export function createVendorResearcher(
       },
       onFailed: (failure) => traceGdeltFailure(trace, failure),
     };
-    let searching: RunSearch;
+    let built: RunSearch;
     if (deps.engine !== undefined) {
       deps.bindHooks?.(hooks);
-      searching = noteUse(deps.engine);
+      built = noteUse(deps.engine);
     } else {
-      searching = createRunSearch({
+      built = createRunSearch({
         search,
         model,
         modelId,
@@ -601,6 +662,7 @@ export function createVendorResearcher(
         ...hooks,
       });
     }
+    const searching = noteTransient(built);
     const session = createWebSession<ResearchCategory>({
       engine: searching.engine,
       readPage: policies.read,
@@ -834,6 +896,7 @@ export function createVendorResearcher(
       readPage,
       policyPages: policies.pages(),
       searchEngine: searching.used(),
+      ...(searching.sawTransient() ? { transientText: true } : {}),
       ...(gathered?.vrdb == null
         ? {}
         : { coverage: { sources: gathered.vrdb.coverage, lookups: gathered.lookups } }),

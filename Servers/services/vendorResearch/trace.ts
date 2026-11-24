@@ -142,6 +142,12 @@ export interface TraceRecorder {
   stopped(reason: string): void;
   /** What the stored findings cite (see `RunTrace.cited`); a later call replaces it. */
   cited(categories: Record<SourceCategory, number>, unreviewedHosts: readonly string[]): void;
+  /**
+   * From now on the snapshot stores every rejection, the ones recorded before included, with an
+   * empty `text`. A run calls it when its model saw search results whose text may not be kept
+   * (Brave Search): a candidate the model wrote can repeat that text.
+   */
+  withholdRejectionText(): void;
   snapshot(): RunTrace;
 }
 
@@ -168,6 +174,7 @@ export function createTraceRecorder(options: { now?: () => number } = {}): Trace
   let cited: RunTrace["cited"];
   let truncated = false;
   let stepCount = 0;
+  let rejectionTextWithheld = false;
 
   const closePhase = () => {
     if (open === null || phases.length >= MAX_PHASES) {
@@ -281,6 +288,10 @@ export function createTraceRecorder(options: { now?: () => number } = {}): Trace
       };
     },
 
+    withholdRejectionText() {
+      rejectionTextWithheld = true;
+    },
+
     snapshot() {
       const openPhase =
         open === null ? [] : [{ name: open.name, ms: Math.max(0, now() - open.startedAt) }];
@@ -297,7 +308,9 @@ export function createTraceRecorder(options: { now?: () => number } = {}): Trace
         version: TRACE_VERSION,
         steps: steps.map((step) => ({ ...step })),
         modelCalls: modelCalls.map((call) => ({ ...call })),
-        rejected: rejected.map((entry) => ({ ...entry })),
+        rejected: rejected.map((entry) =>
+          rejectionTextWithheld && entry.text !== undefined ? { ...entry, text: "" } : { ...entry },
+        ),
         dropped: { ...dropped },
         phases: [...phases, ...openPhase],
         totals,

@@ -65,7 +65,12 @@ import { ResearchTarget } from "./target";
 import type { TraceRecorder } from "./trace";
 import { verifierPasses } from "./verifier";
 import { applyCaps, newValidationReport, validateFindings } from "./validation";
-import { type SnippetCheck, VERIFY_TIMEOUT_MS, checkSnippetFindings } from "./verifySnippets";
+import {
+  type SnippetCheck,
+  VERIFY_TIMEOUT_MS,
+  checkSnippetFindings,
+  withholdSearchText,
+} from "./verifySnippets";
 
 /** One deadline for the model call, retries and self-correction included. */
 export const MODEL_TIMEOUT_MS = 120_000;
@@ -133,6 +138,12 @@ export interface AnalysisInput {
    * is read and no finding is marked.
    */
   readPage?: PageReader;
+  /**
+   * The addresses of the pack's search results whose text may not be kept (Brave Search, see
+   * evidence.ts `transientUrlsOf`). The findings that stay cite them by address only, unless the
+   * check read the page and it holds the quote (see verifySnippets.ts `withholdSearchText`).
+   */
+  transientUrls?: ReadonlySet<string>;
   /**
    * True to have the findings that stay checked by one more model call (see verifier.ts). Off by
    * default: a replay of recorded model answers should see only the calls that the case holds.
@@ -336,14 +347,21 @@ export async function analyse(input: AnalysisInput): Promise<Analysed> {
     checks.map(({ finding, verdict }) =>
       credibilityOf({ finding, pack, provenance, verdict, target }),
     );
+  const transientUrls = input.transientUrls ?? new Set<string>();
+  // Nothing was read for these: a source whose text may not be kept is stored by address only.
   const unchecked = (findings: NewFinding[]): SnippetCheck[] =>
-    findings.map((finding) => ({ finding, verdict: null }));
+    findings.map((finding) => ({
+      finding: withholdSearchText(finding, transientUrls),
+      verdict: null,
+    }));
 
   if ((input.readPage === undefined && input.verifier !== true) || capped.length === 0) {
+    const checks = unchecked(capped);
+    const kept = checks.map(({ finding }) => finding);
     return {
       ok: true,
-      kept: capped,
-      credibility: labelled(unchecked(capped), await withFilers(capped, input)),
+      kept,
+      credibility: labelled(checks, await withFilers(kept, input)),
       duplicatesDropped: dropped,
       capped: cut,
       output,
@@ -361,6 +379,7 @@ export async function analyse(input: AnalysisInput): Promise<Analysed> {
           target,
           readPage: input.readPage,
           trace,
+          transientUrls,
           // The run's abandon signal, beside the check's own deadline: once the run is abandoned no
           // page read is started, and the ones in flight are aborted.
           signal: anyOf(AbortSignal.timeout(VERIFY_TIMEOUT_MS), input.signal),
