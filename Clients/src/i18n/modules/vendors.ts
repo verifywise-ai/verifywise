@@ -131,12 +131,8 @@ export const de: Record<string, string> = {
   "This key gets news only from GDELT, which sometimes refuses requests.":
     "Dieser Schlüssel bezieht Nachrichten nur über GDELT, das Anfragen manchmal ablehnt.",
   "Recent research runs got no news.": "Die letzten Recherchen haben keine Nachrichten gefunden.",
-  "Save, then add an Anthropic key for more reliable news.":
-    "Speichern Sie zuerst und fügen Sie dann einen Anthropic-Schlüssel für zuverlässigere Nachrichten hinzu.",
   "Choose an Anthropic key for more reliable news.":
     "Wählen Sie einen Anthropic-Schlüssel für zuverlässigere Nachrichten.",
-  "Add an Anthropic key for more reliable news":
-    "Fügen Sie einen Anthropic-Schlüssel für zuverlässigere Nachrichten hinzu",
   "One of the chosen LLM keys no longer exists. Choose the keys again.":
     "Einer der gewählten LLM-Schlüssel existiert nicht mehr. Wählen Sie die Schlüssel erneut.",
   "No pending research findings.": "Keine ausstehenden Recherchebefunde.",
@@ -171,8 +167,6 @@ export const de: Record<string, string> = {
   "Searched with Claude web search": "Mit der Websuche von Claude gesucht",
   "News searched with the GDELT Project (last 3 months)":
     "Nachrichten mit dem GDELT Project durchsucht (letzte 3 Monate)",
-  "Anthropic keys search with Claude's own web search, billed by Anthropic at about $10 per 1,000 searches (about 20 to 30 a run); the search results also count as input tokens of the research model. Other keys search the news of the last 3 months through the GDELT Project at no charge.":
-    "Anthropic-Schlüssel suchen mit der eigenen Websuche von Claude, die Anthropic mit etwa 10 $ pro 1.000 Suchen berechnet (etwa 20 bis 30 pro Ausführung); die Suchergebnisse zählen außerdem als Eingabe-Token des Recherchemodells. Andere Schlüssel durchsuchen die Nachrichten der letzten 3 Monate über das GDELT Project, kostenlos.",
   "{category}: {outcome}": "{category}: {outcome}",
   "AI note (unverified)": "KI-Hinweis (ungeprüft)",
   "Credibility": "Glaubwürdigkeit",
@@ -536,6 +530,17 @@ export const de: Record<string, string> = {
   "{count} risks": "{count} Risiken",
   "Showing {range} of {total} vendor": "Anzeige: {range} von {total} Anbieter",
   "Showing {range} of {total} vendors": "Anzeige: {range} von {total} Anbietern",
+  "Anthropic keys search with Claude's own web search, billed by Anthropic at about $10 per 1,000 searches (about 20 to 30 a run); the search results also count as input tokens of the research model. Other keys search the news with Brave when the organization has a Brave search key, and otherwise the news of the last 3 months through the GDELT Project at no charge.":
+    "Anthropic-Schlüssel suchen mit der eigenen Websuche von Claude, die Anthropic mit etwa 10 $ pro 1.000 Suchen berechnet (etwa 20 bis 30 pro Ausführung); die Suchergebnisse zählen außerdem als Eingabe-Token des Recherchemodells. Andere Schlüssel durchsuchen die Nachrichten mit Brave, wenn die Organisation einen Brave-Suchschlüssel hat, und sonst die Nachrichten der letzten 3 Monate über das GDELT Project, kostenlos.",
+  "Searched with Brave Search": "Mit Brave Search gesucht",
+  "News is searched with Brave.": "Nachrichten werden mit Brave durchsucht.",
+  "Save, then add a Brave search key for more reliable news.":
+    "Speichern Sie zuerst und fügen Sie dann einen Brave-Suchschlüssel für zuverlässigere Nachrichten hinzu.",
+  "Add a Brave search key for more reliable news":
+    "Fügen Sie einen Brave-Suchschlüssel für zuverlässigere Nachrichten hinzu",
+  "Or choose an Anthropic key.": "Oder wählen Sie einen Anthropic-Schlüssel.",
+  "Based on a search excerpt; the source page could not be read.":
+    "Beruht auf einem Suchauszug; die Quellseite konnte nicht gelesen werden.",
 };
 
 export const fr: Record<string, string> = {
@@ -668,12 +673,8 @@ export const fr: Record<string, string> = {
   "This key gets news only from GDELT, which sometimes refuses requests.":
     "Cette clé obtient les actualités uniquement via GDELT, qui refuse parfois les requêtes.",
   "Recent research runs got no news.": "Les dernières recherches n'ont trouvé aucune actualité.",
-  "Save, then add an Anthropic key for more reliable news.":
-    "Enregistrez d'abord, puis ajoutez une clé Anthropic pour des actualités plus fiables.",
   "Choose an Anthropic key for more reliable news.":
     "Choisissez une clé Anthropic pour des actualités plus fiables.",
-  "Add an Anthropic key for more reliable news":
-    "Ajoutez une clé Anthropic pour des actualités plus fiables",
   "One of the chosen LLM keys no longer exists. Choose the keys again.":
     "L'une des clés LLM choisies n'existe plus. Choisissez à nouveau les clés.",
   "No pending research findings.": "Aucun résultat de recherche en attente.",
@@ -708,8 +709,6 @@ export const fr: Record<string, string> = {
   "Searched with Claude web search": "Recherche effectuée avec la recherche web de Claude",
   "News searched with the GDELT Project (last 3 months)":
     "Actualités recherchées avec le GDELT Project (3 derniers mois)",
-  "Anthropic keys search with Claude's own web search, billed by Anthropic at about $10 per 1,000 searches (about 20 to 30 a run); the search results also count as input tokens of the research model. Other keys search the news of the last 3 months through the GDELT Project at no charge.":
-    "Les clés Anthropic effectuent leurs recherches avec la recherche web propre à Claude, facturée par Anthropic à environ 10 $ les 1 000 recherches (environ 20 à 30 par exécution) ; les résultats de recherche comptent aussi comme jetons d'entrée du modèle de recherche. Les autres clés recherchent dans les actualités des 3 derniers mois via le GDELT Project, sans frais.",
   "{category}: {outcome}": "{category} : {outcome}",
   "AI note (unverified)": "Note de l'IA (non vérifiée)",
   "Credibility": "Crédibilité",
@@ -1077,6 +1076,17 @@ export const fr: Record<string, string> = {
   "{count} risks": "{count} risques",
   "Showing {range} of {total} vendor": "Affichage de {range} sur {total} fournisseur",
   "Showing {range} of {total} vendors": "Affichage de {range} sur {total} fournisseurs",
+  "Anthropic keys search with Claude's own web search, billed by Anthropic at about $10 per 1,000 searches (about 20 to 30 a run); the search results also count as input tokens of the research model. Other keys search the news with Brave when the organization has a Brave search key, and otherwise the news of the last 3 months through the GDELT Project at no charge.":
+    "Les clés Anthropic effectuent leurs recherches avec la recherche web propre à Claude, facturée par Anthropic à environ 10 $ les 1 000 recherches (environ 20 à 30 par exécution) ; les résultats de recherche comptent aussi comme jetons d'entrée du modèle de recherche. Les autres clés recherchent dans les actualités avec Brave lorsque l'organisation a une clé de recherche Brave, et sinon dans les actualités des 3 derniers mois via le GDELT Project, sans frais.",
+  "Searched with Brave Search": "Recherche effectuée avec Brave Search",
+  "News is searched with Brave.": "Les actualités sont recherchées avec Brave.",
+  "Save, then add a Brave search key for more reliable news.":
+    "Enregistrez d'abord, puis ajoutez une clé de recherche Brave pour des actualités plus fiables.",
+  "Add a Brave search key for more reliable news":
+    "Ajoutez une clé de recherche Brave pour des actualités plus fiables",
+  "Or choose an Anthropic key.": "Ou choisissez une clé Anthropic.",
+  "Based on a search excerpt; the source page could not be read.":
+    "D'après un extrait de recherche ; la page source n'a pas pu être lue.",
 };
 
 export const es: Record<string, string> = {
@@ -1209,12 +1219,8 @@ export const es: Record<string, string> = {
   "This key gets news only from GDELT, which sometimes refuses requests.":
     "Esta clave obtiene noticias solo a través de GDELT, que a veces rechaza las solicitudes.",
   "Recent research runs got no news.": "Las últimas investigaciones no obtuvieron noticias.",
-  "Save, then add an Anthropic key for more reliable news.":
-    "Guarde primero y luego añada una clave de Anthropic para obtener noticias más fiables.",
   "Choose an Anthropic key for more reliable news.":
     "Elija una clave de Anthropic para obtener noticias más fiables.",
-  "Add an Anthropic key for more reliable news":
-    "Añada una clave de Anthropic para obtener noticias más fiables",
   "One of the chosen LLM keys no longer exists. Choose the keys again.":
     "Una de las claves de LLM elegidas ya no existe. Elija las claves de nuevo.",
   "No pending research findings.": "No hay hallazgos de investigación pendientes.",
@@ -1249,8 +1255,6 @@ export const es: Record<string, string> = {
   "Searched with Claude web search": "Búsqueda realizada con la búsqueda web de Claude",
   "News searched with the GDELT Project (last 3 months)":
     "Noticias buscadas con el GDELT Project (últimos 3 meses)",
-  "Anthropic keys search with Claude's own web search, billed by Anthropic at about $10 per 1,000 searches (about 20 to 30 a run); the search results also count as input tokens of the research model. Other keys search the news of the last 3 months through the GDELT Project at no charge.":
-    "Las claves de Anthropic buscan con la búsqueda web propia de Claude, que Anthropic factura a unos 10 $ por cada 1000 búsquedas (entre 20 y 30 por ejecución); los resultados de búsqueda también cuentan como tokens de entrada del modelo de investigación. Las demás claves buscan en las noticias de los últimos 3 meses mediante el GDELT Project, sin coste.",
   "{category}: {outcome}": "{category}: {outcome}",
   "AI note (unverified)": "Nota de la IA (sin verificar)",
   "Credibility": "Credibilidad",
@@ -1608,4 +1612,15 @@ export const es: Record<string, string> = {
   "{count} risks": "{count} riesgos",
   "Showing {range} of {total} vendor": "Mostrando {range} de {total} proveedor",
   "Showing {range} of {total} vendors": "Mostrando {range} de {total} proveedores",
+  "Anthropic keys search with Claude's own web search, billed by Anthropic at about $10 per 1,000 searches (about 20 to 30 a run); the search results also count as input tokens of the research model. Other keys search the news with Brave when the organization has a Brave search key, and otherwise the news of the last 3 months through the GDELT Project at no charge.":
+    "Las claves de Anthropic buscan con la búsqueda web propia de Claude, que Anthropic factura a unos 10 $ por cada 1000 búsquedas (entre 20 y 30 por ejecución); los resultados de búsqueda también cuentan como tokens de entrada del modelo de investigación. Las demás claves buscan en las noticias con Brave cuando la organización tiene una clave de búsqueda de Brave y, si no, en las noticias de los últimos 3 meses mediante el GDELT Project, sin coste.",
+  "Searched with Brave Search": "Búsqueda realizada con Brave Search",
+  "News is searched with Brave.": "Las noticias se buscan con Brave.",
+  "Save, then add a Brave search key for more reliable news.":
+    "Guarde primero y luego añada una clave de búsqueda de Brave para obtener noticias más fiables.",
+  "Add a Brave search key for more reliable news":
+    "Añada una clave de búsqueda de Brave para obtener noticias más fiables",
+  "Or choose an Anthropic key.": "O elija una clave de Anthropic.",
+  "Based on a search excerpt; the source page could not be read.":
+    "Basado en un extracto de búsqueda; no se pudo leer la página de origen.",
 };

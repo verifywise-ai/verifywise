@@ -230,9 +230,10 @@ export interface RunCoverage {
 
 /**
  * The search a run's searches went to: Claude's own web search, the web search of OpenAI (no run
- * uses it yet: its keys search the news today), or the news of the GDELT Project.
+ * uses it yet: its keys search the news today), Brave Search (the organization's Brave key), or
+ * the news of the GDELT Project.
  */
-export type RunSearchEngine = "anthropic" | "openai" | "gdelt";
+export type RunSearchEngine = "anthropic" | "openai" | "brave" | "gdelt";
 
 /**
  * One research run, as the API sends it: an allowlist. The counters are in it;
@@ -278,8 +279,15 @@ export interface VendorResearchRun {
  */
 export interface FindingSource {
   url: string;
+  /** Empty when `quote_withheld` is set. */
   title: string;
+  /** Empty when `quote_withheld` is set. */
   quote: string;
+  /**
+   * True when the source's page could not be read and the finding rests on a search excerpt the
+   * server may not keep: the title and the quote are empty, only the address is left.
+   */
+  quote_withheld?: true;
   published_at: string | null;
   category?: SourceCategory;
   /** The key of independence: the registry entry, the database, or "vendor". */
@@ -480,9 +488,10 @@ export interface VendorResearchConfig {
 
 /**
  * The search a research run gets from a key: Claude's own web search for an Anthropic key that
- * calls Anthropic's API, the news of the GDELT Project for every other key.
+ * calls Anthropic's API; for every other key, Brave Search when the organization has a Brave key,
+ * and the news of the GDELT Project without one.
  */
-export type ResearchSearchEngine = "anthropic" | "gdelt";
+export type ResearchSearchEngine = "anthropic" | "brave" | "gdelt";
 
 /**
  * What the research settings window warns about (Admin only): the search of each LLM key by id,
@@ -495,7 +504,19 @@ export interface VendorResearchSearchStatus {
     byKey: Record<number, ResearchSearchEngine>;
   };
   recentRunsFoundNoNews: boolean;
+  /** Whether the organization has stored a Brave search key. */
+  braveConfigured: boolean;
 }
+
+/** The organization's Brave search key (Admin only): whether one is stored and its last 4 characters. */
+export interface VendorResearchSearchKey {
+  provider: "brave";
+  configured: boolean;
+  last4: string | null;
+}
+
+/** Why the server refused to save a search key: Brave rejected it, or could not be reached. */
+export type SearchKeyErrorCode = "invalid_key" | "unreachable";
 
 /**
  * Which of the organization's LLM keys the research uses, as an Admin chose, and how often the

@@ -210,11 +210,12 @@ export default function RunSummary({
     const listings = attestationLines(run.coverage, t, lang);
     // What the run did, also when it failed. A run that did nothing has no line.
     const counted = run.searches_used + run.pages_read > 0;
-    // Claude's own search needs no credit, so it is named with what the run did. The GDELT Project
-    // is credited under the findings. `openai` is in the list of the table for an engine that no
-    // run uses yet, so it has no words either.
+    // Claude's own search and Brave Search need no credit, so they are named with what the run did.
+    // The GDELT Project is credited under the findings. `openai` is in the list of the table for an
+    // engine that no run uses yet, so it has no words either.
     const claudeSearch = run.search_engine === "anthropic";
-    const checkedSomething = coverage !== null || counted || claudeSearch;
+    const braveSearch = run.search_engine === "brave";
+    const checkedSomething = coverage !== null || counted || claudeSearch || braveSearch;
     const hasDetails = entries.length > 0 || checkedSomething;
 
     above = (
@@ -345,6 +346,9 @@ export default function RunSummary({
             )}
             {claudeSearch && (
               <Typography sx={quietTextSx}>{t("Searched with Claude web search")}</Typography>
+            )}
+            {braveSearch && (
+              <Typography sx={quietTextSx}>{t("Searched with Brave Search")}</Typography>
             )}
           </Stack>
         )}

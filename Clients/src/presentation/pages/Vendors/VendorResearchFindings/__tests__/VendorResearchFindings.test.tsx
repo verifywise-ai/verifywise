@@ -538,6 +538,46 @@ describe("a finding", () => {
     expect(row.queryByText("evil.example.com")).not.toBeInTheDocument();
   });
 
+  it("shows a source whose page could not be read by its host alone, with no quote and a caption", async () => {
+    const WITHHELD = "Based on a search excerpt; the source page could not be read.";
+    mocks.list.mockResolvedValue({
+      rows: [
+        finding({
+          sources: [
+            {
+              url: "https://news.example.com/unread",
+              title: "",
+              quote: "",
+              quote_withheld: true,
+              published_at: null,
+            },
+            {
+              url: "https://blog.example.org/read",
+              title: "A page that was read",
+              quote: "The vendor confirmed the incident.",
+              published_at: null,
+            },
+            // An empty or blank quote of a source that was read is no quote either.
+            { url: "https://empty.example.net/x", title: "", quote: "   ", published_at: null },
+          ],
+        }),
+      ],
+      total: 1,
+    });
+    renderSection();
+    await screen.findByText(FIRST);
+
+    const row = within(rowOf(FIRST));
+    const link = row.getByRole("link", { name: "news.example.com" });
+    expect(link).toHaveAttribute("href", "https://news.example.com/unread");
+    // One caption, for the withheld source only, and one quote, for the source that was read.
+    expect(row.getAllByText(WITHHELD)).toHaveLength(1);
+    expect(link.closest("div")?.parentElement).toHaveTextContent(WITHHELD);
+    expect(rowOf(FIRST).querySelectorAll("blockquote")).toHaveLength(1);
+    expect(row.getByText("The vendor confirmed the incident.").tagName).toBe("BLOCKQUOTE");
+    expect(row.queryByText("A page that was read")).not.toBeInTheDocument();
+  });
+
   it("renders a quote and the model's texts as plain text, never as markup", async () => {
     const quote = "<img src=x onerror=alert(1)>";
     // The action plan is copied into the register on accept: it is shown, and shown as text.

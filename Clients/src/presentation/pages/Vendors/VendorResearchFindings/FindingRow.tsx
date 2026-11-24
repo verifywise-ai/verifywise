@@ -121,6 +121,10 @@ function SourceItem({
   // What the credibility rule found the source to be; a finding of another run has neither.
   const kind = sourceTag(category, t);
   const status = recordTag(source.record?.status, t);
+  // A source whose page could not be read keeps no quote and no title (the search engine's text may
+  // not be stored): only its address is left, and a caption says why. An empty quote is no quote.
+  const withheld = source.quote_withheld === true;
+  const quote = withheld ? "" : (source.quote?.trim() ?? "");
 
   return (
     <Stack sx={{ gap: "4px" }}>
@@ -144,8 +148,13 @@ function SourceItem({
         {kind !== null && <SourceTag label={kind} />}
         {status !== null && <SourceTag label={status} />}
       </Stack>
+      {withheld && (
+        <Typography sx={captionSx}>
+          {t("Based on a search excerpt; the source page could not be read.")}
+        </Typography>
+      )}
       {/* The quote is the web's text through a model: plain text, never markup. */}
-      {source.quote && (
+      {quote !== "" && (
         <Box
           component="blockquote"
           data-vw-no-translate="true"
@@ -159,7 +168,7 @@ function SourceItem({
             overflowWrap: "anywhere",
           }}
         >
-          {source.quote}
+          {quote}
         </Box>
       )}
     </Stack>

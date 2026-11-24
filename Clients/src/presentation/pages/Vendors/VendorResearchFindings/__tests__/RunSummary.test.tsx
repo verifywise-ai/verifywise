@@ -36,6 +36,7 @@ import RunSummary from "../RunSummary";
 const mocks = { latest: vi.mocked(repository.getLatestVendorResearch) };
 
 const CLAUDE_LINE = "Searched with Claude web search";
+const BRAVE_LINE = "Searched with Brave Search";
 const GDELT_LINE = "News searched with the GDELT Project (last 3 months)";
 const GDELT_NAME = "GDELT Project";
 const GDELT_URL = "https://www.gdeltproject.org/";
@@ -97,6 +98,35 @@ describe("the lines that say which search a run used", () => {
     expect(follows(screen.getByText(SEARCHES_LINE), screen.getByText(CLAUDE_LINE))).toBe(true);
     // Claude's search needs no credit of the kind GDELT asks for.
     expect(screen.queryByRole("link", { name: GDELT_NAME })).not.toBeInTheDocument();
+  });
+
+  it("names Brave Search with what the run did, once the details are open, and credits no GDELT", async () => {
+    mocks.latest.mockResolvedValue(searched({ search_engine: "brave" }));
+    renderSummary();
+
+    await screen.findByRole("button", { name: DETAILS });
+    expect(screen.queryByText(BRAVE_LINE)).not.toBeInTheDocument();
+    await openDetails();
+
+    expect(follows(screen.getByText(SEARCHES_LINE), screen.getByText(BRAVE_LINE))).toBe(true);
+    expect(screen.queryByText(CLAUDE_LINE)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: GDELT_NAME })).not.toBeInTheDocument();
+  });
+
+  it("names Brave Search for a run that counted no searches, like Claude's search", async () => {
+    mocks.latest.mockResolvedValue(
+      run({
+        category_summary: FOUR_OUTCOMES,
+        searches_used: 0,
+        pages_read: 0,
+        search_engine: "brave",
+      }),
+    );
+    renderSummary();
+    await openDetails();
+
+    expect(screen.getByText(BRAVE_LINE)).toBeInTheDocument();
+    expect(screen.queryByText(/^Searches: /)).not.toBeInTheDocument();
   });
 
   it("credits the GDELT Project with a link, under the summary and without a click", async () => {
@@ -491,7 +521,7 @@ describe("the dictionary", () => {
   // The credit is built from the translation of the sentence, so a translation has to keep what
   // the screen finds in it: the name of the project, once, to put the link on.
   it.each(LANGS)("has the words of the engine lines in %s", (lang) => {
-    for (const key of [CLAUDE_LINE, GDELT_LINE]) {
+    for (const key of [CLAUDE_LINE, BRAVE_LINE, GDELT_LINE]) {
       const text = translations[lang][key];
       expect(text, `${lang}: ${key}`).toEqual(expect.any(String));
       expect(text.trim().length).toBeGreaterThan(0);
@@ -500,5 +530,6 @@ describe("the dictionary", () => {
     const sentence = translations[lang][GDELT_LINE];
     expect(sentence.split(GDELT_NAME)).toHaveLength(2);
     expect(translations[lang][CLAUDE_LINE]).toContain("Claude");
+    expect(translations[lang][BRAVE_LINE]).toContain("Brave Search");
   });
 });

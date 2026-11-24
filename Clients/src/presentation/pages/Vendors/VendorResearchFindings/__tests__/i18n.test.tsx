@@ -54,6 +54,7 @@ vi.mock(
     getVendorResearchSearchStatus: vi.fn(async () => ({
       engines: { default: null, byKey: {} },
       recentRunsFoundNoNews: false,
+      braveConfigured: false,
     })),
     saveVendorResearchSettings: vi.fn(),
     listVendorRiskFindings: vi.fn(),
