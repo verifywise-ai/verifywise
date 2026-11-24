@@ -24,12 +24,18 @@
  * the worker has going at once do not each send a request a second.
  *
  * Errors:
- * - a key Brave refuses (`error.code` SUBSCRIPTION_TOKEN_INVALID, or a 401 or 403) is a
- *   SearchUnavailableError, so `withFallback` answers the rest of the run from the next engine;
- * - a 429 is waited out once, for the first entry of `X-RateLimit-Reset` in seconds but no more than
- *   2 seconds, and asked again; a second 429 is a SearchEngineError;
- * - anything else (a network error, the time limit, an abort, another status, a body that is too
- *   large, not JSON or of another shape) is a SearchEngineError.
+ * - a key Brave refuses (`error.code` SUBSCRIPTION_TOKEN_INVALID, or a 401 or 403), or a 402 (the
+ *   plan does not pay for the request), is a SearchUnavailableError, so `withFallback` answers the
+ *   rest of the run from the next engine;
+ * - a 429 whose `X-RateLimit-Remaining` shows 0 in any entry after the first (the first is the
+ *   per-second window, the others the longer ones, such as the month) is a quota that is used up: a
+ *   SearchUnavailableError at once, with no wait;
+ * - any other 429 is waited out once, for the first entry of `X-RateLimit-Reset` in seconds but no
+ *   more than 2 seconds, and asked again; a second 429 is a SearchUnavailableError too, since a key
+ *   that stays over its rate will not answer the rest of the run either;
+ * - anything else (a network error, the time limit, an abort, another status such as a 422 for a
+ *   query Brave does not take, a body that is too large, not JSON or of another shape) is a
+ *   SearchEngineError: one search fails, and the run keeps the engine.
  */
 import { createHash } from "node:crypto";
 import { safeFetch } from "../../utils/safeOutboundUrl";
@@ -382,6 +388,22 @@ export function rateLimitWaitMsOf(header: string | null): number {
   return Math.min(seconds * 1000, BRAVE_MAX_RATE_LIMIT_WAIT_MS);
 }
 
+/**
+ * Whether a `X-RateLimit-Remaining` header shows a quota that is used up: 0 in any entry after the
+ * first. The first entry is the per-second window, which a wait clears; the others are the longer
+ * windows (the month), which no wait within a run does.
+ */
+export function quotaExhaustedOf(header: string | null): boolean {
+  if (header === null) return false;
+  return header
+    .split(",")
+    .slice(1)
+    .some((entry) => {
+      const trimmed = entry.trim();
+      return trimmed !== "" && Number(trimmed) === 0;
+    });
+}
+
 /** A 429: the request may be asked once more after the wait. */
 class RateLimited extends Error {
   constructor(readonly waitMs: number) {
@@ -459,8 +481,13 @@ export function createBraveEngine(deps: BraveEngineDeps): SearchEngine {
       const text = await readCappedBody(response, BRAVE_MAX_BODY_BYTES);
       if (text === null) throw new SearchEngineError();
       if (braveErrorCodeOf(text) === BRAVE_INVALID_TOKEN_CODE) throw new SearchUnavailableError();
-      if (response.status === 401 || response.status === 403) throw new SearchUnavailableError();
+      if (response.status === 401 || response.status === 402 || response.status === 403) {
+        throw new SearchUnavailableError();
+      }
       if (response.status === 429) {
+        if (quotaExhaustedOf(response.headers.get("x-ratelimit-remaining"))) {
+          throw new SearchUnavailableError();
+        }
         throw new RateLimited(rateLimitWaitMsOf(response.headers.get("x-ratelimit-reset")));
       }
       if (response.status !== 200) throw new SearchEngineError();
@@ -494,10 +521,16 @@ export function createBraveEngine(deps: BraveEngineDeps): SearchEngine {
         } catch (error) {
           if (!(error instanceof RateLimited)) throw error;
           await sleep(error.waitMs, signal);
-          return await queue(() => request(url, kind, signal), signal);
+          try {
+            return await queue(() => request(url, kind, signal), signal);
+          } catch (again) {
+            // A key still over its rate after the wait will not answer the rest of the run either.
+            if (again instanceof RateLimited) throw new SearchUnavailableError();
+            throw again;
+          }
         }
       } catch (error) {
-        // A refused key stays one, so that `withFallback` moves on; everything else is the fixed
+        // A refused or spent key stays one, so that `withFallback` moves on; everything else is the fixed
         // error, with nothing of the key, the query or the answer in it.
         if (error instanceof SearchUnavailableError) throw new SearchUnavailableError();
         throw new SearchEngineError();

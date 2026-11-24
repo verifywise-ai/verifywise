@@ -7,6 +7,7 @@ import {
   braveQueueFor,
   createBraveEngine,
   plainTextOf,
+  quotaExhaustedOf,
   rateLimitWaitMsOf,
 } from "../braveSearch";
 import { SearchUnavailableError } from "../providerSearch";
@@ -297,6 +298,7 @@ describe("createBraveEngine", () => {
       ["a 422 with SUBSCRIPTION_TOKEN_INVALID", 422],
       ["a 401", 401],
       ["a 403", 403],
+      ["a 402", 402],
     ])("takes %s as a key that cannot search", async (_name, status) => {
       const body =
         status === 422
@@ -324,16 +326,49 @@ describe("createBraveEngine", () => {
       expect(sleep.mock.calls[0][0]).toBe(1000);
     });
 
-    it("fails after a second 429, with one wait only", async () => {
+    it("takes a second 429 as a key that cannot search, with one wait only", async () => {
       const limited = () => json({}, 429, { "X-RateLimit-Reset": "30, 100" });
       const fetch = answering(limited, limited, limited);
       const { engine, sleep } = engineWith(fetch);
       const error = await failureOf(engine.search("acme", "news"));
-      expect(error).toBeInstanceOf(SearchEngineError);
-      expect(error).not.toBeInstanceOf(SearchUnavailableError);
+      expect(error).toBeInstanceOf(SearchUnavailableError);
+      expect(error.message).toBe(FIXED_MESSAGE);
       expect(fetch).toHaveBeenCalledTimes(2);
       expect(sleep).toHaveBeenCalledTimes(1);
       expect(sleep.mock.calls[0][0]).toBe(BRAVE_MAX_RATE_LIMIT_WAIT_MS);
+    });
+
+    it("takes a 429 whose monthly quota is used up as a key that cannot search, without a wait", async () => {
+      const fetch = answering(
+        json({}, 429, { "X-RateLimit-Remaining": "1, 0", "X-RateLimit-Reset": "1, 2419200" }),
+      );
+      const { engine, sleep } = engineWith(fetch);
+      const error = await failureOf(engine.search(SECRET_QUERY, "web"));
+      expect(error).toBeInstanceOf(SearchUnavailableError);
+      expect(error.message).toBe(FIXED_MESSAGE);
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(sleep).not.toHaveBeenCalled();
+    });
+
+    it("waits out a 429 whose only spent window is the per-second one", async () => {
+      const fetch = answering(
+        json({}, 429, { "X-RateLimit-Remaining": "0, 1500", "X-RateLimit-Reset": "1, 2419200" }),
+        json(newsBody([{ title: "t", url: "https://a.example.com/1" }])),
+      );
+      const { engine, sleep } = engineWith(fetch);
+      await expect(engine.search("acme", "news")).resolves.toHaveLength(1);
+      expect(sleep).toHaveBeenCalledTimes(1);
+    });
+
+    it("reads a quota as used up only from a 0 after the first entry", () => {
+      expect(quotaExhaustedOf("1, 0")).toBe(true);
+      expect(quotaExhaustedOf("0,0")).toBe(true);
+      expect(quotaExhaustedOf("1, 5, 0")).toBe(true);
+      expect(quotaExhaustedOf("0, 12")).toBe(false);
+      expect(quotaExhaustedOf("0")).toBe(false);
+      expect(quotaExhaustedOf("1, ")).toBe(false);
+      expect(quotaExhaustedOf("1, soon")).toBe(false);
+      expect(quotaExhaustedOf(null)).toBe(false);
     });
 
     it("waits at most 2 seconds, and 2 seconds without a usable header", () => {
@@ -348,6 +383,7 @@ describe("createBraveEngine", () => {
     it.each<[string, () => Response]>([
       ["a 500", () => json({ error: { code: "SERVER" } }, 500)],
       ["a 422 for another reason", () => json({ error: { code: "VALIDATION" } }, 422)],
+      ["a 422 with a code it does not know", () => json({ error: { code: "SOMETHING_NEW" } }, 422)],
       ["a body that is not JSON", () => new Response("<html>oops</html>", { status: 200 })],
       ["JSON that is no object", () => json([1, 2])],
       ["a web answer with no grounding", () => json({ sources: {} })],
