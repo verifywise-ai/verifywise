@@ -429,11 +429,17 @@ const IncidentManagement: React.FC = () => {
     setSelectedStatus(null);
     handleIncidentFilterChange([], "and");
     setFilterResetKey((key) => key + 1);
-    setAlert(null);
+    // Only the "Filtering by" info toast belongs to the filters; an error stays.
+    setAlert((current) => (current?.variant === "info" ? null : current));
   }, [handleIncidentFilterChange]);
 
   /** -------------------- FETCHING -------------------- */
-  const fetchIncidentsData = async (showLoading = true) => {
+  /**
+   * Loads the incident list. Resolves false when the load failed; the error
+   * toast is already showing then, so callers must not cover it with a
+   * success toast over a stale list.
+   */
+  const fetchIncidentsData = async (showLoading = true): Promise<boolean> => {
     if (showLoading) setIsLoading(true);
     try {
       const response = await getAllEntities({
@@ -445,6 +451,7 @@ const IncidentManagement: React.FC = () => {
         );
         setIncidentsData(formatted);
       }
+      return true;
     } catch (error) {
       logEngine({
         type: "error",
@@ -454,6 +461,7 @@ const IncidentManagement: React.FC = () => {
         variant: "error",
         body: "Failed to load incidents. Please try again later.",
       });
+      return false;
     } finally {
       if (showLoading) setIsLoading(false);
     }
@@ -559,13 +567,14 @@ const IncidentManagement: React.FC = () => {
         });
       }
 
-      // Re-fetch in place: the table keeps its page, sort and scroll.
-      await fetchIncidentsData(false);
-
-      setAlert({
-        variant: "success",
-        body: archived ? "Incident archived successfully." : "Incident restored.",
-      });
+      // Re-fetch in place: the table keeps its page, sort and scroll. When
+      // the refresh fails its error stays up instead of a success toast.
+      if (await fetchIncidentsData(false)) {
+        setAlert({
+          variant: "success",
+          body: archived ? "Incident archived successfully." : "Incident restored.",
+        });
+      }
     } catch (error) {
       logEngine({
         type: "error",
@@ -611,20 +620,21 @@ const IncidentManagement: React.FC = () => {
           // This page shows its own message for every failure.
           suppressGlobalErrorToast: true,
         });
-        setAlert({
-          variant: "success",
-          body: "Incident updated successfully!",
-        });
       } else {
         await createIncidentManagement("/ai-incident-managements", formData);
-        setAlert({
-          variant: "success",
-          body: "New incident added successfully!",
-        });
       }
       // Refresh in place, without the loading skeleton, so the table keeps
-      // its page, sort, filters and scroll position.
-      await fetchIncidentsData(false);
+      // its page, sort, filters and scroll position. The save itself worked,
+      // so the drawer closes either way; a failed refresh keeps its error
+      // toast up instead of a success toast over a stale list.
+      if (await fetchIncidentsData(false)) {
+        setAlert({
+          variant: "success",
+          body: selectedIncident
+            ? "Incident updated successfully!"
+            : "New incident added successfully!",
+        });
+      }
       handleCloseModal();
       return true;
     } catch (error) {

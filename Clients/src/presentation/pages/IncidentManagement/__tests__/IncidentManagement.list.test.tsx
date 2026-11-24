@@ -103,6 +103,7 @@ import IncidentManagement from "../index";
 import IncidentManagementSteps from "../IncidentManagementSteps";
 import { incidentMatchesSearch } from "../incidentSearch";
 import {
+  archiveIncidentById,
   getAllEntities,
   getEntityById,
   updateEntityById,
@@ -282,5 +283,62 @@ describe("IncidentManagement list", () => {
       vi.advanceTimersByTime(3_000);
     });
     expect(screen.queryByText("New incident added successfully!")).not.toBeInTheDocument();
+  });
+
+  it("keeps an error toast when Clear filters is clicked", async () => {
+    await renderPage();
+    vi.mocked(createIncidentManagement).mockRejectedValue(new Error("Server error"));
+    await act(async () => {
+      await captured.drawerProps.onSuccess({ ai_project: "Chatbot" });
+    });
+    search("no such incident");
+
+    act(() => captured.tableProps.onClearFilters());
+    expect(listedIds()).toHaveLength(INCIDENTS.length);
+    expect(screen.getByText("Failed to add incident.")).toBeInTheDocument();
+  });
+
+  it("after a save, a failed refresh keeps its error instead of a success toast", async () => {
+    await renderPage();
+    vi.mocked(createIncidentManagement).mockResolvedValue({ data: {} } as any);
+    vi.mocked(getAllEntities).mockRejectedValue(new Error("Down"));
+
+    let result: unknown;
+    await act(async () => {
+      result = await captured.drawerProps.onSuccess({ ai_project: "Chatbot" });
+    });
+
+    // The save worked, so the drawer closes; the stale list is flagged.
+    expect(result).toBe(true);
+    expect(
+      screen.getByText("Failed to load incidents. Please try again later."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("New incident added successfully!")).not.toBeInTheDocument();
+  });
+
+  it("after archiving, a failed refresh keeps its error instead of a success toast", async () => {
+    await renderPage();
+    vi.mocked(archiveIncidentById).mockResolvedValue({ data: {} } as any);
+    vi.mocked(getAllEntities).mockRejectedValue(new Error("Down"));
+
+    await act(async () => {
+      await captured.tableProps.onArchive("12");
+    });
+
+    expect(
+      screen.getByText("Failed to load incidents. Please try again later."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Incident archived successfully.")).not.toBeInTheDocument();
+  });
+
+  it("shows the archive success toast when the refresh works", async () => {
+    await renderPage();
+    vi.mocked(archiveIncidentById).mockResolvedValue({ data: {} } as any);
+
+    await act(async () => {
+      await captured.tableProps.onArchive("12");
+    });
+
+    expect(screen.getByText("Incident archived successfully.")).toBeInTheDocument();
   });
 });

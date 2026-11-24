@@ -59,6 +59,8 @@ const PROJECTS = [
   { id: 2, uc_id: "UC-2", project_title: "Fraud scoring", approval_status: "pending" },
   // Same title as id 1: told apart by the use case ID.
   { id: 5, uc_id: "UC-5", project_title: "Chatbot", approval_status: "approved" },
+  // Rejected: left out of the picker.
+  { id: 6, uc_id: "UC-6", project_title: "Rejected idea", approval_status: "rejected" },
 ];
 
 const storedIncident = {
@@ -95,7 +97,7 @@ beforeEach(() => {
 });
 
 describe("NewIncident use case picker", () => {
-  it("lists every use case by id, not only approved ones, and tells equal titles apart", () => {
+  it("lists every use case by id but rejected ones, and tells equal titles apart", () => {
     renderWithProviders(<SideDrawerIncident isOpen={true} setIsOpen={vi.fn()} />);
 
     expect(optionTexts()).toEqual(["-", "Chatbot (UC-1)", "Fraud scoring", "Chatbot (UC-5)"]);
@@ -152,6 +154,26 @@ describe("NewIncident use case picker", () => {
     expect(optionTexts()).toContain("Retired bot");
   });
 
+  it("keeps showing a stored rejected use case as the selected extra option", () => {
+    renderWithProviders(
+      <SideDrawerIncident
+        isOpen={true}
+        setIsOpen={vi.fn()}
+        initialData={{ ...storedIncident, project_id: 6, ai_project: "Rejected idea" }}
+        isEdit
+        mode="edit"
+      />,
+    );
+    expect(pickerSelect()).toHaveValue("6");
+    expect(optionTexts()).toEqual([
+      "-",
+      "Rejected idea",
+      "Chatbot (UC-1)",
+      "Fraud scoring",
+      "Chatbot (UC-5)",
+    ]);
+  });
+
   it("keeps a use case stored as text only, and can go back to it after picking another", async () => {
     const onSuccess = vi.fn().mockResolvedValue(true);
     renderWithProviders(
@@ -205,11 +227,9 @@ describe("NewIncident header", () => {
     );
     expect(screen.getByRole("heading", { name: "View incident" })).toBeInTheDocument();
     expect(screen.getByText("(Incident ID: INC-9)")).toBeInTheDocument();
-    // The drawer is named by its title.
-    expect(screen.getByRole("presentation")).toHaveAttribute(
-      "aria-labelledby",
-      "incident-drawer-title",
-    );
+    // The drawer is a modal dialog named by its title.
+    const dialog = screen.getByRole("dialog", { name: "View incident" });
+    expect(dialog).toHaveAttribute("aria-modal", "true");
 
     const close = screen.getByTestId("incident-drawer-close");
     expect(close.tagName).toBe("BUTTON");

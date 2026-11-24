@@ -54,10 +54,16 @@ const DATE_OPTIONS: ChipMenuOption[] = [
   { key: "is_past", operator: "is_past", value: "", label: "Past" },
 ];
 
-/** Date options for a column whose days have already happened (dateRange: "recent"). */
+/**
+ * Date options for a column whose days have already happened (dateRange:
+ * "recent"): the same ranges as the classic filter, so a condition set in
+ * either look shows in the other.
+ */
 const RECENT_DATE_OPTIONS: ChipMenuOption[] = [
   { key: "is_today", operator: "is_today", value: "", label: "Today" },
+  { key: "in_last_1_day", operator: "in_last_1_day", value: "", label: "Since yesterday" },
   { key: "in_last_7_days", operator: "in_last_7_days", value: "", label: "Last 7 days" },
+  { key: "in_last_2_weeks", operator: "in_last_2_weeks", value: "", label: "Last 2 weeks" },
   { key: "in_last_30_days", operator: "in_last_30_days", value: "", label: "Last 30 days" },
 ];
 

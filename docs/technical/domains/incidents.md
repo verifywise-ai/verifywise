@@ -654,19 +654,25 @@ All incident modifications are tracked:
   otherwise the "No incidents reported yet" state shows.
 - Filters (`TableFilter`): incident ID, use case, affected model, owner, type,
   severity, status and occurred date. The occurred date column is a
-  `dateRange: "recent"` column: it offers "is today" and "in the last 1 / 7 /
-  14 / 30 days" (today and the N days before it), compared by the user's local
-  calendar day (`in_last_*` operators in
+  `dateRange: "recent"` column: it offers "is today", "since yesterday" and "in
+  the last 7 days / 2 weeks / 30 days" (today and the N days before it), the
+  same ranges in the classic filter and as phase 1 chips (Today, Since
+  yesterday, Last 7 days, Last 2 weeks, Last 30 days), compared by the user's
+  local calendar day (`in_last_*` operators in
   `Clients/src/application/utils/filterConditions.ts`). Due-date columns on
   other pages keep the forward-looking "in N days" operators.
 - Search (`incidentMatchesSearch` in `pages/IncidentManagement/incidentSearch.ts`):
   the visible incident ID ("INC-12"), the use case title and the reporter's
   name, ignoring case and surrounding spaces. The database id is not searched.
 - Toasts: info and success close after 3 seconds; errors and warnings (such as
-  the edit-conflict message) stay until the user closes them.
+  the edit-conflict message) stay until the user closes them. Clear filters
+  closes only the info toast ("Filtering by ...").
 - After a save, archive or restore the list is fetched again in place (no
   loading skeleton, no table remount), so the page, sort, filters and scroll
-  position are kept. The skeleton shows on the first load only.
+  position are kept. The skeleton shows on the first load only. The success
+  toast shows only when that refresh worked; when it fails, its "Failed to load
+  incidents" error stays up instead, so a stale list is never shown as fresh
+  (the saved drawer still closes, since the save itself succeeded).
 - Role-based create (`incident.create`: Admin, Editor), edit (`incident.edit`) and approval (`incident.approve`)
 - Export functionality
 
@@ -686,8 +692,8 @@ The drawer (`components/Modals/NewIncident`) is a right-hand MUI drawer,
 `min(700px, 100vw)` wide; two-field rows stack on narrow screens. Its header
 shows in every mode: "Create new incident", "Edit incident", "Record approval"
 or "View incident", the incident ID and Jira chip when editing, and a close
-button (a focusable button labelled "Close"). The drawer is named by its title
-(`aria-labelledby`).
+button (a focusable button labelled "Close"). The drawer paper is a modal
+dialog (`role="dialog"`, `aria-modal`) named by its title (`aria-labelledby`).
 
 Option labels (incident types, harm categories, severity, status, approval
 status) are the stored values in sentence case, translated on screen through
@@ -695,13 +701,14 @@ status) are the stored values in sentence case, translated on screen through
 translated. Names that are data (use cases, users, models) are marked
 `noTranslate`.
 
-The use case picker lists every use case the user can see (`useProjects`, not
-only approved ones: the server accepts any use case of the organization for
-`project_id`). Options are keyed by project id; a title shared by several use
+The use case picker lists the use cases the user can see (`useProjects`),
+including ones awaiting approval, since the server accepts any use case of the
+organization for `project_id`; rejected ones (`approval_status: "rejected"`)
+are left out. Options are keyed by project id; a title shared by several use
 cases gets the use case ID after it ("Chatbot (UC-5)"). Picking one sets
 `project_id` and copies the title into the free-text `ai_project`. An incident
 whose use case is not in the list (stored as text only, such as a Jira import,
-or not visible to the user) keeps it as an extra option, selected, so the
+not visible to the user, or rejected) keeps it as an extra option, selected, so the
 stored value still shows and can be picked again (`STORED_USE_CASE_OPTION` for
 text only).
 

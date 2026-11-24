@@ -4681,6 +4681,8 @@ export const de: Record<string, string> = {
   "in the last 7 days": "in den letzten 7 Tagen",
   "in the last 2 weeks": "in den letzten 2 Wochen",
   "in the last 30 days": "in den letzten 30 Tagen",
+  "Since yesterday": "Seit gestern",
+  "Last 2 weeks": "Letzte 2 Wochen",
 };
 
 export const fr: Record<string, string> = {
@@ -9367,6 +9369,8 @@ export const fr: Record<string, string> = {
   "in the last 7 days": "au cours des 7 derniers jours",
   "in the last 2 weeks": "au cours des 2 dernières semaines",
   "in the last 30 days": "au cours des 30 derniers jours",
+  "Since yesterday": "Depuis hier",
+  "Last 2 weeks": "2 dernières semaines",
 };
 
 export const es: Record<string, string> = {
@@ -14050,4 +14054,6 @@ export const es: Record<string, string> = {
   "in the last 7 days": "en los últimos 7 días",
   "in the last 2 weeks": "en las últimas 2 semanas",
   "in the last 30 days": "en los últimos 30 días",
+  "Since yesterday": "Desde ayer",
+  "Last 2 weeks": "Últimas 2 semanas",
 };

@@ -466,8 +466,11 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
   // opened with a use case that is not listed (stored as text only, or a use
   // case the user cannot see) keeps it as an extra option, built from the
   // incident as opened, so it still shows and can be picked again.
+  // Rejected use cases are left out; pending ones stay (they can have
+  // incidents while awaiting approval). A stored rejected one still shows as
+  // the extra option below.
   const projectList = useMemo<Project[]>(
-    () => (Array.isArray(projects) ? projects : []),
+    () => (Array.isArray(projects) ? projects.filter((p) => p.approval_status !== "rejected") : []),
     [projects],
   );
   const baselineProjectId = toId(initialData?.project_id);
@@ -770,7 +773,9 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
       anchor="right"
       open={isOpen}
       onClose={handleClose}
-      slotProps={{ root: { "aria-labelledby": DRAWER_TITLE_ID } }}
+      slotProps={{
+        paper: { "role": "dialog", "aria-modal": true, "aria-labelledby": DRAWER_TITLE_ID },
+      }}
       sx={{
         "margin": 0,
         "& .MuiDrawer-paper": {
