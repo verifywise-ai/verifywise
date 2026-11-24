@@ -1,5 +1,5 @@
 /**
- * 20261124120000-legacy-automation-first-action-entities: flags existing
+ * 20261124112309-legacy-automation-first-action-entities: flags existing
  * automations of the entity triggers that used to run only the event's first
  * action, and leaves the triggers that always ran every action alone.
  */
@@ -7,7 +7,7 @@ import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
 import { cleanupDatabase, createTestOrganization } from "./helpers";
 
-const migration = require("../../database/migrations/20261124120000-legacy-automation-first-action-entities.js");
+const migration = require("../../database/migrations/20261124112309-legacy-automation-first-action-entities.js");
 const queryInterface = { sequelize };
 
 const FLAGGED = [
