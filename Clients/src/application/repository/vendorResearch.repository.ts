@@ -7,6 +7,7 @@ import {
   FindingStatus,
   VendorResearchConfig,
   VendorResearchRun,
+  VendorResearchSearchStatus,
   VendorResearchSettings,
   VendorRiskFinding,
 } from "../../domain/interfaces/i.vendorResearch";
@@ -48,6 +49,22 @@ export async function getVendorResearchSettings(): Promise<VendorResearchSetting
     return extractData<VendorResearchSettings>(response);
   } catch (error) {
     throw toAPIError(error, "Failed to fetch the research settings");
+  }
+}
+
+/**
+ * Which search each LLM key gets, and whether recent runs got no news. Admin only. A failure raises
+ * no toast: the window that reads it only leaves its warning out.
+ */
+export async function getVendorResearchSearchStatus(): Promise<VendorResearchSearchStatus> {
+  try {
+    const response = await apiServices.get<{ message: string; data: VendorResearchSearchStatus }>(
+      "/v1/vendor-research/search-status",
+      { suppressGlobalErrorToast: true },
+    );
+    return extractData<VendorResearchSearchStatus>(response);
+  } catch (error) {
+    throw toAPIError(error, "Failed to fetch the research search status");
   }
 }
 

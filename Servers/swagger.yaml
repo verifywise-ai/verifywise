@@ -29887,6 +29887,30 @@ paths:
       security:
         -
           bearerAuth: []
+  /v1/vendor-research/search-status:
+    get:
+      summary: 'Get Research Search Status'
+      description: 'Which search a research run gets from each LLM key of the organization (anthropic: Claude''s own web search; gdelt: the news of the GDELT Project), the search of the default key (the newest; null without a key), and whether the organization''s latest finished runs of the last 30 days that say something about the news (up to 3) all got none. Names keys by id only. Admins only.'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {engines: {type: object, properties: {default: {type: string, nullable: true, enum: [anthropic, gdelt, null]}, byKey: {type: object, additionalProperties: {type: string, enum: [anthropic, gdelt]}}}}, recentRunsFoundNoNews: {type: boolean}}}
+        '403':
+          description: Forbidden
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Research'
+      operationId: getResearchSearchStatus
+      security:
+        -
+          bearerAuth: []
   /v1/vendor-research/settings:
     get:
       summary: 'Get Research Settings'

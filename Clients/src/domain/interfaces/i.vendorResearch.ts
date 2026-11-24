@@ -479,6 +479,25 @@ export interface VendorResearchConfig {
 }
 
 /**
+ * The search a research run gets from a key: Claude's own web search for an Anthropic key that
+ * calls Anthropic's API, the news of the GDELT Project for every other key.
+ */
+export type ResearchSearchEngine = "anthropic" | "gdelt";
+
+/**
+ * What the research settings window warns about (Admin only): the search of each LLM key by id,
+ * of the default (the newest key; `null` without a key), and whether the organization's latest
+ * runs that say something about the news (up to 3, last 30 days) all got none.
+ */
+export interface VendorResearchSearchStatus {
+  engines: {
+    default: ResearchSearchEngine | null;
+    byKey: Record<number, ResearchSearchEngine>;
+  };
+  recentRunsFoundNoNews: boolean;
+}
+
+/**
  * Which of the organization's LLM keys the research uses, as an Admin chose, and how often the
  * scheduled scan researches the vendors again. `null` leaves a key to the default: the newest key
  * for the research, and the research key for the analysis. For `scanIntervalDays`, `null` is off,

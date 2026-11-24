@@ -12,6 +12,7 @@ import {
   dismissVendorRiskFinding,
   getLatestVendorResearch,
   getVendorResearchConfig,
+  getVendorResearchSearchStatus,
   getVendorResearchSettings,
   listVendorRiskFindings,
   saveVendorResearchSettings,
@@ -27,6 +28,7 @@ import type {
   FindingStatus,
   VendorResearchConfig,
   VendorResearchRun,
+  VendorResearchSearchStatus,
   VendorResearchSettings,
   VendorRiskFinding,
 } from "../../domain/interfaces/i.vendorResearch";
@@ -127,6 +129,7 @@ interface FindingsFilter {
 
 const configKey = () => [...VENDOR_RESEARCH_KEY, "config"] as const;
 const settingsKey = () => [...VENDOR_RESEARCH_KEY, "settings"] as const;
+const searchStatusKey = () => [...VENDOR_RESEARCH_KEY, "searchStatus"] as const;
 const latestKey = (vendorId: number | null) =>
   [...VENDOR_RESEARCH_KEY, "latest", vendorId] as const;
 
@@ -151,6 +154,20 @@ export function useVendorResearchSettings(enabled = true) {
     queryFn: getVendorResearchSettings,
     enabled,
     staleTime: 0,
+  });
+}
+
+/**
+ * Which search each LLM key gets, and whether the organization's recent runs got no news:
+ * what the research settings window warns about. Admin only, like the settings, and read each time
+ * the window opens. A failed read shows no warning and is not retried: the window works without it.
+ */
+export function useVendorResearchSearchStatus() {
+  return useQuery<VendorResearchSearchStatus>({
+    queryKey: searchStatusKey(),
+    queryFn: getVendorResearchSearchStatus,
+    staleTime: 0,
+    retry: false,
   });
 }
 

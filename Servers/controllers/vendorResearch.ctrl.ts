@@ -23,8 +23,14 @@ import {
   getRunTraceQuery,
   getVendorResearchSettingsQuery,
   listFindingsQuery,
+  listRecentRunSummariesQuery,
 } from "../utils/vendorResearch.utils";
 import { getVendorResearchConfig } from "../services/vendorResearch/config";
+import {
+  RECENT_RUNS_READ,
+  RECENT_RUN_DAYS,
+  researchSearchStatus,
+} from "../services/vendorResearch/searchStatus";
 import { credibilityRationale } from "../services/vendorResearch/credibilityText";
 import { foldDecisionStats, sumByPromptVersion } from "../services/vendorResearch/decisionStats";
 import {
@@ -520,6 +526,55 @@ function autoResearchOf(
   if (!("autoResearchOnCreate" in body)) return { ok: true, value: undefined };
   const given = body.autoResearchOnCreate;
   return typeof given === "boolean" ? { ok: true, value: given } : { ok: false };
+}
+
+/**
+ * Which search each of the organization's LLM keys gets in a research run, and whether its recent
+ * runs got no news (see services/vendorResearch/searchStatus.ts).
+ * For those who manage the organization's LLM keys: it is read by the research settings window. It
+ * names engines by key id and carries a boolean, never a key or an address.
+ */
+export async function getResearchSearchStatus(req: Request, res: Response): Promise<any> {
+  const functionName = "getResearchSearchStatus";
+
+  logProcessing({
+    description: "starting getResearchSearchStatus",
+    functionName,
+    fileName: FILE_NAME,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  try {
+    const [llmKeys, summaries] = await Promise.all([
+      getLLMKeysQuery(req.organizationId!),
+      listRecentRunSummariesQuery(req.organizationId!, RECENT_RUNS_READ, RECENT_RUN_DAYS),
+    ]);
+    const keys = llmKeys
+      .filter((key) => typeof key.id === "number")
+      .map((key) => ({ id: key.id as number, name: key.name, url: key.url }));
+
+    await logSuccess({
+      eventType: "Read",
+      description: "retrieved the search status of the vendor research",
+      functionName,
+      fileName: FILE_NAME,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(200).json(STATUS_CODE[200](researchSearchStatus(keys, summaries)));
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: "failed to retrieve the search status of the vendor research",
+      functionName,
+      fileName: FILE_NAME,
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
 }
 
 /**

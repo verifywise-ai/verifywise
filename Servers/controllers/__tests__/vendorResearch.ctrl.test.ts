@@ -12,6 +12,7 @@ jest.mock("../../utils/vendorResearch.utils", () => ({
   getRunTraceQuery: jest.fn(),
   getVendorResearchSettingsQuery: jest.fn(),
   listFindingsQuery: jest.fn(),
+  listRecentRunSummariesQuery: jest.fn(),
 }));
 // The real module opens a BullMQ queue when it is loaded.
 jest.mock("../../services/vendorResearch/trigger", () => ({ startVendorResearch: jest.fn() }));
@@ -38,6 +39,7 @@ import {
   getDecisionStats,
   getLatestVendorResearch,
   getResearchConfig,
+  getResearchSearchStatus,
   getResearchSettings,
   getVendorResearchRunTrace,
   listVendorRiskFindings,
@@ -53,6 +55,7 @@ import {
   getRunTraceQuery,
   getVendorResearchSettingsQuery,
   listFindingsQuery,
+  listRecentRunSummariesQuery,
 } from "../../utils/vendorResearch.utils";
 import { saveVendorResearchSettings } from "../../services/vendorResearch/settings.service";
 import { credibilityRationale, LEGACY_NOTE } from "../../services/vendorResearch/credibilityText";
@@ -81,6 +84,9 @@ const mockGetDecisionCountsQuery = getDecisionCountsQuery as jest.MockedFunction
   typeof getDecisionCountsQuery
 >;
 const mockListFindingsQuery = listFindingsQuery as jest.MockedFunction<typeof listFindingsQuery>;
+const mockRecentSummaries = listRecentRunSummariesQuery as jest.MockedFunction<
+  typeof listRecentRunSummariesQuery
+>;
 const mockGetSettingsQuery = getVendorResearchSettingsQuery as jest.MockedFunction<
   typeof getVendorResearchSettingsQuery
 >;
@@ -276,6 +282,7 @@ beforeEach(() => {
   mockGetLatestRunQuery.mockResolvedValue(null);
   mockGetRunTraceQuery.mockResolvedValue(null);
   mockGetDecisionCountsQuery.mockResolvedValue([]);
+  mockRecentSummaries.mockResolvedValue([]);
   mockGetSettingsQuery.mockResolvedValue({
     researchKeyId: null,
     analysisKeyId: null,
@@ -757,6 +764,61 @@ describe("getResearchConfig", () => {
     const res = createMockRes();
 
     await getResearchConfig(createMockReq(), res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+  });
+});
+
+describe("getResearchSearchStatus", () => {
+  const noNews = [
+    {
+      category: "security_incidents",
+      outcome: "search_failed",
+      note: "The search was not available",
+    },
+    {
+      category: "legal_regulatory",
+      outcome: "search_failed",
+      note: "The search was not available",
+    },
+  ];
+
+  it("answers the search of each key and of the newest one, and never a key or an address", async () => {
+    mockGetLLMKeysQuery.mockResolvedValue([
+      { id: 7, name: "OpenRouter", url: "https://openrouter.ai/api/v1", key: "sk-SENTINEL-77a1" },
+      { id: 3, name: "Anthropic", url: null, key: "sk-ant-SENTINEL-3c" },
+    ] as any);
+    const res = createMockRes();
+
+    await getResearchSearchStatus(createMockReq(), res);
+
+    expect(mockRecentSummaries).toHaveBeenCalledWith(ORG, 10, 30);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(bodyOf(res).data).toEqual({
+      engines: { default: "gdelt", byKey: { 7: "gdelt", 3: "anthropic" } },
+      recentRunsFoundNoNews: false,
+    });
+    expect(sentOf(res)).not.toContain("SENTINEL");
+    expect(sentOf(res)).not.toContain("openrouter.ai");
+  });
+
+  it("answers that recent runs found no news when their news searches all failed", async () => {
+    mockRecentSummaries.mockResolvedValue([noNews, noNews]);
+    const res = createMockRes();
+
+    await getResearchSearchStatus(createMockReq(), res);
+
+    expect(bodyOf(res).data).toEqual({
+      engines: { default: null, byKey: {} },
+      recentRunsFoundNoNews: true,
+    });
+  });
+
+  it("answers 500 when a query throws", async () => {
+    mockRecentSummaries.mockRejectedValue(new Error("DB failure"));
+    const res = createMockRes();
+
+    await getResearchSearchStatus(createMockReq(), res);
 
     expect(res.status).toHaveBeenCalledWith(500);
   });

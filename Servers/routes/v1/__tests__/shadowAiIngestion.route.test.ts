@@ -22,6 +22,7 @@ jest.mock("../../../controllers/vendorResearch.ctrl", () => ({
   getVendorResearchRunTrace: jest.fn(),
   getResearchConfig: jest.fn(),
   getDecisionStats: jest.fn(),
+  getResearchSearchStatus: jest.fn(),
   getResearchSettings: jest.fn(),
   saveResearchSettings: jest.fn(),
   listVendorRiskFindings: jest.fn(),

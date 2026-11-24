@@ -128,6 +128,15 @@ export const de: Record<string, string> = {
   "Automatic research is turned off for this deployment.":
     "Die automatische Recherche ist für diese Installation deaktiviert.",
   "Research settings saved.": "Recherche-Einstellungen gespeichert.",
+  "This key gets news only from GDELT, which sometimes refuses requests.":
+    "Dieser Schlüssel bezieht Nachrichten nur über GDELT, das Anfragen manchmal ablehnt.",
+  "Recent research runs got no news.": "Die letzten Recherchen haben keine Nachrichten gefunden.",
+  "Save, then add an Anthropic key for more reliable news.":
+    "Speichern Sie zuerst und fügen Sie dann einen Anthropic-Schlüssel für zuverlässigere Nachrichten hinzu.",
+  "Choose an Anthropic key for more reliable news.":
+    "Wählen Sie einen Anthropic-Schlüssel für zuverlässigere Nachrichten.",
+  "Add an Anthropic key for more reliable news":
+    "Fügen Sie einen Anthropic-Schlüssel für zuverlässigere Nachrichten hinzu",
   "One of the chosen LLM keys no longer exists. Choose the keys again.":
     "Einer der gewählten LLM-Schlüssel existiert nicht mehr. Wählen Sie die Schlüssel erneut.",
   "No pending research findings.": "Keine ausstehenden Recherchebefunde.",
@@ -656,6 +665,15 @@ export const fr: Record<string, string> = {
   "Automatic research is turned off for this deployment.":
     "La recherche automatique est désactivée pour ce déploiement.",
   "Research settings saved.": "Paramètres de la recherche enregistrés.",
+  "This key gets news only from GDELT, which sometimes refuses requests.":
+    "Cette clé obtient les actualités uniquement via GDELT, qui refuse parfois les requêtes.",
+  "Recent research runs got no news.": "Les dernières recherches n'ont trouvé aucune actualité.",
+  "Save, then add an Anthropic key for more reliable news.":
+    "Enregistrez d'abord, puis ajoutez une clé Anthropic pour des actualités plus fiables.",
+  "Choose an Anthropic key for more reliable news.":
+    "Choisissez une clé Anthropic pour des actualités plus fiables.",
+  "Add an Anthropic key for more reliable news":
+    "Ajoutez une clé Anthropic pour des actualités plus fiables",
   "One of the chosen LLM keys no longer exists. Choose the keys again.":
     "L'une des clés LLM choisies n'existe plus. Choisissez à nouveau les clés.",
   "No pending research findings.": "Aucun résultat de recherche en attente.",
@@ -1188,6 +1206,15 @@ export const es: Record<string, string> = {
   "Automatic research is turned off for this deployment.":
     "La investigación automática está desactivada en esta instalación.",
   "Research settings saved.": "Ajustes de la investigación guardados.",
+  "This key gets news only from GDELT, which sometimes refuses requests.":
+    "Esta clave obtiene noticias solo a través de GDELT, que a veces rechaza las solicitudes.",
+  "Recent research runs got no news.": "Las últimas investigaciones no obtuvieron noticias.",
+  "Save, then add an Anthropic key for more reliable news.":
+    "Guarde primero y luego añada una clave de Anthropic para obtener noticias más fiables.",
+  "Choose an Anthropic key for more reliable news.":
+    "Elija una clave de Anthropic para obtener noticias más fiables.",
+  "Add an Anthropic key for more reliable news":
+    "Añada una clave de Anthropic para obtener noticias más fiables",
   "One of the chosen LLM keys no longer exists. Choose the keys again.":
     "Una de las claves de LLM elegidas ya no existe. Elija las claves de nuevo.",
   "No pending research findings.": "No hay hallazgos de investigación pendientes.",

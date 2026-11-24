@@ -15,6 +15,7 @@ vi.mock(
     >()),
     getVendorResearchConfig: vi.fn(),
     getVendorResearchSettings: vi.fn(),
+    getVendorResearchSearchStatus: vi.fn(),
     saveVendorResearchSettings: vi.fn(),
   }),
 );
@@ -41,6 +42,7 @@ import ResearchSettingsModal from "../ResearchSettingsModal";
 const mocks = {
   config: vi.mocked(repository.getVendorResearchConfig),
   settings: vi.mocked(repository.getVendorResearchSettings),
+  searchStatus: vi.mocked(repository.getVendorResearchSearchStatus),
   save: vi.mocked(repository.saveVendorResearchSettings),
   invalidateKeys: vi.mocked(invalidateLLMKeyQueries),
 };
@@ -110,6 +112,11 @@ beforeEach(() => {
   });
   mocks.save.mockImplementation(async (settings) => settings);
   mocks.config.mockResolvedValue({ hasLlmKey: true, autoRunAllowed: true, autoRunEnabled: true });
+  // No line about the search unless a test asks for one.
+  mocks.searchStatus.mockResolvedValue({
+    engines: { default: null, byKey: {} },
+    recentRunsFoundNoNews: false,
+  });
 });
 
 describe("what the window shows", () => {
@@ -659,6 +666,102 @@ describe("researching new vendors automatically", () => {
     await waitFor(() => expect(autoResearchOf(dialog)).toBeDisabled());
     expect(dialog).toHaveTextContent("Automatic research is turned off for this deployment.");
     expect(dialog).not.toHaveTextContent("Starts a research run when a vendor is added.");
+  });
+});
+
+describe("the line about the news search", () => {
+  /** The engines of KEYS: the OpenAI and OpenRouter keys get GDELT, the Anthropic key its own. */
+  const ENGINES = { 30: "gdelt", 20: "anthropic", 10: "gdelt" } as const;
+  const NOTICE = "research-settings-news-notice";
+  const GDELT_ONLY = "This key gets news only from GDELT, which sometimes refuses requests.";
+  const NO_RECENT_NEWS = "Recent research runs got no news.";
+  const CHOOSE = "Choose an Anthropic key for more reliable news.";
+  const ADD = "Add an Anthropic key for more reliable news";
+  const SAVE_FIRST = "Save, then add an Anthropic key for more reliable news.";
+
+  const statusWith = (
+    byKey: Record<number, "anthropic" | "gdelt">,
+    recentRunsFoundNoNews = false,
+  ) =>
+    mocks.searchStatus.mockResolvedValue({
+      engines: { default: byKey[30] ?? null, byKey },
+      recentRunsFoundNoNews,
+    });
+
+  it("says the default key gets news only from GDELT, and points to the Anthropic key", async () => {
+    statusWith(ENGINES);
+    renderModal();
+    const dialog = await openWindow();
+
+    const notice = await within(dialog).findByTestId(NOTICE);
+    expect(notice).toHaveTextContent(`${GDELT_ONLY} ${CHOOSE}`);
+    expect(notice).toHaveAttribute("role", "status");
+  });
+
+  it("shows nothing for an Anthropic key, and comes back for a GDELT key", async () => {
+    statusWith(ENGINES);
+    renderModal();
+    const dialog = await openWindow();
+    await within(dialog).findByTestId(NOTICE);
+
+    await choose(selectsOf(dialog).research, DEEP);
+    expect(within(dialog).queryByTestId(NOTICE)).not.toBeInTheDocument();
+
+    await choose(selectsOf(dialog).research, FAST);
+    expect(within(dialog).getByTestId(NOTICE)).toHaveTextContent(GDELT_ONLY);
+  });
+
+  it("warns when recent runs got no news", async () => {
+    statusWith(ENGINES, true);
+    renderModal();
+    const dialog = await openWindow();
+
+    const notice = await within(dialog).findByTestId(NOTICE);
+    expect(notice).toHaveTextContent(`${NO_RECENT_NEWS} ${GDELT_ONLY} ${CHOOSE}`);
+  });
+
+  it("does not warn about past runs once an Anthropic key is chosen", async () => {
+    statusWith(ENGINES, true);
+    renderModal();
+    const dialog = await openWindow();
+    await within(dialog).findByTestId(NOTICE);
+
+    await choose(selectsOf(dialog).research, DEEP);
+    expect(within(dialog).queryByTestId(NOTICE)).not.toBeInTheDocument();
+  });
+
+  it("links to the form that adds a key when the organization has no Anthropic key", async () => {
+    statusWith({ 30: "gdelt", 20: "gdelt", 10: "gdelt" });
+    renderModal();
+    const dialog = await openWindow();
+
+    const notice = await within(dialog).findByTestId(NOTICE);
+    expect(notice).not.toHaveTextContent(CHOOSE);
+    expect(within(notice).getByText(ADD)).toBeInTheDocument();
+  });
+
+  it("asks to save first, without a link, while a change is unsaved", async () => {
+    statusWith({ 30: "gdelt", 20: "gdelt", 10: "gdelt" });
+    renderModal();
+    const dialog = await openWindow();
+    await within(dialog).findByTestId(NOTICE);
+
+    await choose(selectsOf(dialog).scan, SCAN_WEEKLY);
+
+    const notice = within(dialog).getByTestId(NOTICE);
+    expect(notice).toHaveTextContent(SAVE_FIRST);
+    expect(within(notice).queryByText(ADD)).not.toBeInTheDocument();
+  });
+
+  it("shows nothing when the status cannot be read, and the window still saves", async () => {
+    mocks.searchStatus.mockRejectedValue(new Error("down"));
+    const { onClose } = renderModal();
+    const dialog = await openWindow();
+
+    await waitFor(() => expect(mocks.searchStatus).toHaveBeenCalled());
+    expect(within(dialog).queryByTestId(NOTICE)).not.toBeInTheDocument();
+    await clickSave(dialog);
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
   });
 });
 
