@@ -241,7 +241,7 @@ export const incidentManagementContent: ArticleContent = {
       items: [
         {
           bold: "Remediation task",
-          text: "Approving the first request creates one high-priority task to respond to the incident. It goes to the incident's owner. If the incident has no owner, it goes to the person who created the incident, or else to the Admin who approved it.",
+          text: "Approving the first request creates one high-priority task to respond to the incident. It goes to the incident's owner. If the incident has no owner, it goes to the person who created the incident, or else to the Admin who approved it. The task is linked to the incident, so it shows in the incident's Linked tasks tab.",
         },
         {
           bold: "Admin escalation",
@@ -323,6 +323,20 @@ export const incidentManagementContent: ArticleContent = {
             "Planned fixes to prevent recurrence (model retraining, process changes, monitoring)",
         },
       ],
+    },
+    {
+      type: "heading",
+      id: "linked-tasks",
+      level: 2,
+      text: "Tasks for an incident",
+    },
+    {
+      type: "paragraph",
+      text: "To track the work an incident needs, create a task and link it to the incident: in the task's **Linked items**, choose Incident and search by incident ID or use case. Open the incident and go to its **Linked tasks** tab to see those tasks, with their status, assignees and due date. Click a task to open it.",
+    },
+    {
+      type: "paragraph",
+      text: "You see the tasks you can see on the Tasks page. Permanently deleting an incident removes its links; the tasks stay.",
     },
     {
       type: "heading",
@@ -414,6 +428,9 @@ export const incidentManagementContent: ArticleContent = {
           text: "The list of incidents you can link on a use case's CE marking tab",
         },
         {
+          text: "The list of incidents you can link to a task. Tasks linked before archiving stay linked",
+        },
+        {
           text: "Reports, which note how many archived incidents were left out",
         },
       ],
@@ -426,6 +443,12 @@ export const incidentManagementContent: ArticleContent = {
       type: "article-links",
       title: "Related articles",
       items: [
+        {
+          collectionId: "ai-governance",
+          articleId: "task-management",
+          title: "Managing tasks",
+          description: "Link tasks to incidents and track the response",
+        },
         {
           collectionId: "ai-governance",
           articleId: "model-inventory",

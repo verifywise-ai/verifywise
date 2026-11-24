@@ -155,6 +155,21 @@ describe("task.repository", () => {
       expect(result).toEqual(mockResponse.data);
     });
 
+    it("asks for the tasks linked to one entity", async () => {
+      vi.mocked(apiServices.get).mockResolvedValue({
+        data: { tasks: [] },
+        status: 200,
+        statusText: "OK",
+      });
+
+      await getAllTasks({ linked_entity: { entity_type: "incident", entity_id: 12 } });
+
+      expect(apiServices.get).toHaveBeenCalledWith(
+        "/tasks?linked_entity_type=incident&linked_entity_id=12&sort_by=created_at&sort_order=DESC&page=1&page_size=25",
+        { signal: undefined },
+      );
+    });
+
     it("should make GET request with all filter arrays", async () => {
       const mockResponse = {
         data: {

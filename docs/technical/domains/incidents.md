@@ -295,6 +295,9 @@ Archived incidents are left out of:
   members of the incident's organization only) besides the stored `reporter`
   text;
 - the CE marking "Link incidents" picker (see [CE Marking Integration](#ce-marking-integration));
+- the task drawer's incident picker: an archived incident cannot be linked to
+  a task (409 from `POST /tasks/:id/entities`), though links made before it
+  was archived stay (see [tasks.md](./tasks.md#linked-items));
 - reports (see [Reports](#reports));
 - the Home queue (`services/homeQueue/sources/incidents.source.ts`), the Jira
   status sync and the Advisor's incident lists and analytics, as before.
@@ -324,7 +327,10 @@ transaction:
    that rolls back sends nothing.
 
 The incident's CE marking links go with it (`fk_ce_incidents_incident`,
-`ON DELETE CASCADE`).
+`ON DELETE CASCADE`). Its task links (`task_entity_links` rows with
+`entity_type` `incident`, which have no foreign key) are deleted by
+`deleteIncidentByIdQuery` right after the incident row, in the same
+transaction; the tasks themselves stay.
 
 ### Change History
 
@@ -735,6 +741,16 @@ The drawer is organized into 4 sections:
    - Approval notes (needs `incident.approve`)
    - Interim report toggle (needs `incident.edit`)
 
+An existing incident's drawer has three tabs: "Incident details" (the form
+above), "Linked tasks" and "Activity" (change history). "Linked tasks"
+(`components/LinkedTasks`) is a read-only list of the tasks linked to the
+incident that the user can see (`GET /tasks?linked_entity_type=incident&linked_entity_id=<id>`,
+same visibility as the tasks page; archived tasks left out): title, status,
+assignees or "Unassigned", and due date. Clicking a task opens it on the tasks
+page. Tasks are linked from the task drawer's linked items (see
+[tasks.md](./tasks.md#linked-items)); the critical incident workflow links its
+remediation task itself.
+
 ### Table Features
 
 - 8 sortable columns
@@ -1010,8 +1026,10 @@ members qualify; when none does, the task is created unassigned. The task's
 creator (`creator_id`) is the approving user, else the assignee, else the
 organization's first Admin, so it is not null. Task history records the
 creation as a system change. The assignee gets the usual task-assigned notice.
-Tasks cannot link to incidents (`task_entity_links` has no incident type), so
-the link is in the description.
+In the same transaction the task is linked to the incident (`task_entity_links`,
+`entity_type` `incident`), so it shows in the incident's "Linked tasks" tab and
+the incident in the task's linked items; the description also carries the
+incident's URL.
 
 **Admin escalation** (`notifyAdminsOfCriticalIncident`): every organization
 member with role Admin gets an in-app notice (`system` type, linked to

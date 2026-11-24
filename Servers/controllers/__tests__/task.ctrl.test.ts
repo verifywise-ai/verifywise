@@ -55,6 +55,7 @@ jest.mock("../../services/inAppNotification.service", () => ({
 jest.mock("../../utils/taskEntityLink.utils", () => ({
   getTaskEntityLinksQuery: jest.fn().mockResolvedValue([]),
   persistTaskEntityLinks: jest.fn().mockResolvedValue(0),
+  isValidEntityType: jest.fn((type: string) => ["vendor", "policy", "incident"].includes(type)),
 }));
 jest.mock("../../utils/changeHistory.base.utils", () => ({
   recordEntityCreation: jest.fn().mockResolvedValue(undefined),
@@ -288,6 +289,42 @@ describe("task.ctrl", () => {
         });
       },
     );
+    it("filters by a linked incident when both linked_entity parameters are sent", async () => {
+      mockGetAll.mockResolvedValue([] as any);
+      const res = createRes();
+      await getAllTasks(
+        createReq({ query: { linked_entity_type: "incident", linked_entity_id: "12" } } as any),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(mockGetAll).toHaveBeenCalledWith(
+        expect.anything(),
+        1,
+        expect.objectContaining({ linked_entity: { entity_type: "incident", entity_id: 12 } }),
+        expect.anything(),
+      );
+    });
+    it("sends no linked filter when neither parameter is sent", async () => {
+      mockGetAll.mockResolvedValue([] as any);
+      await getAllTasks(createReq(), createRes());
+      expect((mockGetAll.mock.calls[0][2] as any).linked_entity).toBeUndefined();
+    });
+    it.each([
+      [{ linked_entity_type: "incident" }],
+      [{ linked_entity_id: "12" }],
+      [{ linked_entity_type: "spaceship", linked_entity_id: "12" }],
+      [{ linked_entity_type: "incident", linked_entity_id: "0" }],
+      [{ linked_entity_type: "incident", linked_entity_id: "-3" }],
+      [{ linked_entity_type: "incident", linked_entity_id: "12abc" }],
+      [{ linked_entity_type: "incident", linked_entity_id: ["12", "13"] }],
+      [{ linked_entity_type: ["incident"], linked_entity_id: "12" }],
+      [{ linked_entity_type: "incident", linked_entity_id: "99999999999999999999" }],
+    ])("answers 400 for a partial or invalid linked filter %j", async (query) => {
+      const res = createRes();
+      await getAllTasks(createReq({ query } as any), res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockGetAll).not.toHaveBeenCalled();
+    });
     it("reports an empty list as zero pages", async () => {
       mockGetAll.mockResolvedValue([] as any);
       const res = createRes();

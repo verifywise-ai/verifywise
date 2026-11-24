@@ -37,10 +37,11 @@ vi.mock("../../../../application/repository/policy.repository", () => ({
   getAllPolicies: vi.fn(),
 }));
 
-import { screen } from "@testing-library/react";
+import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import EntityLinkSelector from "../index";
+import { incidentLinkLabel } from "../incidentLinkLabel";
 import { buildVendor } from "../../../../test/factories";
 import { getAllEntities } from "../../../../application/repository/entity.repository";
 import { getAllVendors } from "../../../../application/repository/vendor.repository";
@@ -69,6 +70,94 @@ describe("EntityLinkSelector", () => {
     expect(screen.getByText("Model")).toBeInTheDocument();
     expect(screen.getByText("Policy")).toBeInTheDocument();
     expect(screen.getByText("Use-case")).toBeInTheDocument();
+    expect(screen.getByText("Incident")).toBeInTheDocument();
+  });
+
+  describe("incidents", () => {
+    const incidents = [
+      { id: 3, incident_id: "INC-12", ai_project: "Credit scoring", archived: false },
+      { id: 4, incident_id: "INC-13", ai_project: "Chatbot", archived: true },
+      { id: 5, incident_id: null, ai_project: "Fraud model" },
+    ];
+
+    beforeEach(() => {
+      (getAllEntities as any).mockImplementation(async ({ routeUrl }: { routeUrl: string }) =>
+        routeUrl === "/ai-incident-managements" ? { data: incidents } : { data: [] },
+      );
+    });
+
+    const pickIncidentType = async () => {
+      await vi.waitFor(() => {
+        expect(getAllEntities).toHaveBeenCalledWith({ routeUrl: "/ai-incident-managements" });
+      });
+      await userEvent.selectOptions(screen.getByTestId("entity-type-select"), "incident");
+    };
+
+    it("names an incident by its visible ID and use case", () => {
+      expect(
+        incidentLinkLabel({ id: 3, incident_id: "INC-12", ai_project: "Credit scoring" }),
+      ).toBe("INC-12 · Credit scoring");
+      expect(incidentLinkLabel({ id: 5, incident_id: null, ai_project: "Fraud model" })).toBe(
+        "INC-5 · Fraud model",
+      );
+      expect(incidentLinkLabel({ id: 6, incident_id: "INC-6", ai_project: " " })).toBe("INC-6");
+    });
+
+    it("lists incidents that are not archived, searchable by ID or use case", async () => {
+      renderWithProviders(<EntityLinkSelector value={[]} onChange={defaultOnChange} />);
+      await pickIncidentType();
+
+      const search = screen.getByPlaceholderText("Search incidents");
+      await userEvent.click(search);
+      const listbox = await screen.findByRole("listbox");
+      expect(within(listbox).getByText("INC-12 · Credit scoring")).toBeInTheDocument();
+      expect(within(listbox).getByText("INC-5 · Fraud model")).toBeInTheDocument();
+      expect(within(listbox).queryByText(/INC-13/)).not.toBeInTheDocument();
+
+      await userEvent.type(search, "fraud");
+      expect(screen.getByRole("listbox")).toHaveTextContent("INC-5 · Fraud model");
+      expect(screen.getByRole("listbox")).not.toHaveTextContent("INC-12");
+    });
+
+    it("adds an incident link", async () => {
+      const onChange = vi.fn();
+      renderWithProviders(<EntityLinkSelector value={[]} onChange={onChange} />);
+      await pickIncidentType();
+
+      await userEvent.type(screen.getByPlaceholderText("Search incidents"), "INC-12");
+      await userEvent.click(await screen.findByText("INC-12 · Credit scoring"));
+
+      const buttons = screen.getAllByRole("button");
+      await userEvent.click(buttons[buttons.length - 1]);
+      expect(onChange).toHaveBeenCalledWith([
+        { entity_id: 3, entity_type: "incident", entity_name: "INC-12 · Credit scoring" },
+      ]);
+    });
+
+    it("says when there is no incident to link", async () => {
+      (getAllEntities as any).mockImplementation(async ({ routeUrl }: { routeUrl: string }) =>
+        routeUrl === "/ai-incident-managements"
+          ? { data: [{ id: 4, incident_id: "INC-13", ai_project: "Chatbot", archived: true }] }
+          : { data: [] },
+      );
+      renderWithProviders(<EntityLinkSelector value={[]} onChange={defaultOnChange} />);
+      await pickIncidentType();
+
+      expect(screen.getByText("No incidents to link")).toBeInTheDocument();
+    });
+
+    it("shows an existing incident link with its type", () => {
+      renderWithProviders(
+        <EntityLinkSelector
+          value={[
+            { entity_id: 3, entity_type: "incident", entity_name: "INC-12 · Credit scoring" },
+          ]}
+          onChange={defaultOnChange}
+        />,
+      );
+      expect(screen.getByText("Incident:")).toBeInTheDocument();
+      expect(screen.getByText("INC-12 · Credit scoring")).toBeInTheDocument();
+    });
   });
 
   it("renders vendor select when Vendor type is selected", async () => {

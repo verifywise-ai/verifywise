@@ -25,6 +25,7 @@ import logger from "../../utils/logger/fileLogger";
 import { getIncidentByIdQuery } from "../../utils/incidentManagement.utils";
 import { createNotificationQuery } from "../../utils/notification.utils";
 import { createNewTaskQuery } from "../../utils/task.utils";
+import { createTaskEntityLinkQuery } from "../../utils/taskEntityLink.utils";
 import { recordEntityCreation } from "../../utils/changeHistory.base.utils";
 import { incidentPagePath } from "../../utils/incidentLinks.utils";
 import { TaskPriority } from "../../domain.layer/enums/task-priority.enum";
@@ -300,6 +301,20 @@ export async function createRemediationTask(
       ctx.organizationId,
       transaction,
       assigneeId !== null ? [{ user_id: assigneeId }] : [],
+    );
+    // The task is linked to its incident, so it shows on the incident and the
+    // incident on the task. Same transaction: no task without its link.
+    await createTaskEntityLinkQuery(
+      {
+        task_id: Number(task.id),
+        entity_id: incident.id,
+        entity_type: "incident",
+        entity_name: incident.useCase
+          ? `${incident.reference} · ${incident.useCase.slice(0, 60)}`
+          : incident.reference,
+      },
+      ctx.organizationId,
+      transaction,
     );
     const effect: RemediationTaskEffect = {
       taskId: Number(task.id),

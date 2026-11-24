@@ -272,6 +272,7 @@ function getEntityTypeLabel(entityType: string): string {
     vendor: "Vendor",
     model: "Model",
     policy: "Policy",
+    incident: "Incident",
     nist_subcategory: "NIST AI RMF",
     iso42001_subclause: "ISO 42001 Clause",
     iso42001_annexcategory: "ISO 42001 Annex",
@@ -302,6 +303,8 @@ async function buildEntityUrlAsync(
       return `${baseUrl}/model-inventory?modelId=${entityId}`;
     case "policy":
       return `${baseUrl}/policies?policyId=${entityId}`;
+    case "incident":
+      return `${baseUrl}${incidentPagePath(entityId)}`;
 
     case "nist_subcategory": {
       // Get function type and category info for NIST - join with struct tables

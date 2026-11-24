@@ -8,6 +8,8 @@
  *  - notifyAdminsOfCriticalIncident claims each Admin's notice under the run
  *    lock, delivers after commit, and marks it sent only after delivery, so a
  *    retry reaches only Admins who were missed;
+ *  - the remediation task is linked to its incident (task_entity_links) in
+ *    the task's transaction;
  *  - nothing inside a locked transaction uses a second connection.
  */
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
@@ -38,6 +40,9 @@ jest.mock("../../../utils/notification.utils", () => ({
 jest.mock("../../../utils/task.utils", () => ({
   createNewTaskQuery: jest.fn(),
 }));
+jest.mock("../../../utils/taskEntityLink.utils", () => ({
+  createTaskEntityLinkQuery: jest.fn(),
+}));
 jest.mock("../../../utils/changeHistory.base.utils", () => ({
   recordEntityCreation: jest.fn(),
 }));
@@ -55,6 +60,7 @@ import { sequelize } from "../../../database/db";
 import { getIncidentByIdQuery } from "../../../utils/incidentManagement.utils";
 import { createNotificationQuery } from "../../../utils/notification.utils";
 import { createNewTaskQuery } from "../../../utils/task.utils";
+import { createTaskEntityLinkQuery } from "../../../utils/taskEntityLink.utils";
 import { recordEntityCreation } from "../../../utils/changeHistory.base.utils";
 import { notificationService } from "../../notificationService";
 import {
@@ -75,6 +81,7 @@ const mockQuery = sequelize.query as unknown as jest.Mock<any>;
 const mockGetIncident = getIncidentByIdQuery as unknown as jest.Mock<any>;
 const mockCreateNotification = createNotificationQuery as unknown as jest.Mock<any>;
 const mockCreateTask = createNewTaskQuery as unknown as jest.Mock<any>;
+const mockCreateLink = createTaskEntityLinkQuery as unknown as jest.Mock<any>;
 const mockRecordCreation = recordEntityCreation as unknown as jest.Mock<any>;
 const mockSendEmail = notificationService.sendEmailWithTemplate as unknown as jest.Mock<any>;
 const mockBuild = buildCriticalIncidentEscalation as unknown as jest.Mock<any>;
@@ -339,11 +346,41 @@ describe("createRemediationTask (Decision 9b)", () => {
     );
   });
 
+  it("links the task to its incident in the task's transaction", async () => {
+    await createRemediationTask(ctx(), incident());
+
+    expect(mockCreateLink).toHaveBeenCalledTimes(1);
+    expect(mockCreateLink).toHaveBeenCalledWith(
+      {
+        task_id: 700,
+        entity_id: 99,
+        entity_type: "incident",
+        entity_name: "INC-99 · Credit scoring",
+      },
+      42,
+      mockTx,
+    );
+  });
+
+  it("names the link by the incident reference alone when it has no use case", async () => {
+    await createRemediationTask(ctx(), incident({ useCase: "" }));
+
+    expect(mockCreateLink.mock.calls[0][0]).toMatchObject({ entity_name: "INC-99" });
+  });
+
+  it("does not link the task when creating it fails", async () => {
+    mockCreateTask.mockRejectedValueOnce(new Error("insert failed"));
+
+    await expect(createRemediationTask(ctx(), incident())).rejects.toThrow("insert failed");
+    expect(mockCreateLink).not.toHaveBeenCalled();
+  });
+
   it("creates the task once when the step runs again for the same run", async () => {
     const first = await createRemediationTask(ctx(), incident());
     const again = await createRemediationTask(ctx(), incident());
 
     expect(mockCreateTask).toHaveBeenCalledTimes(1);
+    expect(mockCreateLink).toHaveBeenCalledTimes(1);
     expect(mockNotifyTask).toHaveBeenCalledTimes(1);
     expect(again).toEqual({ ...first, alreadyCreated: true });
   });

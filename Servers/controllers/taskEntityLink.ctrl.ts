@@ -6,6 +6,7 @@ import {
   getTaskEntityLinksQuery,
   deleteTaskEntityLinkQuery,
   isValidEntityType,
+  isIncidentLinkableQuery,
   entityExistsQuery,
   linkExistsQuery,
   EntityType,
@@ -78,6 +79,17 @@ export async function addTaskEntityLink(req: Request, res: Response): Promise<an
             req.t!("{type} with id {id} not found", { type: entity_type, id: entity_id }),
           ),
         );
+    }
+
+    // An archived incident is read-only until restored; say so rather than 403.
+    if (
+      entity_type === "incident" &&
+      !(await isIncidentLinkableQuery(entity_id, req.organizationId!, transaction))
+    ) {
+      await transaction.rollback();
+      return res
+        .status(409)
+        .json(STATUS_CODE[409](req.t!("Restore this incident before linking it to a task.")));
     }
 
     const mayLink = await canLinkTaskToEntityQuery(

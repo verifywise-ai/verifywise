@@ -10,6 +10,7 @@ export const VALID_ENTITY_TYPES = [
   "vendor",
   "model",
   "policy",
+  "incident",
   "nist_subcategory",
   "iso42001_subclause",
   "iso42001_annexcategory",
@@ -47,6 +48,7 @@ export const TASK_ENTITY_TABLES: Record<EntityType, string> = {
   vendor: "vendors",
   model: "model_inventories",
   policy: "policy_manager",
+  incident: "ai_incident_managements",
   nist_subcategory: "nist_ai_rmf_subcategories",
   iso42001_subclause: "subclauses_iso",
   iso42001_annexcategory: "annexcategories_iso",
@@ -64,7 +66,38 @@ function getEntityTableName(entityType: EntityType): string {
 }
 
 /** Task link targets that do not belong to any one use case. */
-const ORGANIZATION_WIDE_LINK_TYPES: readonly EntityType[] = ["vendor", "model", "policy"];
+const ORGANIZATION_WIDE_LINK_TYPES: readonly EntityType[] = [
+  "vendor",
+  "model",
+  "policy",
+  "incident",
+];
+
+/**
+ * An incident's name on a task link: its visible id ("INC-12", or "INC-<id>"
+ * for a row without one) and its use case, as SQL over the row aliased `i`.
+ */
+export const INCIDENT_LINK_NAME_SQL = `CONCAT_WS(' · ',
+  COALESCE(NULLIF(i.incident_id, ''), 'INC-' || i.id),
+  NULLIF(LEFT(i.ai_project, 60), ''))`;
+
+/**
+ * Whether an incident can be linked to a task now: it exists in the
+ * organization and is not archived. Links made before it was archived stay.
+ */
+export async function isIncidentLinkableQuery(
+  incidentId: number,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<boolean> {
+  const rows = await sequelize.query<{ linkable: boolean }>(
+    `SELECT archived IS NOT TRUE AS linkable
+       FROM ai_incident_managements
+      WHERE organization_id = :organizationId AND id = :incidentId`,
+    { replacements: { organizationId, incidentId }, type: QueryTypes.SELECT, transaction },
+  );
+  return rows[0]?.linkable === true;
+}
 
 /** Task link targets that reach projects_frameworks through a parent row. */
 const LINK_PARENTS: Partial<Record<EntityType, { table: string; foreignKey: string }>> = {
@@ -87,8 +120,9 @@ function requirementSql(entityType: EntityType) {
 /**
  * Whether this user may link a task to this entity. A link to a framework
  * requirement lets the task's assignees read the use case, so it takes access
- * to that use case; vendors, models and policies belong to the organization.
- * A requirement with no use case behind it is refused.
+ * to that use case; vendors, models, policies and incidents belong to the
+ * organization (every member reads incidents). An archived incident cannot be
+ * linked. A requirement with no use case behind it is refused.
  */
 export async function canLinkTaskToEntityQuery(
   entityId: number,
@@ -97,6 +131,9 @@ export async function canLinkTaskToEntityQuery(
   organizationId: number,
   transaction?: Transaction,
 ): Promise<boolean> {
+  if (entityType === "incident") {
+    return isIncidentLinkableQuery(entityId, organizationId, transaction);
+  }
   if (ORGANIZATION_WIDE_LINK_TYPES.includes(entityType)) return true;
 
   const { source, frameworkKey, parentScope } = requirementSql(entityType);
@@ -171,6 +208,7 @@ function getEntityNameColumn(entityType: EntityType): string {
     vendor: "vendor_name",
     model: "model",
     policy: "title",
+    incident: INCIDENT_LINK_NAME_SQL,
     nist_subcategory: "implementation_description", // actual name comes from struct table
     iso42001_subclause: "implementation_description",
     iso42001_annexcategory: "implementation_description",
@@ -255,8 +293,9 @@ export async function getTaskEntityLinksQuery(
   // Enrich each link with entity details (only if entity_name not already stored)
   const enrichedLinks: ITaskEntityLinkWithDetails[] = [];
   for (const link of links) {
-    // If entity_name is already stored, use it
-    if (link.entity_name) {
+    // If entity_name is already stored, use it. An incident's name is read
+    // from the incident every time, so its use case stays current.
+    if (link.entity_name && link.entity_type !== "incident") {
       enrichedLinks.push({
         ...link,
         entity_name: link.entity_name,
@@ -305,7 +344,7 @@ export async function getTaskEntityLinksQuery(
         const tableName = getEntityTableName(link.entity_type);
         const nameColumn = getEntityNameColumn(link.entity_type);
         const entityResult = await sequelize.query<{ name: string }>(
-          `SELECT ${nameColumn} as name FROM ${tableName} WHERE organization_id = :organizationId AND id = :entityId`,
+          `SELECT ${nameColumn} as name FROM ${tableName} i WHERE i.organization_id = :organizationId AND i.id = :entityId`,
           {
             replacements: { organizationId, entityId: link.entity_id },
             type: QueryTypes.SELECT,
@@ -317,7 +356,7 @@ export async function getTaskEntityLinksQuery(
 
       enrichedLinks.push({
         ...link,
-        entity_name: entityName || `${link.entity_type} #${link.entity_id}`,
+        entity_name: entityName || link.entity_name || `${link.entity_type} #${link.entity_id}`,
       });
     } catch {
       // If entity doesn't exist anymore, still include the link

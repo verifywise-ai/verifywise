@@ -63,6 +63,8 @@ export const de: Record<string, string> = {
   "Showing tasks you created or are assigned to. You can create and manage your tasks here.":
     "Es werden Aufgaben angezeigt, die Sie erstellt haben oder die Ihnen zugewiesen sind. Hier können Sie Ihre Aufgaben erstellen und verwalten.",
   "Archive task": "Aufgabe archivieren",
+  "Could not load the linked tasks.": "Die verknüpften Aufgaben konnten nicht geladen werden.",
+  "No incidents to link": "Keine Vorfälle zum Verknüpfen",
 };
 
 export const fr: Record<string, string> = {
@@ -127,6 +129,8 @@ export const fr: Record<string, string> = {
   "Showing tasks you created or are assigned to. You can create and manage your tasks here.":
     "Les tâches que vous avez créées ou qui vous sont assignées sont affichées. Vous pouvez créer et gérer vos tâches ici.",
   "Archive task": "Archiver la tâche",
+  "Could not load the linked tasks.": "Impossible de charger les tâches liées.",
+  "No incidents to link": "Aucun incident à lier",
 };
 
 export const es: Record<string, string> = {
@@ -191,4 +195,6 @@ export const es: Record<string, string> = {
   "Showing tasks you created or are assigned to. You can create and manage your tasks here.":
     "Se muestran las tareas que usted creó o que tiene asignadas. Aquí puede crear y gestionar sus tareas.",
   "Archive task": "Archivar tarea",
+  "Could not load the linked tasks.": "No se pudieron cargar las tareas vinculadas.",
+  "No incidents to link": "No hay incidentes para vincular",
 };

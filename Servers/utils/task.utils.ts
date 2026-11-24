@@ -22,7 +22,7 @@ import {
 } from "./automation/task.automation.utils";
 import { replaceTemplateVariables } from "./automation/automation.utils";
 import { enqueueAutomationAction } from "../services/automations/automationProducer";
-import { getTaskEntityLinksQuery } from "./taskEntityLink.utils";
+import { EntityType, getTaskEntityLinksQuery } from "./taskEntityLink.utils";
 
 interface GetTasksOptions {
   userId: number;
@@ -40,6 +40,8 @@ interface TaskFilters {
   organization_id?: number;
   search?: string;
   include_archived?: boolean;
+  /** Only tasks linked to this entity (task_entity_links). */
+  linked_entity?: { entity_type: EntityType; entity_id: number };
 }
 
 interface TaskSortOptions {
@@ -298,6 +300,17 @@ export const getTasksQuery = async (
   if (filters.search) {
     whereConditions.push(`(t.title ILIKE :search OR t.description ILIKE :search)`);
     replacements.search = `%${filters.search}%`;
+  }
+
+  if (filters.linked_entity) {
+    whereConditions.push(`EXISTS (
+      SELECT 1 FROM task_entity_links tel_filter
+       WHERE tel_filter.organization_id = :organizationId
+         AND tel_filter.task_id = t.id
+         AND tel_filter.entity_type = :linkedEntityType
+         AND tel_filter.entity_id = :linkedEntityId)`);
+    replacements.linkedEntityType = filters.linked_entity.entity_type;
+    replacements.linkedEntityId = filters.linked_entity.entity_id;
   }
 
   // Add WHERE conditions

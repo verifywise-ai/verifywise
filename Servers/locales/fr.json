@@ -571,6 +571,7 @@
   "Incident deleted successfully": "Incident supprimé(e) avec succès",
   "Incident not found": "Incident introuvable",
   "Restore this incident before editing it.": "Restaurez cet incident avant de le modifier.",
+  "Restore this incident before linking it to a task.": "Restaurez cet incident avant de le lier à une tâche.",
   "Linked incidents must be a list of incident ids.": "Les incidents liés doivent être une liste d'identifiants d'incidents.",
   "Some linked incidents do not exist in your organization.": "Certains incidents liés n'existent pas dans votre organisation.",
   "Incorrect CAPTCHA answer": "Réponse CAPTCHA incorrecte",

@@ -28,7 +28,11 @@ import {
   notifyTaskUpdated,
   ITaskEntityLinkForEmail,
 } from "../services/inAppNotification.service";
-import { getTaskEntityLinksQuery, persistTaskEntityLinks } from "../utils/taskEntityLink.utils";
+import {
+  getTaskEntityLinksQuery,
+  isValidEntityType,
+  persistTaskEntityLinks,
+} from "../utils/taskEntityLink.utils";
 import { translateError } from "../utils/i18n.utils";
 import {
   recordEntityCreation,
@@ -247,9 +251,27 @@ export async function getAllTasks(req: Request, res: Response): Promise<any> {
       assignee,
       search,
       include_archived,
+      linked_entity_type,
+      linked_entity_id,
       sort_by = "created_at",
       sort_order = "DESC",
     } = req.query;
+
+    // Tasks linked to one entity: both parameters or neither.
+    let linkedEntity: { entity_type: string; entity_id: number } | undefined;
+    if (linked_entity_type !== undefined || linked_entity_id !== undefined) {
+      const entityId = Number(linked_entity_id);
+      if (
+        typeof linked_entity_type !== "string" ||
+        !isValidEntityType(linked_entity_type) ||
+        typeof linked_entity_id !== "string" ||
+        !/^[1-9]\d*$/.test(linked_entity_id) ||
+        !Number.isSafeInteger(entityId)
+      ) {
+        return res.status(400).json(STATUS_CODE[400](req.t!("Invalid entity type or ID")));
+      }
+      linkedEntity = { entity_type: linked_entity_type, entity_id: entityId };
+    }
 
     // Parse filters
     const filters: any = {};
@@ -262,6 +284,7 @@ export async function getAllTasks(req: Request, res: Response): Promise<any> {
       filters.assignee = Array.isArray(assignee) ? assignee.map(Number) : [Number(assignee)];
     if (search) filters.search = search as string;
     if (include_archived) filters.include_archived = include_archived === "true";
+    if (linkedEntity) filters.linked_entity = linkedEntity;
     filters.organization_id = Number(req.organizationId);
 
     // Parse sorting

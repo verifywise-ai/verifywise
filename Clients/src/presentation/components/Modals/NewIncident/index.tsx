@@ -49,6 +49,7 @@ import {
   HarmCategory,
 } from "../../../../domain/enums/aiIncidentManagement.enum";
 import { HistorySidebar } from "../../Common/HistorySidebar";
+import LinkedTasks from "../../LinkedTasks";
 import TabBar from "../../TabBar";
 import { TabContext } from "@mui/lab";
 import JiraIssueChip from "../../JiraIssueChip";
@@ -843,6 +844,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
               <TabBar
                 tabs={[
                   { label: "Incident details", value: "details", icon: "AlertTriangle" },
+                  { label: "Linked tasks", value: "tasks", icon: "CheckSquare" },
                   { label: "Activity", value: "activity", icon: "History" },
                 ]}
                 activeTab={activeTab}
@@ -855,6 +857,14 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
         {/* Activity tab content */}
         {activeTab === "activity" && isEdit && incidentId ? (
           <HistorySidebar inline isOpen={true} entityType="incident" entityId={incidentId} />
+        ) : activeTab === "tasks" && isEdit && incidentId ? (
+          <Box sx={{ pt: "8px" }}>
+            <LinkedTasks
+              entityType="incident"
+              entityId={incidentId}
+              emptyMessage="No tasks are linked to this incident yet. To link one, open the task and add this incident to its linked items."
+            />
+          </Box>
         ) : (
           <form onSubmit={handleSaveIncident}>
             <Stack gap="8px" width="100%">

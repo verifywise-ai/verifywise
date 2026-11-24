@@ -98,6 +98,14 @@ async function tasksIn(orgId: number) {
   }>;
 }
 
+async function taskLinksIn(orgId: number) {
+  return (await sequelize.query(
+    `SELECT task_id, entity_type, entity_id FROM task_entity_links
+      WHERE organization_id = :orgId ORDER BY id`,
+    { replacements: { orgId }, type: QueryTypes.SELECT },
+  )) as Array<{ task_id: number; entity_type: string; entity_id: number }>;
+}
+
 async function escalationNotices(orgId: number) {
   return (await sequelize.query(
     `SELECT user_id, title, action_url, metadata FROM notifications
@@ -267,6 +275,10 @@ describe("critical incident response workflow", () => {
       assignees: [ownerId],
     });
     expect(tasks[0].title).toContain("Respond to critical incident");
+    // The task is linked to its incident, written with the task.
+    expect(await taskLinksIn(orgId)).toEqual([
+      { task_id: tasks[0].id, entity_type: "incident", entity_id: created.id },
+    ]);
     // The first approval alone notifies no Admin.
     expect(await escalationNotices(orgId)).toHaveLength(0);
 
@@ -304,6 +316,7 @@ describe("critical incident response workflow", () => {
     expect(retriedTask).toMatchObject({ taskId: tasks[0].id, alreadyCreated: true });
     expect(retriedNotice.notified).toEqual([]);
     expect(await tasksIn(orgId)).toHaveLength(1);
+    expect(await taskLinksIn(orgId)).toHaveLength(1);
     expect(await escalationNotices(orgId)).toHaveLength(2);
     expect(
       emails.mock.calls.filter(
@@ -335,6 +348,7 @@ describe("critical incident response workflow", () => {
     await settle();
 
     expect(await tasksIn(orgId)).toHaveLength(1);
+    expect(await taskLinksIn(orgId)).toHaveLength(1);
     expect(outcomes.filter((o) => !o.alreadyCreated)).toHaveLength(1);
   });
 
