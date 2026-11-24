@@ -88,6 +88,23 @@ describe("incident change-history formatters are tenant-scoped", () => {
     });
   });
 
+  it.each([["reporter_id"], ["approved_by_id"]])(
+    "%s is tracked with the user lookup scoped to the organization",
+    async (field) => {
+      const config = getEntityConfig("incident");
+      expect(config.fieldsToTrack).toContain(field);
+      expect(config.fieldLabels[field]).toBe(field === "reporter_id" ? "Reporter" : "Approved by");
+      respond(() => [{ id: 8, name: "Alex", surname: "Moreau", email: null }]);
+
+      await expect(formatters[field]("8", { organizationId: 1, transaction: tx })).resolves.toBe(
+        "Alex Moreau",
+      );
+      const [sql, options] = lookupCalls()[0];
+      expect(sql).toContain("organization_id = :organizationId");
+      expect(options).toMatchObject({ replacements: { userId: 8, organizationId: 1 } });
+    },
+  );
+
   it("the generic user formatter keeps its unscoped lookup when given no organization", async () => {
     mockQuery.mockResolvedValueOnce([]);
     await expect(GENERIC_FORMATTERS.user(7)).resolves.toBe("User #7");

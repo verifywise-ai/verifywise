@@ -187,6 +187,34 @@ const reporterNameFor = async (
   return getIncidentMemberName(id, organizationId, transaction);
 };
 
+/**
+ * The people an incident records both as a user (id) and as name text: the
+ * text is the name the id's user had, or the only record for text-only
+ * reporters (Jira, older rows).
+ */
+const INCIDENT_PERSON_COLUMNS = [
+  ["reporter_id", "reporter"],
+  ["approved_by_id", "approved_by"],
+] as const;
+
+/**
+ * The changed columns to record in history, with one row per person change
+ * (both columns share a label): the user's row when the person is a user,
+ * else the name text's row. A user row also records a change between two
+ * users who have the same name.
+ */
+export const incidentHistoryColumns = (
+  changedColumns: string[],
+  newData: Record<string, unknown>,
+): string[] => {
+  const dropped = new Set<string>();
+  for (const [idColumn, textColumn] of INCIDENT_PERSON_COLUMNS) {
+    if (!changedColumns.includes(idColumn) || !changedColumns.includes(textColumn)) continue;
+    dropped.add(isBlankIncidentValue(newData[idColumn]) ? idColumn : textColumn);
+  }
+  return changedColumns.filter((column) => !dropped.has(column));
+};
+
 export interface UpdateIncidentOptions {
   /**
    * What the caller may change (see IncidentWriteAccess). Required unless
@@ -399,10 +427,13 @@ export async function updateIncident(
     if (userId || options.changedBySystem) {
       // Name lookups are tenant-scoped and run on this transaction, the
       // connection that holds the row lock.
-      const changes = await formatEntityFieldChanges("incident", stored, changed, changedColumns, {
-        organizationId,
-        transaction,
-      });
+      const changes = await formatEntityFieldChanges(
+        "incident",
+        stored,
+        changed,
+        incidentHistoryColumns(changedColumns, changed),
+        { organizationId, transaction },
+      );
       if (changes.length > 0) {
         await recordMultipleFieldChanges(
           "incident",
@@ -502,19 +533,26 @@ export interface CreateIncidentActor {
  * The saved incident's values for creation history, without the column
  * defaults the caller did not send (false booleans such as archived and
  * interim_report, an empty harm category list): history lists what the
- * incident was created with, not every default.
+ * incident was created with, not every default. A person who is a user
+ * (reporter_id, approved_by_id) is recorded by the user row only, not again
+ * by the name text.
  */
 export const creationHistoryValues = (
   saved: Record<string, unknown>,
   input: Record<string, unknown> | undefined,
-): Record<string, unknown> =>
-  Object.fromEntries(
+): Record<string, unknown> => {
+  const values = Object.fromEntries(
     Object.entries(saved).filter(
       ([key, value]) =>
         input?.[key] !== undefined ||
         !(value === false || (Array.isArray(value) && value.length === 0)),
     ),
   );
+  for (const [idColumn, textColumn] of INCIDENT_PERSON_COLUMNS) {
+    if (!isBlankIncidentValue(values[idColumn])) delete values[textColumn];
+  }
+  return values;
+};
 
 /**
  * Creates an incident for a person (the console, the AI Advisor). In order:

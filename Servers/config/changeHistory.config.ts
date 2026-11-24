@@ -149,6 +149,16 @@ const namedRowFormatter =
     }
   };
 
+/**
+ * Formatter for an incident user column (owner, reporter, approver): the
+ * user's name, looked up in the organization. Ids may arrive as strings.
+ */
+const incidentUserFormatter: FieldFormatter = async (
+  value: unknown,
+  context?: FormatterContext,
+): Promise<string> =>
+  GENERIC_FORMATTERS.user(value === null || value === "" ? value : Number(value), context);
+
 /** The integer ids in a list value (an array, or one id), without repeats, ascending. */
 const idList = (value: unknown): number[] => {
   const raw = Array.isArray(value) ? value : value === null || value === undefined ? [] : [value];
@@ -909,6 +919,8 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       "model_inventory_id",
       "project_id",
       "assignee_id",
+      "reporter_id",
+      "approved_by_id",
     ],
     fieldLabels: {
       ai_project: "AI use case or framework",
@@ -934,6 +946,11 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       model_inventory_id: "Affected model",
       project_id: "Linked use case",
       assignee_id: "Owner",
+      // The same people as the reporter / approved_by text, recorded as
+      // users: the service writes one row per change (see
+      // incidentHistoryColumns), so they share the text columns' labels.
+      reporter_id: "Reporter",
+      approved_by_id: "Approved by",
     },
     fieldFormatters: {
       model_inventory_id: namedRowFormatter(
@@ -944,8 +961,9 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
         "SELECT project_title AS name FROM projects WHERE id = :id AND organization_id = :organizationId",
         "Use case",
       ),
-      assignee_id: async (value: unknown, context?: FormatterContext) =>
-        GENERIC_FORMATTERS.user(value === null || value === "" ? value : Number(value), context),
+      assignee_id: incidentUserFormatter,
+      reporter_id: incidentUserFormatter,
+      approved_by_id: incidentUserFormatter,
       // DATE columns: read back as "YYYY-MM-DD" strings, recorded as is.
       occurred_date: GENERIC_FORMATTERS.date,
       date_detected: GENERIC_FORMATTERS.date,

@@ -48,6 +48,8 @@ jest.mock("../workflows/triggers", () => ({
 
 import {
   createIncident,
+  creationHistoryValues,
+  incidentHistoryColumns,
   IncidentCreateValidationError,
   IncidentUpdateValidationError,
   updateIncident,
@@ -58,12 +60,14 @@ import {
   updateIncidentByIdQuery,
 } from "../../utils/incidentManagement.utils";
 import { storedIncident } from "./helpers/incidentFixtures";
+import { formatEntityFieldChanges } from "../../utils/changeHistory.base.utils";
 import { AIIncidentManagementApprovalStatus as Approval } from "../../domain.layer/enums/ai-incident-management.enum";
 
 type Mock = jest.MockedFunction<any>;
 const mockCreate = createNewIncidentQuery as Mock;
 const mockGet = getIncidentByIdQuery as Mock;
 const mockUpdate = updateIncidentByIdQuery as Mock;
+const mockFormatChanges = formatEntityFieldChanges as Mock;
 
 const FULL_ACCESS = { canEdit: true, canApprove: true };
 
@@ -348,6 +352,42 @@ describe("incident reporter and approver users", () => {
       });
     });
 
+    it("records a reporter change between two users as the user row, even with the same name", async () => {
+      const stored = storedIncident();
+      stored.setDataValue("reporter_id", 7);
+      stored.setDataValue("reporter", "Alex Moreau");
+      mockGet.mockImplementation(async () => stored);
+      await updateIncident(1, 42, { reporter_id: 8 }, 7, { access: FULL_ACCESS });
+      // Same name: only the id changed, and it is recorded.
+      expect(writtenColumns()).toEqual({ reporter_id: 8 });
+      expect(mockFormatChanges.mock.calls[0][3]).toEqual(["reporter_id"]);
+    });
+
+    it("records one approver row for a decision: the user's", async () => {
+      const stored = storedIncident();
+      stored.setDataValue("approval_status", Approval.PENDING);
+      stored.setDataValue("approved_by", null as any);
+      stored.setDataValue("approved_by_id", null);
+      stored.setDataValue("approval_date", null);
+      mockGet.mockImplementation(async () => stored);
+      await updateIncident(1, 42, { approval_status: Approval.APPROVED }, 7, {
+        access: FULL_ACCESS,
+      });
+      expect([...mockFormatChanges.mock.calls[0][3]].sort()).toEqual([
+        "approval_date",
+        "approval_status",
+        "approved_by_id",
+      ]);
+    });
+
+    it("records the reporter text row when the reporter becomes text only", async () => {
+      const stored = storedIncident();
+      stored.setDataValue("reporter_id", 7);
+      mockGet.mockImplementation(async () => stored);
+      await updateIncident(1, 42, { reporter: "Grace Hopper" }, 7, { access: FULL_ACCESS });
+      expect(mockFormatChanges.mock.calls[0][3]).toEqual(["reporter"]);
+    });
+
     it("treats a date sent back as the stored day (string or ISO date-time) as unchanged", async () => {
       await updateIncident(
         1,
@@ -361,6 +401,39 @@ describe("incident reporter and approver users", () => {
         { access: FULL_ACCESS },
       );
       expect(writtenColumns()).toEqual({ severity: "Minor" });
+    });
+  });
+
+  describe("history rows per person", () => {
+    it("keeps one row per person change: the user's when set, else the text", () => {
+      expect(
+        incidentHistoryColumns(["reporter", "reporter_id", "severity"], { reporter_id: 8 }),
+      ).toEqual(["reporter_id", "severity"]);
+      expect(incidentHistoryColumns(["reporter", "reporter_id"], { reporter_id: null })).toEqual([
+        "reporter",
+      ]);
+      expect(
+        incidentHistoryColumns(["approved_by", "approved_by_id"], { approved_by_id: null }),
+      ).toEqual(["approved_by"]);
+      expect(incidentHistoryColumns(["reporter_id"], { reporter_id: 8 })).toEqual(["reporter_id"]);
+    });
+
+    it("records a new incident's user reporter and approver once, as users", () => {
+      expect(
+        creationHistoryValues(
+          {
+            reporter: "Alex Kim",
+            reporter_id: 7,
+            approved_by: "Ada Admin",
+            approved_by_id: 9,
+            severity: "Minor",
+          },
+          {},
+        ),
+      ).toEqual({ reporter_id: 7, approved_by_id: 9, severity: "Minor" });
+      expect(
+        creationHistoryValues({ reporter: "Grace", reporter_id: null, approved_by: null }, {}),
+      ).toEqual({ reporter: "Grace", reporter_id: null, approved_by: null });
     });
   });
 });
