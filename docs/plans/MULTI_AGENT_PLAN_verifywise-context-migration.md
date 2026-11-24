@@ -69,7 +69,7 @@
 | C-26 | Migrate Dashboard container (context writers → cache) | Senior Frontend Dev | `containers/Dashboard/index.tsx` + test | 🟢 |
 | C-27 | Remove provider from App.tsx; delete context file; doc update | Technical Lead | `App.tsx`, `application/contexts/VerifyWise.context.ts` (deleted), `AddNewRiskForm/index.md` | 🟢 |
 | C-28 | Full QA: test suite, lint, typecheck, build | QA Engineer | — | 🟢 (11,663 tests pass; 6 intakeFormLogic failures pre-existing on develop; uiSlice test updated + slice coverage added; eslint/tsc/build clean) |
-| C-29 | PR to develop + CI green | Release Manager | — | ⬜ |
+| C-29 | PR to develop + CI green | Release Manager | — | 🟢 https://github.com/verifywise-ai/verifywise/pull/5526 (all checks pass; one pre-existing-on-develop-adjacent type error in useAutoCollapseSidebar test fixed post-review) |
 
 ## Validation Summary
 
