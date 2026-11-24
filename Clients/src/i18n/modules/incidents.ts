@@ -20,6 +20,8 @@ export const de: Record<string, string> = {
     "Das ausgewählte betroffene Modell ist nicht mehr verfügbar.",
   "The selected owner is no longer available.":
     "Der ausgewählte Verantwortliche ist nicht mehr verfügbar.",
+  "The selected reporter is no longer available.":
+    "Die ausgewählte meldende Person ist nicht mehr verfügbar.",
   "Add new incident": "Neuen Vorfall hinzufügen",
   "Log new incidents": "Neue Vorfälle erfassen",
   "Assign owners and track resolution": "Verantwortliche zuweisen und Lösung verfolgen",
@@ -84,6 +86,8 @@ export const fr: Record<string, string> = {
   "The selected affected model is no longer available.":
     "Le modèle concerné sélectionné n'est plus disponible.",
   "The selected owner is no longer available.": "Le responsable sélectionné n'est plus disponible.",
+  "The selected reporter is no longer available.":
+    "La personne déclarante sélectionnée n'est plus disponible.",
   "Add new incident": "Ajouter un nouvel incident",
   "Log new incidents": "Consigner de nouveaux incidents",
   "Assign owners and track resolution": "Attribuer des responsables et suivre la résolution",
@@ -149,6 +153,8 @@ export const es: Record<string, string> = {
     "El modelo afectado seleccionado ya no está disponible.",
   "The selected owner is no longer available.":
     "El responsable seleccionado ya no está disponible.",
+  "The selected reporter is no longer available.":
+    "La persona informante seleccionada ya no está disponible.",
   "Add new incident": "Añadir nuevo incidente",
   "Log new incidents": "Registrar nuevos incidentes",
   "Assign owners and track resolution": "Asignar responsables y seguir la resolución",

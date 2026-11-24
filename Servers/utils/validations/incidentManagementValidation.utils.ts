@@ -156,6 +156,7 @@ const FUTURE_KEY = "{field} cannot be in the future";
 const BOOLEAN_KEY = "{field} must be true or false";
 const HARM_KEY = "{field} must be a list of these categories: {values}";
 const DATE_ORDER_KEY = "date_detected cannot be earlier than occurred_date";
+const USER_ID_KEY = "{field} must be a user id";
 
 const fillPlaceholders = (key: string, vars: Record<string, string | number>): string =>
   key.replace(/\{(\w+)\}/g, (_, name) => (name in vars ? String(vars[name]) : `{${name}}`));
@@ -245,6 +246,12 @@ const checkDate = (field: string, value: unknown): IncidentFieldError | null => 
   return null;
 };
 
+/** An optional user id: a positive integer, or empty for none. */
+const checkUserId = (field: string, value: unknown): IncidentFieldError | null =>
+  isBlankIncidentValue(value) || toIncidentUserId(value) !== null
+    ? null
+    : fieldError(field, "INVALID_TYPE", USER_ID_KEY);
+
 /** An optional boolean. */
 const checkBoolean = (field: string, value: unknown): IncidentFieldError | null =>
   value === undefined || value === null || typeof value === "boolean"
@@ -326,6 +333,7 @@ const FIELD_RULES: Record<string, (value: unknown) => IncidentFieldError | null>
   date_detected: (v) => checkDate("date_detected", v),
   reporter: (v) =>
     checkText("reporter", v, { required: true, max: INCIDENT_TEXT_COLUMN_MAX_LENGTH }),
+  reporter_id: (v) => checkUserId("reporter_id", v),
   model_system_version: (v) =>
     checkText("model_system_version", v, {
       required: false,
@@ -417,9 +425,13 @@ export const validateCompleteIncidentCreation = (data: any): ValidationError[] =
       code: description.code || "INVALID_VALUE",
     });
   }
+  // A reporter picked from the organization's users (reporter_id) stands in
+  // for the reporter text: the server writes the user's name there.
+  const hasReporterId = !isBlankIncidentValue(body.reporter_id);
   for (const [field, rule] of Object.entries(FIELD_RULES)) {
     let value = body[field];
     if (field in INCIDENT_CREATE_DEFAULTS && isBlankIncidentValue(value)) continue;
+    if (field === "reporter" && hasReporterId) continue;
     if (field === "categories_of_harm") value = parseCreateHarmCategories(value);
     const error = rule(value);
     if (error) errors.push(error);
@@ -466,7 +478,19 @@ export const validateIncidentUpdateBusinessRules = (
       });
     }
   }
+  // The reporter the row ends up with. A reporter_id sent (changed or not)
+  // makes the server write that member's name into the reporter text, so the
+  // text sent does not count. Otherwise the text sent, or the stored one, must
+  // be present when the reporter changes: a new text, or the user cleared.
+  const derivesReporter = !isBlankIncidentValue(update.reporter_id);
+  const clearsReporterId = update.reporter_id !== undefined && !derivesReporter;
   for (const [field, rule] of Object.entries(FIELD_RULES)) {
+    if (field === "reporter") {
+      if (derivesReporter || !(changes("reporter") || clearsReporterId)) continue;
+      const error = rule(update.reporter !== undefined ? update.reporter : stored.reporter);
+      if (error) errors.push(error);
+      continue;
+    }
     if (!changes(field)) continue;
     const error =
       field === "categories_of_harm"
@@ -487,6 +511,7 @@ export const validateIncidentUpdateBusinessRules = (
 const APPROVAL_FIELDS = [
   "approval_status",
   "approved_by",
+  "approved_by_id",
   "approval_date",
   "approval_notes",
 ] as const;
@@ -498,11 +523,16 @@ export const INCIDENT_DATE_COLUMNS: ReadonlySet<string> = new Set([
   "approval_date",
 ]);
 
-/** Incident foreign-key columns (issue #4583). Compared as numbers. */
+/**
+ * Incident foreign-key columns (issue #4583, and the reporter / approver
+ * users). Compared as numbers; '' means none.
+ */
 export const INCIDENT_FK_COLUMNS: ReadonlySet<string> = new Set([
   "model_inventory_id",
   "project_id",
   "assignee_id",
+  "reporter_id",
+  "approved_by_id",
 ]);
 
 /** Incident boolean columns. null / undefined count as false. */
@@ -517,19 +547,16 @@ const isEmptyValue = (value: unknown): boolean =>
 const pad2 = (n: number): string => String(n).padStart(2, "0");
 
 /**
- * The calendar date (YYYY-MM-DD) of an incident date value, read as the
- * wall-clock date stored in the TIMESTAMP WITHOUT TIME ZONE column.
+ * The calendar date (YYYY-MM-DD) of an incident date value. The date columns
+ * are DATE, which Sequelize's parser returns as the "YYYY-MM-DD" string, on
+ * raw queries too.
  *
- * - A Date comes from pg, which parses this column type (oid 1114) as
- *   server-local time and the project installs no custom type parser, so its
- *   local components are the stored wall-clock time.
- * - A string starting with YYYY-MM-DD is that date: it is what Postgres
- *   stores for it, since this column type ignores any offset in the input.
- *
- * Both readings agree in any server time zone. (The API still serialises
- * these Dates with toISOString(), which shifts the date on a non-UTC server;
- * that is a separate, pre-existing issue. The edit drawer only sends fields
- * the user changed, so an untouched date is never compared.)
+ * - A string starting with YYYY-MM-DD is that date, whatever follows (an ISO
+ *   date-time's time and offset are ignored: the caller's day is the one
+ *   written).
+ * - A Date is an instant some server code built (the Advisor's "today", a
+ *   Jira issue's creation time): its UTC date, the date the database session
+ *   (UTC) has always stored for it.
  */
 export const incidentCalendarDate = (value: unknown): string | null => {
   if (isEmptyValue(value)) return null;
@@ -539,7 +566,81 @@ export const incidentCalendarDate = (value: unknown): string | null => {
   }
   const date = value instanceof Date ? value : new Date(value as string);
   if (Number.isNaN(date.getTime())) return String(value);
-  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+  return `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`;
+};
+
+/**
+ * The value to write to (or send out for) an incident DATE column:
+ * "YYYY-MM-DD", or null for none. Unparseable values pass through so the
+ * database refuses them rather than storing a guess (validation runs first).
+ */
+export const toIncidentDateValue = (value: unknown): string | null => {
+  if (isEmptyValue(value)) return null;
+  return incidentCalendarDate(value);
+};
+
+/**
+ * An incident day formatted for people (emails, reports): the day itself, in
+ * UTC, so it never becomes the day before on a server west of UTC. "" for no
+ * date; the value as given when it is not a date.
+ */
+export const formatIncidentDay = (
+  value: unknown,
+  locale?: string,
+  options: Intl.DateTimeFormatOptions = {},
+): string => {
+  const day = toIncidentDateValue(value);
+  if (!day) return "";
+  const date = new Date(`${day}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return day;
+  return date.toLocaleDateString(locale, { ...options, timeZone: "UTC" });
+};
+
+/** Hours the furthest-behind time zone (UTC-12) is behind UTC. */
+const FURTHEST_BEHIND_UTC_OFFSET_HOURS = 12;
+
+/** The earliest date that is today somewhere: today in UTC-12. */
+export const earliestIncidentToday = (now: Date = new Date()): string =>
+  new Date(now.getTime() - FURTHEST_BEHIND_UTC_OFFSET_HOURS * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+
+/**
+ * The day the acting user records (an approval date, the Advisor's incident
+ * days), as "YYYY-MM-DD": the local date their browser sent (the
+ * X-Client-Date header, see getRequestClientDate) when it is a real date
+ * that is today somewhere on earth right now (today in UTC-12 to today in
+ * UTC+14), else today in UTC. So an approver in Toronto at 20:00 records
+ * their own day, not tomorrow, and no caller can backdate or postdate it.
+ */
+export const incidentToday = (clientDate?: unknown, now: Date = new Date()): string =>
+  acceptedClientDate(clientDate, now) ?? now.toISOString().slice(0, 10);
+
+/**
+ * A client date (see incidentToday) when it is a bare real date that is today
+ * somewhere on earth at `now`, else null.
+ */
+export const acceptedClientDate = (clientDate: unknown, now: Date = new Date()): string | null => {
+  const day = incidentCalendarDay(clientDate);
+  return day && day >= earliestIncidentToday(now) && day <= latestIncidentDate(now) ? day : null;
+};
+
+/** `value` when it is a bare real calendar date ("YYYY-MM-DD"), else null. */
+export const incidentCalendarDay = (value: unknown): string | null =>
+  typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? sentCalendarDate(value) : null;
+
+/**
+ * A user id sent for reporter_id: a positive integer (number or digits), or
+ * null when it is not one.
+ */
+export const toIncidentUserId = (value: unknown): number | null => {
+  const id =
+    typeof value === "number"
+      ? value
+      : typeof value === "string" && /^\d+$/.test(value.trim())
+        ? Number(value.trim())
+        : NaN;
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
 };
 
 const toHarmArray = (value: unknown): unknown => {
@@ -628,6 +729,7 @@ export const applyReopenApprovalReset = <T extends Record<string, any>>(
     ...update,
     approval_status: AIIncidentManagementApprovalStatus.PENDING,
     approved_by: null,
+    approved_by_id: null,
     approval_date: null,
     approval_notes: null,
   };
@@ -637,7 +739,11 @@ export const applyReopenApprovalReset = <T extends Record<string, any>>(
  * Approval fields the server sets: who recorded the decision and when.
  * Callers cannot send them; every write path drops them from the request.
  */
-export const SERVER_SET_APPROVAL_FIELDS = ["approved_by", "approval_date"] as const;
+export const SERVER_SET_APPROVAL_FIELDS = [
+  "approved_by",
+  "approved_by_id",
+  "approval_date",
+] as const;
 
 /** Approval fields a caller may change, with incident.approve. */
 export const CALLER_APPROVAL_FIELDS: ReadonlySet<string> = new Set([
@@ -659,11 +765,12 @@ export const withoutServerSetApprovalFields = <T extends Record<string, unknown>
 };
 
 /**
- * What a write does to approved_by and approval_date, given the stored
- * approval status (undefined on create) and the one being written:
+ * What a write does to approved_by, approved_by_id and approval_date, given
+ * the stored approval status (undefined on create) and the one being written:
  *
  * - "stamp": the status changes to Approved or Rejected. The server records
- *   the acting user as approver and now as the approval date.
+ *   the acting user as approver (name and id) and today (UTC) as the
+ *   approval date.
  * - "clear": the status changes to Pending or Not required (or a new incident
  *   starts without a decision). Both are cleared.
  * - "keep": the status does not change (or is not written). Both stay as

@@ -67,4 +67,37 @@ describe("Wise Search: incidents", () => {
     expect(others.length).toBeGreaterThan(0);
     for (const sql of others) expect(sql).not.toContain("archived IS NOT TRUE");
   });
+
+  it("also matches the reporter user's current full name, within the organization", async () => {
+    mockQuery.mockImplementation(async (sql: string) =>
+      sql.includes("FROM ai_incident_managements")
+        ? [
+            {
+              id: 12,
+              incident_id: "INC-12",
+              ai_project: "Chatbot",
+              reporter: "Alex K.",
+              description: "Unsafe advice",
+              reporter_name: "Alex Kim",
+            },
+          ]
+        : [],
+    );
+    const results = await wiseSearch({
+      query: "Alex Kim",
+      organizationId: 4,
+      userId: 9,
+      riskViewer: { userId: 9, isAdmin: true } as any,
+    });
+
+    const sql = incidentSql();
+    expect(sql).toMatch(/CONCAT_WS\(' ', u\.name, u\.surname\)\), ''\)\s+FROM users u/);
+    expect(sql).toContain("om.organization_id = ai_incident_managements.organization_id");
+    expect(sql).toContain("WHERE u.id = ai_incident_managements.reporter_id) ILIKE :searchPattern");
+    expect(sql).toContain(") AS reporter_name FROM ai_incident_managements");
+    expect(sql).toContain("organization_id = :organizationId");
+    expect(results.incident_management.results[0]).toEqual(
+      expect.objectContaining({ id: 12, matchedField: "reporter_name", matchedValue: "Alex Kim" }),
+    );
+  });
 });

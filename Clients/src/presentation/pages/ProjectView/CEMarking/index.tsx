@@ -43,6 +43,7 @@ import StandardModal from "../../../components/Modals/StandardModal";
 import Field from "../../../components/Inputs/Field";
 import DatePicker from "../../../components/Inputs/Datepicker";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import { toDateOnlyString } from "../../../tools/isoDateToString";
 import VWTooltip from "../../../components/VWTooltip";
 import Checkbox from "../../../components/Inputs/Checkbox";
 import {
@@ -2014,7 +2015,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                               •
                             </Typography>
                             <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
-                              Occurred: {formatDate(incident.occurred_date)}
+                              Occurred: {formatDate(toDateOnlyString(incident.occurred_date))}
                             </Typography>
                           </>
                         )}

@@ -32,6 +32,7 @@ import { StatusTileCards } from "../../components/Cards/StatusTileCards";
 import PageTour from "../../components/PageTour";
 import IncidentManagementSteps from "./IncidentManagementSteps";
 import { AIIncidentManagementModel } from "../../../domain/models/Common/incidentManagement/incidentManagement.model";
+import { dateOnlyToLocalDay, toDateOnlyString, toLocalDateOnly } from "../../tools/isoDateToString";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import { FilterColumn } from "../../components/Table/FilterBy";
 import { TableFilter } from "../../components/Table/TableFilter";
@@ -109,6 +110,7 @@ const INCIDENT_SAVE_ERROR_FIELDS: UserFacingFieldErrors = {
     project_id: "The selected use case is no longer available.",
     model_inventory_id: "The selected affected model is no longer available.",
     assignee_id: "The selected owner is no longer available.",
+    reporter_id: "The selected reporter is no longer available.",
   },
 };
 
@@ -126,13 +128,12 @@ const toDrawerValues = (incident: AIIncidentManagementModel): NewIncidentFormVal
   type: incident.type || "",
   severity: incident.severity || "",
   status: incident.status || "",
-  occurred_date: incident.occurred_date
-    ? new Date(incident.occurred_date).toISOString().split("T")[0]
-    : new Date().toISOString().split("T")[0],
-  date_detected: incident.date_detected
-    ? new Date(incident.date_detected).toISOString().split("T")[0]
-    : new Date().toISOString().split("T")[0],
+  // Calendar days as sent ("YYYY-MM-DD"); the user's own today when missing.
+  occurred_date: toDateOnlyString(incident.occurred_date) || toLocalDateOnly(new Date()),
+  date_detected: toDateOnlyString(incident.date_detected) || toLocalDateOnly(new Date()),
   reporter: incident.reporter,
+  reporter_id: incident.reporter_id ?? "",
+  reporter_name: incident.reporter_name ?? null,
   categories_of_harm: incident.categories_of_harm || [],
   description: incident.description,
   affected_persons_groups: incident.affected_persons_groups || "",
@@ -142,13 +143,12 @@ const toDrawerValues = (incident: AIIncidentManagementModel): NewIncidentFormVal
   model_system_version: incident.model_system_version,
   interim_report: incident.interim_report || false,
   approval_status: incident.approval_status,
-  approved_by: incident.approved_by,
+  // Read-only: the approver's full name, else the stored text.
+  approved_by: AIIncidentManagementModel.approverLabel(incident),
   // The stored approval date as a calendar date, or null when
   // there is none: never invent one, or a save would look like
   // an explicit approval change to the server.
-  approval_date: incident.approval_date
-    ? new Date(incident.approval_date).toISOString().split("T")[0]
-    : null,
+  approval_date: toDateOnlyString(incident.approval_date) || null,
   approval_notes: incident.approval_notes,
   expected_updated_at: incident.updated_at
     ? new Date(incident.updated_at).toISOString()
@@ -374,7 +374,10 @@ const IncidentManagement: React.FC = () => {
         case "status":
           return item.status;
         case "occurred_date":
-          return item.occurred_date;
+          // Local midnight of the stored day, so "is today" and "is past"
+          // compare with the user's calendar (new Date("YYYY-MM-DD") is UTC
+          // midnight, the day before west of UTC).
+          return dateOnlyToLocalDay(item.occurred_date);
         default:
           return null;
       }
@@ -415,7 +418,7 @@ const IncidentManagement: React.FC = () => {
           (i.id || "").toString().toLowerCase().includes(search) ||
           (i.incident_id || "").toLowerCase().includes(search) ||
           (i.ai_project || "").toLowerCase().includes(search) ||
-          (i.reporter || "").toLowerCase().includes(search),
+          AIIncidentManagementModel.reporterLabel(i).toLowerCase().includes(search),
       );
     }
 
@@ -754,9 +757,9 @@ const IncidentManagement: React.FC = () => {
         type: incident.type || "-",
         severity: incident.severity || "-",
         status: incident.status || "-",
-        occurred_date: incident.occurred_date || "-",
-        date_detected: incident.date_detected || "-",
-        reporter: incident.reporter || "-",
+        occurred_date: toDateOnlyString(incident.occurred_date) || "-",
+        date_detected: toDateOnlyString(incident.date_detected) || "-",
+        reporter: AIIncidentManagementModel.reporterLabel(incident) || "-",
         approval_status: incident.approval_status || "-",
       };
     });

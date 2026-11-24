@@ -30,8 +30,9 @@ const STORED = {
   ...VALID,
   status: "Open",
   approval_status: "Pending",
-  occurred_date: new Date(2026, 5, 20),
-  date_detected: new Date(2026, 5, 23),
+  // DATE columns read back as "YYYY-MM-DD".
+  occurred_date: "2026-06-20",
+  date_detected: "2026-06-23",
   categories_of_harm: ["Safety"],
 };
 

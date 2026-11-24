@@ -28,6 +28,7 @@ import StandardTableHead from "../../components/Table/StandardTableHead";
 import StandardTablePagination from "../../components/Table/StandardTablePagination";
 import { TableEmptyStateLayout } from "../../components/Table/TableEmptyStateLayout";
 import { palette } from "../../themes/palette";
+import { toDateOnlyString } from "../../tools/isoDateToString";
 
 dayjs.extend(utc);
 
@@ -125,12 +126,13 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
           bValue = b.status?.toLowerCase() || "";
           break;
         case "occurred_date":
-          aValue = a.occurred_date ? new Date(a.occurred_date).getTime() : 0;
-          bValue = b.occurred_date ? new Date(b.occurred_date).getTime() : 0;
+          // "YYYY-MM-DD" strings sort as dates.
+          aValue = toDateOnlyString(a.occurred_date);
+          bValue = toDateOnlyString(b.occurred_date);
           break;
         case "approved_by":
-          aValue = a.approved_by?.toLowerCase() || "";
-          bValue = b.approved_by?.toLowerCase() || "";
+          aValue = AIIncidentManagementModel.approverLabel(a).toLowerCase();
+          bValue = AIIncidentManagementModel.approverLabel(b).toLowerCase();
           break;
         default:
           return 0;
@@ -286,7 +288,10 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                           sortConfig.key === "occurred_date" ? "background.surface" : "inherit",
                       }}
                     >
-                      {incident.occurred_date ? formatDate(incident.occurred_date) : "-"}
+                      {/* The calendar day itself: never a UTC midnight shown in local time. */}
+                      {toDateOnlyString(incident.occurred_date)
+                        ? formatDate(toDateOnlyString(incident.occurred_date))
+                        : "-"}
                     </TableCell>
                   )}
                   {isVisible("approved_by") && (
@@ -297,7 +302,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                           sortConfig.key === "approved_by" ? "background.surface" : "inherit",
                       }}
                     >
-                      <TooltipCell value={incident.approved_by} />
+                      <TooltipCell value={AIIncidentManagementModel.approverLabel(incident)} />
                     </TableCell>
                   )}
                   {isVisible("actions") && (
