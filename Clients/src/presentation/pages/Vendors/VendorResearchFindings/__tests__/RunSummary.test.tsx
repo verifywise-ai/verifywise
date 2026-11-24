@@ -387,6 +387,35 @@ describe("a run whose news search was not available", () => {
   });
 });
 
+// The lists that held no record are named only for a reader who asks, behind a link whose words
+// are in the language of the page.
+describe("the lists that held no record", () => {
+  const SHOW = "Show all lists";
+  const HIDE = "Hide the lists";
+
+  afterAll(async () => {
+    await setLanguage("en");
+  });
+
+  it.each(LANGS)("opens and closes them with words in %s", async (lang) => {
+    resetAudit();
+    await setLanguage(lang);
+    mocks.latest.mockResolvedValue(searched({ coverage: coverage() }));
+    renderSummary();
+
+    await openDetails(tr(lang, DETAILS));
+
+    for (const words of [SHOW, HIDE]) {
+      expect(translations[lang][words], `${lang}: ${words}`).toEqual(expect.any(String));
+      expect(translations[lang][words]).not.toBe(words);
+    }
+    await userEvent.click(await screen.findByText(tr(lang, SHOW)));
+    expect(await screen.findByText(tr(lang, HIDE))).toBeInTheDocument();
+    expect(screen.queryByText(SHOW)).not.toBeInTheDocument();
+    expect(screen.queryByText(HIDE)).not.toBeInTheDocument();
+  });
+});
+
 describe("a listing in the vendor's favour (the FedRAMP Marketplace)", () => {
   /** The run of 2026-11-23 for a vendor the Marketplace lists by name: FedRAMP Authorized, High. */
   const listed = (status: "fedramp_authorized" | "fedramp_in_process" = "fedramp_authorized") =>

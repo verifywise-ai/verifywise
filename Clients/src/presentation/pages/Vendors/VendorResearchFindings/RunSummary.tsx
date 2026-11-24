@@ -324,7 +324,7 @@ export default function RunSummary({
                       ariaExpanded={allListsOpen}
                       sx={{ fontSize: textStyles.body.fontSize }}
                     >
-                      {allListsOpen ? "Hide the lists" : "Show all lists"}
+                      {allListsOpen ? t("Hide the lists") : t("Show all lists")}
                     </VWLink>
                     {allListsOpen && (
                       <Typography sx={{ ...quietTextSx, overflowWrap: "anywhere" }}>
