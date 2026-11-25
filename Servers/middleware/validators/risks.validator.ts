@@ -66,6 +66,15 @@ const FAIR_NUMERIC_FIELDS = [
 
 const riskIdParam = param("id").isInt({ min: 1 }).withMessage("id must be a positive integer");
 
+/**
+ * An optional field where null and "" mean none. Unlike optional({ values:
+ * "falsy" }), 0 and false are not skipped: they are checked, and refused.
+ */
+const noneWhenEmpty = (field: string) =>
+  body(field)
+    .optional({ values: "null" })
+    .if((value: unknown) => value !== "");
+
 // Fields that are typed-checked whenever they are present (create + update).
 const optionalRiskBodyFields = [
   body("risk_name")
@@ -126,22 +135,17 @@ const optionalRiskBodyFields = [
     .optional({ nullable: true })
     .isString()
     .withMessage("review_notes must be a string"),
-  // The mitigation fields are optional on create and update. An empty value
-  // ("" or null) means none; a value that is sent is still checked.
-  body("mitigation_status")
-    .optional({ values: "falsy" })
+  // The mitigation fields are optional on create and update. "" or null
+  // means none; any other value (0 and false included) is still checked.
+  noneWhenEmpty("mitigation_status")
     .isIn(MITIGATION_STATUSES)
     .withMessage(`mitigation_status must be one of: ${MITIGATION_STATUSES.join(", ")}`),
-  body("current_risk_level")
-    .optional({ values: "falsy" })
+  noneWhenEmpty("current_risk_level")
     // The legacy "Very Low risk" spelling is still accepted; store the new one.
     .customSanitizer(normalizeCurrentRiskLevel)
     .isIn(CURRENT_RISK_LEVELS)
     .withMessage(`current_risk_level must be one of: ${CURRENT_RISK_LEVELS.join(", ")}`),
-  body("deadline")
-    .optional({ values: "falsy" })
-    .isISO8601()
-    .withMessage("deadline must be a valid ISO 8601 date"),
+  noneWhenEmpty("deadline").isISO8601().withMessage("deadline must be a valid ISO 8601 date"),
   body("mitigation_plan")
     .optional({ nullable: true })
     .isString()
@@ -156,12 +160,10 @@ const optionalRiskBodyFields = [
     .withMessage("mitigation_evidence_document must be a string")
     .isLength({ max: 255 })
     .withMessage("mitigation_evidence_document must be at most 255 characters"),
-  body("likelihood_mitigation")
-    .optional({ values: "falsy" })
+  noneWhenEmpty("likelihood_mitigation")
     .isIn(LIKELIHOODS)
     .withMessage(`likelihood_mitigation must be one of: ${LIKELIHOODS.join(", ")}`),
-  body("risk_severity")
-    .optional({ values: "falsy" })
+  noneWhenEmpty("risk_severity")
     .isIn(RISK_SEVERITIES)
     .withMessage(`risk_severity must be one of: ${RISK_SEVERITIES.join(", ")}`),
   body("final_risk_level")
@@ -180,8 +182,7 @@ const optionalRiskBodyFields = [
     .withMessage("approval_status must be a string")
     .isLength({ max: 255 })
     .withMessage("approval_status must be at most 255 characters"),
-  body("date_of_assessment")
-    .optional({ values: "falsy" })
+  noneWhenEmpty("date_of_assessment")
     .isISO8601()
     .withMessage("date_of_assessment must be a valid ISO 8601 date"),
   body("project_id")

@@ -122,9 +122,13 @@ function registerText(value: unknown, max: number): string | null {
   return cleaned === "" || !fitsWithin(cleaned, max) ? null : cleaned;
 }
 
-/** Like registerText, but a text that is empty once cleaned is kept, as "": the field is optional. */
-function optionalRegisterText(value: unknown, max: number): string | null {
-  if (typeof value !== "string") return null;
+/**
+ * Like registerText for an optional field: null, and a text that is empty once cleaned, are kept as
+ * "" (cleared). Undefined when the value is not text at all; null when the text is too long.
+ */
+function optionalRegisterText(value: unknown, max: number): string | null | undefined {
+  if (value === null) return "";
+  if (typeof value !== "string") return undefined;
   const cleaned = cleanText(value).trim();
   return fitsWithin(cleaned, max) ? cleaned : null;
 }
@@ -169,6 +173,11 @@ function checkEdits(edits: FindingEdits): CheckedEdits {
   // The action plan is optional, as on the vendor risk form: an emptied plan is saved empty.
   if (edits.action_plan !== undefined) {
     const text = optionalRegisterText(edits.action_plan, limits.ACTION_PLAN.MAX);
+    // Not text at all (a number, an object): refused, not cleared.
+    if (text === undefined) {
+      throw new ValidationException("Invalid action plan", "action_plan");
+    }
+    // Only a text that is too long gets the length message; null and "" clear the plan.
     if (text === null) {
       throw new ValidationException(
         "The action plan can be at most 1000 characters",

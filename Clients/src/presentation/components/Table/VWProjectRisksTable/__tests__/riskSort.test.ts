@@ -41,9 +41,10 @@ describe("compareRisks", () => {
     },
   );
 
-  it("puts null text first ascending and last descending", () => {
-    expect(sortIds(withNulls, "mitigation_status", "asc")).toEqual([2, 3, 1]);
-    expect(sortIds(withNulls, "mitigation_status", "desc")).toEqual([1, 3, 2]);
+  it("sorts a risk with no mitigation status as Not Started, as the table shows it", () => {
+    // Completed, In progress, Not Started (no status)
+    expect(sortIds(withNulls, "mitigation_status", "asc")).toEqual([3, 1, 2]);
+    expect(sortIds(withNulls, "mitigation_status", "desc")).toEqual([2, 1, 3]);
   });
 
   it("orders severity by rank, not alphabetically", () => {

@@ -6192,7 +6192,7 @@ export const intakeFormEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/intake/submissions/{id}/suggested-risks/accept-all',
     summary: "Accept All Suggested Risks",
-    description: "Moves every suggested risk still in \"suggested\" to \"accepted\". Dismissed ones stay dismissed; ones without a mitigation plan are skipped. Returns { accepted, skipped }.",
+    description: "Moves every suggested risk still in \"suggested\" to \"accepted\". Dismissed ones stay dismissed. The mitigation plan is optional, so none is skipped for lacking one; skipped stays in the response for compatibility. Returns { accepted, skipped }.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -6211,7 +6211,7 @@ export const intakeFormEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/intake/submissions/{id}/suggested-risks/{suggestionId}',
     summary: "Update A Suggested Risk",
-    description: "Edits, accepts, dismisses or restores one suggested risk on a pending submission. Accepting requires a mitigation plan.",
+    description: "Edits, accepts, dismisses or restores one suggested risk on a pending submission. The mitigation plan is optional.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -6231,7 +6231,7 @@ export const intakeFormEndpoints: Endpoint[] = [
     },
     responses: [
       { status: 200, description: "The updated suggestion" },
-      { status: 400, description: "Invalid field, nothing to update, or accepting without a mitigation plan" },
+      { status: 400, description: "Invalid field, or nothing to update" },
       { status: 401, description: "Unauthorized" },
       { status: 403, description: "Forbidden" },
       { status: 404, description: "Submission or suggestion not found" },

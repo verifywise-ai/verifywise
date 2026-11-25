@@ -31,6 +31,7 @@ import { text, palette as vwPalette } from "../../../themes/palette";
 import { formatCustomFieldValue } from "../../CustomFieldsSection/formatCustomFieldValue";
 import { riskCalendarDay } from "../../../tools/isoDateToString";
 import { getEffectiveRiskLevel } from "../../../../application/utils/riskLevel";
+import { getMitigationStatus } from "../../../../application/utils/mitigationStatus";
 
 function getDummyEvent() {
   const realEvent = new Event("click", { bubbles: true, cancelable: true });
@@ -290,7 +291,7 @@ const VWProjectRisksTableBody = ({
                             : "",
                     }}
                   >
-                    {row.mitigation_status ? <Chip label={row.mitigation_status} /> : "-"}
+                    <Chip label={getMitigationStatus(row)} />
                   </TableCell>
                 )}
                 {isColVisible("risk_level_autocalculated") && (

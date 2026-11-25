@@ -439,6 +439,8 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
             label="Next review date"
             date={values.target_date ? dayjs(values.target_date) : null}
             handleDateChange={handleDateChange}
+            // Optional, so it can be cleared.
+            isClearable
             sx={{
               width: "100%",
               backgroundColor: theme.palette.background.main,

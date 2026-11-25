@@ -96,6 +96,10 @@ describe("Creating a risk without its mitigation", () => {
         { deadline: "next week" },
         { current_risk_level: "Huge" },
         { likelihood_mitigation: "Often" },
+        // Only "" and null mean none: 0 and false are refused, not stored.
+        { mitigation_status: 0 },
+        { deadline: false },
+        { risk_severity: 0 },
       ]) {
         const res = await ctx.request.post("/api/projectRisks").send({ ...base, ...bad });
         expect(res.status).toBe(400);
@@ -215,6 +219,12 @@ describe("Creating a risk without its mitigation", () => {
         .post("/api/v1/model-risks")
         .send(modelRisk(ctx.userId, { target_date: "later" }));
       expect(res.status).toBe(400);
+      for (const notADate of [0, false]) {
+        const refused = await ctx.request
+          .post("/api/v1/model-risks")
+          .send(modelRisk(ctx.userId, { target_date: notADate }));
+        expect(refused.status).toBe(400);
+      }
     });
 
     it("clears the target date of a saved model risk with an empty value", async () => {

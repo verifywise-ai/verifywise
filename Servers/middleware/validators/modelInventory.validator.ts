@@ -200,7 +200,9 @@ export const validateCreateModelRiskV1 = [
   requiredRefId("owner", "owner is required and must be a positive integer"),
   // Optional, like the other mitigation fields: empty ("" or null) means none.
   body("target_date")
-    .optional({ values: "falsy" })
+    .optional({ values: "null" })
+    // "" means none too; 0 or false is checked, and refused.
+    .if((value: unknown) => value !== "")
     .isISO8601()
     .withMessage("target_date must be a valid ISO 8601 date"),
   ...optionalModelRiskFields,
@@ -231,7 +233,9 @@ export const validateUpdateModelRiskV1 = [
   requiredRefId("owner", "owner must be a positive integer").optional(),
   // An emptied date ("" or null) clears it.
   body("target_date")
-    .optional({ values: "falsy" })
+    .optional({ values: "null" })
+    // "" means none too; 0 or false is checked, and refused.
+    .if((value: unknown) => value !== "")
     .isISO8601()
     .withMessage("target_date must be a valid ISO 8601 date"),
   ...optionalModelRiskFields,

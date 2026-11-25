@@ -118,3 +118,19 @@ describe("riskLevelCardAfterFilterChange", () => {
     expect(riskLevelCardKey("Unknown")).toBeNull();
   });
 });
+
+// The mitigation status is optional; a risk saved without one has not started
+// mitigation, as the server counts it.
+describe("mitigation status filter value", () => {
+  it("reads a risk with no status as Not Started", () => {
+    for (const status of [null, undefined, ""]) {
+      const risk = { mitigation_status: status } as unknown as RiskModel;
+      expect(getRiskFieldValue(risk, "mitigation_status")).toBe("Not Started");
+    }
+  });
+
+  it("keeps a stored status", () => {
+    const risk = { mitigation_status: "In Progress" } as unknown as RiskModel;
+    expect(getRiskFieldValue(risk, "mitigation_status")).toBe("In Progress");
+  });
+});

@@ -140,8 +140,9 @@ lengths, members of the organization).
 Where each path enforces it:
 
 - **REST project risks** (`middleware/validators/risks.validator.ts`): the
-  mitigation enums and dates use `optional({ values: "falsy" })`, so `""` and
-  `null` mean none. `createRiskService` stores an empty enum or date as NULL;
+  mitigation enums and dates go through `noneWhenEmpty`, so `""` and `null`
+  mean none. Any other value, `0` and `false` included, is checked and
+  refused when it is not valid. `createRiskService` stores an empty enum or date as NULL;
   `updateRiskByIdQuery` already did on update.
 - **Risk form** (`AddNewRiskForm`): no mitigation field is required. A new risk
   starts with every mitigation field empty, including the deadline and the
@@ -151,14 +152,19 @@ Where each path enforces it:
 - **Vendor risk form and API**: the action plan is optional (at most 1,000
   characters). Accepting a vendor research finding takes an emptied plan.
 - **Model risks** (`/api/v1/model-risks`): `target_date` is optional on create
-  and can be cleared on update (`""` or `null`). The form starts with no review
-  date.
+  and can be cleared on update (`""` or `null`; `0` or `false` is refused). The
+  form starts with no review date, and its picker can be cleared. The Advisor's
+  `agent_suggest_model_risk` stores no date when none is given (it used to be
+  today).
 - **AI advisor** (`agent_create_risk`): the five mitigation fields are optional
   in the schema and are not in the tool's `required` list; the LLM is told not
   to ask for them.
 - **MCP** (`create_risk`) and the **risk import** already took no mitigation.
   The import no longer invents a residual likelihood of Rare: an empty residual
   likelihood stays empty, and so does the residual level.
+- **Suggestions** (AI suggestions on a use case, AI Detection): the form opens
+  with only the suggested plan text filled in; no status or residual pair is
+  pre-chosen.
 - **Intake approval**: a suggested risk can be accepted without a mitigation
   plan. Approval still gives each new risk "Not Started" and a deadline of
   approval + 90 days unless the reviewer set one (see intake-forms.md).
@@ -168,7 +174,7 @@ Where each path enforces it:
 | Field | Behaviour when empty |
 |-------|----------------------|
 | `deadline` / model `target_date` | No deadline reminders or escalations (the scans require a date). Tables show "NA" or "—", and sorting by date puts undated risks last in both directions |
-| `mitigation_status` | Counts as Not Started in the Home queue, the advisor (`get_risk_analytics`, `get_executive_summary`, the `fetch_risks` filter), the mitigation status history chart and reports. Tables show "-" |
+| `mitigation_status` | Counts as Not Started in the Home queue, the advisor (`get_risk_analytics`, `get_executive_summary`, the `fetch_risks` filter), the mitigation status history chart and reports. The risk table shows, filters, sorts and exports it as Not Started (`getMitigationStatus` in `Clients/src/application/utils/mitigationStatus.ts`) |
 | Residual pair and `final_risk_level` | The residual level stays NULL until both residual inputs are set. No chart, card or report reads the residual level; the effective level (current, else inherent) is what views show |
 | `current_risk_level` | The effective level falls back to the inherent level |
 | `action_plan` | Shown as "-" in reports |

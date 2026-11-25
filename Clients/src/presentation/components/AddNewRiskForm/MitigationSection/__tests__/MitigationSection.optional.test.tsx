@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import { act, screen } from "@testing-library/react";
+import { act, fireEvent, screen } from "@testing-library/react";
 import type { MutableRefObject } from "react";
 
 vi.mock("../../../../../application/hooks/useUsers", () => ({
@@ -57,6 +57,30 @@ describe("MitigationSection optional fields", () => {
       expect(screen.queryByText(`${label} is required.`)).not.toBeInTheDocument();
     }
     expect(screen.queryByText("Invalid date")).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ["deadline", "mitigation-deadline-input"],
+    ["dateOfAssessment", "mitigation-assessment-date-input"],
+  ] as const)("clears a set %s to empty", (field, id) => {
+    const values = { ...mitigationInitialState, [field]: "2030-01-15T12:00:00.000Z" };
+    const setMitigationValues = vi.fn();
+    renderWithProviders(
+      <MitigationSection
+        mitigationValues={values}
+        setMitigationValues={setMitigationValues}
+        validateRef={{ current: null }}
+      />,
+    );
+    // The picker's clear button is the one without a "Choose date" label.
+    const picker = document.getElementById(id)?.closest("[class*='MuiPickersTextField-root']");
+    const clear = picker?.querySelector("button:not([aria-label])") as HTMLElement | null;
+    expect(clear).toBeTruthy();
+    if (!clear) return;
+    fireEvent.click(clear);
+    const calls = setMitigationValues.mock.calls;
+    const update = calls[calls.length - 1]?.[0];
+    expect(typeof update === "function" ? update(values)[field] : update?.[field]).toBe("");
   });
 
   it("does not mark the mitigation fields as required", () => {

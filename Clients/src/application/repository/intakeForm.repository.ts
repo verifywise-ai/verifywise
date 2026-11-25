@@ -540,7 +540,10 @@ export async function updateSuggestedRisk(
   return response.data as { data: IntakeSuggestedRisk };
 }
 
-/** Accept every suggestion still in "suggested" that has a mitigation plan. */
+/**
+ * Accept every suggestion still in "suggested". The mitigation plan is optional, so
+ * `skipped` is normally 0; it stays in the response for compatibility.
+ */
 export async function acceptAllSuggestedRisks(
   submissionId: number,
 ): Promise<{ data: { accepted: number; skipped: number; items: IntakeSuggestedRisk[] } }> {

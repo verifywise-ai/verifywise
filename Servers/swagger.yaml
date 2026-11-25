@@ -1888,7 +1888,6 @@ components:
         - risk_category
         - risk_level
         - owner
-        - target_date
       properties:
         risk_name:
           type: string
@@ -1921,7 +1920,8 @@ components:
         target_date:
           type: string
           format: date
-          description: 'Next review / target date.'
+          nullable: true
+          description: 'Next review / target date. Optional: omit it, or send null or an empty string for none.'
         description:
           type: string
         mitigation_plan:
@@ -24946,7 +24946,7 @@ paths:
       tags:
         - 'Intake Forms'
       summary: 'Accept All Suggested Risks'
-      description: 'Moves every suggested risk still in "suggested" to "accepted". Dismissed ones stay dismissed; ones without a mitigation plan are skipped. Returns { accepted, skipped }.'
+      description: 'Moves every suggested risk still in "suggested" to "accepted". Dismissed ones stay dismissed. The mitigation plan is optional, so none is skipped for lacking one; skipped stays in the response for compatibility. Returns { accepted, skipped }.'
       operationId: acceptAllSuggestedRisks
       security:
         -
@@ -24976,7 +24976,7 @@ paths:
       tags:
         - 'Intake Forms'
       summary: 'Update A Suggested Risk'
-      description: 'Edits, accepts, dismisses or restores one suggested risk on a pending submission. Accepting requires a mitigation plan.'
+      description: 'Edits, accepts, dismisses or restores one suggested risk on a pending submission. The mitigation plan is optional.'
       operationId: updateSuggestedRisk
       security:
         -
@@ -25035,7 +25035,7 @@ paths:
         '200':
           description: 'The updated suggestion'
         '400':
-          description: 'Invalid field, nothing to update, or accepting without a mitigation plan'
+          description: 'Invalid field, or nothing to update'
         '401':
           description: Unauthorized
         '403':

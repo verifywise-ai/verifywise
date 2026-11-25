@@ -159,11 +159,13 @@ describe("AiRiskSuggestions", () => {
     expect(capturedRiskFormProps?.initialRiskValues.reviewNotes).toContain(
       "The use case exposes LLM endpoints without describing access controls.",
     );
+    // Nothing in the mitigation tab is pre-chosen: no status, no residual pair.
     expect(capturedRiskFormProps?.initialMitigationValues).toMatchObject({
-      mitigationStatus: 1,
+      mitigationStatus: 0,
       mitigationPlan: "",
-      likelihood: 5,
-      riskSeverity: 4,
+      deadline: "",
+      likelihood: 0,
+      riskSeverity: 0,
     });
   });
 
@@ -182,11 +184,13 @@ describe("AiRiskSuggestions", () => {
       potentialImpact: "Forced migration effort and potential service degradation.",
       reviewNotes: "Suggested by AI based on the use case description.",
     });
+    // Only the suggested plan text is filled in.
     expect(capturedRiskFormProps?.initialMitigationValues).toMatchObject({
-      mitigationStatus: 1,
+      mitigationStatus: 0,
       mitigationPlan: "Pin model versions and abstract the provider API.",
-      likelihood: 3,
-      riskSeverity: 4,
+      deadline: "",
+      likelihood: 0,
+      riskSeverity: 0,
     });
   });
 

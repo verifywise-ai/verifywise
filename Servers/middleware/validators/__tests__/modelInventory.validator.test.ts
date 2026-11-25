@@ -112,8 +112,10 @@ describe("v1 model risk", () => {
         (await run(validateCreateModelRiskV1, { ...risk, target_date: empty })).status,
       ).toBeUndefined();
     }
-    const r = await run(validateCreateModelRiskV1, { ...risk, target_date: "later" });
-    expect(r.fields).toEqual(["target_date"]);
+    for (const notADate of ["later", 0, false]) {
+      const r = await run(validateCreateModelRiskV1, { ...risk, target_date: notADate });
+      expect(r.fields).toEqual(["target_date"]);
+    }
   });
 
   it("lets an update clear the target date with null or an empty string", async () => {
@@ -121,6 +123,10 @@ describe("v1 model risk", () => {
       expect(
         (await run(validateUpdateModelRiskV1, { target_date: cleared }, { id: "3" })).status,
       ).toBeUndefined();
+    }
+    for (const notADate of [0, false]) {
+      const r = await run(validateUpdateModelRiskV1, { target_date: notADate }, { id: "3" });
+      expect(r.fields).toEqual(["target_date"]);
     }
   });
 

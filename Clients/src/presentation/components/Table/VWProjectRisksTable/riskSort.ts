@@ -2,6 +2,7 @@ import { RiskModel } from "../../../../domain/models/Common/risks/risk.model";
 import { riskCalendarDay } from "../../../tools/isoDateToString";
 import { getEffectiveRiskLevel, riskLevelRank } from "../../../../application/utils/riskLevel";
 import { compareNames } from "../../../../application/utils/userSort";
+import { getMitigationStatus } from "../../../../application/utils/mitigationStatus";
 
 export type RiskSortDirection = "asc" | "desc";
 
@@ -37,7 +38,8 @@ const sortValue = (
     case "severity":
       return getSeverityValue(risk.severity);
     case "mitigation_status":
-      return risk.mitigation_status ?? "";
+      // Sorted as shown: no status is Not Started.
+      return getMitigationStatus(risk);
     case "risk_level_autocalculated":
       // The column shows the effective level, so it sorts by it.
       return riskLevelRank(getEffectiveRiskLevel(risk));

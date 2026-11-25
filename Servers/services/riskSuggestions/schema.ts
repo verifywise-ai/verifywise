@@ -17,8 +17,9 @@ export const catalogMatchSchema = z
     reason: z.string().max(300),
     ai_lifecycle_phase: z.string().optional(),
     // Use-case-specific drafts: the catalogs carry no impact or mitigation
-    // text, and the risk register requires a mitigation plan. Optional so an
-    // answer that omits them still parses; callers fall back.
+    // text. The mitigation plan is optional in the risk register, so these are
+    // a head start only. Optional so an answer that omits them still parses;
+    // callers fall back.
     impact: z.string().max(1000).optional(),
     mitigation_plan: z.string().max(1000).optional(),
     implementation_strategy: z.string().max(1000).optional(),

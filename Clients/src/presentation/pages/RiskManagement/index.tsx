@@ -65,6 +65,7 @@ import { getEffectiveRiskLevel } from "../../../application/utils/riskLevel";
 import { text } from "../../themes/palette";
 import { chartTheme } from "../../themes/chartTheme";
 import { riskCalendarDay, toLocalDateOnly } from "../../tools/isoDateToString";
+import { getMitigationStatus } from "../../../application/utils/mitigationStatus";
 
 /**
  * Set initial loading status for all CRUD process
@@ -359,7 +360,7 @@ const RiskManagement = () => {
         risk_owner: ownerName,
         severity: risk.severity || "-",
         likelihood: risk.likelihood || "-",
-        mitigation_status: risk.mitigation_status || "-",
+        mitigation_status: getMitigationStatus(risk),
         risk_level: getEffectiveRiskLevel(risk) || "-",
         deadline: toLocalDateOnly(riskCalendarDay(risk.deadline)) || "-",
       };

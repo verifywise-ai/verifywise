@@ -364,6 +364,8 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                 label="Deadline"
                 date={mitigationValues.deadline ? dayjs(mitigationValues.deadline) : null}
                 handleDateChange={(e) => handleDateChange("deadline", e)}
+                // Optional, so it can be cleared.
+                isClearable
                 onBlur={handleFieldBlur("deadline")}
                 sx={{ flex: 1 }}
                 error={errors.deadline}
@@ -473,6 +475,8 @@ const MitigationSection: FC<MitigationSectionProps> = ({
               mitigationValues.dateOfAssessment ? dayjs(mitigationValues.dateOfAssessment) : null
             }
             handleDateChange={(e) => handleDateChange("dateOfAssessment", e)}
+            // Optional, so it can be cleared.
+            isClearable
             onBlur={handleFieldBlur("dateOfAssessment")}
             sx={{ flex: 1 }}
             error={errors.dateOfAssessment}

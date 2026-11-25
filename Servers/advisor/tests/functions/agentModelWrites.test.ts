@@ -252,6 +252,8 @@ describe("model risk writes", () => {
       expect.objectContaining({ risk_name: "Drift", owner: 12 }),
       editorCtx(REQUESTER),
     );
+    // No target date was given, so none is stored (it used to be today).
+    expect(mockRiskCreate.mock.calls.at(-1)?.[0]).toMatchObject({ target_date: null });
   });
 
   // Decision 10: approvals filed before the likelihood list still execute.
