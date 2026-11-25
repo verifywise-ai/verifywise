@@ -79,7 +79,7 @@ const EditLayoutModal = ({
     >
       <Stack gap="8px">
         {saveFailed && (
-          <Alert variant="error" body="Could not save your layout. Try again." isToast={false} />
+          <Alert variant="error" body="Could not save your layout. Try again." inline />
         )}
         <Stack direction="row" justifyContent="flex-end">
           <CustomizableButton
