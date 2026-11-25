@@ -314,6 +314,7 @@ export default function TestDatasetPanel({
               variant="error"
               body={actionError}
               isToast={false}
+              inline
               onClick={() => setActionError(null)}
             />
           </Box>

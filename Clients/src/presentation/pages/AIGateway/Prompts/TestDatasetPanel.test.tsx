@@ -198,7 +198,10 @@ describe("TestDatasetPanel", () => {
       within(await screen.findByRole("dialog")).getByRole("button", { name: "Delete" }),
     );
 
-    expect(await screen.findByText("Could not delete the dataset. Try again.")).toBeVisible();
+    const message = await screen.findByText("Could not delete the dataset. Try again.");
+    expect(message).toBeVisible();
+    // Inline under the buttons, not a fixed toast.
+    expect(message.closest('[role="alert"]')).toHaveStyle({ position: "static" });
     expect(screen.getByLabelText("Name")).toHaveValue("Regression suite");
   });
 
@@ -212,7 +215,10 @@ describe("TestDatasetPanel", () => {
 
     fireEvent.click(screen.getByText("Save dataset"));
 
-    expect(await screen.findByText("Could not save the dataset. Try again.")).toBeVisible();
+    const message = await screen.findByText("Could not save the dataset. Try again.");
+    expect(message).toBeVisible();
+    // Inline under the buttons, not a fixed toast.
+    expect(message.closest('[role="alert"]')).toHaveStyle({ position: "static" });
 
     fireEvent.mouseDown(screen.getAllByRole("combobox")[0]);
     fireEvent.click(screen.getByRole("option", { name: "Regression suite" }));
