@@ -57,6 +57,7 @@ import type { ComponentProps } from "react";
 import { fireEvent, screen } from "@testing-library/react";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import NewModelRisk from "../index";
+import { SELECT_MIN_WIDTH } from "../../../Inputs/Select/constants";
 
 describe("NewModelRisk", () => {
   it("renders without crashing when open", () => {
@@ -97,5 +98,15 @@ describe("NewModelRisk", () => {
     expect(screen.getByTestId("review-date").textContent).toBe("2030-01-15");
     fireEvent.click(screen.getByText("clear date"));
     expect(screen.getByTestId("review-date").textContent).toBe("empty");
+  });
+
+  it("lets the owner, review date and model columns shrink to a select's minimum and wrap", () => {
+    const { getByTestId } = renderWithProviders(<NewModelRisk isOpen={true} setIsOpen={vi.fn()} />);
+    // The review date is the only date picker; its column's parent is the third row.
+    const row = getByTestId("datepicker").parentElement!.parentElement!;
+    expect(getComputedStyle(row).flexWrap).toBe("wrap");
+    for (const column of Array.from(row.children)) {
+      expect(getComputedStyle(column).minWidth).toBe(SELECT_MIN_WIDTH);
+    }
   });
 });
