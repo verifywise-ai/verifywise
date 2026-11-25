@@ -47,6 +47,33 @@ export async function updateProject({ id, body }: { id: number; body: any }): Pr
   return response;
 }
 
+/** A use case's approval workflow (GET /api/v1/projects/:id/approval-workflow). */
+export interface UseCaseApprovalWorkflow {
+  approval_workflow_id: number | null;
+  workflow_title: string | null;
+  /** False once the workflow is archived; null when none is attached. */
+  workflow_is_active: boolean | null;
+  approval_status: "pending" | "rejected" | null;
+}
+
+/**
+ * The workflow attached to a use case and its approval status. The legacy
+ * project responses never carry approval_workflow_id, so read it here.
+ */
+export async function getUseCaseApprovalWorkflow({
+  id,
+  signal,
+}: {
+  id: number;
+  signal?: AbortSignal;
+}): Promise<UseCaseApprovalWorkflow> {
+  const response = await apiServices.get<{ data: UseCaseApprovalWorkflow }>(
+    `/v1/projects/${id}/approval-workflow`,
+    { signal },
+  );
+  return response.data.data;
+}
+
 export interface DeleteUseCaseResult {
   deleted: boolean;
   /** The risks the delete archived (none unless archiving was asked for). */

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { getApprovalWorkflowsByEntityType } from "../repository/approvalWorkflow.repository";
+import { getUseCaseApprovalWorkflow } from "../repository/project.repository";
 
 /** An active approval workflow that can review a use case, as a select item. */
 export interface UseCaseWorkflowOption {
@@ -33,5 +34,24 @@ export function useUseCaseApprovalWorkflows() {
       );
     },
     staleTime: 60 * 1000,
+  });
+}
+
+/** Keys of one use case's attached workflow; `all` refreshes every use case. */
+export const useCaseApprovalWorkflowKeys = {
+  all: ["useCaseApprovalWorkflow"] as const,
+  detail: (projectId: number) => [...useCaseApprovalWorkflowKeys.all, projectId] as const,
+};
+
+/**
+ * The approval workflow attached to one use case (title, archived or not) and
+ * its approval status. Refreshed by a workflow change and by approval
+ * decisions (RequestorApprovalModal).
+ */
+export function useUseCaseApprovalWorkflow(projectId: number) {
+  return useQuery({
+    queryKey: useCaseApprovalWorkflowKeys.detail(projectId),
+    queryFn: ({ signal }) => getUseCaseApprovalWorkflow({ id: projectId, signal }),
+    staleTime: 30 * 1000,
   });
 }

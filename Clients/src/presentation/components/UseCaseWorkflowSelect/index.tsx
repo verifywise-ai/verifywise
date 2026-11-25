@@ -6,6 +6,7 @@ import Select from "../Inputs/Select";
 import { VWLink } from "../Link";
 import CreateNewApprovalWorkflow from "../Modals/NewApprovalWorkflow";
 import { useCan } from "../../../application/hooks/useCan";
+import { useTranslation } from "../../../application/hooks/useTranslation";
 import {
   useCaseApprovalWorkflowsQueryKey,
   useUseCaseApprovalWorkflows,
@@ -25,11 +26,17 @@ export interface UseCaseWorkflowSelectProps {
   allowNone?: boolean;
   /** Adds a link to the Approval workflows page (admins only). */
   showManageLink?: boolean;
+  /** Title of the selected workflow when it is archived (not in the active list). */
+  archivedTitle?: string | null;
   error?: string;
   sx?: object;
 }
 
 const hintSx = { fontSize: 13, color: "text.secondary" };
+
+/** "<title> (archived)": the title is the user's text, the suffix is translated. */
+export const archivedWorkflowLabel = (title: string, t: (key: string) => string) =>
+  `${title} ${t("(archived)")}`;
 
 /**
  * Approval workflow select for a use case: the organization's use case
@@ -42,12 +49,14 @@ const UseCaseWorkflowSelect = ({
   onChange,
   allowNone = false,
   showManageLink = false,
+  archivedTitle,
   error,
   sx,
 }: UseCaseWorkflowSelectProps) => {
   const navigate = useNavigate();
   const canManageWorkflows = useCan("approvalWorkflow.admin");
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const { data: workflows = [], isSuccess } = useUseCaseApprovalWorkflows();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
@@ -58,7 +67,13 @@ const UseCaseWorkflowSelect = ({
   const items = [
     ...(allowNone ? [{ _id: 0, name: "None" }] : []),
     ...workflows.map(({ _id, name }) => ({ _id, name, noTranslate: true })),
-    ...(isArchived ? [{ _id: value, name: "Archived workflow" }] : []),
+    ...(isArchived
+      ? [
+          archivedTitle
+            ? { _id: value, name: archivedWorkflowLabel(archivedTitle, t), noTranslate: true }
+            : { _id: value, name: "Archived workflow" },
+        ]
+      : []),
   ];
 
   // A failed save throws back to the modal, which keeps the input and shows why.

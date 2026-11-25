@@ -39,8 +39,23 @@ vi.mock("../../../../../../application/repository/approvalWorkflow.repository", 
 }));
 
 const mockUpdateProject = vi.fn();
+// What GET /api/v1/projects/:id/approval-workflow answers; the project rows
+// themselves never carry the workflow id.
+let mockAttached: {
+  approval_workflow_id: number | null;
+  workflow_title: string | null;
+  workflow_is_active: boolean | null;
+  approval_status: "pending" | "rejected" | null;
+} = {
+  approval_workflow_id: null,
+  workflow_title: null,
+  workflow_is_active: null,
+  approval_status: null,
+};
+const mockGetAttached = vi.fn();
 vi.mock("../../../../../../application/repository/project.repository", () => ({
   updateProject: (...args: unknown[]) => mockUpdateProject(...args),
+  getUseCaseApprovalWorkflow: (...args: unknown[]) => mockGetAttached(...args),
 }));
 
 let mockPermissions: string[] | undefined = ["useCase.edit"];
@@ -54,14 +69,28 @@ vi.mock("../../../../../../application/hooks/useAuth", () => ({
   useAuth: () => ({ userRoleName: mockRole, userId: mockUserId }),
 }));
 
-const project = (overrides: Partial<Project> = {}): Project =>
-  ({
+/**
+ * A use case, and the endpoint's answer for it: the workflow id and status a
+ * test passes are served by the endpoint, as the API does, and left out of the
+ * project row. Id 99 stands for an archived workflow.
+ */
+const project = (overrides: Partial<Project> = {}): Project => {
+  const { approval_workflow_id: workflowId = null, ...rest } = overrides;
+  const active = mockWorkflows.find((workflow) => workflow.id === workflowId);
+  mockAttached = {
+    approval_workflow_id: workflowId ?? null,
+    workflow_title: workflowId ? (active?.workflow_title ?? "Old review") : null,
+    workflow_is_active: workflowId ? Boolean(active) : null,
+    approval_status: overrides.approval_status ?? null,
+  };
+  return {
     id: 7,
     project_title: "Credit scoring",
     owner: 1,
     lifecycle_stage: LifecycleStage.PLANNED,
-    ...overrides,
-  }) as Project;
+    ...rest,
+  } as Project;
+};
 
 describe("canManageLifecycle", () => {
   it("allows useCase.edit holders and the owner; never Auditors", () => {
@@ -86,6 +115,7 @@ describe("UseCaseLifecyclePanel", () => {
       { id: 4, workflow_title: "Legal sign-off", entity_type: "use_case" },
     ];
     vi.clearAllMocks();
+    mockGetAttached.mockImplementation(async () => mockAttached);
   });
 
   it("offers Mark as live and Retire on a planned use case, and sends the chosen date", async () => {
@@ -169,7 +199,7 @@ describe("UseCaseLifecyclePanel", () => {
 
   // An admin may clear the workflow of a rejected use case; it stays rejected
   // and only a new approval lets it go live, so the reason says how.
-  it("tells an approval workflow admin how to get a rejected use case approved", () => {
+  it("tells an approval workflow admin how to get a rejected use case approved", async () => {
     mockPermissions = ["useCase.edit", "approvalWorkflow.admin"];
     renderWithProviders(
       <UseCaseLifecyclePanel
@@ -178,13 +208,13 @@ describe("UseCaseLifecyclePanel", () => {
     );
     expect(screen.getByTestId("lifecycle-go-live-btn")).toBeDisabled();
     expect(
-      screen.getByText(
+      await screen.findByText(
         "Its last approval request was rejected. Attach an approval workflow and get it approved before marking it as live.",
       ),
     ).toBeInTheDocument();
   });
 
-  it("tells anyone else a workflow admin has to attach a workflow", () => {
+  it("tells anyone else a workflow admin has to attach a workflow", async () => {
     renderWithProviders(
       <UseCaseLifecyclePanel
         project={project({ approval_status: "rejected", approval_workflow_id: null })}
@@ -192,7 +222,7 @@ describe("UseCaseLifecyclePanel", () => {
     );
     expect(screen.getByTestId("lifecycle-go-live-btn")).toBeDisabled();
     expect(
-      screen.getByText(
+      await screen.findByText(
         "Its last approval request was rejected. An approval workflow admin needs to attach a workflow and get it approved before it can go live.",
       ),
     ).toBeInTheDocument();
@@ -243,6 +273,7 @@ describe("UseCaseLifecyclePanel approval workflow", () => {
       },
     ];
     vi.clearAllMocks();
+    mockGetAttached.mockImplementation(async () => mockAttached);
     mockUpdateProject.mockResolvedValue({});
   });
 
@@ -250,8 +281,9 @@ describe("UseCaseLifecyclePanel approval workflow", () => {
     const onChanged = vi.fn();
     renderWithProviders(<UseCaseLifecyclePanel project={project()} onChanged={onChanged} />);
 
+    const action = await screen.findByTestId("lifecycle-workflow-action");
     expect(screen.getByTestId("lifecycle-workflow-title")).toHaveTextContent("None");
-    const action = screen.getByTestId("lifecycle-workflow-action");
+    expect(mockGetAttached).toHaveBeenCalledWith(expect.objectContaining({ id: 7 }));
     expect(action).toHaveTextContent("Attach workflow");
     fireEvent.click(action);
 
@@ -266,6 +298,8 @@ describe("UseCaseLifecyclePanel approval workflow", () => {
     await waitFor(() => expect(mockUpdateProject).toHaveBeenCalledTimes(1));
     expect(mockUpdateProject).toHaveBeenCalledWith({ id: 7, body: { approval_workflow_id: 3 } });
     await waitFor(() => expect(onChanged).toHaveBeenCalled());
+    // The attached workflow is read again from the endpoint.
+    await waitFor(() => expect(mockGetAttached).toHaveBeenCalledTimes(2));
   });
 
   it("shows the attached workflow and its status, and clears it with None", async () => {
@@ -278,7 +312,7 @@ describe("UseCaseLifecyclePanel approval workflow", () => {
 
     expect(await screen.findByText("Model risk review")).toBeInTheDocument();
     expect(screen.getByText("Pending approval")).toBeInTheDocument();
-    const action = screen.getByTestId("lifecycle-workflow-action");
+    const action = await screen.findByTestId("lifecycle-workflow-action");
     expect(action).toHaveTextContent("Change workflow");
     fireEvent.click(action);
 
@@ -297,13 +331,39 @@ describe("UseCaseLifecyclePanel approval workflow", () => {
     );
   });
 
+  // The project row has no approval_workflow_id (the API never sends it); the
+  // label comes from GET /api/v1/projects/:id/approval-workflow.
+  it("shows the workflow title the endpoint returns", async () => {
+    mockGetAttached.mockResolvedValue({
+      approval_workflow_id: 4,
+      workflow_title: "Legal sign-off",
+      workflow_is_active: true,
+      approval_status: "pending",
+    });
+    mockPermissions = ["useCase.edit", "approvalWorkflow.admin"];
+    renderWithProviders(
+      <UseCaseLifecyclePanel project={{ ...project(), approval_status: null } as Project} />,
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("lifecycle-workflow-title")).toHaveTextContent("Legal sign-off"),
+    );
+    expect(screen.getByText("Pending approval")).toBeInTheDocument();
+    expect(screen.getByTestId("lifecycle-workflow-action")).toHaveTextContent("Change workflow");
+    fireEvent.click(screen.getByTestId("lifecycle-workflow-action"));
+    // The dialog starts on the attached workflow.
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() =>
+      expect(within(dialog).getByRole("combobox")).toHaveTextContent("Legal sign-off"),
+    );
+  });
+
   it("replaces a workflow and keeps Save off until the choice changes", async () => {
     renderWithProviders(
       <UseCaseLifecyclePanel
         project={project({ approval_workflow_id: 3, lifecycle_stage: LifecycleStage.LIVE })}
       />,
     );
-    fireEvent.click(screen.getByTestId("lifecycle-workflow-action"));
+    fireEvent.click(await screen.findByTestId("lifecycle-workflow-action"));
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByRole("button", { name: "Save" })).toBeDisabled();
 
@@ -329,7 +389,7 @@ describe("UseCaseLifecyclePanel approval workflow", () => {
     );
   });
 
-  it("lets an approval workflow admin change a rejected use case's workflow", () => {
+  it("lets an approval workflow admin change a rejected use case's workflow", async () => {
     mockPermissions = ["useCase.edit", "approvalWorkflow.admin"];
     renderWithProviders(
       <UseCaseLifecyclePanel
@@ -337,7 +397,7 @@ describe("UseCaseLifecyclePanel approval workflow", () => {
       />,
     );
     expect(screen.getByText("Rejected")).toBeInTheDocument();
-    expect(screen.getByTestId("lifecycle-workflow-action")).toBeInTheDocument();
+    expect(await screen.findByTestId("lifecycle-workflow-action")).toBeInTheDocument();
     expect(screen.queryByTestId("lifecycle-workflow-locked")).toBeNull();
   });
 
@@ -357,7 +417,7 @@ describe("UseCaseLifecyclePanel approval workflow", () => {
     const autoNote =
       "If its risk classification is at or below the workflow's auto-approve level, it is approved at once.";
     renderWithProviders(<UseCaseLifecyclePanel project={project()} />);
-    fireEvent.click(screen.getByTestId("lifecycle-workflow-action"));
+    fireEvent.click(await screen.findByTestId("lifecycle-workflow-action"));
 
     await pickWorkflow("Fast track");
     expect(screen.getByText(autoNote)).toBeInTheDocument();
@@ -372,7 +432,7 @@ describe("UseCaseLifecyclePanel approval workflow", () => {
     fireEvent.click(await screen.findByTestId("lifecycle-workflow-action"));
     const dialog = await screen.findByRole("dialog");
     await waitFor(() =>
-      expect(within(dialog).getByRole("combobox")).toHaveTextContent("Archived workflow"),
+      expect(within(dialog).getByRole("combobox")).toHaveTextContent("Old review (archived)"),
     );
     expect(within(dialog).getByRole("button", { name: "Save" })).toBeDisabled();
   });
@@ -386,7 +446,7 @@ describe("UseCaseLifecyclePanel approval workflow", () => {
 
   it("names a workflow that is no longer in the active list as archived", async () => {
     renderWithProviders(<UseCaseLifecyclePanel project={project({ approval_workflow_id: 99 })} />);
-    expect(await screen.findByText("Archived workflow")).toBeInTheDocument();
+    expect(await screen.findByText("Old review (archived)")).toBeInTheDocument();
   });
 
   it("shows the server's refusal in the modal", async () => {
@@ -395,7 +455,7 @@ describe("UseCaseLifecyclePanel approval workflow", () => {
         "Only an approval workflow admin can change the workflow while its approval is pending or rejected",
     });
     renderWithProviders(<UseCaseLifecyclePanel project={project()} />);
-    fireEvent.click(screen.getByTestId("lifecycle-workflow-action"));
+    fireEvent.click(await screen.findByTestId("lifecycle-workflow-action"));
     await pickWorkflow("Legal sign-off");
     saveWorkflow();
     expect(
@@ -408,7 +468,7 @@ describe("UseCaseLifecyclePanel approval workflow", () => {
   it("tells a non-admin there are no workflows and to ask an Admin", async () => {
     mockWorkflows = [];
     renderWithProviders(<UseCaseLifecyclePanel project={project()} />);
-    fireEvent.click(screen.getByTestId("lifecycle-workflow-action"));
+    fireEvent.click(await screen.findByTestId("lifecycle-workflow-action"));
     expect(await screen.findByTestId("use-case-workflow-empty")).toHaveTextContent(
       "No approval workflows for use cases yet. Ask an Admin to create one.",
     );
@@ -420,7 +480,7 @@ describe("UseCaseLifecyclePanel approval workflow", () => {
     mockWorkflows = [];
     mockPermissions = ["useCase.edit", "approvalWorkflow.admin"];
     renderWithProviders(<UseCaseLifecyclePanel project={project()} />);
-    fireEvent.click(screen.getByTestId("lifecycle-workflow-action"));
+    fireEvent.click(await screen.findByTestId("lifecycle-workflow-action"));
     expect(await screen.findByTestId("use-case-workflow-empty")).toHaveTextContent(
       "No approval workflows for use cases yet.",
     );

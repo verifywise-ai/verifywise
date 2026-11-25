@@ -6,7 +6,9 @@ import Field from "../../../../components/Inputs/Field";
 import Alert from "../../../../components/Alert";
 import StatusBadge from "../../../../components/StatusBadge";
 import { VWLink } from "../../../../components/Link";
-import UseCaseWorkflowSelect from "../../../../components/UseCaseWorkflowSelect";
+import UseCaseWorkflowSelect, {
+  archivedWorkflowLabel,
+} from "../../../../components/UseCaseWorkflowSelect";
 import LifecyclePanel from "../../../../components/LifecycleTabs/LifecyclePanel";
 import {
   lifecycleLabelSx,
@@ -19,7 +21,11 @@ import {
   useUseCaseLifecycleActions,
   useUseCaseLifecycleSummary,
 } from "../../../../../application/hooks/useUseCaseLifecycle";
-import { useUseCaseApprovalWorkflows } from "../../../../../application/hooks/useUseCaseApprovalWorkflows";
+import {
+  useUseCaseApprovalWorkflow,
+  useUseCaseApprovalWorkflows,
+} from "../../../../../application/hooks/useUseCaseApprovalWorkflows";
+import { useTranslation } from "../../../../../application/hooks/useTranslation";
 import { LifecycleStage } from "../../../../../domain/enums/lifecycleStage.enum";
 import { Project } from "../../../../../domain/types/Project";
 
@@ -82,7 +88,8 @@ const UseCaseLifecyclePanel = ({
   const { goLive, retire, confirm, setDepartment, setApprovalWorkflow } =
     useUseCaseLifecycleActions(project.id);
   const { data: summary } = useUseCaseLifecycleSummary();
-  const { data: workflows, isSuccess: workflowsLoaded } = useUseCaseApprovalWorkflows();
+  const { data: workflows } = useUseCaseApprovalWorkflows();
+  const { t } = useTranslation();
 
   const [departmentOpen, setDepartmentOpen] = useState(false);
   const [department, setDepartmentDraft] = useState(project.department ?? "");
@@ -105,18 +112,26 @@ const UseCaseLifecyclePanel = ({
   // While the latest approval is pending or rejected the server lets only an
   // approval workflow admin change the workflow.
   const isWorkflowAdmin = useCan("approvalWorkflow.admin");
-  const approvalStatus = project.approval_status ?? null;
-  const currentWorkflowId = project.approval_workflow_id ?? 0;
+  // The project responses do not carry the workflow id; this endpoint does,
+  // with its title, whether it is archived, and the approval status.
+  const { data: attached, isSuccess: attachedLoaded } = useUseCaseApprovalWorkflow(project.id);
+  const approvalStatus = attachedLoaded
+    ? attached.approval_status
+    : (project.approval_status ?? null);
+  const currentWorkflowId = attached?.approval_workflow_id ?? 0;
+  const archivedTitle = attached?.workflow_is_active === false ? attached.workflow_title : null;
   // The PATCH that changes it is authorized on useCase.edit, which an owner
   // who may manage the lifecycle does not always hold.
   const canEditWorkflow = canManage && canEditUseCases;
-  const canChangeWorkflow = canEditWorkflow && (!approvalStatus || isWorkflowAdmin);
-  const workflowTitle = currentWorkflowId
-    ? workflowsLoaded
-      ? (workflows?.find((workflow) => workflow._id === Number(currentWorkflowId))?.name ??
-        "Archived workflow")
-      : ""
-    : "None";
+  const canChangeWorkflow =
+    attachedLoaded && canEditWorkflow && (!approvalStatus || isWorkflowAdmin);
+  const workflowTitle = !attachedLoaded
+    ? ""
+    : !currentWorkflowId
+      ? null
+      : archivedTitle
+        ? archivedWorkflowLabel(archivedTitle, t)
+        : (attached.workflow_title ?? "");
   const workflowNotes = workflowChangeNotes({
     selected: workflowDraft,
     current: Number(currentWorkflowId),
@@ -169,13 +184,13 @@ const UseCaseLifecyclePanel = ({
           // pending or rejected (audit decision 2). A rejected use case whose
           // workflow an admin cleared stays rejected until a new approval.
           // Only an approval workflow admin may attach one to a rejected use case.
-          project.approval_status === "rejected"
-            ? project.approval_workflow_id == null
+          approvalStatus === "rejected"
+            ? attachedLoaded && !currentWorkflowId
               ? isWorkflowAdmin
                 ? "Its last approval request was rejected. Attach an approval workflow and get it approved before marking it as live."
                 : "Its last approval request was rejected. An approval workflow admin needs to attach a workflow and get it approved before it can go live."
               : "Approve this use case before marking it as live. Its last approval request was rejected."
-            : project.approval_status === "pending"
+            : approvalStatus === "pending"
               ? "Approve this use case before marking it as live."
               : undefined
         }
@@ -227,15 +242,20 @@ const UseCaseLifecyclePanel = ({
             <Stack sx={{ gap: "4px" }} data-testid="lifecycle-approval-workflow">
               <Typography sx={lifecycleLabelSx}>Approval workflow</Typography>
               <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ gap: "8px" }}>
-                <Typography
-                  sx={lifecycleValueSx}
-                  data-testid="lifecycle-workflow-title"
-                  data-vw-no-translate={
-                    currentWorkflowId && workflowTitle !== "Archived workflow" ? "true" : undefined
-                  }
-                >
-                  {workflowTitle}
-                </Typography>
+                {workflowTitle === null ? (
+                  <Typography sx={lifecycleValueSx} data-testid="lifecycle-workflow-title">
+                    None
+                  </Typography>
+                ) : (
+                  // The user's own title (an archived one carries its translated suffix).
+                  <Typography
+                    sx={lifecycleValueSx}
+                    data-testid="lifecycle-workflow-title"
+                    data-vw-no-translate="true"
+                  >
+                    {workflowTitle}
+                  </Typography>
+                )}
                 {approvalStatus === "pending" && (
                   <StatusBadge
                     label="Pending approval"
@@ -306,6 +326,7 @@ const UseCaseLifecyclePanel = ({
             value={workflowDraft}
             onChange={setWorkflowDraft}
             allowNone={!!currentWorkflowId}
+            archivedTitle={archivedTitle}
             showManageLink
           />
           {workflowNotes.length > 0 && (

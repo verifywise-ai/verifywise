@@ -4690,6 +4690,7 @@ export const de: Record<string, string> = {
   "Create workflow": "Ablauf erstellen",
   "Manage approval workflows": "Genehmigungsabläufe verwalten",
   "The workflow could not be saved.": "Der Ablauf konnte nicht gespeichert werden.",
+  "(archived)": "(archiviert)",
 };
 
 export const fr: Record<string, string> = {
@@ -9386,6 +9387,7 @@ export const fr: Record<string, string> = {
   "Create workflow": "Créer un flux",
   "Manage approval workflows": "Gérer les flux d'approbation",
   "The workflow could not be saved.": "Le flux n'a pas pu être enregistré.",
+  "(archived)": "(archivé)",
 };
 
 export const es: Record<string, string> = {
@@ -14078,4 +14080,5 @@ export const es: Record<string, string> = {
   "Create workflow": "Crear flujo",
   "Manage approval workflows": "Gestionar flujos de aprobación",
   "The workflow could not be saved.": "No se pudo guardar el flujo.",
+  "(archived)": "(archivado)",
 };

@@ -1004,6 +1004,45 @@ export const lockUseCaseWorkflowQuery = async (
   return { approval_workflow_id: id == null ? null : Number(id) };
 };
 
+/** A use case's approval workflow, as GET /api/v1/projects/:id/approval-workflow returns it. */
+export interface UseCaseApprovalWorkflowRow {
+  approval_workflow_id: number | null;
+  workflow_title: string | null;
+  /** False once the workflow is archived; null when no workflow is attached. */
+  workflow_is_active: boolean | null;
+}
+
+/**
+ * The approval workflow attached to a use case, with its title and whether it
+ * is still active (archived workflows keep their row). Both tables are scoped
+ * to the organization. Null when the use case is not in the organization.
+ */
+export const getUseCaseApprovalWorkflowQuery = async (
+  projectId: number,
+  organizationId: number,
+): Promise<UseCaseApprovalWorkflowRow | null> => {
+  const rows = (await sequelize.query(
+    `SELECT p.approval_workflow_id, aw.workflow_title, aw.is_active
+       FROM projects p
+       LEFT JOIN approval_workflows aw
+         ON aw.id = p.approval_workflow_id AND aw.organization_id = :organizationId
+      WHERE p.id = :id AND p.organization_id = :organizationId`,
+    { replacements: { id: projectId, organizationId }, type: QueryTypes.SELECT },
+  )) as Array<{
+    approval_workflow_id: number | string | null;
+    workflow_title: string | null;
+    is_active: boolean | null;
+  }>;
+  if (rows.length === 0) return null;
+  const row = rows[0];
+  const hasWorkflow = row.approval_workflow_id != null && row.workflow_title != null;
+  return {
+    approval_workflow_id: hasWorkflow ? Number(row.approval_workflow_id) : null,
+    workflow_title: hasWorkflow ? row.workflow_title : null,
+    workflow_is_active: hasWorkflow ? row.is_active === true : null,
+  };
+};
+
 /**
  * Delete a project and everything that hangs off it. The project row is
  * locked (FOR UPDATE) before any child row is touched. The project_deleted

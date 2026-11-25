@@ -9,6 +9,7 @@ import {
   countSubControlsByProjectId,
   getAllProjectsQuery,
   getProjectByIdQuery,
+  getUseCaseApprovalWorkflowQuery,
   lockUseCaseWorkflowQuery,
   updateProjectByIdQuery,
 } from "../utils/project.utils";
@@ -813,6 +814,42 @@ export async function getRisksLinkedOnlyToProject(req: Request, res: Response): 
       description: `Failed to read the risks linked only to project ID ${projectId}`,
       functionName: "getRisksLinkedOnlyToProject",
       fileName: "project.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * GET /api/v1/projects/:id/approval-workflow: the use case's approval
+ * workflow (id, title, still active or archived) and the status of its latest
+ * approval request. The legacy project responses never carried the workflow
+ * id and are frozen, so the use case overview reads it here.
+ */
+export async function getUseCaseApprovalWorkflow(req: Request, res: Response): Promise<any> {
+  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const log = { functionName: "getUseCaseApprovalWorkflow", fileName: "project.ctrl.ts" };
+
+  try {
+    const workflow = await getUseCaseApprovalWorkflowQuery(projectId, req.organizationId!);
+    if (!workflow) {
+      return res.status(404).json(STATUS_CODE[404]({}));
+    }
+    const approvalStatus = await getApprovalStatusQuery(
+      projectId,
+      "use_case",
+      req.organizationId!,
+    );
+
+    return res.status(200).json(STATUS_CODE[200]({ ...workflow, approval_status: approvalStatus }));
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: `Failed to read the approval workflow of project ID ${projectId}`,
+      ...log,
       error: error as Error,
       userId: req.userId!,
       organizationId: req.organizationId!,

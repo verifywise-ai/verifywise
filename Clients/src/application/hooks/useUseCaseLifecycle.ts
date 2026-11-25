@@ -14,6 +14,7 @@ import {
 } from "../repository/useCaseLifecycle.repository";
 import { updateProject } from "../repository/project.repository";
 import { projectQueryKeys } from "./useProjects";
+import { useCaseApprovalWorkflowKeys } from "./useUseCaseApprovalWorkflows";
 import type { ConfirmationIntervalDays } from "../../domain/enums/lifecycleStage.enum";
 
 /** React Query keys for the use case lifecycle (#5187). */
@@ -119,6 +120,9 @@ export function useUseCaseLifecycleActions(projectId: number) {
       await Promise.all([
         onSuccess(),
         queryClient.invalidateQueries({ queryKey: projectQueryKeys.all }),
+        queryClient.invalidateQueries({
+          queryKey: useCaseApprovalWorkflowKeys.detail(projectId),
+        }),
       ]);
     },
   });
