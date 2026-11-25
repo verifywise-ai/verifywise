@@ -40,6 +40,7 @@ vi.mock("../../../../../../application/repository/approvalWorkflow.repository", 
 }));
 
 const mockUpdateProject = vi.fn();
+const mockResubmit = vi.fn();
 // What GET /api/v1/projects/:id/approval-workflow answers; the project rows
 // themselves never carry the workflow id.
 let mockAttached: {
@@ -57,6 +58,7 @@ const mockGetAttached = vi.fn();
 vi.mock("../../../../../../application/repository/project.repository", () => ({
   updateProject: (...args: unknown[]) => mockUpdateProject(...args),
   getUseCaseApprovalWorkflow: (...args: unknown[]) => mockGetAttached(...args),
+  resubmitUseCaseApproval: (...args: unknown[]) => mockResubmit(...args),
 }));
 
 let mockPermissions: string[] | undefined = ["useCase.edit"];
@@ -184,7 +186,24 @@ describe("UseCaseLifecyclePanel", () => {
   });
 
   // The server refuses go-live while the approval is rejected (or pending).
-  it("keeps a rejected use case from going live and says why", () => {
+  // With an archived workflow nobody can resubmit it, so the reason stays
+  // general.
+  it("keeps a rejected use case from going live and says why", async () => {
+    renderWithProviders(
+      <UseCaseLifecyclePanel
+        project={project({ approval_status: "rejected", approval_workflow_id: 99 })}
+      />,
+    );
+    expect(screen.getByTestId("lifecycle-go-live-btn")).toBeDisabled();
+    expect(await screen.findByText("Old review (archived)")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Approve this use case before marking it as live. Its last approval request was rejected.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("tells someone who can resubmit a rejected use case to do so before it goes live", async () => {
     renderWithProviders(
       <UseCaseLifecyclePanel
         project={project({ approval_status: "rejected", approval_workflow_id: 3 })}
@@ -192,8 +211,8 @@ describe("UseCaseLifecyclePanel", () => {
     );
     expect(screen.getByTestId("lifecycle-go-live-btn")).toBeDisabled();
     expect(
-      screen.getByText(
-        "Approve this use case before marking it as live. Its last approval request was rejected.",
+      await screen.findByText(
+        "Its last approval request was rejected. Resubmit it for approval and get it approved before marking it as live.",
       ),
     ).toBeInTheDocument();
   });
@@ -566,5 +585,189 @@ describe("UseCaseLifecyclePanel approval workflow", () => {
     expect(screen.getByTestId("use-case-workflow-manage")).toHaveTextContent(
       "Manage approval workflows",
     );
+  });
+});
+
+const resubmitDialog = async () => {
+  fireEvent.click(await screen.findByTestId("lifecycle-workflow-resubmit"));
+  return screen.findByRole("dialog");
+};
+
+describe("UseCaseLifecyclePanel resubmit for approval", () => {
+  beforeEach(() => {
+    mockRole = "Editor";
+    mockUserId = 1;
+    mockStaleIds = [];
+    mockPermissions = ["useCase.edit"];
+    mockWorkflows = [
+      { id: 3, workflow_title: "Model risk review", entity_type: "use_case" },
+      {
+        id: 5,
+        workflow_title: "Fast track",
+        entity_type: "use_case",
+        auto_approve_max_risk: "Limited risk",
+      },
+    ];
+    vi.clearAllMocks();
+    mockGetAttached.mockImplementation(async () => mockAttached);
+    mockResubmit.mockResolvedValue({
+      approval_request_id: 31,
+      status: "pending",
+      auto_approved: false,
+    });
+  });
+
+  it("offers a non-admin editor Resubmit for approval on a rejected use case", async () => {
+    renderWithProviders(
+      <UseCaseLifecyclePanel
+        project={project({ approval_workflow_id: 3, approval_status: "rejected" })}
+      />,
+    );
+    expect(await screen.findByTestId("lifecycle-workflow-resubmit")).toHaveTextContent(
+      "Resubmit for approval",
+    );
+    // Changing the workflow still needs an approval workflow admin.
+    expect(screen.queryByTestId("lifecycle-workflow-action")).toBeNull();
+    expect(screen.getByTestId("lifecycle-workflow-locked")).toBeInTheDocument();
+  });
+
+  it("confirms, sends the resubmission and refreshes the use case", async () => {
+    const onChanged = vi.fn();
+    renderWithProviders(
+      <UseCaseLifecyclePanel
+        project={project({ approval_workflow_id: 3, approval_status: "rejected" })}
+        onChanged={onChanged}
+      />,
+    );
+    const dialog = await resubmitDialog();
+    expect(
+      within(dialog).getByText("Send this use case for approval again with Model risk review?"),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("It moves to In review until the request is approved or rejected."),
+    ).toBeInTheDocument();
+    expect(within(dialog).queryByText(/auto-approve level/)).toBeNull();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Resubmit" }));
+    await waitFor(() => expect(mockResubmit).toHaveBeenCalledWith({ id: 7 }));
+    expect(mockResubmit).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(onChanged).toHaveBeenCalled());
+    expect(await screen.findByText("The use case was sent for approval.")).toBeInTheDocument();
+    // The attached workflow and its status are read again.
+    await waitFor(() => expect(mockGetAttached).toHaveBeenCalledTimes(2));
+  });
+
+  it("notes the auto-approve level and says when it was approved at once", async () => {
+    mockResubmit.mockResolvedValue({
+      approval_request_id: 32,
+      status: "approved",
+      auto_approved: true,
+    });
+    renderWithProviders(
+      <UseCaseLifecyclePanel
+        project={project({
+          approval_workflow_id: 5,
+          approval_status: "rejected",
+          lifecycle_stage: LifecycleStage.LIVE,
+        })}
+      />,
+    );
+    const dialog = await resubmitDialog();
+    expect(
+      within(dialog).getByText(
+        "If its risk classification is at or below the workflow's auto-approve level, it is approved at once.",
+      ),
+    ).toBeInTheDocument();
+    // Only a planned use case moves to In review.
+    expect(within(dialog).queryByText(/It moves to In review/)).toBeNull();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Resubmit" }));
+    expect(await screen.findByText("The use case was approved automatically.")).toBeInTheDocument();
+  });
+
+  it("shows the server's refusal in the modal", async () => {
+    mockResubmit.mockRejectedValue({
+      message:
+        "Every step of the selected approval workflow needs an approver. Ask an approval workflow admin to change this use case's approval workflow.",
+    });
+    renderWithProviders(
+      <UseCaseLifecyclePanel
+        project={project({ approval_workflow_id: 3, approval_status: "rejected" })}
+      />,
+    );
+    const dialog = await resubmitDialog();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Resubmit" }));
+    expect(
+      await within(dialog).findByText(
+        "Every step of the selected approval workflow needs an approver. Ask an approval workflow admin to change this use case's approval workflow.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("does not offer it when the workflow is archived, and shows the admin hint", async () => {
+    renderWithProviders(
+      <UseCaseLifecyclePanel
+        project={project({ approval_workflow_id: 99, approval_status: "rejected" })}
+      />,
+    );
+    expect(await screen.findByText("Old review (archived)")).toBeInTheDocument();
+    expect(screen.queryByTestId("lifecycle-workflow-resubmit")).toBeNull();
+    expect(screen.getByTestId("lifecycle-workflow-locked")).toHaveTextContent(
+      "Only an approval workflow admin can change it while approval is pending or rejected.",
+    );
+  });
+
+  it("does not offer it while approval is pending", async () => {
+    renderWithProviders(
+      <UseCaseLifecyclePanel
+        project={project({ approval_workflow_id: 3, approval_status: "pending" })}
+      />,
+    );
+    expect(await screen.findByText("Pending approval")).toBeInTheDocument();
+    expect(screen.queryByTestId("lifecycle-workflow-resubmit")).toBeNull();
+  });
+
+  it("does not offer it when there is no rejection or no workflow", async () => {
+    const { unmount } = renderWithProviders(
+      <UseCaseLifecyclePanel
+        project={project({ approval_workflow_id: 3, approval_status: null })}
+      />,
+    );
+    expect(await screen.findByText("Model risk review")).toBeInTheDocument();
+    expect(screen.queryByTestId("lifecycle-workflow-resubmit")).toBeNull();
+    unmount();
+
+    renderWithProviders(
+      <UseCaseLifecyclePanel
+        project={project({ approval_workflow_id: null, approval_status: "rejected" })}
+      />,
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("lifecycle-workflow-title")).toHaveTextContent("None"),
+    );
+    expect(screen.queryByTestId("lifecycle-workflow-resubmit")).toBeNull();
+  });
+
+  it("does not offer it to an owner without useCase.edit", async () => {
+    mockRole = "Reviewer";
+    mockPermissions = [];
+    renderWithProviders(
+      <UseCaseLifecyclePanel
+        project={project({ approval_workflow_id: 3, approval_status: "rejected" })}
+      />,
+    );
+    expect(await screen.findByText("Model risk review")).toBeInTheDocument();
+    expect(screen.queryByTestId("lifecycle-workflow-resubmit")).toBeNull();
+  });
+
+  it("does not offer it to an Auditor", async () => {
+    mockRole = "Auditor";
+    renderWithProviders(
+      <UseCaseLifecyclePanel
+        project={project({ approval_workflow_id: 3, approval_status: "rejected" })}
+      />,
+    );
+    expect(await screen.findByText("Model risk review")).toBeInTheDocument();
+    expect(screen.queryByTestId("lifecycle-workflow-resubmit")).toBeNull();
   });
 });
