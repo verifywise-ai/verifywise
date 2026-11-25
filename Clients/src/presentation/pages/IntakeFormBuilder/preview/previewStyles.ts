@@ -1,8 +1,5 @@
-/** Outlined 30px button used by the preview controls. */
+/** Outlined button colours for the preview controls; the height is the house default. */
 export const outlinedButtonSx = {
-  "height": 30,
-  "minHeight": 30,
-  "fontSize": "13px",
   "borderColor": "border.dark",
   "color": "text.secondary",
   "backgroundColor": "background.main",

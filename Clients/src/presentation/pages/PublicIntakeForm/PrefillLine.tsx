@@ -50,7 +50,7 @@ export function PrefillLine({
           text="Confirm"
           onClick={onConfirm}
           testId={`prefill-confirm-${suggestion.questionId}`}
-          sx={{ height: 30, minWidth: 0, px: "8px", fontSize: "12px" }}
+          sx={{ minWidth: 0, px: "8px", fontSize: "12px" }}
         />
       )}
     </Box>

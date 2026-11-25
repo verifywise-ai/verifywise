@@ -1143,7 +1143,7 @@ export default function PromptEditorPage() {
               text="Skip"
               variant="text"
               onClick={handleCommitSkip}
-              sx={{ height: 30, fontSize: 12 }}
+              sx={{ fontSize: 12 }}
             />
           </Box>
         </Stack>

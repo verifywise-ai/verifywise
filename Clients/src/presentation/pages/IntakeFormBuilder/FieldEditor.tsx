@@ -221,7 +221,6 @@ function OptionsEditor({ options, onChange }: OptionsEditorProps) {
         onClick={handleAddOption}
         sx={{
           "mt": "8px",
-          "height": 30,
           "fontSize": "12px",
           "color": theme.palette.primary.main,
           "&:hover": { backgroundColor: theme.palette.background.fill },
