@@ -15,10 +15,7 @@ import {
   lifecycleValueSx,
 } from "../../../../components/LifecycleTabs/lifecyclePanelStyles";
 import { useAuth } from "../../../../../application/hooks/useAuth";
-import {
-  canManageLifecycle,
-  hasUseCaseWriteAccess,
-} from "../../../../../application/utils/useCaseLifecycle";
+import { canManageLifecycle } from "../../../../../application/utils/useCaseLifecycle";
 import { useCan } from "../../../../../application/hooks/useCan";
 import {
   useUseCaseLifecycleActions,
@@ -169,15 +166,18 @@ const UseCaseLifecyclePanel = ({
           : { text: attached.workflow_title ?? "", noTranslate: true };
   // A rejected use case goes back for approval under the same workflow
   // (POST /v1/projects/:id/resubmit-approval), gated like the server:
-  // useCase.edit plus write access to this use case. No approval workflow
-  // admin is needed since the workflow stays. An archived or missing
+  // useCase.edit plus write access to this use case. Write access comes from
+  // the server (viewer_can_write, the rule the route's guard applies), so a
+  // user who writes through a group attached to the use case gets the button
+  // too; while it loads or if it fails, there is no button. No approval
+  // workflow admin is needed since the workflow stays. An archived or missing
   // workflow can't review it; an admin changes it first.
   const canResubmit =
     attachedLoaded &&
     // canManage only rules out Auditors here, since useCase.edit is held.
     canManage &&
     canEditUseCases &&
-    hasUseCaseWriteAccess(userRoleName, userId, project.owner, project.members) &&
+    attached.viewer_can_write === true &&
     approvalStatus === "rejected" &&
     !!currentWorkflowId &&
     attached.workflow_is_active === true;

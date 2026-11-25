@@ -24,27 +24,6 @@ export function canManageLifecycle(
   return canEdit;
 }
 
-/**
- * Whether the user has write access to a use case, as far as the client can
- * tell. Mirrors the server's write rule (getProjectAccessQuery, which uses
- * projectVisibilitySql): the roles that see every use case (seesAllProjects
- * matches the role names Admin and SuperAdmin), the owner, or a member.
- * Access through a group attached to the use case is not known here, so
- * this is narrower than the server for group-only access, never wider.
- * Task assignees and workflow approvers only read, so they are not counted.
- */
-export function hasUseCaseWriteAccess(
-  role: string,
-  userId: number | null,
-  ownerId: number | null | undefined,
-  memberIds: ReadonlyArray<number | string> | undefined,
-): boolean {
-  if (role === "Admin" || role === "SuperAdmin") return true;
-  if (userId === null) return false;
-  if (ownerId != null && Number(ownerId) === userId) return true;
-  return (memberIds ?? []).some((memberId) => Number(memberId) === userId);
-}
-
 /** A lifecycle tab's count: entities in the stage plus extra rows (e.g. intake submissions). */
 export function lifecycleTabCount(
   stage: LifecycleStage,

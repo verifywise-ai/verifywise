@@ -30373,7 +30373,7 @@ paths:
   '/v1/projects/{id}/approval-workflow':
     get:
       summary: 'Get a use case''s approval workflow'
-      description: 'The approval workflow attached to the use case (its id, title and whether it is still active; an archived workflow keeps its title; a stored workflow that cannot be found in the organization comes back with its id, a null title and workflow_is_active false) and the status of the latest approval request: pending, rejected, or null when there is none open or rejected (approved and withdrawn requests read as null). All workflow fields are null when no workflow is attached. Change the workflow with PATCH /api/v1/projects/{id} and approval_workflow_id. Anyone who may read the use case may read this.'
+      description: 'The approval workflow attached to the use case (its id, title and whether it is still active; an archived workflow keeps its title; a stored workflow that cannot be found in the organization comes back with its id, a null title and workflow_is_active false) and the status of the latest approval request: pending, rejected, or null when there is none open or rejected (approved and withdrawn requests read as null). All workflow fields are null when no workflow is attached. Change the workflow with PATCH /api/v1/projects/{id} and approval_workflow_id. viewer_can_write says whether the caller has write access to the use case, so a client can offer POST /api/v1/projects/{id}/resubmit-approval to those it accepts (it also needs useCase.edit). Anyone who may read the use case may read this.'
       parameters:
         -
           name: id
@@ -30391,7 +30391,7 @@ paths:
                 type: object
                 properties:
                   message: {type: string}
-                  data: {type: object, properties: {approval_workflow_id: {type: integer, nullable: true}, workflow_title: {type: string, nullable: true}, workflow_is_active: {type: boolean, nullable: true, description: 'False when the workflow has been archived or cannot be found in the organization'}, approval_status: {type: string, enum: [pending, rejected], nullable: true}}}
+                  data: {type: object, properties: {approval_workflow_id: {type: integer, nullable: true}, workflow_title: {type: string, nullable: true}, workflow_is_active: {type: boolean, nullable: true, description: 'False when the workflow has been archived or cannot be found in the organization'}, approval_status: {type: string, enum: [pending, rejected], nullable: true}, viewer_can_write: {type: boolean, description: 'True when the caller has write access to this use case, by the rule the use case write routes apply (Admin, owner, member, or a member of a group attached to the use case). Says nothing about the useCase.edit permission.'}}}
         '400':
           description: 'The id is not a positive integer'
         '403':
