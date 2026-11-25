@@ -21,6 +21,7 @@ import { getUserLanguage } from "../utils/userPreference.utils";
 import { deadlineNoticeKey } from "../utils/deadline.utils";
 import { formatReviewDate } from "../utils/policyReviewDate.utils";
 import { incidentPagePath } from "../utils/incidentLinks.utils";
+import { approvalLinkedEntity, approvalRequestPath } from "../utils/approvalLinks.utils";
 
 /**
  * Build a frontend-compatible URL for a given entity type and id.
@@ -803,9 +804,9 @@ export const notifyApprovalRequested = async (
   requesterName: string,
   baseUrl: string,
   /**
-   * The request's entity, when it is not a use case. For a policy, `useCase.id`
-   * is the approval request id: the notification names the policy and links
-   * to the approval workflows page opened on that request (the same
+   * The request's entity (`useCase.id` is the approval request id). A use
+   * case links to its page; a policy, or anything without a page, links to
+   * the approval workflows page opened on the request (the same
    * `/approval-workflows?request=<id>` link the Home queue uses), where the
    * approver decides.
    */
@@ -813,10 +814,11 @@ export const notifyApprovalRequested = async (
 ): Promise<void> => {
   const approver = await getUserById(approverId);
 
-  const isPolicy = entity?.type === "policy";
-  const actionUrl = isPolicy
-    ? `/approval-workflows?request=${useCase.id}`
-    : buildEntityUrl(NotificationEntityType.USE_CASE, useCase.id);
+  const linked = approvalLinkedEntity(entity?.type, entity?.id);
+  const actionUrl =
+    linked?.type === NotificationEntityType.USE_CASE
+      ? buildEntityUrl(linked.type, linked.id)
+      : approvalRequestPath(useCase.id);
 
   await sendInAppNotification(
     organizationId,
@@ -825,8 +827,8 @@ export const notifyApprovalRequested = async (
       type: NotificationType.APPROVAL_REQUESTED,
       title: `Approval requested - Step ${useCase.stepNumber}`,
       message: `${requesterName} needs your approval for: ${useCase.name}`,
-      entity_type: isPolicy ? NotificationEntityType.POLICY : NotificationEntityType.USE_CASE,
-      entity_id: isPolicy ? entity!.id : useCase.id,
+      entity_type: linked?.type,
+      entity_id: linked?.id,
       entity_name: useCase.name,
       action_url: actionUrl,
       metadata: { stepNumber: useCase.stepNumber },
@@ -854,6 +856,7 @@ export const notifyApprovalRequested = async (
 export const notifyApprovalComplete = async (
   organizationId: number,
   requesterId: number,
+  /** `id` is the approval request id; the item's own id is `entityId`. */
   useCase: {
     id: number;
     name: string;
@@ -878,7 +881,7 @@ export const notifyApprovalComplete = async (
   // approval workflow, just add a row here.
   const labelFor = (
     et?: string,
-  ): { label: string; entity: NotificationEntityType; url: string; entityId?: number } => {
+  ): { label: string; entity?: NotificationEntityType; url: string; entityId?: number } => {
     switch (et) {
       case "policy":
         if (entityId) {
@@ -898,7 +901,7 @@ export const notifyApprovalComplete = async (
         return {
           label: "AI action",
           entity: NotificationEntityType.AI_ACTION,
-          url: `/approval-requests/${useCase.id}`,
+          url: approvalRequestPath(useCase.id),
         };
       case "model_inventory":
       case "model":
@@ -919,13 +922,33 @@ export const notifyApprovalComplete = async (
           entity: NotificationEntityType.VENDOR,
           url: `/vendors`,
         };
+      case "file":
+        return {
+          label: "File",
+          entity: NotificationEntityType.FILE,
+          url: approvalRequestPath(useCase.id),
+        };
       case "use_case":
-      default:
+      case undefined:
+        // useCase.id is the request id: link the use case itself when its id
+        // is known, otherwise the request.
+        if (entityId) {
+          return {
+            label: "Use case",
+            entity: NotificationEntityType.USE_CASE,
+            url: buildEntityUrl(NotificationEntityType.USE_CASE, entityId),
+            entityId,
+          };
+        }
         return {
           label: "Use case",
           entity: NotificationEntityType.USE_CASE,
-          url: `/use-cases/${useCase.id}`,
+          url: approvalRequestPath(useCase.id),
         };
+      default:
+        // Any other entity: its id says nothing about a use case, so the
+        // notice names no entity and opens the request.
+        return { label: "Request", url: approvalRequestPath(useCase.id) };
     }
   };
 
@@ -939,7 +962,7 @@ export const notifyApprovalComplete = async (
       title: `${label} fully approved`,
       message: `Your ${label.toLowerCase()} "${useCase.name}" has been fully approved`,
       entity_type: entity,
-      entity_id: linkedId ?? useCase.id,
+      entity_id: linkedId,
       entity_name: useCase.name,
       action_url: url,
     },
@@ -970,9 +993,13 @@ export const notifyApprovalAutoApproved = async (
   riskLevel: string,
   threshold: string,
   baseUrl: string,
+  /** The use case's own id; `useCase.id` is the approval request id. */
+  useCaseId?: number | null,
 ): Promise<void> => {
   const requester = await getUserById(requesterId);
-  const url = `/use-cases/${useCase.id}`;
+  const url = useCaseId
+    ? buildEntityUrl(NotificationEntityType.USE_CASE, useCaseId)
+    : approvalRequestPath(useCase.id);
 
   await sendInAppNotification(
     organizationId,
@@ -982,7 +1009,7 @@ export const notifyApprovalAutoApproved = async (
       title: "Use case auto-approved",
       message: `Your use case "${useCase.name}" was auto-approved: risk level "${riskLevel}" is at or below the workflow threshold "${threshold}"`,
       entity_type: NotificationEntityType.USE_CASE,
-      entity_id: useCase.id,
+      entity_id: useCaseId ?? undefined,
       entity_name: useCase.name,
       action_url: url,
       metadata: { auto_approved: true, risk_level: riskLevel, threshold },

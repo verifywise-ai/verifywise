@@ -283,7 +283,7 @@ describe("notifyUseCaseApprovalRequested", () => {
       3,
       7,
       {
-        id: 9,
+        id: 50,
         name: "Use Case: Fraud scoring",
         workflowName: "Use case sign-off",
         stepNumber: 1,
@@ -291,6 +291,7 @@ describe("notifyUseCaseApprovalRequested", () => {
       },
       "Ada Lovelace",
       expect.any(String),
+      { type: "use_case", id: 9 },
     );
     expect(mockNotify).toHaveBeenCalledWith(
       3,
@@ -298,10 +299,11 @@ describe("notifyUseCaseApprovalRequested", () => {
       expect.anything(),
       "Ada Lovelace",
       expect.any(String),
+      { type: "use_case", id: 9 },
     );
   });
 
-  it("links the approver to the use case, not to the approval request", async () => {
+  it("passes the request id and names the use case as the entity it links to", async () => {
     const approval = buildApproval([buildStep(1, [7])]);
 
     await notifyUseCaseApprovalRequested(project, approval, 1, 3);
@@ -309,9 +311,10 @@ describe("notifyUseCaseApprovalRequested", () => {
     expect(mockNotify).toHaveBeenCalledWith(
       3,
       7,
-      expect.objectContaining({ id: project.id }),
+      expect.objectContaining({ id: approval.request.id }),
       expect.anything(),
       expect.anything(),
+      { type: "use_case", id: project.id },
     );
   });
 
@@ -327,6 +330,7 @@ describe("notifyUseCaseApprovalRequested", () => {
       expect.anything(),
       expect.anything(),
       expect.anything(),
+      expect.anything(),
     );
   });
 
@@ -339,6 +343,7 @@ describe("notifyUseCaseApprovalRequested", () => {
     expect(mockNotify).toHaveBeenCalledWith(
       3,
       7,
+      expect.anything(),
       expect.anything(),
       expect.anything(),
       expect.anything(),
@@ -376,6 +381,13 @@ describe("notifyUseCaseApprovalRequested", () => {
 
     await notifyUseCaseApprovalRequested(project, approval, 1, 3);
 
-    expect(mockNotify).toHaveBeenCalledWith(3, 7, expect.anything(), "Someone", expect.anything());
+    expect(mockNotify).toHaveBeenCalledWith(
+      3,
+      7,
+      expect.anything(),
+      "Someone",
+      expect.anything(),
+      expect.anything(),
+    );
   });
 });

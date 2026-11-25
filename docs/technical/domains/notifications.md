@@ -314,11 +314,19 @@ The hook manually parses SSE format:
 // Generic publisher
 sendNotification(tenantId, userId, notification)
 
-// Approval workflow specific
-notifyStepApprovers(requestId, stepNumber, tenantId)
-notifyRequesterApproved(requestId, tenantId)
-notifyRequesterRejected(requestId, comments, tenantId)
+// Approval workflow specific (services/notification.service.ts)
+notifyStepApprovers(organizationId, requestId, stepNumber, requestName)
+notifyRequesterRejected(organizationId, requesterId, requestId, requestName, context?)
+notifyRequesterStepCompleted(organizationId, requesterId, requestId, requestName, context, entity?)
+
+// Approval workflow specific (services/inAppNotification.service.ts)
+notifyApprovalRequested(organizationId, approverId, request, requesterName, baseUrl, entity?)
+notifyApprovalComplete(organizationId, requesterId, request, baseUrl, entityType?, entityId?)
+notifyApprovalAutoApproved(organizationId, requesterId, request, riskLevel, threshold, baseUrl, useCaseId?)
 ```
+
+Approval notices build their links with `utils/approvalLinks.utils.ts`; see
+"Notification links" in `approvals.md`.
 
 ### Email Notifications
 

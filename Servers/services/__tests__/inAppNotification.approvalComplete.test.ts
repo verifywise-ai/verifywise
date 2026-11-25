@@ -28,7 +28,11 @@ jest.mock("../notificationService", () => ({
   },
 }));
 
-import { notifyApprovalComplete, notifyApprovalRequested } from "../inAppNotification.service";
+import {
+  notifyApprovalAutoApproved,
+  notifyApprovalComplete,
+  notifyApprovalRequested,
+} from "../inAppNotification.service";
 import { EMAIL_TEMPLATES } from "../../constants/emailTemplates";
 import { NotificationEntityType } from "../../domain.layer/interfaces/i.notification";
 
@@ -71,17 +75,18 @@ describe("notifyApprovalComplete", () => {
       "policy",
     );
 
+    // 7 is the request id: it is never stored as the policy's id.
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         entity_type: NotificationEntityType.POLICY,
-        entity_id: 7,
+        entity_id: undefined,
         action_url: "/policies",
       }),
       2,
     );
   });
 
-  it("keeps the request id as entity id for other entity types", async () => {
+  it("links a use case to its own page, not to the request id", async () => {
     await notifyApprovalComplete(
       2,
       3,
@@ -95,7 +100,76 @@ describe("notifyApprovalComplete", () => {
       expect.objectContaining({
         title: "Use case fully approved",
         entity_type: NotificationEntityType.USE_CASE,
-        entity_id: 7,
+        entity_id: 9,
+        action_url: "/project-view?projectId=9",
+      }),
+      2,
+    );
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(mockSendTemplate).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      EMAIL_TEMPLATES.APPROVAL_COMPLETE,
+      expect.objectContaining({ use_case_url: "https://app.test/project-view?projectId=9" }),
+    );
+  });
+
+  it("links an AI action to the request in the approvals modal", async () => {
+    await notifyApprovalComplete(
+      2,
+      3,
+      { id: 7, name: "Send email", totalSteps: 1 },
+      "https://app.test",
+      "ai_action",
+    );
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entity_type: NotificationEntityType.AI_ACTION,
+        entity_id: undefined,
+        action_url: "/approval-workflows?request=7",
+      }),
+      2,
+    );
+  });
+
+  it("names a file a file and links the request, never a use case with the file's id", async () => {
+    await notifyApprovalComplete(
+      2,
+      3,
+      { id: 7, name: "File Approval: a.pdf", totalSteps: 1 },
+      "https://app.test",
+      "file",
+      12,
+    );
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "File fully approved",
+        entity_type: NotificationEntityType.FILE,
+        entity_id: undefined,
+        action_url: "/approval-workflows?request=7",
+      }),
+      2,
+    );
+  });
+
+  it("names no entity for other types and links the request", async () => {
+    await notifyApprovalComplete(
+      2,
+      3,
+      { id: 7, name: "Dataset: claims", totalSteps: 1 },
+      "https://app.test",
+      "dataset",
+      12,
+    );
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Request fully approved",
+        entity_type: undefined,
+        entity_id: undefined,
+        action_url: "/approval-workflows?request=7",
       }),
       2,
     );
@@ -136,14 +210,81 @@ describe("notifyApprovalRequested", () => {
     );
   });
 
-  it("keeps the use case entity and link without an entity", async () => {
-    await notifyApprovalRequested(2, 9, request, "Ada L", "https://app.test");
+  it("links a use case approver to the use case, not to the request id", async () => {
+    await notifyApprovalRequested(2, 9, request, "Ada L", "https://app.test", {
+      type: "use_case",
+      id: 58,
+    });
 
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         entity_type: NotificationEntityType.USE_CASE,
-        entity_id: 7,
-        action_url: "/project-view?projectId=7",
+        entity_id: 58,
+        action_url: "/project-view?projectId=58",
+      }),
+      2,
+    );
+  });
+
+  it("links the request when there is no entity, and names none", async () => {
+    await notifyApprovalRequested(2, 9, request, "Ada L", "https://app.test");
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entity_type: undefined,
+        entity_id: undefined,
+        action_url: "/approval-workflows?request=7",
+      }),
+      2,
+    );
+  });
+});
+
+describe("notifyApprovalAutoApproved", () => {
+  const request = { id: 7, name: "Use Case: Chatbot" };
+
+  it("links the use case itself, not the request id", async () => {
+    await notifyApprovalAutoApproved(
+      2,
+      3,
+      request,
+      "Minimal risk",
+      "High risk",
+      "https://app.test",
+      58,
+    );
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entity_type: NotificationEntityType.USE_CASE,
+        entity_id: 58,
+        action_url: "/project-view?projectId=58",
+      }),
+      2,
+    );
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(mockSendTemplate).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      EMAIL_TEMPLATES.APPROVAL_COMPLETE,
+      expect.objectContaining({ use_case_url: "https://app.test/project-view?projectId=58" }),
+    );
+  });
+
+  it("links the request when the use case id is unknown", async () => {
+    await notifyApprovalAutoApproved(
+      2,
+      3,
+      request,
+      "Minimal risk",
+      "High risk",
+      "https://app.test",
+    );
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entity_id: undefined,
+        action_url: "/approval-workflows?request=7",
       }),
       2,
     );
