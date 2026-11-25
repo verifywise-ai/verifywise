@@ -20,7 +20,11 @@ import {
   buildTaskUpdateReplacements,
 } from "./automation/task.automation.utils";
 import { runEventAutomations } from "./automation/automationActions.utils";
-import { getTaskEntityLinksQuery } from "./taskEntityLink.utils";
+import {
+  EntityType,
+  getEntityLinksForTasksQuery,
+  getTaskEntityLinksQuery,
+} from "./taskEntityLink.utils";
 
 interface GetTasksOptions {
   userId: number;
@@ -38,6 +42,8 @@ interface TaskFilters {
   organization_id?: number;
   search?: string;
   include_archived?: boolean;
+  /** Only tasks linked to this entity (task_entity_links). */
+  linked_entity?: { entity_type: EntityType; entity_id: number };
 }
 
 interface TaskSortOptions {
@@ -272,6 +278,17 @@ export const getTasksQuery = async (
     replacements.search = `%${filters.search}%`;
   }
 
+  if (filters.linked_entity) {
+    whereConditions.push(`EXISTS (
+      SELECT 1 FROM task_entity_links tel_filter
+       WHERE tel_filter.organization_id = :organizationId
+         AND tel_filter.task_id = t.id
+         AND tel_filter.entity_type = :linkedEntityType
+         AND tel_filter.entity_id = :linkedEntityId)`);
+    replacements.linkedEntityType = filters.linked_entity.entity_type;
+    replacements.linkedEntityId = filters.linked_entity.entity_id;
+  }
+
   // Add WHERE conditions
   if (whereConditions.length > 0) {
     baseQueryParts.push("WHERE " + whereConditions.join(" AND "));
@@ -345,6 +362,8 @@ export const getTasksQuery = async (
     .map((t) => t.id)
     .filter((id): id is number => typeof id === "number");
   const customFieldsByTask = await fetchCustomFieldsForEntities("task", taskIds, organizationId);
+  // Every task's links in one read (incident names in one more), not per task.
+  const linksByTask = await getEntityLinksForTasksQuery(taskIds, organizationId);
 
   // Add assignees and entity links to each task following the project members pattern
   for (const task of tasks) {
@@ -358,8 +377,7 @@ export const getTasksQuery = async (
     );
     (task.dataValues as any)["assignees"] = assignees.map((a: any) => a.user_id);
 
-    // Fetch entity links for this task
-    const entityLinks = await getTaskEntityLinksQuery(task.id!, organizationId);
+    const entityLinks = linksByTask.get(task.id!) ?? [];
     (task.dataValues as any)["entity_links"] = entityLinks.map((link) => ({
       id: link.id,
       entity_id: link.entity_id,

@@ -1,11 +1,11 @@
 import { Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import {
-  canLinkTaskToEntityQuery,
   createTaskEntityLinkQuery,
   getTaskEntityLinksQuery,
   deleteTaskEntityLinkQuery,
   isValidEntityType,
+  taskLinkRefusalQuery,
   entityExistsQuery,
   linkExistsQuery,
   EntityType,
@@ -30,13 +30,14 @@ export async function addTaskEntityLink(req: Request, res: Response): Promise<an
     organizationId: req.organizationId!,
   });
 
+  // Before the transaction: an early 401 must not leave one open.
+  const { userId, role } = req;
+  if (!userId || !role) {
+    return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
+  }
+
   const transaction = await sequelize.transaction();
   try {
-    const { userId, role } = req;
-    if (!userId || !role) {
-      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
-    }
-
     const { entity_id, entity_type, entity_name } = req.body;
 
     // Validate entity_type
@@ -80,7 +81,7 @@ export async function addTaskEntityLink(req: Request, res: Response): Promise<an
         );
     }
 
-    const mayLink = await canLinkTaskToEntityQuery(
+    const refusal = await taskLinkRefusalQuery(
       entity_id,
       entity_type as EntityType,
       { userId, role },
@@ -88,7 +89,14 @@ export async function addTaskEntityLink(req: Request, res: Response): Promise<an
       transaction,
     );
 
-    if (!mayLink) {
+    // An archived incident is read-only until restored: say so, not 403.
+    if (refusal === "archived_incident") {
+      await transaction.rollback();
+      return res
+        .status(409)
+        .json(STATUS_CODE[409](req.t!("Restore this incident before linking it to a task.")));
+    }
+    if (refusal) {
       await transaction.rollback();
       return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
     }
@@ -223,13 +231,14 @@ export async function removeTaskEntityLink(req: Request, res: Response): Promise
     organizationId: req.organizationId!,
   });
 
+  // Before the transaction: an early 401 must not leave one open.
+  const { userId, role } = req;
+  if (!userId || !role) {
+    return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
+  }
+
   const transaction = await sequelize.transaction();
   try {
-    const { userId, role } = req;
-    if (!userId || !role) {
-      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
-    }
-
     // Check if task exists
     const task = await getTaskByIdQuery(taskId, { userId, role }, req.organizationId!);
 

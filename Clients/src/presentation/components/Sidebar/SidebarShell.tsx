@@ -1,4 +1,4 @@
-import { FC, ReactNode, useState, useEffect, useRef, useContext } from "react";
+import { FC, ReactNode, useState, useEffect, useRef } from "react";
 import {
   Box,
   IconButton,
@@ -39,7 +39,6 @@ import { chartTheme } from "../../themes/chartTheme";
 import { isClassicUi } from "../../themes/uiStyle";
 import { toggleSidebar } from "../../../application/redux/ui/uiSlice";
 import "../Layout/icon-shake.css";
-import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import VerifyWiseLogo from "../../assets/imgs/verifywise-logo.svg";
 import SidebarFooter from "./SidebarFooter";
 import { SIDEBAR_ROW_HEIGHT } from "./sidebarRowHeight";
@@ -648,9 +647,6 @@ const SidebarShell: FC<SidebarShellProps> = ({
   const [showFlyingHearts, setShowFlyingHearts] = useState(false);
   const [heartReturning, setHeartReturning] = useState(false);
   const heartTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // VerifyWiseContext available for future use
-  useContext(VerifyWiseContext);
 
   const collapsed = useSelector((state: any) => state.ui?.sidebar?.collapsed);
 

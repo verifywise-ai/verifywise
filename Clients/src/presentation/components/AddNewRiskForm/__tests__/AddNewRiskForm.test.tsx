@@ -39,10 +39,6 @@ vi.mock("../../../application/hooks/useAuth", () => ({
   useAuth: () => ({ userId: 1, roleName: "Admin" }),
 }));
 
-vi.mock("../../../application/contexts/VerifyWise.context", () => ({
-  VerifyWiseContext: { _currentValue: null },
-}));
-
 vi.mock("../../tools/riskCalculator", () => ({
   RiskCalculator: { calculate: vi.fn().mockReturnValue(0) },
 }));

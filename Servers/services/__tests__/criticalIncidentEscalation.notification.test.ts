@@ -46,6 +46,7 @@ const BASE_URL = "https://app.example.com";
 const incident = {
   id: 99,
   reference: "INC-99",
+  displayId: "INC-99",
   useCase: "Credit scoring",
   severity: "Very serious",
   type: "Security breach",

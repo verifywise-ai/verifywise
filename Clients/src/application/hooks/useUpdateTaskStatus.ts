@@ -1,5 +1,5 @@
 import { updateTaskStatus } from "../repository/task.repository";
-import { taskQueryKeys } from "./useTasks";
+import { linkedTaskQueryKeys, taskQueryKeys } from "./useTasks";
 import { useOptimisticListMutation } from "./utils/optimisticMutation";
 import type { ITask } from "../../domain/interfaces/i.task";
 import { TaskStatus } from "../../domain/enums/task.enum";
@@ -14,6 +14,8 @@ export function useUpdateTaskStatus() {
   return useOptimisticListMutation<ITask, unknown, Error, UpdateTaskStatusVariables>({
     mutationFn: ({ id, status }) => updateTaskStatus({ id, status }),
     queryKey: ({ filters }) => taskQueryKeys.list(filters || {}),
+    // Lists of tasks linked to an entity show the status too.
+    invalidateKeys: () => [linkedTaskQueryKeys.all],
     updateItem:
       ({ id, status }) =>
       (task) =>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef, useContext } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 import StandardModal from "../../Modals/StandardModal";
 import { CustomizableButton } from "../../button/customizable-button";
@@ -9,7 +9,6 @@ import { useGenerateReport, useReportRun } from "../../../../application/hooks/u
 import { downloadReportRun } from "../../../../application/repository/reporting.repository";
 import { showAlert } from "../../../../infrastructure/api/customAxios";
 import { useProjects } from "../../../../application/hooks/useProjects";
-import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
 import { logEngine } from "../../../../application/tools/log.engine";
 import { useLLMKeyStatus } from "../../../../application/hooks/useLLMKeyStatus";
 import AIKeyBanner from "./AIKeyBanner";
@@ -47,10 +46,6 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
     isFetching: projectsFetching,
     isStale: projectsStale,
   } = useProjects();
-  // Read only to log it: the picker in GenerateReportFrom lists
-  // dashboardValues.projects while the guard below checks useProjects(). When
-  // they disagree, "Use case not found" is the symptom.
-  const { dashboardValues } = useContext(VerifyWiseContext);
   // Generating a report authorizes on reporting.admin.
   const isAdmin = useCan("reporting.admin");
   const permissionsSettled = usePermissionsSettled();
@@ -130,9 +125,6 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
     );
 
     if (!currentProject) {
-      const contextProjects = Array.isArray(dashboardValues?.projects)
-        ? dashboardValues.projects
-        : [];
       logEngine({
         type: "error",
         // Template literal, not a quoted string: this is a developer
@@ -151,18 +143,8 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
           useProjectsAgeSeconds: Math.round((Date.now() - projectsUpdatedAt) / 1000),
           useProjectsIsFetching: projectsFetching,
           useProjectsIsStale: projectsStale,
-          // The picker's list — what the user actually chose from.
-          contextIds: contextProjects.map((p: { id: unknown }) => p.id),
-          contextIdTypes: [...new Set(contextProjects.map((p: { id: unknown }) => typeof p.id))],
-          contextCount: contextProjects.length,
-          presentInContext: contextProjects.some(
-            (p: { id: unknown }) => p.id === basicFormValues.project,
-          ),
           // True when only strict equality is in the way.
-          matchesLoosely: (projects ?? []).some(
-            // eslint-disable-next-line eqeqeq
-            (p) => p.id == basicFormValues.project,
-          ),
+          matchesLoosely: (projects ?? []).some((p) => p.id == basicFormValues.project),
         },
       });
       toast("error", "Use case not found");

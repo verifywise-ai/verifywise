@@ -1,15 +1,13 @@
 import { Stack, Typography, Box } from "@mui/material";
 import "./index.css";
 import { Outlet, useLocation } from "react-router";
-import { useContext, useEffect, FC, useState } from "react";
-import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
+import { useEffect, FC, useState } from "react";
 import { EvalsSidebarProvider } from "../../../application/contexts/EvalsSidebar.context";
 import { AIDetectionSidebarProvider } from "../../../application/contexts/AIDetectionSidebar.context";
 import { ShadowAISidebarProvider } from "../../../application/contexts/ShadowAISidebar.context";
 import { AIGatewaySidebarProvider } from "../../../application/contexts/AIGatewaySidebar.context";
 import { AITrustIndexSidebarProvider } from "../../../application/contexts/AITrustIndexSidebar.context";
 import DemoAppBanner from "../../components/DemoBanner/DemoAppBanner";
-import { getAllProjects } from "../../../application/repository/project.repository";
 import {
   postAutoDrivers,
   deleteAutoDrivers,
@@ -22,6 +20,7 @@ import type { DemoDataLoaderStatus } from "../../components/DemoDataLoader";
 import Alert from "../../components/Alert";
 import { AlertState } from "../../../application/interfaces/appStates";
 import { useDashboard } from "../../../application/hooks/useDashboard";
+import { useProjectsCache } from "../../../application/hooks/useProjectsCache";
 import { useActiveModule } from "../../../application/hooks/useActiveModule";
 import AppSwitcher from "../../components/AppSwitcher";
 import ChangeNotice from "../../components/ChangeNotice";
@@ -36,7 +35,7 @@ interface DashboardProps {
 }
 
 const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
-  const { setDashboardValues, setProjects } = useContext(VerifyWiseContext);
+  const { refreshProjects } = useProjectsCache();
   const location = useLocation();
   const { activeModule, setActiveModule } = useActiveModule();
   const { userRoleName, isSuperAdmin, organizationId } = useAuth();
@@ -75,24 +74,13 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
     }
   }, [dashboard, refreshProjectsFlag]);
 
+  // Refetch through React Query, which cancels an older refetch still in flight, so the newest
+  // answer always wins.
   useEffect(() => {
-    const fetchProjects = async () => {
-      try {
-        const response = await getAllProjects();
-        if (!response?.data) return;
-        setProjects(response.data);
-        setDashboardValues((prevValues: any) => ({
-          ...prevValues,
-          projects: response.data,
-          selectedProjectId: response.data[0]?.id || "", // Set the first project ID as the default selected one
-        }));
-      } catch (error) {
-        console.error("Error fetching projects:", error);
-      }
-    };
-
-    fetchProjects();
-  }, [setDashboardValues, reloadTrigger, location.pathname, refreshProjectsFlag]);
+    refreshProjects().catch((error) => {
+      console.error("Error fetching projects:", error);
+    });
+  }, [refreshProjects, reloadTrigger, location.pathname, refreshProjectsFlag]);
 
   // Handle create demo data. The overlay shows progress while the request
   // runs, then reloads from its "Explore the demo" button.
@@ -152,19 +140,7 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
         });
 
         // Refresh dashboard and projects data
-        await Promise.all([
-          fetchDashboard(),
-          getAllProjects({ forceFresh: true }).then((projectsResponse) => {
-            if (projectsResponse?.data) {
-              setProjects(projectsResponse.data);
-              setDashboardValues((prevValues: any) => ({
-                ...prevValues,
-                projects: projectsResponse.data,
-                selectedProjectId: projectsResponse.data[0]?.id || "",
-              }));
-            }
-          }),
-        ]);
+        await Promise.all([fetchDashboard(), refreshProjects()]);
 
         // Force refresh projects flag to trigger updates in child components
         setRefreshProjectsFlag((prev) => !prev);

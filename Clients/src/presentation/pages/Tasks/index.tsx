@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect, useContext, useMemo, useCallback, useRef } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Box, Stack, Typography, Fade } from "@mui/material";
 import TabContext from "@mui/lab/TabContext";
@@ -10,7 +10,7 @@ import TasksTable from "../../components/Table/TasksTable";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import DeadlineWarningBox from "../../components/DeadlineWarningBox";
-import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
+import { useAuth } from "../../../application/hooks/useAuth";
 import { storageService } from "../../../infrastructure/storage";
 import { ITask, TaskSummary } from "../../../domain/interfaces/i.task";
 import {
@@ -25,7 +25,7 @@ import {
 import TaskSummaryCards from "./TaskSummaryCards";
 import CreateTask from "../../components/Modals/CreateTask";
 import useUsers from "../../../application/hooks/useUsers";
-import { useTasks, taskQueryKeys } from "../../../application/hooks/useTasks";
+import { useTasks, taskQueryKeys, linkedTaskQueryKeys } from "../../../application/hooks/useTasks";
 import { useUpdateTaskStatus } from "../../../application/hooks/useUpdateTaskStatus";
 import { useUpdateTaskPriority } from "../../../application/hooks/useUpdateTaskPriority";
 import {
@@ -134,7 +134,7 @@ const Tasks: React.FC = () => {
     storageService.set("tasksViewTab", activeTab);
   }, [activeTab]);
 
-  const { userRoleName, userId } = useContext(VerifyWiseContext);
+  const { userRoleName, userId } = useAuth();
   const { users } = useUsers();
 
   // Track if we've already processed the URL param to avoid duplicate fetches
@@ -447,6 +447,9 @@ const Tasks: React.FC = () => {
             for (const link of linksToRemove) {
               await removeTaskEntityLink(editingTask.id!, link.id);
             }
+            if (linksToRemove.length > 0) {
+              queryClient.invalidateQueries({ queryKey: linkedTaskQueryKeys.all });
+            }
           } catch (linkError) {
             console.error("Error syncing entity links:", linkError);
             // Don't fail the whole operation, just log the error
@@ -548,6 +551,7 @@ const Tasks: React.FC = () => {
               task.id === taskId ? { ...task, status: TaskStatus.OPEN } : task,
             ) ?? [],
         );
+        queryClient.invalidateQueries({ queryKey: linkedTaskQueryKeys.all });
         setAlert({
           variant: "success",
           title: "Task restored successfully",
@@ -575,6 +579,7 @@ const Tasks: React.FC = () => {
         taskQueryKeys.list({ includeArchived }),
         (old: ITask[] | undefined) => old?.filter((task) => task.id !== taskId) ?? [],
       );
+      queryClient.invalidateQueries({ queryKey: linkedTaskQueryKeys.all });
       setAlert({
         variant: "success",
         title: "Task deleted permanently",

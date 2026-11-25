@@ -577,6 +577,7 @@
   "Incident deleted successfully": "Incident deleted successfully",
   "Incident not found": "Incident not found",
   "Restore this incident before editing it.": "Restore this incident before editing it.",
+  "Restore this incident before linking it to a task.": "Restore this incident before linking it to a task.",
   "Linked incidents must be a list of incident ids.": "Linked incidents must be a list of incident ids.",
   "Some linked incidents do not exist in your organization.": "Some linked incidents do not exist in your organization.",
   "Incorrect CAPTCHA answer": "Incorrect CAPTCHA answer",
