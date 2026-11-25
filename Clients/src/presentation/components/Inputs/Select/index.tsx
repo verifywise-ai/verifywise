@@ -29,6 +29,7 @@ import {
   useTheme,
 } from "@mui/material";
 import "./index.css";
+import { SELECT_MIN_WIDTH } from "./constants";
 import { ChevronDown } from "lucide-react";
 import { SelectProps } from "../../../types/widget.types";
 import { getSelectStyles } from "../../../utils/inputStyles";
@@ -251,7 +252,7 @@ function Select({
         }}
         sx={{
           fontSize: 13,
-          minWidth: "125px",
+          minWidth: SELECT_MIN_WIDTH,
           width: "100%",
           backgroundColor: isFilterApplied
             ? theme.palette.background.fill
