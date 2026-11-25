@@ -288,7 +288,7 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'While a request is pending or after it is rejected, only people who manage approval workflows can change or remove the workflow. If you sent the request, withdraw it from the approval request instead. Removing the workflow from a rejected use case does not create its frameworks. They wait until a new review approves it. Workflow changes show up in the use case\'s history.',
+      text: 'While a request is pending or after it is rejected, only people who manage approval workflows can change or remove the workflow. If you sent the request, withdraw it from the approval request instead. After a rejection, anyone who can edit the use case can send it for approval again under the same workflow (see below). Removing the workflow from a rejected use case does not create its frameworks. They wait until a new review approves it. Workflow changes show up in the use case\'s history.',
     },
     {
       type: 'heading',
@@ -315,6 +315,20 @@ export const useCasesContent: ArticleContent = {
     {
       type: 'paragraph',
       text: 'People who manage approval workflows see **Create workflow** under the workflow field, in this dialog and in the create use case form. It opens the workflow form with the entity set to Use case, and the new workflow is selected once you save it. The dialog also links to **Manage approval workflows**. When there are no use case workflows yet, the field says so. Everyone else is asked to get an Admin to create one.',
+    },
+    {
+      type: 'heading',
+      id: 'resubmit-for-approval',
+      level: 3,
+      text: 'Resubmitting a rejected use case',
+    },
+    {
+      type: 'paragraph',
+      text: 'When a use case\'s approval request is rejected, the requester is notified, and the notification opens the use case. Make the changes the approvers asked for, then choose **Resubmit for approval** next to the **Approval workflow** field on the Overview tab and confirm. A new request goes to the same workflow\'s approvers, and a planned use case moves to In review until the request is approved or rejected. If the workflow has an auto-approve risk level and the use case\'s risk classification is at or below it, the request is approved at once.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Anyone who can edit the use case can resubmit it. You do not need to manage approval workflows, because the workflow stays the same. The option appears only after a rejection and only while the workflow is still active. If the workflow has been archived, or can no longer review use cases, ask someone who manages approval workflows to change it. The resubmission shows up in the use case\'s history.',
     },
     {
       type: 'heading',
@@ -349,7 +363,7 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Open a use case to move it along. On the Overview tab, choose **Mark as live** and pick the go-live date (today or earlier), or choose **Retire**. A planned use case that never launches can be retired too. A use case with an approval workflow cannot be marked as live until a review approves it, so not while its request is pending, was rejected or was withdrawn. A rejected use case stays rejected even if an admin removes its workflow: attach a workflow and get it approved first. The same panel holds the department. The dashboard uses it to group live use cases.',
+      text: 'Open a use case to move it along. On the Overview tab, choose **Mark as live** and pick the go-live date (today or earlier), or choose **Retire**. A planned use case that never launches can be retired too. A use case with an approval workflow cannot be marked as live until a review approves it, so not while its request is pending, was rejected or was withdrawn. A rejected use case stays rejected until a new review approves it: choose **Resubmit for approval** to send it to the same workflow again, or, if an admin removed its workflow, attach one and get it approved first. The same panel holds the department. The dashboard uses it to group live use cases.',
     },
     {
       type: 'image',
