@@ -195,8 +195,9 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
         const r = checkStringValidation("Impact description", v as string, 1, 500);
         return r.accepted ? "" : r.message;
       },
+      // Optional: the plan is often not known yet when the risk is logged.
       action_plan: (v: unknown) => {
-        const r = checkStringValidation("Action plan", v as string, 1, 1000);
+        const r = checkStringValidation("Action plan", (v as string) ?? "", 0, 1000);
         return r.accepted ? "" : r.message;
       },
       vendor_id: (v: unknown) => {
@@ -303,7 +304,8 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
         action_owner: existingRisk.action_owner ? String(existingRisk.action_owner) : "",
         risk_severity: optionIdOf(RISK_SEVERITY_OPTIONS, existingRisk.risk_severity),
         likelihood: optionIdOf(LIKELIHOOD_OPTIONS, existingRisk.likelihood),
-        action_plan: existingRisk.action_plan,
+        // A risk saved without a plan has none stored.
+        action_plan: existingRisk.action_plan ?? "",
         vendor_id: existingRisk.vendor_id,
       }));
       setSelectedFrameworks(
@@ -661,7 +663,6 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
             error={errors.action_plan}
             onChange={(e) => handleOnChange("action_plan", e.target.value)}
             onBlur={handleFieldBlur("action_plan")}
-            isRequired
             disabled={isEditingDisabled}
             rows={4}
             placeholder="Outline the steps or controls you will take to reduce or eliminate this risk."

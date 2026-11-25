@@ -3,7 +3,6 @@ import { IModelRisk } from "../../interfaces/i.modelRisk";
 import { ModelRiskCategory } from "../../enums/model-risk-category.enum";
 import { ModelRiskLevel } from "../../enums/model-risk-level.enum";
 import { ModelRiskStatus } from "../../enums/model-risk-status.enum";
-import { ValidationException } from "../../exceptions/custom.exception";
 
 @Table({
   tableName: "model_risks",
@@ -164,43 +163,6 @@ export class ModelRiskModel extends Model<ModelRiskModel> implements IModelRisk 
     },
   })
   lastUpdated?: string;
-
-  /**
-   * Validate model risk data before saving
-   */
-  async validateModelRiskData(): Promise<void> {
-    if (!this.risk_name || !String(this.risk_name).trim()) {
-      throw new ValidationException("Risk name is required", "risk_name", this.risk_name);
-    }
-
-    if (!this.risk_category) {
-      throw new ValidationException(
-        "Risk category is required",
-        "risk_category",
-        this.risk_category,
-      );
-    }
-
-    if (!this.risk_level) {
-      throw new ValidationException("Risk level is required", "risk_level", this.risk_level);
-    }
-
-    if (!this.status) {
-      throw new ValidationException("Status is required", "status", this.status);
-    }
-
-    if (!this.owner || !String(this.owner).trim()) {
-      throw new ValidationException("Owner is required", "owner", this.owner);
-    }
-
-    if (!this.target_date) {
-      throw new ValidationException(
-        "Next review date is required",
-        "target_date",
-        this.target_date,
-      );
-    }
-  }
 
   /**
    * Get model risk data without sensitive information

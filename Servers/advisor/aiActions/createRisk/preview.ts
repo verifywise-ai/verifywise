@@ -16,12 +16,14 @@ export function renderCreateRiskPreview(input: AgentCreateRiskInput): string {
   const qualifier = qualifierParts.length ? `${qualifierParts.join("/")} ` : "";
 
   const tail: string[] = [];
-  tail.push(`current level: ${input.current_risk_level}`);
-  tail.push(`mitigation: ${input.mitigation_status}`);
-  tail.push(`deadline ${input.deadline}`);
+  // The mitigation fields are optional; only the ones given are shown.
+  if (input.current_risk_level) tail.push(`current level: ${input.current_risk_level}`);
+  if (input.mitigation_status) tail.push(`mitigation: ${input.mitigation_status}`);
+  if (input.deadline) tail.push(`deadline ${input.deadline}`);
   if (input.project_ids && input.project_ids.length > 0) {
     tail.push(`project${input.project_ids.length > 1 ? "s" : ""} ${input.project_ids.join(", ")}`);
   }
 
-  return `Create a ${qualifier}risk "${input.risk_name}" (${tail.join("; ")})`;
+  const details = tail.length > 0 ? ` (${tail.join("; ")})` : "";
+  return `Create a ${qualifier}risk "${input.risk_name}"${details}`;
 }

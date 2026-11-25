@@ -39,7 +39,7 @@ export interface IntakeSuggestedRisk {
   likelihood: Likelihood;
   severity: Severity;
   impact: string;
-  /** The risk register requires one; "" only when the model omitted it. */
+  /** Optional, as in the risk register; "" when the model omitted it. */
   mitigationPlan: string;
   implementationStrategy: string;
   /** ISO date; null means approval + 90 days. */

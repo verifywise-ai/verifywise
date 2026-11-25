@@ -62,7 +62,7 @@ Submitter name, submitter email and schema fields of type `email` never reach th
 
 Stage statuses: `pending`, `complete`, `ai_not_configured` (form has no LLM key, or the key was deleted) and `ai_failed`.
 
-Per-suggestion writes are single atomic `UPDATE`s on the matching array element (`updateSuggestedRiskItemQuery`, `setAllSuggestionStatesQuery`). Two reviewers acting at once don't overwrite each other, and the same statement refuses to leave an accepted item without a mitigation plan. Every assessment and suggestion write requires `status = 'pending'`, so a job that finishes after approve or reject changes nothing. The assessment write keeps a reviewer override's band in `risk_tier`.
+Per-suggestion writes are single atomic `UPDATE`s on the matching array element (`updateSuggestedRiskItemQuery`, `setAllSuggestionStatesQuery`). Two reviewers acting at once don't overwrite each other. The mitigation plan is optional, as in the risk register, so an item is accepted with or without one. Every assessment and suggestion write requires `status = 'pending'`, so a job that finishes after approve or reject changes nothing. The assessment write keeps a reviewer override's band in `risk_tier`.
 
 ## Background job
 
@@ -100,8 +100,8 @@ All new writes use `authorize("intakeForm.edit")`.
 |---|---|
 | `GET /intake/submissions/:id/preview` | Adds `assessment`, `suggestedRisks`, `ruleMinimumPreview` (current rules) and `assessedLevel` (stored) |
 | `POST /intake/submissions/:id/assessment/retry` | 202 with the stages queued. Only failed stages, stages never stored, or stages pending over 10 minutes. 409 when nothing qualifies |
-| `PATCH /intake/submissions/:id/suggested-risks/:suggestionId` | Edit, accept, dismiss or restore one suggestion. Whitelisted fields only. Accepting needs a mitigation plan. `modelRiskLevel` is refused (400): a model suggestion's level follows its likelihood and severity, and an edit of either recomputes the stored `modelRiskLevel` |
-| `POST /intake/submissions/:id/suggested-risks/accept-all` | Accepts open suggestions that have a mitigation plan. Returns `{ accepted, skipped, items }`, with items as stored. 409 when the submission isn't pending, including one decided during the call |
+| `PATCH /intake/submissions/:id/suggested-risks/:suggestionId` | Edit, accept, dismiss or restore one suggestion. Whitelisted fields only. The mitigation plan is optional. `modelRiskLevel` is refused (400): a model suggestion's level follows its likelihood and severity, and an edit of either recomputes the stored `modelRiskLevel` |
+| `POST /intake/submissions/:id/suggested-risks/accept-all` | Accepts every open suggestion (the mitigation plan is optional). Returns `{ accepted, skipped, items }`, with items as stored; `skipped` is kept for compatibility and is 0 unless the items changed during the call. 409 when the submission isn't pending, including one decided during the call |
 | `PATCH /intake/submissions/:id/risk-override` | Pending submissions only (409 otherwise). A pre-v2 tier name is stored as its band (`bandOfTier`). For v2, or a submission not scored yet, the tier must be a band at or above the band of the current rule minimum |
 
 ## Routing endpoints

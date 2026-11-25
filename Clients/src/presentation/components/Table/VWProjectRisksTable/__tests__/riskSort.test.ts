@@ -41,9 +41,10 @@ describe("compareRisks", () => {
     },
   );
 
-  it("puts null text first ascending and last descending", () => {
-    expect(sortIds(withNulls, "mitigation_status", "asc")).toEqual([2, 3, 1]);
-    expect(sortIds(withNulls, "mitigation_status", "desc")).toEqual([1, 3, 2]);
+  it("sorts a risk with no mitigation status as Not Started, as the table shows it", () => {
+    // Completed, In progress, Not Started (no status)
+    expect(sortIds(withNulls, "mitigation_status", "asc")).toEqual([3, 1, 2]);
+    expect(sortIds(withNulls, "mitigation_status", "desc")).toEqual([2, 1, 3]);
   });
 
   it("orders severity by rank, not alphabetically", () => {
@@ -65,13 +66,21 @@ describe("compareRisks", () => {
     expect(sortIds(rows, "risk_level_autocalculated", "asc")).toEqual([4, 2, 3, 1]);
   });
 
-  it("sorts missing deadlines and ALE as zero", () => {
-    const rows = [
-      risk({ id: 1, deadline: "2026-05-01T00:00:00Z", ale_estimate: 10 }),
-      risk({ id: 2, deadline: null, ale_estimate: null }),
-    ];
-    expect(sortIds(rows, "deadline", "asc")).toEqual([2, 1]);
+  it("sorts a missing ALE as zero", () => {
+    const rows = [risk({ id: 1, ale_estimate: 10 }), risk({ id: 2, ale_estimate: null })];
     expect(sortIds(rows, "ale_estimate", "asc")).toEqual([2, 1]);
+  });
+
+  // The deadline is optional: an undated risk is not the most urgent one.
+  it("puts risks without a deadline last in both directions", () => {
+    const rows = [
+      risk({ id: 1, deadline: null }),
+      risk({ id: 2, deadline: "2026-05-01T12:00:00Z" }),
+      risk({ id: 3, deadline: "2026-03-01T12:00:00Z" }),
+      risk({ id: 4, deadline: "" }),
+    ];
+    expect(sortIds(rows, "deadline", "asc")).toEqual([3, 2, 1, 4]);
+    expect(sortIds(rows, "deadline", "desc")).toEqual([2, 3, 1, 4]);
   });
 
   it("keeps the original order for an unknown key saved in an older version", () => {

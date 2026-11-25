@@ -55,7 +55,8 @@ const initialState: IModelRiskFormData = {
   severity: "",
   status: ModelRiskStatus.OPEN,
   owner: "",
-  target_date: new Date().toISOString().split("T")[0],
+  // Optional: a new risk has no review date until someone sets one.
+  target_date: "",
   description: "",
   mitigation_plan: "",
   impact: "",
@@ -127,10 +128,6 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
       status: (v: unknown) => (!v ? "Status is required." : ""),
       owner: (v: unknown) => {
         const r = checkStringValidation("Owner", v as string, 1);
-        return r.accepted ? "" : r.message;
-      },
-      target_date: (v: unknown) => {
-        const r = checkStringValidation("Next review date", v as string, 1);
         return r.accepted ? "" : r.message;
       },
     }),
@@ -246,13 +243,13 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
 
   const handleDateChange = useCallback(
     (newDate: Dayjs | null) => {
-      if (newDate?.isValid()) {
-        setValues((prev) => ({
-          ...prev,
-          target_date: newDate ? newDate.format("YYYY-MM-DD") : "",
-        }));
-        clearFieldError("target_date");
+      if (newDate === null) {
+        // Cleared: the review date is optional.
+        setValues((prev) => ({ ...prev, target_date: "" }));
+      } else if (newDate.isValid()) {
+        setValues((prev) => ({ ...prev, target_date: newDate.format("YYYY-MM-DD") }));
       }
+      clearFieldError("target_date");
     },
     [clearFieldError],
   );
@@ -449,13 +446,14 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
         <Box sx={{ flex: 1 }}>
           <DatePicker
             label="Next review date"
-            date={values.target_date ? dayjs(values.target_date) : dayjs(new Date())}
+            date={values.target_date ? dayjs(values.target_date) : null}
             handleDateChange={handleDateChange}
+            // Optional, so it can be cleared.
+            isClearable
             sx={{
               width: "100%",
               backgroundColor: theme.palette.background.main,
             }}
-            isRequired
             error={errors.target_date}
           />
         </Box>

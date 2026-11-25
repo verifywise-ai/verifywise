@@ -417,7 +417,7 @@ The other fields are **edits**: what the person changed in the vendor risk form 
 | Field | Valid |
 |-------|-------|
 | `risk_description`, `impact_description` | A string of 1 to 500 characters (code points) once control characters are removed and the ends are trimmed |
-| `action_plan` | The same, 1 to 1,000 characters |
+| `action_plan` | Optional: `null` or a string that is empty once cleaned is saved empty. A longer text is refused with "The action plan can be at most 1000 characters", and a value that is not text with "Invalid action plan" |
 | `likelihood`, `risk_severity` | One of the register's own values (`VENDOR_RISK_ENUMS`; note the top likelihood is `Almost certain` with a small c) |
 | `risk_level` | A string of 1 to 50 characters. It is checked, but the new risk's stored level is computed from its likelihood and severity, as on every vendor risk write (see [Vendor risk level](#vendor-risk-level)) |
 | `frameworks` | An array of at most 100 positive whole numbers, each at most 2,147,483,647 (a Postgres integer); duplicates are dropped. Empty means none. Each must also be the id of a framework: that is checked inside the accept's transaction, after the finding is locked, and an id that names no framework is a 400 "Invalid frameworks" that rolls the accept back and leaves the finding pending |

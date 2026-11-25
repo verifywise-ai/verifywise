@@ -142,11 +142,12 @@ export async function executeCreateRisk(
       risk_owner: riskOwner,
       projects: input.project_ids ?? [],
       frameworks: input.framework_ids ?? [],
+      // The mitigation fields are optional: a field the user did not give is stored as none.
       mitigation_status: input.mitigation_status,
       mitigation_plan: input.mitigation_plan,
       current_risk_level: normalizeCurrentRiskLevel(input.current_risk_level),
       implementation_strategy: input.implementation_strategy,
-      deadline: new Date(input.deadline),
+      deadline: input.deadline ? new Date(input.deadline) : undefined,
       risk_approval: input.approver,
       approval_status: input.approval_status,
       date_of_assessment: input.date_of_assessment ? new Date(input.date_of_assessment) : undefined,

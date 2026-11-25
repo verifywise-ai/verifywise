@@ -594,7 +594,8 @@ const _agentSuggestModelRiskInner = createWriteToolFn({
         status: (data.status as any) || "Open",
         // owner is INTEGER FK to users.id — pass null when omitted, not "".
         owner: (data.owner ?? null) as any,
-        target_date: data.target_date || new Date().toISOString(),
+        // Optional: no date was given, so none is stored (not today).
+        target_date: (data.target_date || null) as unknown as string,
         mitigation_plan: data.mitigation_plan || "",
         impact: data.impact || "",
         likelihood: data.likelihood ?? null,

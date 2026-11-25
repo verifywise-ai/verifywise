@@ -609,6 +609,33 @@ describe("POST /api/v1/vendor-risk-findings/:id/accept", () => {
       expect(await countAll("frameworks_vendorrisks")).toBe(0);
     });
 
+    // The action plan is optional: null or "" clears it, and the risk is created without one.
+    it.each([null, ""])("creates the risk without an action plan when it is %p", async (plan) => {
+      const { owner } = await seedTwoTenantContexts(3);
+      const {
+        inserted: [finding],
+      } = await seedFindings(owner);
+
+      const res = await owner.request.post(acceptUrl(finding.id)).send({ action_plan: plan });
+
+      expect(res.status).toBe(200);
+      const [risk] = await risksOf(owner.orgId);
+      expect(risk.action_plan).toBe("");
+    });
+
+    it("refuses an action plan that is not text, with its own message", async () => {
+      const { owner } = await seedTwoTenantContexts(3);
+      const {
+        inserted: [finding],
+      } = await seedFindings(owner);
+
+      const res = await owner.request.post(acceptUrl(finding.id)).send({ action_plan: 5 });
+
+      expect(res.status).toBe(400);
+      expect(JSON.stringify(res.body)).toContain("Invalid action plan");
+      expect(await risksOf(owner.orgId)).toEqual([]);
+    });
+
     it("works the risk level out from the edited pair when the caller sends none", async () => {
       const { owner } = await seedTwoTenantContexts(3);
       const {

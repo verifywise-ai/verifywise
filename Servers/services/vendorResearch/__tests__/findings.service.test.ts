@@ -437,8 +437,12 @@ describe("acceptFinding", () => {
         await expectRefusedOutright({ impact_description: value }, "impact_description");
       });
 
-      it.each(notText)("refuses an action plan that is %s", async (_label, value) => {
+      // The action plan is optional: null or an empty one is saved empty, anything not text is
+      // refused with its own message (not the length one).
+      it.each(notText.slice(1, 4))("refuses an action plan that is %s", async (_label, value) => {
         await expectRefusedOutright({ action_plan: value }, "action_plan");
+        const error = await rejection(accept({ edits: { action_plan: value } }));
+        expect((error as ValidationException).message).toBe("Invalid action plan");
       });
 
       it("refuses a risk description of 501 characters", async () => {
@@ -449,8 +453,21 @@ describe("acceptFinding", () => {
         await expectRefusedOutright({ impact_description: "a".repeat(501) }, "impact_description");
       });
 
-      it("refuses an action plan of 1001 characters", async () => {
+      it.each([notText[0], ...notText.slice(4)])(
+        "saves an action plan that is %s as empty",
+        async (_label, value) => {
+          await accept({ edits: { action_plan: value } });
+
+          expect(created().action_plan).toBe("");
+        },
+      );
+
+      it("refuses an action plan of 1001 characters, with the length message", async () => {
         await expectRefusedOutright({ action_plan: "a".repeat(1001) }, "action_plan");
+        const error = await rejection(accept({ edits: { action_plan: "a".repeat(1001) } }));
+        expect((error as ValidationException).message).toBe(
+          "The action plan can be at most 1000 characters",
+        );
       });
 
       it("measures the length after the text is cleaned and trimmed", async () => {

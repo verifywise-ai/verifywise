@@ -122,6 +122,12 @@ describe("VWProjectRisksTableBody", () => {
     expect(screen.getByText("In Progress")).toBeInTheDocument();
   });
 
+  it("shows a risk saved without a mitigation status as Not Started", () => {
+    const rows = [{ ...mockRows[0], mitigation_status: null }] as unknown as RiskModel[];
+    renderWithContext(<VWProjectRisksTableBody {...defaultProps} rows={rows} />);
+    expect(screen.getByText("Not Started")).toBeInTheDocument();
+  });
+
   it("renders risk level chip", () => {
     renderWithContext(<VWProjectRisksTableBody {...defaultProps} />);
     const highChips = screen.getAllByText("High");

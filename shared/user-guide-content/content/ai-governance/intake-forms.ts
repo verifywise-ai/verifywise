@@ -770,7 +770,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'For each suggestion you can accept, dismiss, edit or undo your choice. **Accept all** accepts every open suggestion that has a mitigation plan. A risk can\'t be accepted without a mitigation plan, because the risk register requires one. Your choices save as you make them, so closing the dialog keeps them.',
+      text: 'For each suggestion you can accept, dismiss, edit or undo your choice. **Accept all** accepts every open suggestion. The mitigation plan is optional, so you can accept a suggestion without one and add the plan to the risk later. Your choices save as you make them, so closing the dialog keeps them.',
     },
     {
       type: 'paragraph',

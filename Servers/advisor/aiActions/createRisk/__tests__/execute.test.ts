@@ -101,6 +101,30 @@ describe("executeCreateRisk", () => {
     expect(afterCommit).toHaveBeenCalledTimes(1);
   });
 
+  it("creates a risk without any mitigation field, storing none", async () => {
+    mockCreate.mockResolvedValue({ id: 3 });
+    await executeCreateRisk({
+      inputParams: {
+        risk_name: "R",
+        risk_description: "d",
+        ai_lifecycle_phase: "Deployment & integration",
+        risk_category: ["Data privacy risk"],
+        impact: "i",
+      },
+      organizationId: 1,
+      requesterId: 2,
+      transaction: { afterCommit: jest.fn() },
+    } as never);
+    const payload = mockCreate.mock.calls.at(-1)[0];
+    expect(payload).toMatchObject({
+      mitigation_status: undefined,
+      mitigation_plan: undefined,
+      current_risk_level: undefined,
+      implementation_strategy: undefined,
+      deadline: undefined,
+    });
+  });
+
   it("notifies a named approver after commit", async () => {
     const risk = { id: 3, risk_name: "R", risk_approval: 8 };
     mockCreate.mockResolvedValue(risk);

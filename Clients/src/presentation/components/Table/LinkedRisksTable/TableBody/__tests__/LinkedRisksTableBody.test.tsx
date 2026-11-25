@@ -9,7 +9,8 @@ const mockRows = [
     id: 1,
     risk_name: "Data Breach",
     risk_description: "Potential data leak",
-    risk_severity: "High",
+    severity: "Major",
+    risk_severity: "Minor",
     likelihood: "Likely",
     risk_category: "Security",
   },
@@ -17,7 +18,8 @@ const mockRows = [
     id: 2,
     risk_name: "Model Bias",
     risk_description: "Algorithmic bias in outputs",
-    risk_severity: "Medium",
+    severity: "Moderate",
+    risk_severity: null,
     likelihood: "Possible",
     risk_category: "Fairness",
   },
@@ -25,6 +27,7 @@ const mockRows = [
     id: 3,
     risk_name: "Third Party Risk",
     risk_description: "Vendor data handling",
+    severity: "Catastrophic",
     risk_severity: "Critical",
     likelihood: "Unlikely",
     risk_category: "Vendor",
@@ -68,15 +71,19 @@ describe("LinkedRisksTableBody", () => {
     expect(screen.getByText("Algorithmic bias in outputs")).toBeInTheDocument();
   });
 
-  it("renders severity chips", () => {
+  // The column sits next to the inherent likelihood, so it shows the inherent
+  // severity; the residual one (risk_severity) is optional and not shown.
+  it("renders the inherent severity chips, not the residual severity", () => {
     renderWithProviders(
       <table>
         <LinkedRisksTableBody {...defaultProps} />
       </table>,
     );
-    expect(screen.getByText("High")).toBeInTheDocument();
-    expect(screen.getByText("Medium")).toBeInTheDocument();
-    expect(screen.getByText("Critical")).toBeInTheDocument();
+    expect(screen.getByText("Major")).toBeInTheDocument();
+    expect(screen.getByText("Moderate")).toBeInTheDocument();
+    expect(screen.getByText("Catastrophic")).toBeInTheDocument();
+    expect(screen.queryByText("Minor")).not.toBeInTheDocument();
+    expect(screen.queryByText("Critical")).not.toBeInTheDocument();
   });
 
   it("renders likelihood values", () => {

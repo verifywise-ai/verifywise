@@ -36,15 +36,18 @@ vi.mock("../../../../components/AddNewRiskForm", () => ({
     onSuccess,
     onError,
     initialRiskValues,
+    initialMitigationValues,
     createRisk,
   }: {
     onSuccess: (id?: number) => void;
     onError: (m: string) => void;
     initialRiskValues?: RiskFormValues;
+    initialMitigationValues?: Record<string, unknown>;
     createRisk?: (body: Record<string, unknown>) => Promise<unknown>;
   }) => (
     <div data-testid="add-new-risk-form">
       <span data-testid="review-notes">{initialRiskValues?.reviewNotes}</span>
+      <span data-testid="mitigation-values">{JSON.stringify(initialMitigationValues)}</span>
       <button
         onClick={async () => {
           try {
@@ -194,6 +197,14 @@ describe("SuggestedRisksSection", () => {
     expect(screen.getByTestId("review-notes").textContent).toContain(
       "AI Detection scan #7 (acme/app)",
     );
+    // Only the suggested plan is filled in; no status or residual pair is pre-chosen.
+    expect(JSON.parse(screen.getByTestId("mitigation-values").textContent ?? "{}")).toMatchObject({
+      mitigationStatus: 0,
+      mitigationPlan: "Add redaction middleware.",
+      deadline: "",
+      likelihood: 0,
+      riskSeverity: 0,
+    });
 
     mockGetActions.mockResolvedValue([makeAction()]);
     fireEvent.click(screen.getByText("Simulate save"));

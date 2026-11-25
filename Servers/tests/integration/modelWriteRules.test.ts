@@ -152,8 +152,9 @@ describe("model write rules", () => {
         .send({ risk_name: "Drift" });
       expect(res.status).toBe(400);
       const fields = res.body.data.errors.map((e: { field: string }) => e.field).sort();
-      // The level is computed from likelihood and severity (decision 10).
-      expect(fields).toEqual(["likelihood", "owner", "risk_category", "severity", "target_date"]);
+      // The level is computed from likelihood and severity (decision 10). The
+      // next review date is optional: mitigation is not needed to log a risk.
+      expect(fields).toEqual(["likelihood", "owner", "risk_category", "severity"]);
     });
 
     it("creates a model risk from only its required fields, the rest null or empty", async () => {
@@ -163,10 +164,9 @@ describe("model write rules", () => {
         likelihood: "Likely",
         severity: "Major",
         owner: String(owner),
-        target_date: "2027-01-31",
       });
       expect(res.status).toBe(201);
-      expect(res.body.data).toMatchObject({ model_id: null, status: "Open" });
+      expect(res.body.data).toMatchObject({ model_id: null, status: "Open", target_date: null });
     });
 
     it("refuses a request without a token, 403 for an Auditor, 404 across organizations", async () => {

@@ -289,22 +289,39 @@ describe("updateSuggestedRisk", () => {
     expect(r.body.data).toBe("Nothing to update");
   });
 
-  it("400 when accepting a risk without a mitigation plan", async () => {
+  // The mitigation plan is optional, as in the risk register.
+  it("accepts a risk without a mitigation plan", async () => {
     intake.getSubmissionByIdQuery.mockResolvedValue(
       submission({ suggestedRisks: block([item({ mitigationPlan: "" })]) }),
     );
+    intake.updateSuggestedRiskItemQuery.mockResolvedValue(
+      item({ state: "accepted", mitigationPlan: "" }),
+    );
     const r = await call(ctrl.updateSuggestedRisk, patchReq({ state: "accepted" }));
-    expect(r.status).toBe(400);
-    expect(r.body.data).toBe("Add a mitigation plan before accepting this risk");
+    expect(r.status).toBe(200);
+    expect(intake.updateSuggestedRiskItemQuery).toHaveBeenCalledWith(
+      11,
+      expect.any(String),
+      expect.objectContaining({ state: "accepted" }),
+      ORG,
+    );
   });
 
-  it("400 when clearing the mitigation plan of an accepted risk", async () => {
+  it("clears the mitigation plan of an accepted risk", async () => {
     intake.getSubmissionByIdQuery.mockResolvedValue(
       submission({ suggestedRisks: block([item({ state: "accepted" })]) }),
     );
+    intake.updateSuggestedRiskItemQuery.mockResolvedValue(
+      item({ state: "accepted", mitigationPlan: "" }),
+    );
     const r = await call(ctrl.updateSuggestedRisk, patchReq({ mitigationPlan: "  " }));
-    expect(r.status).toBe(400);
-    expect(intake.updateSuggestedRiskItemQuery).not.toHaveBeenCalled();
+    expect(r.status).toBe(200);
+    expect(intake.updateSuggestedRiskItemQuery).toHaveBeenCalledWith(
+      11,
+      expect.any(String),
+      expect.objectContaining({ mitigationPlan: "" }),
+      ORG,
+    );
   });
 
   it("accepting with a new mitigation plan in the same request is fine", async () => {
@@ -366,7 +383,7 @@ describe("updateSuggestedRisk", () => {
 });
 
 describe("acceptAllSuggestedRisks", () => {
-  it("accepts suggested items with a mitigation plan and reports the rest", async () => {
+  it("accepts suggested items, with or without a mitigation plan", async () => {
     intake.getSubmissionByIdQuery.mockResolvedValueOnce(
       submission({
         suggestedRisks: block([
@@ -376,22 +393,24 @@ describe("acceptAllSuggestedRisks", () => {
         ]),
       }),
     );
-    const stored = [item({ id: "a", state: "accepted" })];
+    const stored = [
+      item({ id: "a", state: "accepted" }),
+      item({ id: "b", state: "accepted", mitigationPlan: "" }),
+    ];
     intake.getSubmissionByIdQuery.mockResolvedValueOnce(
       submission({ suggestedRisks: block(stored) }),
     );
-    intake.setAllSuggestionStatesQuery.mockResolvedValue(1);
+    intake.setAllSuggestionStatesQuery.mockResolvedValue(2);
     const r = await call(ctrl.acceptAllSuggestedRisks, req());
     expect(r.status).toBe(200);
     // The items come back as stored, for the client to show.
-    expect(r.body.data).toEqual({ accepted: 1, skipped: 1, items: stored });
+    expect(r.body.data).toEqual({ accepted: 2, skipped: 0, items: stored });
     expect(intake.setAllSuggestionStatesQuery).toHaveBeenCalledWith(
       11,
       "suggested",
       "accepted",
       7,
       ORG,
-      { requireMitigationPlan: true },
     );
   });
 
