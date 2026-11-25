@@ -218,10 +218,25 @@ describe("vendorReviewsSource", () => {
 });
 
 describe("incidentsSource", () => {
-  it("is a visible top-group source", () => {
+  const withKeys = (keys: string[]): HomeQueueContext => ({
+    ...ctx,
+    can: (key) => keys.includes(key),
+  });
+
+  it("is a top-group source", () => {
     expect(incidentsSource.id).toBe("incidents");
     expect(incidentsSource.part).toBe("automate");
-    expect(incidentsSource.isVisible(ctx)).toBe(true);
+  });
+
+  // An assigned incident is only work for a role that can act on it.
+  it.each([
+    [["incident.edit"], true],
+    [["incident.approve"], true],
+    [["incident.edit", "incident.approve"], true],
+    [["incident.create"], false],
+    [[], false],
+  ])("with %j it is visible: %s", (keys, visible) => {
+    expect(incidentsSource.isVisible(withKeys(keys as string[]))).toBe(visible);
   });
 
   it("assignee = me, status not Closed, not archived, org scoped", async () => {

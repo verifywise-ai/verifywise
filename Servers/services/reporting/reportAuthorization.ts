@@ -1,5 +1,6 @@
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
+import { projectAccessSql } from "../../utils/projectVisibility.utils";
 
 /**
  * Who may produce a report, and over what.
@@ -59,20 +60,20 @@ export async function assertReportScopeAllowed(input: {
 
   let isMember = false;
   if (needsMembership) {
-    // Same predicate as project.utils.ts getAllProjectsQuery: owner or member.
+    // The use case rule (projectAccessSql): owner, member, or through a group
+    // attached to the use case, the same people who can open it and see its
+    // reports (reportVisibility.utils).
+    const access = projectAccessSql("p", input.userId);
     const rows = (await sequelize.query(
       `SELECT 1 AS ok FROM projects p
-         LEFT JOIN projects_members pm
-           ON pm.project_id = p.id AND pm.organization_id = :organizationId
         WHERE p.id = :projectId
-          AND p.organization_id = :organizationId
-          AND (p.owner = :userId OR pm.user_id = :userId)
+          AND p.organization_id = :organizationId${access.sql}
         LIMIT 1`,
       {
         replacements: {
           projectId: input.projectId,
           organizationId: input.organizationId,
-          userId: input.userId,
+          ...access.replacements,
         },
         type: QueryTypes.SELECT,
       },

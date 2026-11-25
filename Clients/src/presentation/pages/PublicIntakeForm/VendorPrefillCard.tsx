@@ -100,7 +100,6 @@ export function VendorPrefillCard({
             )
           }
           onClick={() => inputRef.current?.click()}
-          sx={{ height: 30 }}
         />
       </Box>
       {message && (

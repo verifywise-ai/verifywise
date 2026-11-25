@@ -1286,10 +1286,27 @@ export const aiIncidentEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/ai-incident-managements',
     summary: "Create New Incident",
+    description: "Needs incident.create. Required: ai_project, type, severity, occurred_date, date_detected, reporter (or reporter_id) and description (5 to 32,767 characters). status defaults to Open and approval_status to Pending when omitted. type, severity, status and approval_status must be one of their listed values; ai_project, reporter and model_system_version are at most 255 characters; dates are YYYY-MM-DD (or an ISO date-time), not later than today in UTC+14 (the furthest-ahead time zone, so today anywhere is accepted), and date_detected is on or after occurred_date. categories_of_harm is optional: a list (or a comma-separated string) of Health, Safety, Rights, Property, Environment. The reporter is required: a reporter_id (a user of your organization; the server writes their full name into reporter) or a non-empty reporter text. Dates are stored and returned as YYYY-MM-DD. approved_by, approved_by_id and approval_date are set by the server and ignored in the request. A caller without incident.approve always gets approval_status Pending with no approval_notes. A caller with incident.approve may send Approved or Rejected; the server then records the caller's name as approved_by, their id as approved_by_id and today (UTC) as approval_date.",
     requiresAuth: true,
+    requestBody: {
+      "ai_project": "string (required)",
+      "type": "Malfunction | Unexpected behavior | Model drift | Misuse | Data corruption | Security breach | Performance degradation (required)",
+      "severity": "Minor | Serious | Very serious (required)",
+      "status": "Open | Investigating | Mitigated | Closed | Suspended | Emergency action (optional)",
+      "approval_status": "Pending | Approved | Rejected | Not required (optional)",
+      "occurred_date": "string (required)",
+      "date_detected": "string (required)",
+      "reporter": "string (optional)",
+      "reporter_id": "integer (optional)",
+      "model_system_version": "string (optional)",
+      "description": "string (required)",
+      "categories_of_harm": "array (optional)",
+    },
     responses: [
       { status: 201, description: "Created successfully" },
+      { status: 400, description: "Validation failed: errors lists each field ({ field, message, code })" },
       { status: 401, description: "Unauthorized" },
+      { status: 403, description: "The role does not hold incident.create" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Incidents",
@@ -1304,7 +1321,9 @@ export const aiIncidentEndpoints: Endpoint[] = [
     ],
     responses: [
       { status: 200, description: "Success" },
+      { status: 400, description: "Invalid incident ID" },
       { status: 401, description: "Unauthorized" },
+      { status: 404, description: "Incident not found (missing or in another organization)" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Incidents",
@@ -1313,13 +1332,18 @@ export const aiIncidentEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/ai-incident-managements/{id}',
     summary: "Update Incident By Id",
+    description: "Needs incident.edit or incident.approve, then per field: changing approval_status or approval_notes needs incident.approve, changing any other field (archived included) needs incident.edit. A field sent with its stored value is not a change. An archived incident takes only { \"archived\": false } (restore); any other change answers 409 (\"Restore this incident before editing it.\") and nothing is written. approved_by, approved_by_id and approval_date are set by the server and ignored in the request: when approval_status changes to Approved or Rejected, approved_by is the caller's name, approved_by_id their id and approval_date today (UTC, YYYY-MM-DD); when it changes to Pending or Not required, all three are cleared. A changed reporter_id must be a user of your organization (400 INVALID_REFERENCE otherwise) and sets reporter to their full name; a changed reporter text without reporter_id clears reporter_id. Changed fields follow the create rules (enums, lengths, dates; harm categories an update adds must be listed values, stored ones outside the list may stay); a required field cannot be set to null or an empty string, and the dates the incident ends up with must keep date_detected on or after occurred_date. Fields left out are not changed.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
     responses: [
       { status: 200, description: "Success" },
+      { status: 400, description: "Validation failed" },
       { status: 401, description: "Unauthorized" },
+      { status: 403, description: "The role holds neither incident.edit nor incident.approve, or the request changes a field that needs the key it lacks (\"Your role does not allow editing this incident's details.\" / \"Your role does not allow approving or rejecting incidents.\"). Nothing is written." },
+      { status: 404, description: "Incident not found" },
+      { status: 409, description: "The incident changed since expected_updated_at, or the incident is archived and the request changes more than archived (code INCIDENT_ARCHIVED)" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Incidents",
@@ -1328,13 +1352,17 @@ export const aiIncidentEndpoints: Endpoint[] = [
     method: 'DELETE',
     path: '/ai-incident-managements/{id}',
     summary: "Delete Incident By Id",
+    description: "Permanently deletes the incident. A deletion entry is recorded in its change history, and the incident_deleted automation is sent after the delete commits.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
     responses: [
       { status: 200, description: "Deleted successfully" },
+      { status: 400, description: "The id is not a positive integer" },
       { status: 401, description: "Unauthorized" },
+      { status: 403, description: "The role does not hold incident.delete" },
+      { status: 404, description: "Incident not found in the organization. Nothing is deleted and no automation is sent." },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Incidents",
@@ -1343,13 +1371,17 @@ export const aiIncidentEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/ai-incident-managements/{id}/archive',
     summary: "Archive Incident By Id",
+    description: "Archives the incident through the incident update path: the row is locked, the change is recorded in change history (\"Archived\") and the incident_updated automation is sent after commit. Archiving an archived incident changes nothing. The request body is ignored. To restore, send { \"archived\": false } to PATCH /ai-incident-managements/{id}.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
     ],
     responses: [
-      { status: 200, description: "Success" },
+      { status: 200, description: "The incident after the change" },
+      { status: 400, description: "The id is not a positive integer" },
       { status: 401, description: "Unauthorized" },
+      { status: 403, description: "The role does not hold incident.edit" },
+      { status: 404, description: "Incident not found in the organization" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Incidents",
@@ -2251,9 +2283,14 @@ export const ceMarkingEndpoints: Endpoint[] = [
     parameters: [
       { name: 'projectId', in: 'path', type: 'integer', required: true, description: "The projectId" },
     ],
+    requestBody: {
+      "linkedIncidents": "array (optional)",
+    },
     responses: [
       { status: 200, description: "Success" },
+      { status: 400, description: "linkedIncidents is not a list of positive integer ids (\"Linked incidents must be a list of incident ids.\"), or names an incident that does not exist in the organization (\"Some linked incidents do not exist in your organization.\"). Nothing is written." },
       { status: 401, description: "Unauthorized" },
+      { status: 404, description: "Use case or CE marking record not found" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "CE Marking",
@@ -2329,9 +2366,12 @@ export const changeHistoryEndpoints: Endpoint[] = [
     requiresAuth: true,
     parameters: [
       { name: 'incidentId', in: 'path', type: 'integer', required: true, description: "The incidentId" },
+      { name: 'limit', in: 'query', type: 'integer', required: false, description: "The limit" },
+      { name: 'offset', in: 'query', type: 'integer', required: false, description: "The offset" },
     ],
     responses: [
       { status: 200, description: "Success" },
+      { status: 400, description: "Invalid incident ID, or limit not an integer from 1 to 100, or offset not a whole number of 0 or more" },
       { status: 401, description: "Unauthorized" },
       { status: 500, description: "Internal server error" },
     ],
@@ -6153,7 +6193,7 @@ export const intakeFormEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/intake/submissions/{id}/suggested-risks/accept-all',
     summary: "Accept All Suggested Risks",
-    description: "Moves every suggested risk still in \"suggested\" to \"accepted\". Dismissed ones stay dismissed; ones without a mitigation plan are skipped. Returns { accepted, skipped }.",
+    description: "Moves every suggested risk still in \"suggested\" to \"accepted\". Dismissed ones stay dismissed. The mitigation plan is optional, so none is skipped for lacking one; skipped stays in the response for compatibility. Returns { accepted, skipped }.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -6172,7 +6212,7 @@ export const intakeFormEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/intake/submissions/{id}/suggested-risks/{suggestionId}',
     summary: "Update A Suggested Risk",
-    description: "Edits, accepts, dismisses or restores one suggested risk on a pending submission. Accepting requires a mitigation plan.",
+    description: "Edits, accepts, dismisses or restores one suggested risk on a pending submission. The mitigation plan is optional.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -6192,7 +6232,7 @@ export const intakeFormEndpoints: Endpoint[] = [
     },
     responses: [
       { status: 200, description: "The updated suggestion" },
-      { status: 400, description: "Invalid field, nothing to update, or accepting without a mitigation plan" },
+      { status: 400, description: "Invalid field, or nothing to update" },
       { status: 401, description: "Unauthorized" },
       { status: 403, description: "Forbidden" },
       { status: 404, description: "Submission or suggestion not found" },
@@ -7648,6 +7688,7 @@ export const modelInventoryEndpoints: Endpoint[] = [
     responses: [
       { status: 200, description: "Model inventory deleted" },
       { status: 401, description: "Missing or invalid JWT" },
+      { status: 403, description: "The model has a saved approver and the caller is neither that approver nor an Admin" },
       { status: 404, description: "Model inventory not found" },
       { status: 500, description: "Internal server error" },
     ],
@@ -9983,6 +10024,7 @@ export const reportingscheduledReportsEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/reporting/scheduled-reports',
     summary: "List Scheduled Reports",
+    description: "Scheduled reports of the caller's organization. Admins see all; other roles see organization-wide schedules and those of projects they own, are a member of or reach through a group.",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -9994,10 +10036,11 @@ export const reportingscheduledReportsEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/reporting/scheduled-reports',
     summary: "Create Scheduled Report",
-    description: "Requires role: Admin or Editor",
+    description: "Frozen legacy contract: reportParameters is ignored and a quarterly frequency is refused with 400 (use POST /v1/scheduled-reports).  Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
+      { status: 400, description: "Validation error, or a quarterly schedule (only through /v1/scheduled-reports)" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Reporting/Scheduled Reports",
@@ -10006,10 +10049,11 @@ export const reportingscheduledReportsEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/reporting/scheduled-reports/{id}',
     summary: "Update Scheduled Report",
-    description: "Requires role: Admin or Editor",
+    description: "Frozen legacy contract: reportParameters is ignored and a quarterly frequency is refused with 400 (use PATCH /v1/scheduled-reports/{id}).  Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
+      { status: 400, description: "Validation error, or a quarterly schedule (only through /v1/scheduled-reports)" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Reporting/Scheduled Reports",
@@ -10081,7 +10125,7 @@ export const reportingtemplatesEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/reporting/templates',
     summary: "Create Template",
-    description: "Requires role: Admin or Editor",
+    description: "Frozen legacy contract: parameters_config is ignored (use POST /v1/report-templates).  Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -10104,7 +10148,7 @@ export const reportingtemplatesEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/reporting/templates/{id}',
     summary: "Update Template",
-    description: "Requires role: Admin or Editor",
+    description: "Frozen legacy contract: parameters_config is ignored and the stored report kind is kept (use PATCH /v1/report-templates/{id}).  Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -10128,7 +10172,7 @@ export const reportingtemplatesEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/reporting/templates/{id}/run',
     summary: "Run Template Now",
-    description: "Requires role: Admin or Editor",
+    description: "Frozen legacy contract: reportParameters is ignored, so running a template whose kind needs report parameters fails with 400 (use POST /v1/report-templates/{id}/run).  Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -13305,6 +13349,114 @@ export const v1V1lifecycleSettingsEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Llm Keys endpoints
+export const v1V1llmKeysEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/v1/llm-keys',
+    summary: "Create an LLM key, checked with its provider first",
+    description: "Checks the key with its provider before saving: one free request (Anthropic GET /v1/models/{model}, OpenAI GET /v1/models, OpenRouter GET /api/v1/key, Custom GET {url}/models) sent with the key and its custom headers, 8 second timeout. A refusal is a 400 with data.code workspace_required, invalid_key or model_unavailable. When the provider cannot be reached (network error, timeout, 5xx, 429, or a Custom URL the outbound policy refuses) the answer is a 409 with data.code unreachable, unless the body sets skip_verification: true, which saves the key unchecked. A rejected key is never saved, even with skip_verification. data.reason, when present, names a more specific cause: bad_characters (400, the key has characters no key can have), cannot_list_models (409, a 401/403 saying the key lacks the permission to list models) or model_not_listed (409, a Custom endpoint whose /models list lacks the model; ids equal to model:latest or ending in /model count as listed). With no model the check uses the default model the Advisor uses. Anthropic keys not tied to a workspace need the anthropic-workspace-id custom header.",
+    requiresAuth: true,
+    requestBody: {
+      "name": "Anthropic | OpenAI | OpenRouter | Custom (required)",
+      "key": "string (required)",
+      "model": "string (required)",
+      "url": "string (optional)",
+      "custom_headers": "object (optional, nullable)",
+      "skip_verification": "boolean (optional)",
+    },
+    responses: [
+      { status: 201, description: "Created; the key is not returned" },
+      { status: 400, description: "Invalid body, or the provider rejected the key: data is { message, code } with code workspace_required, invalid_key or model_unavailable" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - requires the llmKeys.admin permission (Admin by default)" },
+      { status: 409, description: "The provider could not be reached to check the key: data is { message, code: unreachable }. Resend with skip_verification: true to save anyway." },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Llm Keys",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/llm-keys/{id}',
+    summary: "Update an LLM key, checked with its provider first",
+    description: "Checks the key with its provider before saving when the body changes the provider, key, URL, model or headers (unsent fields keep their stored values). A change of provider or endpoint must send the key again (otherwise 400, before any provider call), and drops the stored custom headers unless the body sends custom_headers. A url without a name applies only to a Custom key: one free request (Anthropic GET /v1/models/{model}, OpenAI GET /v1/models, OpenRouter GET /api/v1/key, Custom GET {url}/models) sent with the key and its custom headers, 8 second timeout. A refusal is a 400 with data.code workspace_required, invalid_key or model_unavailable. When the provider cannot be reached (network error, timeout, 5xx, 429, or a Custom URL the outbound policy refuses) the answer is a 409 with data.code unreachable, unless the body sets skip_verification: true, which saves the key unchecked. A rejected key is never saved, even with skip_verification. data.reason, when present, names a more specific cause: bad_characters (400, the key has characters no key can have), cannot_list_models (409, a 401/403 saying the key lacks the permission to list models) or model_not_listed (409, a Custom endpoint whose /models list lacks the model; ids equal to model:latest or ending in /model count as listed). With no model the check uses the default model the Advisor uses. Anthropic keys not tied to a workspace need the anthropic-workspace-id custom header.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    requestBody: {
+      "name": "Anthropic | OpenAI | OpenRouter | Custom (optional)",
+      "key": "string (optional)",
+      "model": "string (optional)",
+      "url": "string (optional)",
+      "custom_headers": "object (optional, nullable)",
+      "skip_verification": "boolean (optional)",
+    },
+    responses: [
+      { status: 200, description: "Updated; the key is not returned" },
+      { status: 400, description: "Invalid body, or the provider rejected the key: data is { message, code } with code workspace_required, invalid_key or model_unavailable" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden - requires the llmKeys.admin permission (Admin by default)" },
+      { status: 404, description: "No LLM key with this id in the organization" },
+      { status: 409, description: "The provider could not be reached to check the key: data is { message, code: unreachable }. Resend with skip_verification: true to save anyway." },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Llm Keys",
+  },
+];
+
+// v1: V1/Model Inventories endpoints
+export const v1V1modelInventoriesEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/v1/model-inventories',
+    summary: "Create New Model Inventory",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Model Inventories",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/model-inventories/{id}',
+    summary: "Update Model Inventory By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Model Inventories",
+  },
+];
+
+// v1: V1/Model Risks endpoints
+export const v1V1modelRisksEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/v1/model-risks',
+    summary: "Create New Model Risk",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Model Risks",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/model-risks/{id}',
+    summary: "Update Model Risk By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Model Risks",
+  },
+];
+
 // v1: V1/Policy Templates endpoints
 export const v1V1policyTemplatesEndpoints: Endpoint[] = [
   {
@@ -13489,6 +13641,226 @@ export const v1V1projectsEndpoints: Endpoint[] = [
       { status: 500, description: "Internal server error" },
     ],
     tag: "v1: V1/Projects",
+  },
+  {
+    method: 'GET',
+    path: '/v1/projects/{id}/approval-workflow',
+    summary: "Get a use case's approval workflow",
+    description: "The approval workflow attached to the use case (its id, title and whether it is still active; an archived workflow keeps its title; a stored workflow that cannot be found in the organization comes back with its id, a null title and workflow_is_active false) and the status of the latest approval request: pending, rejected, or null when there is none open or rejected (approved and withdrawn requests read as null). All workflow fields are null when no workflow is attached. Change the workflow with PATCH /api/v1/projects/{id} and approval_workflow_id. Anyone who may read the use case may read this.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The use case id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "The id is not a positive integer" },
+      { status: 403, description: "No read access to the use case" },
+      { status: 404, description: "Use case not found in the organization" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Projects",
+  },
+  {
+    method: 'POST',
+    path: '/v1/projects/{id}/resubmit-approval',
+    summary: "Resubmit a rejected use case for approval",
+    description: "Sends a use case whose latest approval request was rejected for approval again, under the approval workflow already attached to it. Opens a new pending request as attaching a workflow does: a planned use case moves to in review and the step 1 approvers are notified. It is never auto-approved, whatever the workflow's auto-approve level: a person rejected the use case, so a person reviews it again. The use case row is locked for the duration, so two resubmits at once open one request; the second answers 409. Requires useCase.edit and write access to the use case; no approval workflow admin is needed, since the workflow does not change. To use another workflow, an approval workflow admin changes it with PATCH /api/v1/projects/{id}.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The use case id" },
+    ],
+    responses: [
+      { status: 201, description: "Approval request opened" },
+      { status: 400, description: "The id is not a positive integer, no workflow is attached, or the attached workflow can no longer review a use case (archived, no steps, a step without approvers)" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "No useCase.edit permission, or no write access to the use case" },
+      { status: 404, description: "Use case not found in the organization" },
+      { status: 409, description: "The latest approval request is not rejected: it is still pending, or the use case was approved or never sent for approval" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Projects",
+  },
+];
+
+// v1: V1/Report Runs endpoints
+export const v1V1reportRunsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/report-runs/{id}/download/fix-it-list',
+    summary: "Download Run Companion",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Report Runs",
+  },
+];
+
+// v1: V1/Report Templates endpoints
+export const v1V1reportTemplatesEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/v1/report-templates/{id}/run',
+    summary: "Run Template Now",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Report Templates",
+  },
+  {
+    method: 'GET',
+    path: '/v1/report-templates/{id}/last-parameters',
+    summary: "Get Last Parameters",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Report Templates",
+  },
+  {
+    method: 'POST',
+    path: '/v1/report-templates',
+    summary: "Create Template",
+    description: "Creates a custom template in the caller's organization with its first version. Unlike the frozen POST /reporting/templates, it accepts parameters_config.",
+    requiresAuth: true,
+    requestBody: {
+      "name": "string (required)",
+      "description": "string (optional, nullable)",
+      "category": "string (required)",
+      "default_scope": "project | organization (required)",
+      "supported_scopes": "array (optional)",
+      "recommended_frequency": "string (optional, nullable)",
+      "sections_config": "object (optional)",
+      "ai_blocks_config": "object (optional)",
+      "framework_config": "object (optional)",
+      "parameters_config": "object (optional)",
+    },
+    responses: [
+      { status: 201, description: "Created: the template with latestVersion" },
+      { status: 400, description: "Validation error (missing name or category, bad default_scope, invalid parameters_config)" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "The role lacks reportTemplate.edit" },
+      { status: 409, description: "A template with this name already exists" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Report Templates",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/report-templates/{id}',
+    summary: "Update Template",
+    description: "Updates a custom template's metadata and, when any config field is sent, appends a new version. A config field the body leaves out (missing or null) keeps the previous version's value, so a partial edit never resets the rest; an explicit value, {} included, is stored as sent (an empty framework_config means every framework). A body whose config fields are all null has nothing to write (400), and a parameters_config change without sections_config is refused (400) when the new kind refuses one of the inherited sections. Unlike the frozen PATCH /reporting/templates/{id}, it accepts parameters_config. System templates and other organizations' templates answer 404.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    requestBody: {
+      "name": "string (optional)",
+      "description": "string (optional, nullable)",
+      "category": "string (optional)",
+      "default_scope": "project | organization (optional)",
+      "supported_scopes": "array (optional)",
+      "recommended_frequency": "string (optional, nullable)",
+      "sections_config": "object (optional)",
+      "ai_blocks_config": "object (optional)",
+      "framework_config": "object (optional)",
+      "parameters_config": "object (optional)",
+    },
+    responses: [
+      { status: 200, description: "Updated: the template with latestVersion (null when only metadata changed)" },
+      { status: 400, description: "No updatable fields supplied, or invalid parameters_config" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "The role lacks reportTemplate.edit" },
+      { status: 404, description: "Template not found in the organization, or a system template" },
+      { status: 409, description: "Duplicate name, or a concurrent edit (retry)" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Report Templates",
+  },
+  {
+    method: 'POST',
+    path: '/v1/report-templates/{id}/duplicate',
+    summary: "Duplicate Template",
+    description: "Copies a system template or one of the organization's own into the caller's organization, named '<name> (copy)', or the next free '<name> (copy N)' (archived templates hold their slug too). The copy carries the metadata and the latest version's whole config. An archived source answers 404. No request body.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 201, description: "Created: the copy with latestVersion" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "The role lacks reportTemplate.edit" },
+      { status: 404, description: "Template not found or not visible to the organization" },
+      { status: 409, description: "No free copy name: the first thousand are taken, or concurrent copies took the chosen name three times" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Report Templates",
+  },
+];
+
+// v1: V1/Scheduled Reports endpoints
+export const v1V1scheduledReportsEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/v1/scheduled-reports',
+    summary: "Create Scheduled Report",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Scheduled Reports",
+  },
+  {
+    method: 'GET',
+    path: '/v1/scheduled-reports/{id}',
+    summary: "Get Scheduled Report",
+    description: "One scheduled report of the caller's organization, with its template version's parameters_config. Admins read any schedule; other roles read organization-wide schedules and those of projects they own, are a member of or reach through a group, and get 404 for the rest.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 404, description: "Scheduled report not found in this organization, or not readable by the caller" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Scheduled Reports",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/scheduled-reports/{id}',
+    summary: "Update Scheduled Report",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Scheduled Reports",
+  },
+];
+
+// v1: V1/Tasks endpoints
+export const v1V1tasksEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/tasks/linked/{entityType}/{entityId}',
+    summary: "List the tasks linked to an entity",
+    description: "The tasks linked to one entity (an incident, a vendor, ...) through task_entity_links that the user can see, with the visibility of GET /tasks. Archived tasks are left out. Not paginated.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'entityType', in: 'path', type: 'EntityType', required: true, description: "The entityType" },
+      { name: 'entityId', in: 'path', type: 'integer', required: true, description: "The entityId" },
+    ],
+    responses: [
+      { status: 200, description: "The linked tasks" },
+      { status: 400, description: "Invalid entity type or ID" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Tasks",
   },
 ];
 
@@ -13676,6 +14048,32 @@ export const v1V1useCaseLifecycleEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Vendor Risks endpoints
+export const v1V1vendorRisksEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/vendor-risks/{id}',
+    summary: "Get Vendor Risk By Id Including Deleted",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Vendor Risks",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/vendor-risks/{id}/restore',
+    summary: "Restore Vendor Risk By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Vendor Risks",
+  },
+];
+
 // Vendors endpoints
 export const vendorEndpoints: Endpoint[] = [
   {
@@ -13788,12 +14186,193 @@ export const vendorEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/vendors/{id}/riskSuggestions',
     summary: "Get Vendor Risk Suggestions",
+    description: "Read-only. Derives vendor risks from the vendor's questionnaire answers (data sensitivity, business criticality, past issues, regulatory exposure) and leaves out any the vendor already has a near-identical active risk for. Writes nothing.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "Invalid vendor ID" },
+      { status: 401, description: "Unauthorized" },
+      { status: 404, description: "No vendor with this ID in the organization" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendors",
+  },
+  {
+    method: 'GET',
+    path: '/v1/vendors/{id}/research/latest',
+    summary: "Get Latest Vendor Research",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
     ],
-    tag: "Vendors",
+    tag: "v1: Vendors",
+  },
+  {
+    method: 'GET',
+    path: '/v1/vendors/{id}/research/runs/{runId}/trace',
+    summary: "Get Vendor Research Run Trace",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendors",
+  },
+  {
+    method: 'POST',
+    path: '/v1/vendors/{id}/research',
+    summary: "Start Vendor Research Run",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendors",
+  },
+  {
+    method: 'POST',
+    path: '/v1/vendors',
+    summary: "Create Vendor V1",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendors",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/vendors/{id}',
+    summary: "Update Vendor By Id V1",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendors",
+  },
+];
+
+// v1: Vendor Research endpoints
+export const vendorResearchEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/vendor-research/config',
+    summary: "Get Research Config",
+    description: "What the page needs to know to offer vendor research. Booleans only, never a key. autoRunAllowed is the deployment switch (VENDOR_RESEARCH_AUTO_RUN); autoRunEnabled is whether a new vendor of the organization is researched as soon as it is added, which needs both autoRunAllowed and the organization setting autoResearchOnCreate.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Research",
+  },
+  {
+    method: 'GET',
+    path: '/v1/vendor-research/decision-stats',
+    summary: "Get Decision Stats",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Research",
+  },
+  {
+    method: 'GET',
+    path: '/v1/vendor-research/search-status',
+    summary: "Get Research Search Status",
+    description: "Which search a research run gets from each LLM key of the organization (anthropic: Claude's own web search; brave: Brave Search with the organization's Brave key, for a key with no search of its own when one is stored; gdelt: the news of the GDELT Project), the search of the default key (the newest; null without a key), whether the organization has a Brave Search key (braveConfigured; never the key), and whether the organization's latest finished runs of the last 30 days that say something about the news (up to 3) all got none. Names keys by id only. Admins only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 403, description: "Forbidden" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Research",
+  },
+  {
+    method: 'GET',
+    path: '/v1/vendor-research/settings',
+    summary: "Get Research Settings",
+    description: "The LLM keys the vendor research uses, the scheduled scan interval and whether a new vendor is researched as soon as it is added. Admins only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 403, description: "Forbidden" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Research",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/vendor-research/settings',
+    summary: "Save Research Settings",
+    description: "Stores the research settings of the organization. researchKeyId and analysisKeyId are required (an LLM key id or null for the default). scanIntervalDays and autoResearchOnCreate are optional: a body that leaves one out keeps the stored value.",
+    requiresAuth: true,
+    requestBody: {
+      "researchKeyId": "integer (required, nullable)",
+      "analysisKeyId": "integer (required, nullable)",
+      "scanIntervalDays": "7 | 14 | 30 |  (optional, nullable)",
+      "autoResearchOnCreate": "boolean (optional)",
+    },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "A key id, scanIntervalDays or autoResearchOnCreate is not valid" },
+      { status: 403, description: "Forbidden" },
+      { status: 404, description: "LLM key not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Research",
+  },
+  {
+    method: 'GET',
+    path: '/v1/vendor-research/search-key',
+    summary: "Get Research Search Key",
+    description: "Whether the organization stored a Brave Search API key for the vendor research, and its last four characters. The key itself is never returned. Admins only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 403, description: "Forbidden" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Research",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/vendor-research/search-key',
+    summary: "Save Research Search Key",
+    description: "Stores the organization's Brave Search API key, encrypted, after one test request to Brave. Spaces around the key are dropped. A key Brave refuses, or text that cannot be a key (10 to 200 printable characters, no spaces), is a 422 with code invalid_key. A check that could not be made is a 422 with code unreachable, unless skipCheck is true, which stores the key anyway. Admins only.",
+    requiresAuth: true,
+    requestBody: {
+      "key": "string (required)",
+      "skipCheck": "boolean (optional)",
+    },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "No key in the body" },
+      { status: 403, description: "Forbidden" },
+      { status: 422, description: "The key was not stored: Brave refused it (invalid_key) or could not be reached to check it (unreachable)" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Research",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/vendor-research/search-key',
+    summary: "Delete Research Search Key",
+    description: "Removes the organization's Brave Search API key; the vendor research goes back to its other searches. Admins only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 403, description: "Forbidden" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Research",
   },
 ];
 
@@ -13836,8 +14415,14 @@ export const vendorRiskEndpoints: Endpoint[] = [
     path: '/vendorRisks/by-frameworkid/{id}',
     summary: "Get Vendor Risks By Framework Id",
     requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+      { name: 'filter', in: 'query', type: 'string', required: false, description: "The filter" },
+    ],
     responses: [
       { status: 200, description: "Success" },
+      { status: 400, description: "Invalid framework ID or filter" },
+      { status: 401, description: "Unauthorized" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Vendor Risks",
@@ -13867,7 +14452,9 @@ export const vendorRiskEndpoints: Endpoint[] = [
     ],
     responses: [
       { status: 200, description: "Success" },
+      { status: 400, description: "Invalid vendor risk ID" },
       { status: 401, description: "Unauthorized" },
+      { status: 404, description: "No active vendor risk with this ID in the organization" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Vendor Risks",
@@ -13885,7 +14472,10 @@ export const vendorRiskEndpoints: Endpoint[] = [
     },
     responses: [
       { status: 202, description: "Accepted" },
+      { status: 400, description: "Invalid vendor risk ID, or a validation error (missing or invalid field, unknown framework ID, action owner who is not a member of the organization)" },
       { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden: needs the vendor.edit permission" },
+      { status: 404, description: "No active vendor risk with this ID in the organization" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Vendor Risks",
@@ -13900,7 +14490,10 @@ export const vendorRiskEndpoints: Endpoint[] = [
     ],
     responses: [
       { status: 202, description: "Accepted" },
+      { status: 400, description: "Invalid vendor risk ID" },
       { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden: needs the vendor.edit permission" },
+      { status: 404, description: "No active vendor risk with this ID in the organization" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Vendor Risks",
@@ -13915,10 +14508,49 @@ export const vendorRiskEndpoints: Endpoint[] = [
     },
     responses: [
       { status: 201, description: "Created successfully" },
+      { status: 400, description: "Validation error (missing or invalid field, unknown framework ID, action owner who is not a member of the organization)" },
       { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Forbidden: needs the vendor.edit permission" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Vendor Risks",
+  },
+];
+
+// v1: Vendor Risk Findings endpoints
+export const vendorRiskFindingsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/vendor-risk-findings',
+    summary: "List Vendor Risk Findings",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Risk Findings",
+  },
+  {
+    method: 'POST',
+    path: '/v1/vendor-risk-findings/{id}/accept',
+    summary: "Accept Vendor Risk Finding",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Risk Findings",
+  },
+  {
+    method: 'POST',
+    path: '/v1/vendor-risk-findings/{id}/dismiss',
+    summary: "Dismiss Vendor Risk Finding",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Risk Findings",
   },
 ];
 
@@ -14039,11 +14671,21 @@ export const allEndpoints = {
   v1V1importedFrameworkAssessments: v1V1importedFrameworkAssessmentsEndpoints,
   v1V1intakeFormReviewTime: v1V1intakeFormReviewTimeEndpoints,
   v1V1lifecycleSettings: v1V1lifecycleSettingsEndpoints,
+  v1V1llmKeys: v1V1llmKeysEndpoints,
+  v1V1modelInventories: v1V1modelInventoriesEndpoints,
+  v1V1modelRisks: v1V1modelRisksEndpoints,
   v1V1policyTemplates: v1V1policyTemplatesEndpoints,
   v1V1projects: v1V1projectsEndpoints,
+  v1V1reportRuns: v1V1reportRunsEndpoints,
+  v1V1reportTemplates: v1V1reportTemplatesEndpoints,
+  v1V1scheduledReports: v1V1scheduledReportsEndpoints,
+  v1V1tasks: v1V1tasksEndpoints,
   v1V1training: v1V1trainingEndpoints,
   v1V1useCaseLifecycle: v1V1useCaseLifecycleEndpoints,
+  v1V1vendorRisks: v1V1vendorRisksEndpoints,
   vendor: vendorEndpoints,
+  vendorResearch: vendorResearchEndpoints,
   vendorRisk: vendorRiskEndpoints,
+  vendorRiskFindings: vendorRiskFindingsEndpoints,
   webhook: webhookEndpoints,
 };

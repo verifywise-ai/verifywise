@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef, useContext } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 import StandardModal from "../../Modals/StandardModal";
 import { CustomizableButton } from "../../button/customizable-button";
@@ -9,7 +9,6 @@ import { useGenerateReport, useReportRun } from "../../../../application/hooks/u
 import { downloadReportRun } from "../../../../application/repository/reporting.repository";
 import { showAlert } from "../../../../infrastructure/api/customAxios";
 import { useProjects } from "../../../../application/hooks/useProjects";
-import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
 import { logEngine } from "../../../../application/tools/log.engine";
 import { useLLMKeyStatus } from "../../../../application/hooks/useLLMKeyStatus";
 import AIKeyBanner from "./AIKeyBanner";
@@ -47,10 +46,6 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
     isFetching: projectsFetching,
     isStale: projectsStale,
   } = useProjects();
-  // Read only to log it: the picker in GenerateReportFrom lists
-  // dashboardValues.projects while the guard below checks useProjects(). When
-  // they disagree, "Use case not found" is the symptom.
-  const { dashboardValues } = useContext(VerifyWiseContext);
   // Generating a report authorizes on reporting.admin.
   const isAdmin = useCan("reporting.admin");
   const permissionsSettled = usePermissionsSettled();
@@ -114,7 +109,7 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
     return Object.values(sectionSelection).some((v) => v === true);
   }, [sectionSelection]);
 
-  const toast = useCallback((variant: "success" | "error", body: string) => {
+  const toast = useCallback((variant: "success" | "warning" | "error", body: string) => {
     showAlert({ variant, body, isToast: true });
   }, []);
 
@@ -130,9 +125,6 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
     );
 
     if (!currentProject) {
-      const contextProjects = Array.isArray(dashboardValues?.projects)
-        ? dashboardValues.projects
-        : [];
       logEngine({
         type: "error",
         // Template literal, not a quoted string: this is a developer
@@ -151,18 +143,8 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
           useProjectsAgeSeconds: Math.round((Date.now() - projectsUpdatedAt) / 1000),
           useProjectsIsFetching: projectsFetching,
           useProjectsIsStale: projectsStale,
-          // The picker's list — what the user actually chose from.
-          contextIds: contextProjects.map((p: { id: unknown }) => p.id),
-          contextIdTypes: [...new Set(contextProjects.map((p: { id: unknown }) => typeof p.id))],
-          contextCount: contextProjects.length,
-          presentInContext: contextProjects.some(
-            (p: { id: unknown }) => p.id === basicFormValues.project,
-          ),
           // True when only strict equality is in the way.
-          matchesLoosely: (projects ?? []).some(
-            // eslint-disable-next-line eqeqeq
-            (p) => p.id == basicFormValues.project,
-          ),
+          matchesLoosely: (projects ?? []).some((p) => p.id == basicFormValues.project),
         },
       });
       toast("error", "Use case not found");
@@ -217,7 +199,10 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
     // onClose/toast/state on it.
     let cancelled = false;
 
-    if (run.data.status === "success" && run.data.file_id != null) {
+    if (
+      (run.data.status === "success" || run.data.status === "partial_success") &&
+      run.data.file_id != null
+    ) {
       const finishedRun = run.data;
       downloadReportRun(finishedRun.id)
         .then((blob) => {
@@ -230,7 +215,16 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
           a.click();
           a.remove();
           URL.revokeObjectURL(url);
-          toast("success", "Report successfully downloaded.");
+          // partial_success: the file is complete except for the parts the
+          // message names, so warn with it rather than report an error.
+          if (finishedRun.status === "partial_success") {
+            toast(
+              "warning",
+              finishedRun.error_message ?? "Report downloaded, but part of it could not be read.",
+            );
+          } else {
+            toast("success", "Report successfully downloaded.");
+          }
           onReportGeneratedRef.current?.();
           onCloseRef.current();
         })
@@ -247,7 +241,7 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
         // Terminal success but no file was produced.
         toast("error", "Report generated, but the file is not available to download.");
       } else {
-        // failed | partial_success
+        // failed, or partial_success with no file to download
         toast("error", run.data.error_message ?? "Report generation failed.");
       }
       setRunId(undefined);

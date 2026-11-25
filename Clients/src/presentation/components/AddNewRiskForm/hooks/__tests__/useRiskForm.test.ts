@@ -59,19 +59,6 @@ vi.mock("../../../../application/hooks/useUsers", () => ({
   default: () => ({ users: [{ id: 1, name: "Test", surname: "User" }], loading: false }),
 }));
 
-vi.mock("../../../../application/contexts/VerifyWise.context", () => ({
-  VerifyWiseContext: {
-    _currentValue: { inputValues: {} },
-    Consumer: ({ children }: any) => children({ inputValues: {} }),
-    Provider: ({ children, value }: any) =>
-      React.createElement(
-        React.Fragment,
-        null,
-        typeof children === "function" ? children(value) : children,
-      ),
-  },
-}));
-
 vi.mock("../../../tools/riskCalculator", () => ({
   RiskCalculator: {
     getRiskLevel: () => ({ level: "Low" }),
@@ -214,6 +201,30 @@ describe("useRiskForm", () => {
 
     expect(createRisk).toHaveBeenCalled();
     expect(mockOnError).toHaveBeenCalledWith(reason);
+  });
+
+  // The residual pair is optional: an untouched mitigation tab (nothing
+  // picked) must not stop the save.
+  it("creates a risk whose residual likelihood and severity are not picked", async () => {
+    const createRisk = vi.fn().mockResolvedValue({ status: 201, data: { data: { id: 9 } } });
+    const { result } = renderHook(
+      () =>
+        useRiskForm(
+          createProps({
+            createRisk,
+            initialMitigationValues: { likelihood: 0, riskSeverity: 0 } as never,
+          }),
+        ),
+      { wrapper: Wrapper },
+    );
+    result.current.riskValidateRef.current = () => true;
+    mockMitigationValidateRef.current = () => true;
+
+    await act(async () => {
+      await result.current.riskFormSubmitHandler();
+    });
+
+    expect(createRisk).toHaveBeenCalledTimes(1);
   });
 
   it("returns usersLoading as false when users are loaded", () => {

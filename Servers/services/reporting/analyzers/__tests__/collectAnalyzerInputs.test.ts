@@ -19,8 +19,10 @@ jest.mock("../../../../utils/evidenceAi.utils", () => ({
 // Same reason: reportRunAnalysis.utils imports the real sequelize instance at
 // module load (reportRunAnalysis.utils.ts:1).
 const mockPriorFacts = jest.fn();
+const mockPriorFactsByTemplate = jest.fn();
 jest.mock("../../../../utils/reportRunAnalysis.utils", () => ({
   getPriorFactsSnapshotQuery: (...a: any[]) => mockPriorFacts(...a),
+  getPriorFactsSnapshotByTemplateQuery: (...a: any[]) => mockPriorFactsByTemplate(...a),
 }));
 
 // collectAnalyzerInputs now imports ./facts, which imports isoDate from
@@ -28,6 +30,8 @@ jest.mock("../../../../utils/reportRunAnalysis.utils", () => ({
 jest.mock("../../../../database/db", () => ({ sequelize: {} }));
 
 import { FACTS_SCHEMA_VERSION } from "../facts";
+import { ANALYZERS } from "../registry";
+import { e23FixItReportData, FIX_IT_ITEMS } from "../../tests/helpers/e23ReportData";
 import {
   collectReadinessInput,
   collectEvidenceGapsInput,
@@ -44,6 +48,7 @@ describe("collectAnalyzerInputs", () => {
     mockFrameworkScore.mockReset().mockResolvedValue({ avg_score: 40 });
     mockGaps.mockReset().mockResolvedValue([{ control_id: 1, gap_type: "no_evidence" }]);
     mockPriorFacts.mockReset().mockResolvedValue(null);
+    mockPriorFactsByTemplate.mockReset().mockResolvedValue(null);
   });
 
   it("skips the evidence-gap query for a framework it does not cover", async () => {
@@ -120,6 +125,35 @@ describe("collectAnalyzerInputs", () => {
     expect(owners).toEqual(expect.arrayContaining(["Alice", "Bob", "Carol"]));
   });
 
+  it("harvests framework requirement owners, reviewers and approvers but not the Unknown user placeholder", () => {
+    const row = (over: any) => ({ title: "T", status: "Waiting", ...over });
+    const owners = collectAllowedOwners({
+      sections: {
+        frameworkRequirements: {
+          frameworks: [
+            {
+              frameworkName: "SOC 2",
+              groups: [
+                {
+                  title: "CC1",
+                  requirements: [
+                    row({
+                      owner: "Dana",
+                      reviewer: "Unknown user",
+                      children: [row({ approver: "Eve", owner: "Unknown user" })],
+                    }),
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    } as any);
+    expect(owners).toEqual(expect.arrayContaining(["Dana", "Eve"]));
+    expect(owners).not.toContain("Unknown user");
+  });
+
   it("harvests approvers from the models section — its omission is why every action had a null owner", () => {
     // dataCollector.collectModelsList emits `approver` as a resolved name
     // string; model_inventories has no owner column. Leaving the section out
@@ -147,6 +181,7 @@ describe("collectAnalyzerInputs", () => {
       riskAnalysis: true,
       complianceGap: false,
       vendorRisk: false,
+      e23Gap: false,
     });
   });
 
@@ -154,6 +189,23 @@ describe("collectAnalyzerInputs", () => {
     const blocks = resolveBlocks({ aiEnhanced: true } as any);
     expect(blocks.complianceGap).toBe(false);
     expect(blocks.vendorRisk).toBe(false);
+  });
+
+  it("leaves the E-23 gap analysis off for manual legacy runs and when AI is off", () => {
+    expect(resolveBlocks({ aiEnhanced: true } as any).e23Gap).toBe(false);
+    expect(resolveBlocks({ aiEnhanced: false } as any).e23Gap).toBe(false);
+  });
+
+  it("harvests fix-it owners as allowed suggested owners, never the Unassigned placeholder", () => {
+    const owners = collectAllowedOwners({
+      sections: {
+        e23FixItList: {
+          items: [{ owner: "Rae Rater" }, { owner: "Unassigned" }, { owner: "Sam Steward" }],
+          counts: { high: 0, medium: 0, low: 0 },
+        },
+      },
+    } as any);
+    expect(owners.sort()).toEqual(["Rae Rater", "Sam Steward"]);
   });
 
   it("prefers an explicit aiBlocks over the legacy default", () => {
@@ -236,6 +288,65 @@ describe("collectAnalyzerInputs", () => {
     expect(collectFactsInput(rd).facts).not.toContain("Change since");
   });
 
+  describe("a frameworkRequirements section that could not be read", () => {
+    const rollup = (total: number) => ({
+      total,
+      done: 0,
+      unassigned: 0,
+      noEvidence: 0,
+      overdue: 0,
+      statusBreakdown: {},
+    });
+    const withFramework = (total: number) => ({
+      frameworks: [
+        {
+          frameworkId: 5,
+          frameworkName: "SOC 2",
+          groups: [{ title: "CC1", orderNo: 1, requirements: [], rollup: rollup(total) }],
+          rollup: rollup(total),
+        },
+      ],
+    });
+    const base = {
+      metadata: { generatedAt: new Date(2026, 6, 22), frameworkName: "SOC 2", projectTitle: "A" },
+      charts: {},
+    };
+    const prior = collectFactsInput({
+      ...base,
+      sections: { frameworkRequirements: withFramework(10) },
+    } as any).snapshot;
+
+    it("is left out of the snapshot and of the change lines", () => {
+      const out = collectFactsInput(
+        {
+          ...base,
+          sections: { frameworkRequirements: withFramework(2) },
+          sectionNotices: [
+            { sectionKey: "frameworkRequirements", reason: "collection_failed", detail: "GDPR" },
+          ],
+        } as any,
+        prior,
+      );
+
+      expect(out.snapshot.sections.frameworkRequirements).toBeUndefined();
+      expect(out.facts).not.toContain("Change since");
+    });
+
+    it("is unchanged without a failure notice", () => {
+      const out = collectFactsInput(
+        {
+          ...base,
+          sections: { frameworkRequirements: withFramework(2) },
+          sectionNotices: [],
+        } as any,
+        prior,
+      );
+
+      expect(out.snapshot.sections.frameworkRequirements).toBeDefined();
+      expect(out.facts).toContain("Change since");
+    });
+  });
+
   it("does not query for a prior snapshot when the run belongs to no schedule", async () => {
     // A manual run has no predecessor by construction. Skipping the query is
     // the whole of "degrade to prior = null silently".
@@ -306,5 +417,139 @@ describe("collectAnalyzerInputs", () => {
 
     mockPriorFacts.mockResolvedValue({ generatedAt: "2026-06-01T00:00:00.000Z" });
     expect(await collectPriorFacts(12, 5)).toBeNull();
+  });
+
+  describe("an OSFI E-23 manual run compares against the template's previous run (spec 8.10)", () => {
+    const stored = {
+      schema: FACTS_SCHEMA_VERSION,
+      generatedAt: "2026-08-20",
+      framework: "OSFI E-23",
+      subject: "Organization",
+      sections: { e23FixItList: { items: 9 } },
+    };
+
+    it("falls back to the template for kind osfi_e23 when the run has no schedule", async () => {
+      mockPriorFactsByTemplate.mockResolvedValue(stored);
+      expect(await collectPriorFacts(undefined, 5, { templateId: 31, kind: "osfi_e23" })).toEqual(
+        stored,
+      );
+      expect(mockPriorFactsByTemplate).toHaveBeenCalledWith(31, 5);
+      expect(mockPriorFacts).not.toHaveBeenCalled();
+    });
+
+    it("keeps a scheduled E-23 run on its own schedule", async () => {
+      mockPriorFacts.mockResolvedValue(stored);
+      await collectPriorFacts(12, 5, { templateId: 31, kind: "osfi_e23" });
+      expect(mockPriorFacts).toHaveBeenCalledWith(12, 5);
+      expect(mockPriorFactsByTemplate).not.toHaveBeenCalled();
+    });
+
+    it("never uses the template for any other kind of report", async () => {
+      expect(await collectPriorFacts(undefined, 5, { templateId: 31 })).toBeNull();
+      expect(await collectPriorFacts(undefined, 5, { templateId: 31, kind: "other" })).toBeNull();
+      expect(await collectPriorFacts(undefined, 5, { kind: "osfi_e23" })).toBeNull();
+      expect(mockPriorFactsByTemplate).not.toHaveBeenCalled();
+    });
+
+    it("refuses a template prior written under another vocabulary", async () => {
+      mockPriorFactsByTemplate.mockResolvedValue({ ...stored, schema: FACTS_SCHEMA_VERSION - 1 });
+      expect(
+        await collectPriorFacts(undefined, 5, { templateId: 31, kind: "osfi_e23" }),
+      ).toBeNull();
+    });
+  });
+
+  describe("fix-it content stays out of the formal-report analyzers (spec 8.5 vs 8.6)", () => {
+    const OWNER = "Quinn Fixowner";
+    const TITLE = "Retire the shadow pricing spreadsheet";
+    const CLOSES = "The spreadsheet is archived and its model is tiered";
+    const rd = () =>
+      e23FixItReportData({
+        items: [{ ...FIX_IT_ITEMS[0], what: TITLE, owner: OWNER, closesWhen: CLOSES }],
+      });
+    const inputs = () => {
+      const { facts, formalFacts } = collectFactsInput(rd());
+      return {
+        facts,
+        formalFacts,
+        sectionSummaries: {
+          frameworkRequirements: "Most requirements are self-assessed as done.",
+          e23FixItList: `Start with ${TITLE}, owned by ${OWNER}; it closes when ${CLOSES}.`,
+        },
+      };
+    };
+
+    it.each(["executiveSummary", "keyFindings"] as const)(
+      "%s gets the fix-it counts and no item, owner, closes-when or internal-document text",
+      (key) => {
+        const prompt = ANALYZERS[key].buildUserPrompt(rd(), inputs());
+        expect(prompt).not.toBe("");
+        expect(prompt).not.toContain(OWNER);
+        expect(prompt).not.toContain(TITLE);
+        expect(prompt).not.toContain(CLOSES);
+        expect(prompt).not.toMatch(/internal document/i);
+        expect(prompt).toContain("[Remediation item counts] items: 1; high: 1; medium: 0; low: 0");
+        expect(prompt).toContain("Most requirements are self-assessed as done.");
+      },
+    );
+
+    it("e23Gap gets the counts-only facts block too", () => {
+      const prompt = ANALYZERS.e23Gap.buildUserPrompt(rd(), inputs());
+      expect(prompt).not.toBe("");
+      expect(prompt).not.toContain(OWNER);
+      expect(prompt).not.toContain(TITLE);
+      expect(prompt).not.toMatch(/internal document/i);
+    });
+
+    it("recommendedActions keeps the full fix-it input", () => {
+      const prompt = ANALYZERS.recommendedActions.buildUserPrompt(rd(), inputs());
+      expect(prompt).toContain(OWNER);
+      expect(prompt).toContain(TITLE);
+      expect(prompt).toMatch(/internal document/);
+      expect(prompt).toContain(`it closes when ${CLOSES}`);
+    });
+
+    it("leaves formalFacts identical to facts on a report without a fix-it list", () => {
+      const data = rd();
+      delete (data.sections as any).e23FixItList;
+      const { facts, formalFacts } = collectFactsInput(data);
+      expect(formalFacts).toBe(facts);
+    });
+
+    it("keeps owner and item rows out of the formal change lines as well", () => {
+      const prior = collectFactsInput(rd()).snapshot;
+      const now = e23FixItReportData({ items: [] });
+      const { facts, formalFacts } = collectFactsInput(now, prior);
+      expect(facts).toMatch(/Fix-it list \(internal document\) high: 0 \(was 1, -1\)/);
+      expect(formalFacts).toContain("Remediation item counts high: 0 (was 1, -1)");
+      expect(formalFacts).not.toContain(OWNER);
+      expect(formalFacts).not.toMatch(/internal document/i);
+    });
+  });
+
+  describe("the board version names no model in the formal facts (spec 8.3)", () => {
+    const NAMES = ["Fraud detector", "Credit scorer"];
+
+    it("keeps the MRM counts and drops the named exceptions for the board", () => {
+      const { facts, formalFacts } = collectFactsInput(e23FixItReportData({ audience: "board" }));
+      for (const name of NAMES) expect(formalFacts).not.toContain(name);
+      expect(formalFacts).toContain("untiered models: ");
+      // The full block (recommendedActions, internal document) keeps them.
+      expect(facts).toContain("Fraud detector");
+    });
+
+    it("keeps the named exceptions for OSFI, with or without a fix-it list", () => {
+      expect(collectFactsInput(e23FixItReportData()).formalFacts).toContain("Fraud detector");
+      const data = e23FixItReportData();
+      delete (data.sections as any).e23FixItList;
+      expect(collectFactsInput(data).formalFacts).toContain("Fraud detector");
+    });
+
+    it("drops them on a board run without a fix-it list too", () => {
+      const data = e23FixItReportData({ audience: "board" });
+      delete (data.sections as any).e23FixItList;
+      const { formalFacts } = collectFactsInput(data);
+      for (const name of NAMES) expect(formalFacts).not.toContain(name);
+    });
   });
 });

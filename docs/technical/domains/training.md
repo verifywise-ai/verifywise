@@ -221,6 +221,8 @@ Report sections:
 | `training_updated` | Training modified |
 | `training_deleted` | Training deleted |
 
+`training_added`, `training_updated` and `training_deleted` run every action of every active automation of the trigger; an automation that existed before that change keeps only the event's first action until it is edited and saved (`legacy_first_action_only`). See [Automations → Dispatch of entity events](../infrastructure/automations.md#dispatch-of-entity-events).
+
 ### Template Variables
 
 For training notifications:
@@ -339,6 +341,18 @@ All under `/api/v1/training`, authenticated.
 Assignees are checked against the organization's current members, since a user can belong to several organizations. A request naming a non-member is rejected whole. Lists and reminders leave out people who have left the organization.
 
 Changing a training's status to Completed does not complete its assignments. A finished training record does not show that each person took it, so completing everyone is an explicit action.
+
+### Advisor
+
+The Advisor's training writes run as the user who asked (else the approver), with the console's permission, through the console's own services, so an Advisor write leaves the same rows, history, automations and notices as a console one:
+
+| Tool | Permission | Service |
+|------|-----------|---------|
+| `agent_create_training_record`, `agent_update_training_record` | `training.edit` | `services/trainingRecord.service.ts` (also behind `POST`/`PATCH /api/training`) |
+| `agent_delete_training_record` | `training.admin` | `services/trainingRecord.service.ts` (also behind `DELETE /api/training/:id`) |
+| `agent_assign_training_to_user` | `training.edit` | `assignTraining` in `services/trainingAssignment.service.ts` (also behind `POST /assignments`) |
+
+Each tool's checks run before the approval is requested, so nobody is asked to approve a call that cannot run, and again when it executes: the permission, held by the user who asked (never an `_`-prefixed parameter from the model, which the tool bridge drops); for a record, a valid id of a record in the organization, a title to create and at least one field to update; for an assignment, the ids, the due date, the training in the organization and the person a member. `PATCH /api/training/:id` with nothing to write answers 400, and an update or delete of a record outside the organization answers 404 even when a training automation is active. The assignment takes a required `due_date`, emails the assignee and is a `warning`-level write: a person confirms it first. Its approval card names the training and the person (name and email). A training record has no due date: the record tools take `duration` (free text such as "2 hours") and refuse a `due_date`, including one in an approval stored before this changed.
 
 ### Change history
 

@@ -1,0 +1,109 @@
+import { describe, it, expect, jest } from "@jest/globals";
+
+// The vendor research routes follow the rule of coreWriteRoutes.permissions.test.ts: Reviewer and
+// Auditor are read-only, so every write carries a permission check, not only authentication.
+// Starting a run and deciding a finding write to the vendors' side of the register (accepting a
+// finding creates a vendor risk), so they need the key of the other vendor and vendor risk writes,
+// vendor.edit. What shows how the agent performs, or chooses the LLM key it uses, goes to those who
+// manage the organization's LLM keys. Everything else is read by any signed-in user.
+//
+// The routes are versioned (ADR 0001: added after the policy, so they live in routes/v1 and are
+// served under /api/v1). The vendor reads and the delete stay on the legacy router, which has no
+// research route. The create and the update of a vendor, which take the other names and the
+// identifiers that the frozen legacy contract lacked (ADR 0001 sections 1, 2 and 5), are versioned
+// here too, as thin adapters with the key of the legacy writes.
+
+jest.mock("../../../middleware/auth.middleware", () => ({
+  __esModule: true,
+  default: jest.fn((_req: any, _res: any, next: any) => next()),
+}));
+jest.mock("../../../middleware/accessControl.middleware", () => ({
+  __esModule: true,
+  default: jest.fn((permission: string) => {
+    const mw: any = (_req: any, _res: any, next: any) => next();
+    mw.permissionKey = permission;
+    return mw;
+  }),
+}));
+
+import legacyVendorRouter from "../../vendor.route";
+import vendorRouter from "../vendors.route";
+import vendorResearchRouter from "../vendorResearch.route";
+import vendorRiskFindingsRouter from "../vendorRiskFindings.route";
+
+const permissionFor = (router: any, method: string, path: string) => {
+  const layer = router.stack.find((l: any) => l.route?.path === path && l.route.methods[method]);
+  expect(layer).toBeDefined();
+  return layer.route.stack.map((s: any) => s.handle.permissionKey).filter(Boolean);
+};
+
+describe("vendor research write routes require a permission", () => {
+  it.each([
+    ["start a run", "post", "/:id/research", "vendor.edit", vendorRouter],
+    ["accept a finding", "post", "/:id/accept", "vendor.edit", vendorRiskFindingsRouter],
+    ["dismiss a finding", "post", "/:id/dismiss", "vendor.edit", vendorRiskFindingsRouter],
+    ["save the settings", "put", "/settings", "llmKeys.admin", vendorResearchRouter],
+  ])("%s: %s %s requires %s", (_label, method, path, key, router) => {
+    expect(permissionFor(router, method, path)).toEqual([key]);
+  });
+});
+
+describe("vendor research read routes", () => {
+  it.each([
+    ["the trace of a run", "get", "/:id/research/runs/:runId/trace", vendorRouter],
+    ["the decision statistics", "get", "/decision-stats", vendorResearchRouter],
+    ["the settings", "get", "/settings", vendorResearchRouter],
+  ])("%s: %s %s requires llmKeys.admin", (_label, method, path, router) => {
+    expect(permissionFor(router, method, path)).toEqual(["llmKeys.admin"]);
+  });
+
+  it.each([
+    ["the latest run", "get", "/:id/research/latest", vendorRouter],
+    ["the config", "get", "/config", vendorResearchRouter],
+    ["the findings", "get", "/", vendorRiskFindingsRouter],
+  ])("%s: %s %s has no role permission", (_label, method, path, router) => {
+    expect(permissionFor(router, method, path)).toEqual([]);
+  });
+});
+
+describe("the vendor writes under /api/v1 need vendor.edit, as on legacy", () => {
+  it.each([
+    ["create a vendor", "post", "/"],
+    ["update a vendor", "patch", "/:id"],
+  ])("%s: %s %s requires vendor.edit", (_label, method, path) => {
+    expect(permissionFor(vendorRouter, method, path)).toEqual(["vendor.edit"]);
+    // The same key as the legacy write it adapts.
+    expect(permissionFor(legacyVendorRouter, method, path)).toEqual(["vendor.edit"]);
+  });
+});
+
+describe("the v1 vendor router", () => {
+  it("copies only the writes whose body changed", () => {
+    const routes = (vendorRouter as any).stack
+      .filter((layer: any) => layer.route)
+      .flatMap((layer: any) =>
+        Object.keys(layer.route.methods).map((method) => `${method} ${layer.route.path}`),
+      )
+      .sort();
+
+    // No read, and no delete: their contract did not change (ADR 0001 section 5).
+    expect(routes).toEqual([
+      "get /:id/research/latest",
+      "get /:id/research/runs/:runId/trace",
+      "patch /:id",
+      "post /",
+      "post /:id/research",
+    ]);
+  });
+});
+
+describe("the legacy vendor router", () => {
+  it("has no research route: those moved to /api/v1 and nothing is left behind", () => {
+    const paths = (legacyVendorRouter as any).stack
+      .filter((layer: any) => layer.route)
+      .map((layer: any) => layer.route.path as string);
+
+    expect(paths.length).toBeGreaterThan(0);
+    expect(paths.filter((path: string) => path.includes("research"))).toEqual([]);
+  });
+});

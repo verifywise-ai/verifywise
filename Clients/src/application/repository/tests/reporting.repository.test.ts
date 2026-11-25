@@ -2,6 +2,7 @@ import {
   getTemplates,
   getTemplate,
   getScheduledReports,
+  getScheduledReport,
   createScheduledReport,
   runScheduledReportNow,
   setScheduledReportActive,
@@ -17,9 +18,11 @@ import {
   getSectionCatalog,
   createTemplate,
   updateTemplate,
+  duplicateTemplate,
   archiveTemplate,
   runTemplateNow,
   getRunAnalyses,
+  getLastReportParameters,
 } from "../reporting.repository";
 import { apiServices } from "../../../infrastructure/api/networkServices";
 
@@ -93,6 +96,29 @@ describe("reporting.repository", () => {
     });
   });
 
+  describe("getScheduledReport", () => {
+    it("reads one schedule from v1, with its version's parameters_config", async () => {
+      const row = {
+        id: 5,
+        report_parameters: { isFinal: false },
+        parameters_config: { kind: "osfi_e23", fields: [] },
+      };
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: row },
+      });
+
+      const result = await getScheduledReport(5);
+
+      // The edit dialog shows its own message when this fails.
+      expect(apiServices.get).toHaveBeenCalledWith("/v1/scheduled-reports/5", {
+        suppressGlobalErrorToast: true,
+      });
+      expect(result).toEqual(row);
+    });
+  });
+
   describe("createScheduledReport", () => {
     it("makes a post request with the body", async () => {
       const body = { name: "Weekly" };
@@ -104,7 +130,10 @@ describe("reporting.repository", () => {
 
       const result = await createScheduledReport(body);
 
-      expect(apiServices.post).toHaveBeenCalledWith("/reporting/scheduled-reports", body);
+      // v1 accepts reportParameters and quarterly; the caller shows the 400 messages.
+      expect(apiServices.post).toHaveBeenCalledWith("/v1/scheduled-reports", body, {
+        suppressGlobalErrorToast: true,
+      });
       expect(result).toEqual({ id: 1, ...body });
     });
   });
@@ -160,7 +189,9 @@ describe("reporting.repository", () => {
 
       await updateScheduledReport(5, body);
 
-      expect(apiServices.patch).toHaveBeenCalledWith("/reporting/scheduled-reports/5", body);
+      expect(apiServices.patch).toHaveBeenCalledWith("/v1/scheduled-reports/5", body, {
+        suppressGlobalErrorToast: true,
+      });
     });
   });
 
@@ -307,8 +338,10 @@ describe("reporting.repository", () => {
     });
   });
 
+  // The template writes go through v1, which accepts parameters_config; the
+  // legacy /reporting/templates writes are frozen and drop it.
   describe("createTemplate", () => {
-    it("makes a post request with the template body", async () => {
+    it("posts the template body to v1", async () => {
       const body = { name: "Template" } as any;
       vi.mocked(apiServices.post).mockResolvedValue({
         status: 200,
@@ -318,12 +351,12 @@ describe("reporting.repository", () => {
 
       await createTemplate(body);
 
-      expect(apiServices.post).toHaveBeenCalledWith("/reporting/templates", body);
+      expect(apiServices.post).toHaveBeenCalledWith("/v1/report-templates", body);
     });
   });
 
   describe("updateTemplate", () => {
-    it("makes a patch request scoped to the template id", async () => {
+    it("patches the template on v1, scoped to its id", async () => {
       const body = { name: "Updated" } as any;
       vi.mocked(apiServices.patch).mockResolvedValue({
         status: 200,
@@ -333,7 +366,22 @@ describe("reporting.repository", () => {
 
       await updateTemplate(1, body);
 
-      expect(apiServices.patch).toHaveBeenCalledWith("/reporting/templates/1", body);
+      expect(apiServices.patch).toHaveBeenCalledWith("/v1/report-templates/1", body);
+    });
+  });
+
+  describe("duplicateTemplate", () => {
+    it("asks v1 to copy the template, sending no body of its own", async () => {
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 201,
+        statusText: "Created",
+        data: { data: { id: 12, name: "Pack (copy)" } },
+      });
+
+      const result = await duplicateTemplate(4);
+
+      expect(apiServices.post).toHaveBeenCalledWith("/v1/report-templates/4/duplicate", {});
+      expect(result).toEqual({ id: 12, name: "Pack (copy)" });
     });
   });
 
@@ -363,7 +411,9 @@ describe("reporting.repository", () => {
 
       await runTemplateNow(1, body);
 
-      expect(apiServices.post).toHaveBeenCalledWith("/reporting/templates/1/run", body);
+      expect(apiServices.post).toHaveBeenCalledWith("/v1/report-templates/1/run", body, {
+        suppressGlobalErrorToast: true,
+      });
     });
   });
 
@@ -378,6 +428,23 @@ describe("reporting.repository", () => {
       await getRunAnalyses(9);
 
       expect(apiServices.get).toHaveBeenCalledWith("/reporting/runs/9/analyses");
+    });
+  });
+
+  describe("getLastReportParameters", () => {
+    it("reads the v1 prefill and passes a missing run through as null", async () => {
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { message: "OK", data: null },
+      });
+
+      const result = await getLastReportParameters(3);
+
+      expect(apiServices.get).toHaveBeenCalledWith("/v1/report-templates/3/last-parameters", {
+        suppressGlobalErrorToast: true,
+      });
+      expect(result).toBeNull();
     });
   });
 });

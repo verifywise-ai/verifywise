@@ -20,6 +20,14 @@ const makeStore = (collapsed: boolean) =>
         sidebar: { collapsed },
         appModule: { active: "evals" as const },
         modelInventory: { statusFilter: "all" },
+        componentsVisible: {
+          home: false,
+          sidebar: false,
+          projectFrameworks: false,
+          compliance: false,
+        },
+        inputValues: {},
+        photoRefreshCounter: 0,
       },
     },
   });

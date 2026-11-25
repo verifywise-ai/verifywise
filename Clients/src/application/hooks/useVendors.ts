@@ -8,6 +8,15 @@ import {
   deleteVendor,
 } from "../repository/vendor.repository";
 import { VendorModel } from "../../domain/models/Common/vendor/vendor.model";
+import { VENDOR_RESEARCH_KEY } from "./useVendorResearch";
+import { VENDOR_INSIGHTS_KEY } from "./useRiskLinks";
+import { vendorRiskQueryKeys } from "./useVendorRisks";
+
+/**
+ * The vendor modal and the Vendors page show their own message for a failed
+ * write, so the global error toast would be a second one.
+ */
+export const OWN_ERROR_MESSAGE = { suppressGlobalErrorToast: true } as const;
 
 // Query keys for vendors
 export const vendorQueryKeys = {
@@ -67,7 +76,7 @@ export const useCreateVendor = () => {
 
   return useMutation({
     mutationFn: async (vendorData: Partial<VendorModel>) => {
-      const response = await createNewVendor({ body: vendorData });
+      const response = await createNewVendor({ body: vendorData, config: OWN_ERROR_MESSAGE });
       return response;
     },
     onSuccess: () => {
@@ -83,13 +92,17 @@ export const useUpdateVendor = () => {
 
   return useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Partial<VendorModel> }) => {
-      const response = await updateVendor({ id, body: data });
+      const response = await updateVendor({ id, body: data, config: OWN_ERROR_MESSAGE });
       return response;
     },
     onSuccess: (_, { id }) => {
       // Invalidate and refetch vendor details and lists
       queryClient.invalidateQueries({ queryKey: vendorQueryKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: vendorQueryKeys.lists() });
+      // A vendor's use cases feed the insights' reach and coverage, and each
+      // of its risks' use case column and filter.
+      queryClient.invalidateQueries({ queryKey: VENDOR_INSIGHTS_KEY });
+      queryClient.invalidateQueries({ queryKey: vendorRiskQueryKeys.lists() });
     },
   });
 };
@@ -100,12 +113,16 @@ export const useDeleteVendor = () => {
 
   return useMutation({
     mutationFn: async (id: number) => {
-      const response = await deleteVendor({ id });
+      const response = await deleteVendor({ id, config: OWN_ERROR_MESSAGE });
       return response;
     },
     onSuccess: () => {
-      // Invalidate and refetch vendor lists
+      // Invalidate and refetch vendor lists; the vendor's risks went with it.
       queryClient.invalidateQueries({ queryKey: vendorQueryKeys.lists() });
+      // The findings and the runs of the vendor go with it, and the Research findings tab counts them.
+      queryClient.invalidateQueries({ queryKey: VENDOR_RESEARCH_KEY });
+      queryClient.invalidateQueries({ queryKey: vendorRiskQueryKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: VENDOR_INSIGHTS_KEY });
     },
   });
 };

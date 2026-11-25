@@ -1,6 +1,7 @@
 import { Column, DataType, Model, Table } from "sequelize-typescript";
 import { IAIIncidentManagement } from "../../interfaces/i.aiIncidentManagement";
 import { ValidationException } from "../../exceptions/custom.exception";
+import { toIncidentDateValue } from "../../../utils/validations/incidentManagementValidation.utils";
 import {
   AIIncidentManagementApprovalStatus,
   AIIncidentManagementStatus,
@@ -74,6 +75,17 @@ export class AIIncidentManagementModel
   })
   assignee_name?: string;
 
+  /** Full names of the reporter_id / approved_by_id users (query aliases). */
+  @Column({
+    type: DataType.VIRTUAL,
+  })
+  reporter_name?: string;
+
+  @Column({
+    type: DataType.VIRTUAL,
+  })
+  approved_by_name?: string;
+
   @Column({
     type: DataType.ENUM(...Object.values(IncidentType)),
     allowNull: false,
@@ -92,23 +104,32 @@ export class AIIncidentManagementModel
   })
   status!: AIIncidentManagementStatus;
 
+  /** DATE: "YYYY-MM-DD" (Sequelize parses DATE columns as strings). */
   @Column({
-    type: DataType.DATE,
+    type: DataType.DATEONLY,
     allowNull: false,
   })
-  occurred_date!: Date;
+  occurred_date!: string;
 
   @Column({
-    type: DataType.DATE,
+    type: DataType.DATEONLY,
     allowNull: false,
   })
-  date_detected!: Date;
+  date_detected!: string;
 
+  /** Who reported it: the user's full name, or free text (Jira, older rows). */
   @Column({
     type: DataType.STRING,
     allowNull: false,
   })
   reporter!: string;
+
+  /** FK to users: the reporter, when picked from the organization's users. */
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+  })
+  reporter_id?: number | null;
 
   @Column({
     type: DataType.ENUM(...Object.values(AIIncidentManagementApprovalStatus)),
@@ -122,11 +143,19 @@ export class AIIncidentManagementModel
   })
   approved_by?: string;
 
+  /** FK to users: who recorded the approval decision (set by the server). */
   @Column({
-    type: DataType.DATE,
+    type: DataType.INTEGER,
     allowNull: true,
   })
-  approval_date?: Date;
+  approved_by_id?: number | null;
+
+  /** DATE: "YYYY-MM-DD", the day the decision was recorded. */
+  @Column({
+    type: DataType.DATEONLY,
+    allowNull: true,
+  })
+  approval_date?: string | null;
 
   @Column({
     type: DataType.TEXT,
@@ -265,9 +294,11 @@ export class AIIncidentManagementModel
       type: this.type,
       severity: this.severity,
       status: this.status,
-      occurred_date: this.occurred_date?.toISOString(),
-      date_detected: this.date_detected?.toISOString(),
+      occurred_date: toIncidentDateValue(this.occurred_date),
+      date_detected: toIncidentDateValue(this.date_detected),
       reporter: this.reporter,
+      reporter_id: this.reporter_id ?? null,
+      reporter_name: (this.getDataValue("reporter_name") as string | undefined) ?? null,
       categories_of_harm: this.categories_of_harm || [],
       affected_persons_groups: this.affected_persons_groups,
       description: this.description,
@@ -279,7 +310,9 @@ export class AIIncidentManagementModel
       archived: this.archived,
       approval_status: this.approval_status,
       approved_by: this.approved_by,
-      approval_date: this.approval_date?.toISOString() || null,
+      approved_by_id: this.approved_by_id ?? null,
+      approved_by_name: (this.getDataValue("approved_by_name") as string | undefined) ?? null,
+      approval_date: toIncidentDateValue(this.approval_date),
       approval_notes: this.approval_notes,
       created_at: (this.createdAt ?? this.created_at)?.toISOString(),
       updated_at: (this.updatedAt ?? this.updated_at)?.toISOString(),
@@ -312,9 +345,11 @@ export class AIIncidentManagementModel
       type: this.type,
       severity: this.severity,
       status: this.status,
-      occurred_date: this.occurred_date?.toISOString(),
-      date_detected: this.date_detected?.toISOString(),
+      occurred_date: toIncidentDateValue(this.occurred_date),
+      date_detected: toIncidentDateValue(this.date_detected),
       reporter: this.reporter,
+      reporter_id: this.reporter_id ?? null,
+      reporter_name: (this.getDataValue("reporter_name") as string | undefined) ?? null,
       categories_of_harm: this.categories_of_harm || [],
       affected_persons_groups: this.affected_persons_groups,
       description: this.description,
@@ -326,7 +361,9 @@ export class AIIncidentManagementModel
       archived: this.archived,
       approval_status: this.approval_status,
       approved_by: this.approved_by,
-      approval_date: this.approval_date?.toISOString() || null,
+      approved_by_id: this.approved_by_id ?? null,
+      approved_by_name: (this.getDataValue("approved_by_name") as string | undefined) ?? null,
+      approval_date: toIncidentDateValue(this.approval_date),
       approval_notes: this.approval_notes,
       created_at: (this.createdAt ?? this.created_at)?.toISOString(),
       updated_at: (this.updatedAt ?? this.updated_at)?.toISOString(),
@@ -345,9 +382,10 @@ export class AIIncidentManagementModel
       type: data.type!,
       severity: data.severity!,
       status: data.status || AIIncidentManagementStatus.OPEN,
-      occurred_date: data.occurred_date || new Date(),
-      date_detected: data.date_detected || new Date(),
+      occurred_date: toIncidentDateValue(data.occurred_date || new Date())!,
+      date_detected: toIncidentDateValue(data.date_detected || new Date())!,
       reporter: data.reporter || "",
+      reporter_id: data.reporter_id ?? null,
       categories_of_harm: data.categories_of_harm || [],
       affected_persons_groups: data.affected_persons_groups || "",
       description: data.description || "",
@@ -359,7 +397,8 @@ export class AIIncidentManagementModel
       archived: data.archived || false,
       approval_status: data.approval_status || AIIncidentManagementApprovalStatus.PENDING,
       approved_by: data.approved_by || "",
-      approval_date: data.approval_date || undefined,
+      approved_by_id: data.approved_by_id ?? null,
+      approval_date: toIncidentDateValue(data.approval_date),
       approval_notes: data.approval_notes || "",
       is_demo: data.is_demo || false,
       created_at: new Date(),
@@ -383,9 +422,10 @@ export class AIIncidentManagementModel
       type: data.type ?? existingIncident.type,
       severity: data.severity ?? existingIncident.severity,
       status: data.status ?? existingIncident.status,
-      occurred_date: data.occurred_date ?? existingIncident.occurred_date,
-      date_detected: data.date_detected ?? existingIncident.date_detected,
+      occurred_date: toIncidentDateValue(data.occurred_date) ?? existingIncident.occurred_date,
+      date_detected: toIncidentDateValue(data.date_detected) ?? existingIncident.date_detected,
       reporter: data.reporter ?? existingIncident.reporter,
+      reporter_id: data.reporter_id ?? existingIncident.reporter_id,
       categories_of_harm: data.categories_of_harm ?? existingIncident.categories_of_harm,
       affected_persons_groups:
         data.affected_persons_groups ?? existingIncident.affected_persons_groups,
@@ -400,7 +440,8 @@ export class AIIncidentManagementModel
       archived: data.archived ?? existingIncident.archived,
       approval_status: data.approval_status ?? existingIncident.approval_status,
       approved_by: data.approved_by ?? existingIncident.approved_by,
-      approval_date: data.approval_date ?? existingIncident.approval_date,
+      approved_by_id: data.approved_by_id ?? existingIncident.approved_by_id,
+      approval_date: toIncidentDateValue(data.approval_date) ?? existingIncident.approval_date,
       approval_notes: data.approval_notes ?? existingIncident.approval_notes,
       updated_at: new Date(),
     });

@@ -35,7 +35,10 @@ import {
   updateSubmissionRoutingQuery,
   updateSecondReviewQuery,
 } from "../utils/intakeForm.utils";
-import { createNewModelInventoryQuery } from "../utils/modelInventory.utils";
+import { createModelInventoryService } from "../services/modelInventory.service";
+import { createModelRiskService } from "../services/modelRisk.service";
+import { ModelApprovalForbiddenError } from "../utils/modelApproval.utils";
+import { requestCallerIsAdmin } from "../utils/organizationAdmin.utils";
 import { createNewProjectQuery } from "../utils/project.utils";
 import { setTierSuggestionResponseQuery } from "../utils/intakeTierSuggestion.utils";
 import type { ApplicantTierResponse } from "./intakeTierSuggestion.ctrl";
@@ -55,7 +58,6 @@ import { IntakeEntityType } from "../domain.layer/enums/intake-entity-type.enum"
 import { ModelInventoryStatus } from "../domain.layer/enums/model-inventory-status.enum";
 import { ProjectStatus } from "../domain.layer/enums/project-status.enum";
 import { AiRiskClassification } from "../domain.layer/enums/ai-risk-classification.enum";
-import { ModelInventoryModel } from "../domain.layer/models/modelInventory/modelInventory.model";
 import { IIntakeFormSchema } from "../domain.layer/interfaces/i.intakeForm";
 import {
   validateIntakeFormSchemaLabels,
@@ -133,7 +135,6 @@ import {
   type RoutingReason,
 } from "../domain.layer/interfaces/i.intakeSubmission";
 import { ModelRiskCategory } from "../domain.layer/enums/model-risk-category.enum";
-import { ModelRiskLevel } from "../domain.layer/enums/model-risk-level.enum";
 import {
   asBand,
   isBandAllowed,
@@ -149,8 +150,7 @@ import {
 } from "../services/intakeScoring/approvalRisks";
 import { createRiskService } from "../services/risk.service";
 import { SYSTEM_RISK_VIEWER } from "../utils/riskVisibility.utils";
-import { createNewModelRiskQuery } from "../utils/modelRisk.utils";
-import { LIKELIHOODS, SEVERITIES } from "../services/intakeScoring/riskMappers";
+import { LIKELIHOODS, modelRiskLevelFor, SEVERITIES } from "../services/intakeScoring/riskMappers";
 import type { IntakeSuggestedRisk } from "../services/intakeScoring/intakeSuggestions";
 import { selectRetryStages } from "../services/intakeScoring/retry";
 import {
@@ -175,6 +175,10 @@ import type {
 import { createSignedToken, verifySignedToken } from "../utils/signedToken.utils";
 import { formAiAvailable } from "../services/intakeLiveChecks/availability";
 import { recordSubmitLiveChecks } from "../services/intakeLiveChecks/submit";
+
+/** R3 on intake approval: the submitter, not the reviewer, named the approver. */
+const INTAKE_MODEL_SELF_APPROVER_MESSAGE =
+  "This submission names you as the model's approver. Another reviewer or an Admin must approve it.";
 
 /** Safely extract a single string from req.params (which may be string | string[]). */
 const paramStr = (val: string | string[]): string => (Array.isArray(val) ? val[0] : val);
@@ -607,7 +611,6 @@ async function logIfOutsideLane(
 const SUGGESTION_STATES: IntakeSuggestedRisk["state"][] = ["suggested", "accepted", "dismissed"];
 const SUGGESTION_TEXT_FIELDS = ["description", "mitigationPlan", "implementationStrategy"] as const;
 const MODEL_RISK_CATEGORIES = Object.values(ModelRiskCategory) as string[];
-const MODEL_RISK_LEVELS = Object.values(ModelRiskLevel) as string[];
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
@@ -669,12 +672,9 @@ export function parseSuggestionPatch(
     }
     patch.modelRiskCategory = body.modelRiskCategory as ModelRiskCategory;
   }
-  if (body.modelRiskLevel !== undefined) {
-    if (!MODEL_RISK_LEVELS.includes(body.modelRiskLevel as string)) {
-      return { invalid: "modelRiskLevel" };
-    }
-    patch.modelRiskLevel = body.modelRiskLevel as ModelRiskLevel;
-  }
+  // A model risk's level comes from likelihood and severity (decision 10):
+  // the reviewer can no longer set it.
+  if (body.modelRiskLevel !== undefined) return { invalid: "modelRiskLevel" };
   return { patch };
 }
 
@@ -2248,16 +2248,18 @@ export async function updateSuggestedRisk(req: Request, res: Response) {
     if (!current) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Suggested risk not found")));
     }
-    // The risk register requires a mitigation plan, so nothing is accepted
-    // without one, and an accepted risk can't have its plan cleared.
-    const resultingState = state ?? current.state;
+    // The mitigation plan is optional, as in the risk register: a suggestion
+    // is accepted with or without one.
+
+    // A model suggestion's level follows its likelihood and severity.
     if (
-      resultingState === "accepted" &&
-      !(content.mitigationPlan ?? current.mitigationPlan)?.trim()
+      current.modelRiskLevel !== undefined &&
+      (content.likelihood !== undefined || content.severity !== undefined)
     ) {
-      return res
-        .status(400)
-        .json(STATUS_CODE[400](req.t!("Add a mitigation plan before accepting this risk")));
+      content.modelRiskLevel = modelRiskLevelFor(
+        content.likelihood ?? current.likelihood,
+        content.severity ?? current.severity,
+      );
     }
 
     const now = new Date().toISOString();
@@ -2273,8 +2275,8 @@ export async function updateSuggestedRisk(req: Request, res: Response) {
       req.organizationId!,
     );
     if (!item) {
-      // Decided, or changed by someone else (e.g. its plan cleared), between
-      // the read and the atomic write. Say which.
+      // Decided, or removed by someone else, between the read and the atomic
+      // write. Say which.
       const latest = await getSubmissionByIdQuery(submissionId, req.organizationId!);
       const message =
         latest && latest.status !== IntakeSubmissionStatus.PENDING
@@ -2291,8 +2293,9 @@ export async function updateSuggestedRisk(req: Request, res: Response) {
 }
 
 /**
- * Accept every suggestion still in "suggested". Dismissed ones stay dismissed;
- * ones without a mitigation plan are skipped and counted.
+ * Accept every suggestion still in "suggested". Dismissed ones stay dismissed.
+ * The mitigation plan is optional, so none is skipped for lacking one;
+ * `skipped` stays in the response for compatibility.
  * POST /intake/submissions/:id/suggested-risks/accept-all
  */
 export async function acceptAllSuggestedRisks(req: Request, res: Response) {
@@ -2321,7 +2324,6 @@ export async function acceptAllSuggestedRisks(req: Request, res: Response) {
       "accepted",
       req.userId!,
       req.organizationId!,
-      { requireMitigationPlan: true },
     );
     // The items as stored, so the client shows the server's states. A
     // submission decided meanwhile accepted nothing, which is not "skipped".
@@ -2383,6 +2385,9 @@ async function approve(
     organizationId: req.organizationId!,
   });
 
+  // Before the transaction: on a role cache miss this needs its own
+  // connection, which must not wait behind the one the transaction holds.
+  const callerIsAdmin = await requestCallerIsAdmin(req);
   const transaction = await sequelize.transaction();
 
   try {
@@ -2624,7 +2629,11 @@ async function approve(
     );
 
     if (submission.entityType === IntakeEntityType.MODEL) {
-      const model = ModelInventoryModel.createNewModelInventory({
+      // Through the model service, as the approving user: the approval rule
+      // (a non-Admin may not approve a submission that names them the
+      // model's approver), the change history, the "model added" automation
+      // and the approver notice, sent after this transaction commits.
+      const modelInput = {
         provider: (entityData.provider as string) || "",
         model: (entityData.name as string) || (entityData.model as string) || "",
         version: (entityData.modelVersion as string) || (entityData.version as string) || "",
@@ -2638,16 +2647,35 @@ async function approve(
         hosting_provider:
           (entityData.hosting_provider as string) || (entityData.modelType as string) || "",
         status: ModelInventoryStatus.PENDING,
-      });
-
-      const createdModel = await createNewModelInventoryQuery(
-        model,
-        req.organizationId!,
-        [],
-        [],
-        transaction,
-      );
-      entityId = createdModel.id!;
+      };
+      try {
+        const createdModel = await createModelInventoryService(
+          modelInput,
+          {
+            organizationId: req.organizationId!,
+            userId: req.userId!,
+            callerIsAdmin,
+          },
+          transaction,
+        );
+        entityId = createdModel.id!;
+      } catch (error) {
+        // The submission names the approving user as the model's approver
+        // (R3): a non-Admin can't approve their own model, so say who can.
+        if (error instanceof ModelApprovalForbiddenError) {
+          await transaction.rollback();
+          const message =
+            error.reason === "self"
+              ? req.t!(INTAKE_MODEL_SELF_APPROVER_MESSAGE)
+              : translateError(req, error);
+          return res.status(403).json(STATUS_CODE[403](message));
+        }
+        if (error instanceof ValidationException) {
+          await transaction.rollback();
+          return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+        }
+        throw error;
+      }
     } else if (submission.entityType === IntakeEntityType.USE_CASE) {
       // The organization's defaults for a new use case (#5192): its region
       // when the submission gave none, and its frameworks.
@@ -2815,9 +2843,11 @@ async function approve(
     for (const s of submission.suggestedRisks?.items ?? []) {
       if (s.state !== "accepted") continue;
       if (submission.entityType === IntakeEntityType.MODEL) {
-        await createNewModelRiskQuery(
+        // Through the model risk service: change history and the owner
+        // notice, after this transaction commits.
+        await createModelRiskService(
           buildModelRiskFromSuggestion(s, { ...approval, modelId: entityId }),
-          req.organizationId!,
+          { organizationId: req.organizationId!, userId: req.userId! },
           transaction,
         );
       } else {
@@ -2924,6 +2954,11 @@ async function approve(
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
+    // A request the risk writes refuse (an accepted model suggestion without
+    // a valid likelihood or severity) is the reviewer's to fix: 400.
+    if (error instanceof ValidationException) {
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+    }
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

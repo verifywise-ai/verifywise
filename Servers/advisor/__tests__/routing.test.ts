@@ -25,11 +25,11 @@ const MASTER_DEF = [
   // Compliance agent
   {
     type: "function",
-    function: { name: "get_compliance_overview", description: "", parameters: {} },
+    function: { name: "get_compliance_score", description: "", parameters: {} },
   },
   {
     type: "function",
-    function: { name: "fetch_eu_ai_act_categories", description: "", parameters: {} },
+    function: { name: "get_eu_ai_act_control_categories", description: "", parameters: {} },
   },
   // Universal — not claimed by any agent in AGENT_TOOL_MAP
   { type: "function", function: { name: "global_search", description: "", parameters: {} } },
@@ -93,7 +93,7 @@ describe("routing / selectActiveTools — single agent match", () => {
       toolsDefinition: MASTER_DEF,
     });
     expect(result.selectedAgents).toContain("compliance-agent");
-    expect(names(result.toolsDefinition)).toContain("fetch_eu_ai_act_categories");
+    expect(names(result.toolsDefinition)).toContain("get_eu_ai_act_control_categories");
   });
 });
 

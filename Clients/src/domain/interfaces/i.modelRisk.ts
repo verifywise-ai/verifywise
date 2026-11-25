@@ -31,7 +31,8 @@ export interface IModelRisk {
   description?: string;
   mitigation_plan?: string;
   impact?: string;
-  likelihood?: string;
+  likelihood?: string | null;
+  severity?: string | null;
   key_metrics?: string;
   current_values?: string;
   threshold?: string;
@@ -45,14 +46,16 @@ export interface IModelRisk {
 export interface IModelRiskFormData {
   risk_name: string;
   risk_category: ModelRiskCategory;
-  risk_level: ModelRiskLevel;
+  /** Hand-picked only while likelihood or severity is missing (older risks). */
+  risk_level?: ModelRiskLevel;
   status: ModelRiskStatus;
   owner: string;
   target_date: string;
   description?: string;
   mitigation_plan?: string;
   impact?: string;
-  likelihood?: string;
+  likelihood?: string | null;
+  severity?: string | null;
   key_metrics?: string;
   current_values?: string;
   threshold?: string;

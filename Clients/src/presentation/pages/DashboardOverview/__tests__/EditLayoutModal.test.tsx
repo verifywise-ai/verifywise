@@ -83,7 +83,9 @@ describe("EditLayoutModal", () => {
     const onSave = vi.fn().mockRejectedValue(new Error("nope"));
     const { onClose, user } = setup({ onSave });
     await user.click(screen.getByRole("button", { name: "Save" }));
-    expect(await screen.findByText("Could not save your layout. Try again.")).toBeInTheDocument();
+    const message = await screen.findByText("Could not save your layout. Try again.");
+    // Inside the modal, not a fixed toast in the corner.
+    expect(message.closest('[role="alert"]')).toHaveStyle({ position: "static" });
     expect(onClose).not.toHaveBeenCalled();
   });
 

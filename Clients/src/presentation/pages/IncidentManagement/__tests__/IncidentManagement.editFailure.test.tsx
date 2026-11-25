@@ -118,4 +118,38 @@ describe("IncidentManagement edit failure", () => {
     // The drawer is still open.
     expect(screen.getByText("Probe save")).toBeInTheDocument();
   });
+
+  it("shows the server's translated message for the other field rules too", async () => {
+    vi.mocked(updateEntityById).mockRejectedValue(
+      new CustomException("Incident update validation failed", 400, {
+        message: "Bad Request",
+        data: {
+          status: "error",
+          message: "Incident update validation failed",
+          errors: [
+            {
+              field: "severity",
+              message: "severity must be one of: Minor, Serious, Very serious",
+              code: "INVALID_ENUM_VALUE",
+            },
+            {
+              field: "date_detected",
+              message: "date_detected cannot be earlier than occurred_date",
+              code: "INVALID_DATE_ORDER",
+            },
+          ],
+        },
+      }),
+    );
+    renderWithProviders(<IncidentManagement />);
+
+    fireEvent.click(await screen.findByText("Edit 42"));
+    fireEvent.click(await screen.findByText("Probe save"));
+
+    expect(
+      await screen.findByText(
+        "severity must be one of: Minor, Serious, Very serious date_detected cannot be earlier than occurred_date",
+      ),
+    ).toBeInTheDocument();
+  });
 });

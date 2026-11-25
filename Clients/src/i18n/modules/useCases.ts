@@ -2,6 +2,14 @@
 // Spread into ../translations.ts. Other areas stay in that file for now.
 
 export const de: Record<string, string> = {
+  "Rare": "Selten",
+  "Unlikely": "Unwahrscheinlich",
+  "Possible": "Möglich",
+  "Likely": "Wahrscheinlich",
+  "Almost certain": "Fast sicher",
+  "Set by likelihood and severity": "Ergibt sich aus Eintrittswahrscheinlichkeit und Schweregrad",
+  "Pick a likelihood and a severity to set the level":
+    "Wählen Sie Eintrittswahrscheinlichkeit und Schweregrad, um die Stufe festzulegen",
   "close calls": "Grenzfälle",
   "missed of completed": "übersehen von abgeschlossen",
   "decisions": "Entscheidungen",
@@ -97,11 +105,7 @@ export const de: Record<string, string> = {
     "Für diese Einreichung wurden keine Risiken vorgeschlagen.",
   "Likelihood:": "Wahrscheinlichkeit:",
   "Severity:": "Schweregrad:",
-  "Add a mitigation plan before accepting this risk.":
-    "Fügen Sie einen Minderungsplan hinzu, bevor Sie dieses Risiko annehmen.",
   "lower-rated suggestions not shown": "niedriger bewertete Vorschläge werden nicht angezeigt",
-  "not accepted: they need a mitigation plan first":
-    "nicht angenommen: Sie brauchen zuerst einen Minderungsplan",
   "Couldn't retry the assessment. Please try again.":
     "Die Bewertung konnte nicht wiederholt werden. Bitte versuchen Sie es erneut.",
   "Accepted risks are added to the register when you approve.":
@@ -109,8 +113,6 @@ export const de: Record<string, string> = {
   "Model risk category": "Modellrisikokategorie",
   "Model risk level": "Modellrisikostufe",
   "(default: 90 days after approval)": "(Standard: 90 Tage nach Genehmigung)",
-  "An accepted risk needs a mitigation plan":
-    "Ein angenommenes Risiko braucht einen Minderungsplan",
   "Can't be lower than the rule minimum allows":
     "Darf nicht unter dem liegen, was das Regelminimum erlaubt",
   "Risk score:": "Risikowert:",
@@ -773,6 +775,14 @@ export const de: Record<string, string> = {
 };
 
 export const fr: Record<string, string> = {
+  "Rare": "Rare",
+  "Unlikely": "Peu probable",
+  "Possible": "Possible",
+  "Likely": "Probable",
+  "Almost certain": "Presque certain",
+  "Set by likelihood and severity": "Déterminé par la probabilité et la gravité",
+  "Pick a likelihood and a severity to set the level":
+    "Choisissez une probabilité et une gravité pour définir le niveau",
   "close calls": "cas limites",
   "missed of completed": "manquées sur terminées",
   "decisions": "décisions",
@@ -867,11 +877,7 @@ export const fr: Record<string, string> = {
     "Aucun risque n'a été suggéré pour cette soumission.",
   "Likelihood:": "Probabilité :",
   "Severity:": "Gravité :",
-  "Add a mitigation plan before accepting this risk.":
-    "Ajoutez un plan d'atténuation avant d'accepter ce risque.",
   "lower-rated suggestions not shown": "suggestions moins bien notées non affichées",
-  "not accepted: they need a mitigation plan first":
-    "non acceptés : ils ont d'abord besoin d'un plan d'atténuation",
   "Couldn't retry the assessment. Please try again.":
     "Impossible de relancer l'évaluation. Veuillez réessayer.",
   "Accepted risks are added to the register when you approve.":
@@ -879,7 +885,6 @@ export const fr: Record<string, string> = {
   "Model risk category": "Catégorie de risque du modèle",
   "Model risk level": "Niveau de risque du modèle",
   "(default: 90 days after approval)": "(par défaut : 90 jours après l'approbation)",
-  "An accepted risk needs a mitigation plan": "Un risque accepté a besoin d'un plan d'atténuation",
   "Can't be lower than the rule minimum allows":
     "Ne peut pas être inférieur à ce que permet le minimum des règles",
   "Risk score:": "Score de risque :",
@@ -1538,6 +1543,14 @@ export const fr: Record<string, string> = {
 };
 
 export const es: Record<string, string> = {
+  "Rare": "Raro",
+  "Unlikely": "Improbable",
+  "Possible": "Posible",
+  "Likely": "Probable",
+  "Almost certain": "Casi seguro",
+  "Set by likelihood and severity": "Determinado por la probabilidad y la gravedad",
+  "Pick a likelihood and a severity to set the level":
+    "Elija una probabilidad y una gravedad para definir el nivel",
   "close calls": "casos límite",
   "missed of completed": "omitidas de completadas",
   "decisions": "decisiones",
@@ -1631,11 +1644,7 @@ export const es: Record<string, string> = {
   "No risks were suggested for this submission.": "No se sugirieron riesgos para este envío.",
   "Likelihood:": "Probabilidad:",
   "Severity:": "Gravedad:",
-  "Add a mitigation plan before accepting this risk.":
-    "Añade un plan de mitigación antes de aceptar este riesgo.",
   "lower-rated suggestions not shown": "sugerencias con menor puntuación no se muestran",
-  "not accepted: they need a mitigation plan first":
-    "no aceptados: primero necesitan un plan de mitigación",
   "Couldn't retry the assessment. Please try again.":
     "No se pudo reintentar la evaluación. Inténtalo de nuevo.",
   "Accepted risks are added to the register when you approve.":
@@ -1643,7 +1652,6 @@ export const es: Record<string, string> = {
   "Model risk category": "Categoría de riesgo del modelo",
   "Model risk level": "Nivel de riesgo del modelo",
   "(default: 90 days after approval)": "(por defecto: 90 días después de la aprobación)",
-  "An accepted risk needs a mitigation plan": "Un riesgo aceptado necesita un plan de mitigación",
   "Can't be lower than the rule minimum allows":
     "No puede ser inferior a lo que permite el mínimo de las reglas",
   "Risk score:": "Puntuación de riesgo:",

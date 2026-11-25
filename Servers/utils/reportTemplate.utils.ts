@@ -1,5 +1,6 @@
 import { sequelize } from "../database/db";
 import { QueryTypes, Transaction } from "sequelize";
+import { VERSION_JSON_COLUMNS } from "./reportTemplateVersionColumns";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 
 // System templates (organization_id IS NULL) plus this org's custom templates.
@@ -66,6 +67,53 @@ export function slugify(name: string): string {
       .replace(/-$/, "")
       .slice(0, 200) || "template"
   );
+}
+
+// Every slug the organization's own templates hold, archived ones included:
+// uq_report_templates_org_slug covers inactive rows too, so an archived
+// template's slug is still taken.
+export async function getOrganizationTemplateSlugsQuery(
+  organization_id: number,
+): Promise<Set<string>> {
+  const rows: any[] = await sequelize.query(
+    `SELECT slug FROM report_templates WHERE organization_id = :organization_id`,
+    { replacements: { organization_id }, type: QueryTypes.SELECT },
+  );
+  return new Set(rows.map((r) => r.slug));
+}
+
+// report_templates.name is VARCHAR(255) and slugify keeps 200 characters.
+const MAX_TEMPLATE_NAME = 255;
+const MAX_SLUG = 200;
+const MAX_COPY_NUMBER = 1000;
+
+const copySuffix = (n: number) => (n === 1 ? " (copy)" : ` (copy ${n})`);
+
+/**
+ * The name of copy number `n` of a template: "<name> (copy)", then
+ * "<name> (copy 2)", ... The base name is trimmed, never the suffix, by code
+ * points so a character outside the BMP is not cut in half: first to fit the
+ * name column, then until the slug is short enough that slugify's 200-character
+ * cut does not drop the suffix (two copies of a long name would otherwise share
+ * a slug).
+ */
+export function copyName(name: string, n: number): string {
+  const suffix = copySuffix(n);
+  const base = Array.from(String(name)).slice(0, MAX_TEMPLATE_NAME - Array.from(suffix).length);
+  while (base.length && slugify(base.join("") + suffix).length >= MAX_SLUG) base.pop();
+  return base.join("") + suffix;
+}
+
+/**
+ * The first copy name whose slug is not in `takenSlugs`, or null when the first
+ * MAX_COPY_NUMBER are all taken.
+ */
+export function freeCopyName(name: string, takenSlugs: Set<string>): string | null {
+  for (let n = 1; n <= MAX_COPY_NUMBER; n++) {
+    const candidate = copyName(name, n);
+    if (!takenSlugs.has(slugify(candidate))) return candidate;
+  }
+  return null;
 }
 
 // Custom templates are always org-owned and never system templates: the
@@ -192,13 +240,19 @@ export async function archiveTemplateQuery(id: number, organization_id: number):
 // The SELECT ... WHERE EXISTS is the tenant guard: a template id belonging to
 // another org inserts zero rows and returns undefined.
 //
-// framework_config is carried like every other config column and is not
-// optional to thread: an empty framework_config means EVERY framework in
-// scope, so a version written without it does not merely lose a preference —
-// it silently widens what the template reports on. Duplicating a framework-
-// specific template goes through this INSERT, and dropping the column here is
-// how a copy of "ISO 42001 Internal Audit Pack" ends up reporting on
-// everything under an ISO-42001 name.
+// Every config column inherits: a version written without a column (or with
+// null) keeps the previous version's value, so a PATCH that edits one part of
+// a template never resets the rest. An explicit value, {} included, is stored
+// as sent, so a caller can still clear a column. A first version (no previous
+// one) gets the column default. This matters most for:
+// - framework_config: {} means EVERY framework in scope, so a reset would not
+//   merely lose a preference but widen what the template reports on.
+// - parameters_config: holds the report kind (e.g. "osfi_e23") that unlocks
+//   the kind's sections; losing it would turn an E-23 template into a general
+//   one whose sections every run then refuses.
+// - sections_config and ai_blocks_config: a reset empties the report.
+// Duplicating a template passes every column of the source's latest version.
+// The columns and their first-version defaults: ./reportTemplateVersionColumns.ts.
 export async function createTemplateVersionQuery(
   template_id: number,
   organization_id: number,
@@ -206,15 +260,45 @@ export async function createTemplateVersionQuery(
   userId: number,
   transaction?: Transaction,
 ): Promise<any> {
+  const parametersConfig = config.parameters_config;
+  if (
+    parametersConfig !== undefined &&
+    parametersConfig !== null &&
+    (typeof parametersConfig !== "object" || Array.isArray(parametersConfig))
+  ) {
+    throw new ValidationException(
+      "parameters_config must be an object",
+      "parameters_config",
+      parametersConfig,
+    );
+  }
+  const replacements: Record<string, unknown> = {
+    template_id,
+    organization_id,
+    created_by: userId,
+  };
+  for (const { column } of VERSION_JSON_COLUMNS) {
+    const value = config[column];
+    replacements[column] = value === undefined || value === null ? null : JSON.stringify(value);
+  }
+  const columns = VERSION_JSON_COLUMNS.map((c) => c.column).join(", ");
+  const values = VERSION_JSON_COLUMNS.map(
+    ({ column, fallback }) => `COALESCE(CAST(:${column} AS JSONB), prev.${column}, ${fallback})`,
+  ).join(",\n            ");
   const rows: any = await sequelize.query(
     `INSERT INTO report_template_versions
-       (template_id, version, sections_config, ai_blocks_config, framework_config,
-        format_config, branding_config, schedule_defaults, delivery_defaults, created_by)
+       (template_id, version, ${columns}, created_by)
      SELECT :template_id,
             (SELECT COALESCE(MAX(version), 0) + 1
                FROM report_template_versions WHERE template_id = :template_id),
-            :sections_config, :ai_blocks_config, :framework_config, :format_config,
-            :branding_config, :schedule_defaults, :delivery_defaults, :created_by
+            ${values},
+            :created_by
+       FROM (SELECT 1) AS one
+       LEFT JOIN LATERAL (
+         SELECT * FROM report_template_versions
+          WHERE template_id = :template_id
+          ORDER BY version DESC LIMIT 1
+       ) AS prev ON true
       WHERE EXISTS (
         SELECT 1 FROM report_templates
          WHERE id = :template_id
@@ -222,24 +306,7 @@ export async function createTemplateVersionQuery(
            AND is_system_template = false
       )
      RETURNING *`,
-    {
-      replacements: {
-        template_id,
-        organization_id,
-        sections_config: JSON.stringify(config.sections_config ?? { sections: [] }),
-        ai_blocks_config: JSON.stringify(config.ai_blocks_config ?? {}),
-        // {} is the column default and means "every framework in scope" —
-        // the same fallback the wizard applies when it seeds [].
-        framework_config: JSON.stringify(config.framework_config ?? {}),
-        format_config: JSON.stringify(config.format_config ?? {}),
-        branding_config: JSON.stringify(config.branding_config ?? {}),
-        schedule_defaults: JSON.stringify(config.schedule_defaults ?? {}),
-        delivery_defaults: JSON.stringify(config.delivery_defaults ?? {}),
-        created_by: userId,
-      },
-      type: QueryTypes.SELECT,
-      transaction,
-    },
+    { replacements, type: QueryTypes.SELECT, transaction },
   );
   return rows[0];
 }

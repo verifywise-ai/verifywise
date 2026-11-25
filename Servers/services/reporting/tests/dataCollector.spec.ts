@@ -142,6 +142,17 @@ describe("dataCollector", () => {
       expect(result.branding.organizationName).toBe("Acme Corp");
     });
 
+    it("puts the report kind and parameters on the metadata", async () => {
+      const collector = createDataCollector(10, 1, 1, 100, 5);
+      const result = await collector.collectAllData([], {
+        reportKind: "osfi_e23",
+        reportParameters: { institutionName: "Northern Bank" },
+      });
+
+      expect(result.metadata.reportKind).toBe("osfi_e23");
+      expect(result.metadata.reportParameters).toEqual({ institutionName: "Northern Bank" });
+    });
+
     it("should collect project risks when section included", async () => {
       mockGetProjectRisks.mockResolvedValue([
         {
@@ -315,6 +326,23 @@ describe("dataCollector", () => {
       expect(result.sections.projectRisks!.risks[0].mitigationStatus).toBe("Not Started");
     });
 
+    it("shows a project risk saved without a mitigation status as Not Started, not Unknown", async () => {
+      mockGetProjectRisks.mockResolvedValue([
+        {
+          id: 12,
+          risk_name: "No mitigation yet",
+          risk_level_autocalculated: "Medium risk",
+          mitigation_status: null,
+          deadline: null,
+        },
+      ] as any);
+
+      const collector = createDataCollector(10, 1, 1, 100, 5);
+      const result = await collector.collectAllData(["projectRisks"]);
+
+      expect(result.sections.projectRisks!.risks[0].mitigationStatus).toBe("Not Started");
+    });
+
     it("reads model_risks.status (not the non-existent mitigation_status) and surfaces plan/date/impact/likelihood", async () => {
       // verifywise.model_risks has no `mitigation_status` column, so the old
       // read made every model risk in every report literally "Unknown".
@@ -474,6 +502,47 @@ describe("dataCollector", () => {
       expect((incident as any).assignee).toBeUndefined();
       expect((incident as any).title).toBeUndefined();
       expect(incident.type).toBe("Data quality");
+    });
+
+    it("leaves archived incidents out and counts them", async () => {
+      mockQuery.mockImplementation((async (sql: unknown) => {
+        const text = String(sql);
+        if (text.includes("COUNT(*)::int AS archived")) return [{ archived: 2 }];
+        if (text.includes("FROM ai_incident_managements")) {
+          return [
+            { id: 9, incident_id: "INC-9", type: "Misuse", severity: "Minor", status: "Open" },
+          ];
+        }
+        return [];
+      }) as any);
+
+      const collector = createDataCollector(10, 1, 1, 100, 5);
+      const result = await collector.collectAllData(["incidentManagement"]);
+
+      const section = result.sections.incidentManagement!;
+      expect(section.totalIncidents).toBe(1);
+      expect(section.archivedIncidents).toBe(2);
+      const listSql = mockQuery.mock.calls
+        .map(([sql]) => String(sql))
+        .find((sql) => sql.includes("SELECT aim.*"));
+      expect(listSql).toContain("aim.archived IS NOT TRUE");
+    });
+
+    it("scopes a use case report's incidents by project_id, list and archived count", async () => {
+      mockQuery.mockImplementation((async () => []) as any);
+
+      const collector = new ReportDataCollector(10, 77, 1, 100, 5);
+      await (collector as any).collectIncidentManagement(false);
+
+      const incidentCalls = mockQuery.mock.calls.filter(([sql]) =>
+        String(sql).includes("FROM ai_incident_managements"),
+      );
+      expect(incidentCalls).toHaveLength(2);
+      for (const [sql, options] of incidentCalls) {
+        expect(String(sql)).toContain("aim.project_id = :projectId");
+        expect(String(sql)).not.toContain("ai_project");
+        expect((options as any).replacements).toEqual({ organizationId: 10, projectId: 77 });
+      }
     });
 
     it("scopes the control-owner lookup to the caller's organization, in one query", async () => {

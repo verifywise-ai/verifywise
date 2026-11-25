@@ -8,19 +8,10 @@ vi.mock("react-router", async () => {
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
-let mockContextValue: any = {
-  projects: [],
-  currentProjectId: null,
-};
+let mockProjects: any[] = [];
 
-vi.mock("../../../../../application/contexts/VerifyWise.context", () => ({
-  VerifyWiseContext: {
-    get _currentValue() {
-      return mockContextValue;
-    },
-    Provider: ({ children }: any) => children,
-    Consumer: ({ children }: any) => children(mockContextValue),
-  },
+vi.mock("../../../../../application/hooks/useProjects", () => ({
+  useProjects: () => ({ data: mockProjects, isLoading: false }),
 }));
 
 let mockMappings: any[] = [];
@@ -40,7 +31,7 @@ import GovernanceHub from "../index";
 describe("GovernanceHub", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockContextValue = { projects: [], currentProjectId: null };
+    mockProjects = [];
     mockMappings = [];
     mockScenarios = [];
     mockPreferences = null;
@@ -93,7 +84,6 @@ describe("GovernanceHub", () => {
   });
 
   it("shows live coverage stats and gap hotspots when coverage data is present", () => {
-    mockContextValue = { projects: [], currentProjectId: "3" };
     mockCoverage = [
       {
         framework_id: 1,

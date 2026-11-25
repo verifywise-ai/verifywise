@@ -32,7 +32,7 @@ import { NextFunction, Request, Response } from "express";
 import { getTokenPayload } from "../utils/jwt.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { getUserByIdQuery } from "../utils/user.utils";
-import { asyncLocalStorage } from "../utils/context/context";
+import { asyncLocalStorage, readClientDateHeader } from "../utils/context/context";
 import { getTenantHash } from "../tools/getTenantHash";
 import { getRoleNameById } from "../utils/roleMap";
 import {
@@ -99,6 +99,7 @@ const authenticateJWT = async (
       {
         userId: req.userId ?? 1,
         organizationId: req.organizationId ?? 1,
+        clientDate: readClientDateHeader(req.headers),
       },
       () => {
         next();
@@ -237,6 +238,8 @@ const authenticateJWT = async (
       {
         userId: decoded.id,
         organizationId: req.organizationId ?? 0,
+        // The browser's local date, for days recorded for this user.
+        clientDate: readClientDateHeader(req.headers),
       },
       () => {
         // RLS Phase 2 (flag-gated, OFF by default): when

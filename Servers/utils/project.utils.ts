@@ -18,9 +18,7 @@ import {
 } from "../extensions/framework-import/importedAssessment.service";
 import { IProjectAttributes } from "../domain.layer/interfaces/i.project";
 import { IRoleAttributes } from "../domain.layer/interfaces/i.role";
-import { TenantAutomationActionModel } from "../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
-import { replaceTemplateVariables } from "./automation/automation.utils";
-import { enqueueAutomationAction } from "../services/automations/automationProducer";
+import { runEventAutomations } from "./automation/automationActions.utils";
 import {
   buildProjectReplacements,
   buildProjectUpdateReplacements,
@@ -635,60 +633,22 @@ export const createNewProjectQuery = async (
     }
   }
 
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat
-    JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId
-    JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId
-    JOIN automation_actions paa ON aa.action_type_id = paa.id
-    WHERE pat.key = 'project_added' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
-    if (automation["trigger_key"] === "project_added") {
-      const owner_name = await resolveProjectOwnerName(
-        createdProject.dataValues,
-        "Unknown",
-        transaction,
-      );
-
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildProjectReplacements({
+  // Every action of every active automation; one flagged legacy keeps only the
+  // event's first. Enqueued once the transaction commits.
+  await runEventAutomations(
+    organizationId,
+    "project_added",
+    async () =>
+      buildProjectReplacements({
         ...createdProject.dataValues,
-        owner_name,
-      });
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // Enqueue with processed params
-      await enqueueAutomationAction(automation.action_key, {
-        ...processedParams,
-        organizationId,
-      });
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    }
-  }
+        owner_name: await resolveProjectOwnerName(
+          createdProject.dataValues,
+          "Unknown",
+          transaction,
+        ),
+      }),
+    { transaction, logContext: `project_added, project ${createdProject.id}` },
+  );
 
   return createdProject;
 };
@@ -890,64 +850,25 @@ export const updateProjectByIdQuery = async (
   const updatedMembers = (await getCurrentProjectMembers(id, organizationId, transaction)).map(
     Number,
   );
-  type AutomationRows = [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
   // No project column changed (e.g. members only): nothing for "project updated"
-  // to report, even when a caller stamped last_updated.
-  const automations: AutomationRows = changesProjectColumns
-    ? ((await sequelize.query(
-        `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat
-    JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId
-    JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId
-    JOIN automation_actions paa ON aa.action_type_id = paa.id
-    WHERE pat.key = 'project_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-        { replacements: { organizationId }, transaction },
-      )) as AutomationRows)
-    : [[], 0];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
-    if (automation["trigger_key"] === "project_updated") {
-      const owner_name = await resolveProjectOwnerName(
-        updatedProject.dataValues,
-        "Unknown",
-        transaction,
-      );
-
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildProjectUpdateReplacements(oldProject, {
-        ...updatedProject.dataValues,
-        owner_name,
-      });
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // Enqueue with processed params
-      await enqueueAutomationAction(automation.action_key, {
-        ...processedParams,
-        organizationId,
-      });
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    }
+  // to report, even when a caller stamped last_updated. Otherwise every action
+  // of every active automation; one flagged legacy keeps only the event's
+  // first. Enqueued once the transaction commits.
+  if (changesProjectColumns) {
+    await runEventAutomations(
+      organizationId,
+      "project_updated",
+      async () =>
+        buildProjectUpdateReplacements(oldProject, {
+          ...updatedProject.dataValues,
+          owner_name: await resolveProjectOwnerName(
+            updatedProject.dataValues,
+            "Unknown",
+            transaction,
+          ),
+        }),
+      { transaction, logContext: `project_updated, project ${id}` },
+    );
   }
   return {
     ...updatedProject.dataValues,
@@ -1083,20 +1004,109 @@ export const lockUseCaseWorkflowQuery = async (
   return { approval_workflow_id: id == null ? null : Number(id) };
 };
 
+/** The use case fields an approval request is opened from (request name, entity data). */
+export interface UseCaseApprovalSnapshot {
+  id: number;
+  project_title: string;
+  owner: number | null;
+  ai_risk_classification: string | null;
+  approval_workflow_id: number | null;
+}
+
+/**
+ * The fields createUseCaseApprovalRequest reads, inside the caller's
+ * transaction: after lockUseCaseWorkflowQuery they are read under that row
+ * lock, on the transaction's connection, so they are current and no second
+ * pool connection is taken while the lock is held. Null when the use case is
+ * not in the organization.
+ */
+export const getUseCaseApprovalSnapshotQuery = async (
+  projectId: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<UseCaseApprovalSnapshot | null> => {
+  const rows = (await sequelize.query(
+    `SELECT id, project_title, owner, ai_risk_classification, approval_workflow_id
+       FROM projects
+      WHERE id = :id AND organization_id = :organizationId`,
+    { replacements: { id: projectId, organizationId }, type: QueryTypes.SELECT, transaction },
+  )) as Array<{
+    id: number | string;
+    project_title: string;
+    owner: number | string | null;
+    ai_risk_classification: string | null;
+    approval_workflow_id: number | string | null;
+  }>;
+  if (rows.length === 0) return null;
+  const row = rows[0];
+  return {
+    id: Number(row.id),
+    project_title: row.project_title,
+    owner: row.owner == null ? null : Number(row.owner),
+    ai_risk_classification: row.ai_risk_classification,
+    approval_workflow_id:
+      row.approval_workflow_id == null ? null : Number(row.approval_workflow_id),
+  };
+};
+
+/** A use case's approval workflow, as GET /api/v1/projects/:id/approval-workflow returns it. */
+export interface UseCaseApprovalWorkflowRow {
+  approval_workflow_id: number | null;
+  workflow_title: string | null;
+  /**
+   * False once the workflow is archived, or when the stored workflow is not
+   * found in the organization (then workflow_title is null); null when no
+   * workflow is attached.
+   */
+  workflow_is_active: boolean | null;
+}
+
+/**
+ * The approval workflow attached to a use case, with its title and whether it
+ * is still active (archived workflows keep their row). Both tables are scoped
+ * to the organization. Null when the use case is not in the organization.
+ */
+export const getUseCaseApprovalWorkflowQuery = async (
+  projectId: number,
+  organizationId: number,
+): Promise<UseCaseApprovalWorkflowRow | null> => {
+  const rows = (await sequelize.query(
+    `SELECT p.approval_workflow_id, aw.workflow_title, aw.is_active
+       FROM projects p
+       LEFT JOIN approval_workflows aw
+         ON aw.id = p.approval_workflow_id AND aw.organization_id = :organizationId
+      WHERE p.id = :id AND p.organization_id = :organizationId`,
+    { replacements: { id: projectId, organizationId }, type: QueryTypes.SELECT },
+  )) as Array<{
+    approval_workflow_id: number | string | null;
+    workflow_title: string | null;
+    is_active: boolean | null;
+  }>;
+  if (rows.length === 0) return null;
+  const row = rows[0];
+  if (row.approval_workflow_id == null) {
+    return { approval_workflow_id: null, workflow_title: null, workflow_is_active: null };
+  }
+  // A stored id the organization-scoped join does not find is still attached
+  // (changing it withdraws its request), but cannot be used: no title, inactive.
+  const found = row.workflow_title != null;
+  return {
+    approval_workflow_id: Number(row.approval_workflow_id),
+    workflow_title: found ? row.workflow_title : null,
+    workflow_is_active: found ? row.is_active === true : false,
+  };
+};
+
 /**
  * Delete a project and everything that hangs off it. The project row is
- * locked (FOR UPDATE) before any child row is touched. Pass
- * `enqueueAutomationAfterCommit` when the caller's transaction may still roll
- * back after this returns (for example a batch removal): the project_deleted
- * automation is then queued only once the transaction commits, so it never
- * fires for a project that survived a rollback. Without it the automation is
- * queued right away, as before.
+ * locked (FOR UPDATE) before any child row is touched. The project_deleted
+ * automations are queued only once the transaction commits, so they never
+ * fire for a project that survived a rollback.
  */
 export const deleteProjectByIdQuery = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
-  options: { enqueueAutomationAfterCommit?: boolean } = {},
 ): Promise<boolean> => {
   // The project lock comes before any child row. If the caller already holds
   // it (deleteProjectWithSideEffects), this is a cheap no-op.
@@ -1150,80 +1160,20 @@ export const deleteProjectByIdQuery = async (
   );
   const deletedProject = result[0];
 
-  // Automation trigger is optional - wrap in try-catch to prevent automation failures
-  // from blocking the core project deletion operation
-  try {
-    // Only proceed with automation if we have a valid deleted project
-    if (deletedProject && (deletedProject.owner || deletedProject.external_owner_name)) {
-      const automations = (await sequelize.query(
-        `SELECT
-          pat.key AS trigger_key,
-          paa.key AS action_key,
-          a.id AS automation_id,
-          aa.*
-        FROM automation_triggers pat
-        JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId
-        JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId
-        JOIN automation_actions paa ON aa.action_type_id = paa.id
-        WHERE pat.key = 'project_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
-        { replacements: { organizationId }, transaction },
-      )) as [
-        (TenantAutomationActionModel & {
-          trigger_key: string;
-          action_key: string;
-          automation_id: number;
-        })[],
-        number,
-      ];
-      if (automations[0].length > 0) {
-        const automation = automations[0][0];
-        if (automation["trigger_key"] === "project_deleted") {
-          const owner_name = await resolveProjectOwnerName(deletedProject, "Unknown", transaction);
-
-          const params = automation.params!;
-
-          // Build replacements
-          const replacements = buildProjectReplacements({
-            ...deletedProject,
-            owner_name,
-          });
-
-          // Replace variables in subject and body
-          const processedParams = {
-            ...params,
-            subject: replaceTemplateVariables(params.subject || "", replacements),
-            body: replaceTemplateVariables(params.body || "", replacements),
-            automation_id: automation.automation_id,
-          };
-
-          // Enqueue with processed params
-          const enqueue = () =>
-            enqueueAutomationAction(automation.action_key, {
-              ...processedParams,
-              organizationId,
-            });
-          if (options.enqueueAutomationAfterCommit) {
-            transaction.afterCommit(() => {
-              enqueue().catch((err) =>
-                console.warn(
-                  `[deleteProjectByIdQuery] Automation enqueue after commit failed for project ${id}:`,
-                  err instanceof Error ? err.message : err,
-                ),
-              );
-            });
-          } else {
-            await enqueue();
-          }
-        } else {
-          console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-        }
-      }
-    }
-  } catch (automationError) {
-    // Log but don't throw - automation failure shouldn't block project deletion
-    console.warn(
-      `[deleteProjectByIdQuery] Automation trigger failed for project ${id}:`,
-      automationError instanceof Error ? automationError.message : automationError,
+  // The automation is optional: its lookup runs in a savepoint (contained),
+  // so a failure there is logged and never aborts the delete's transaction.
+  // Every action of every active automation; one flagged legacy keeps only
+  // the event's first. Queued once the transaction commits.
+  if (deletedProject && (deletedProject.owner || deletedProject.external_owner_name)) {
+    await runEventAutomations(
+      organizationId,
+      "project_deleted",
+      async () =>
+        buildProjectReplacements({
+          ...deletedProject,
+          owner_name: await resolveProjectOwnerName(deletedProject, "Unknown", transaction),
+        }),
+      { transaction, contained: true, logContext: `project_deleted, project ${id}` },
     );
   }
 

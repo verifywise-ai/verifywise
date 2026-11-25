@@ -1,4 +1,4 @@
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { useLocation } from "react-router";
 import { QueryClient } from "@tanstack/react-query";
 import { onApprovalRequestsChanged } from "../../../../application/events/approvalRequestEvents";
@@ -9,8 +9,7 @@ import { renderWithProviders } from "../../../../test/renderWithProviders";
 vi.mock("../../../../application/repository/approvalWorkflow.repository", () => ({
   getAllApprovalWorkflows: vi.fn().mockResolvedValue({ data: [] }),
   getApprovalWorkflowById: vi.fn().mockResolvedValue({ data: null }),
-  createApprovalWorkflow: vi.fn().mockResolvedValue({ data: {} }),
-  updateApprovalWorkflow: vi.fn().mockResolvedValue({ data: {} }),
+  saveApprovalWorkflow: vi.fn().mockResolvedValue({ id: 1 }),
   deleteApprovalWorkflow: vi.fn().mockResolvedValue({ data: {} }),
 }));
 
@@ -43,7 +42,9 @@ vi.mock("../ApprovalWorkflowsTable", () => ({
       data-testid="approval-workflows-table"
       data-can-edit={String(Boolean(onEdit))}
       data-can-archive={String(Boolean(onArchive))}
-    />
+    >
+      <button onClick={() => onArchive?.("5")}>Archive workflow 5</button>
+    </div>
   ),
 }));
 
@@ -51,8 +52,18 @@ vi.mock("../../../components/Layout/PageHeaderExtended", () => ({
   PageHeaderExtended: ({ children }: any) => <div data-testid="page-header">{children}</div>,
 }));
 
+const newWorkflowForm = vi.hoisted(() => ({
+  workflow_title: "Model risk review",
+  entity: 1,
+  steps: [],
+  auto_approve_max_risk: null,
+}));
 vi.mock("../../../components/Modals/NewApprovalWorkflow", () => ({
-  default: () => <div data-testid="new-approval-workflow-modal" />,
+  default: ({ onSuccess }: any) => (
+    <div data-testid="new-approval-workflow-modal">
+      <button onClick={() => onSuccess(newWorkflowForm)}>Save workflow form</button>
+    </div>
+  ),
 }));
 
 vi.mock("../../../components/button/customizable-button", () => ({
@@ -116,6 +127,7 @@ const canMock = vi.hoisted(() => ({ useCan: vi.fn(() => true) }));
 vi.mock("../../../../application/hooks/useCan", () => canMock);
 
 import ApprovalWorkflows from "../index";
+import { saveApprovalWorkflow } from "../../../../application/repository/approvalWorkflow.repository";
 
 const LocationProbe = () => <div data-testid="location-search">{useLocation().search}</div>;
 
@@ -150,6 +162,35 @@ describe("ApprovalWorkflows", () => {
     const table = screen.getByTestId("approval-workflows-table");
     expect(table).toHaveAttribute("data-can-edit", "false");
     expect(table).toHaveAttribute("data-can-archive", "false");
+  });
+
+  it("creates a new workflow through the shared save", async () => {
+    renderWithProviders(<ApprovalWorkflows />);
+    fireEvent.click(screen.getByRole("button", { name: "Save workflow form" }));
+    await waitFor(() =>
+      expect(saveApprovalWorkflow).toHaveBeenCalledWith({
+        id: undefined,
+        formData: newWorkflowForm,
+      }),
+    );
+  });
+
+  it("refreshes the use case workflow lists after a save and after an archive", async () => {
+    const queryClient = new QueryClient();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    renderWithProviders(<ApprovalWorkflows />, { queryClient });
+    const useCaseList = { queryKey: ["approvalWorkflows", "use_case"] };
+    // Every use case overview's attached workflow (title, archived state).
+    const attachedWorkflows = { queryKey: ["useCaseApprovalWorkflow"] };
+
+    fireEvent.click(screen.getByRole("button", { name: "Save workflow form" }));
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith(useCaseList));
+    expect(invalidate).toHaveBeenCalledWith(attachedWorkflows);
+
+    invalidate.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Archive workflow 5" }));
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith(useCaseList));
+    expect(invalidate).toHaveBeenCalledWith(attachedWorkflows);
   });
 
   it("renders without crashing", () => {

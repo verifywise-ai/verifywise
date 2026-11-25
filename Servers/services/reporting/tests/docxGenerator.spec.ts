@@ -318,19 +318,31 @@ describe("DOCX Generator", () => {
       aiSummaries,
     });
 
+    it("prints a section heading as plain bold text: no shading, no rail, sentence case", async () => {
+      const result = await generateDOCX(
+        withSummaries({ sectionSummaries: {}, recommendedActions }),
+      );
+      const xml = await docxXml(result.content);
+      const paragraph = xml.split("</w:p>").find((p) => p.includes(">Recommended actions</w:t>"));
+      expect(paragraph).toBeDefined();
+      expect(paragraph).toContain("<w:b/>");
+      expect(paragraph).not.toContain("<w:shd");
+      expect(paragraph).not.toContain("<w:pBdr");
+    });
+
     it("renders recommended actions even when the executive summary abstained", async () => {
       const result = await generateDOCX(
         withSummaries({ sectionSummaries: {}, recommendedActions }),
       );
       const text = await docxText(result.content);
 
-      expect(text).toContain("RECOMMENDED ACTIONS");
+      expect(text).toContain("Recommended actions");
       expect(text).toContain("Close the DPIA gap");
       expect(text).toContain("[high · Jane Ops]");
       expect(text).toContain("Refresh vendor attestations");
       expect(text).toContain("[— · Unassigned]");
       expect(text).toContain("1. Recommended actions");
-      expect(text).not.toContain("EXECUTIVE SUMMARY");
+      expect(text).not.toContain("Executive summary");
       expect(text).not.toContain("Compliance gap analysis");
       expect(text).not.toContain("Third-party risk analysis");
     });
@@ -339,7 +351,7 @@ describe("DOCX Generator", () => {
       const result = await generateDOCX(withSummaries({ sectionSummaries: {}, complianceGap }));
       const text = await docxText(result.content);
 
-      expect(text).toContain("COMPLIANCE GAP ANALYSIS");
+      expect(text).toContain("Compliance gap analysis");
       expect(text).toContain("Two clauses lack evidence.");
       expect(text).toContain("SCOPE NOTE");
       expect(text).toContain("Scores reflect stored readiness only.");
@@ -355,7 +367,7 @@ describe("DOCX Generator", () => {
       const result = await generateDOCX(withSummaries({ sectionSummaries: {}, vendorRisk }));
       const text = await docxText(result.content);
 
-      expect(text).toContain("THIRD-PARTY RISK ANALYSIS");
+      expect(text).toContain("Third-party risk analysis");
       expect(text).toContain("One processor has no independent assurance report.");
       expect(text).toContain("Acme Cloud: ");
       expect(text).toContain("No SOC 2 Type II (high)");
@@ -382,11 +394,11 @@ describe("DOCX Generator", () => {
       expect(text).toContain("4. Third-party risk analysis");
 
       // The TOC promises this order; the body must actually follow it.
-      expect(text.indexOf("RECOMMENDED ACTIONS")).toBeLessThan(
-        text.indexOf("COMPLIANCE GAP ANALYSIS"),
+      expect(text.indexOf("Recommended actions")).toBeLessThan(
+        text.indexOf("Compliance gap analysis"),
       );
-      expect(text.indexOf("COMPLIANCE GAP ANALYSIS")).toBeLessThan(
-        text.indexOf("THIRD-PARTY RISK ANALYSIS"),
+      expect(text.indexOf("Compliance gap analysis")).toBeLessThan(
+        text.indexOf("Third-party risk analysis"),
       );
     });
 
@@ -432,9 +444,9 @@ describe("DOCX Generator", () => {
       const result = await generateDOCX(withSummaries({ sectionSummaries: {} }));
       const text = await docxText(result.content);
 
-      expect(text).not.toContain("RECOMMENDED ACTIONS");
-      expect(text).not.toContain("COMPLIANCE GAP ANALYSIS");
-      expect(text).not.toContain("THIRD-PARTY RISK ANALYSIS");
+      expect(text).not.toContain("Recommended actions");
+      expect(text).not.toContain("Compliance gap analysis");
+      expect(text).not.toContain("Third-party risk analysis");
     });
 
     it("renders structured findings with severity, basis, counterfactual and related sections", async () => {
@@ -655,6 +667,177 @@ describe("DOCX Generator", () => {
     });
   });
 
+  describe("table cells with newlines (existing callers)", () => {
+    it("keeps a multi-line assessment answer as one run at the normal size and colour", async () => {
+      const result = await generateDOCX({
+        ...mockReportData,
+        sections: {
+          assessment: {
+            overallProgress: 50,
+            totalQuestions: 1,
+            answeredQuestions: 1,
+            topics: [
+              {
+                id: 1,
+                title: "Topic",
+                progress: 100,
+                subtopics: [
+                  {
+                    id: 1,
+                    title: "Sub",
+                    questions: [
+                      {
+                        id: 1,
+                        question: "Q?",
+                        answer: "line1\r\nline2\nline3",
+                        status: "Answered",
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        } as unknown as ReportData["sections"],
+      });
+      const xml = await docxXml(result.content);
+      const run = xml.match(/<w:r>(?:(?!<\/w:r>).)*line1(?:(?!<\/w:r>).)*<\/w:r>/s)?.[0] ?? "";
+      expect(run).toContain("line1\r\nline2\nline3");
+      expect(run).toContain('<w:sz w:val="20"/>');
+      expect(run).not.toContain('<w:sz w:val="16"/>');
+      expect(run).not.toContain("595959");
+    });
+
+    it("prints a null cell as '-' instead of failing the export", async () => {
+      const result = await generateDOCX({
+        ...mockReportData,
+        sections: {
+          projectRisks: {
+            totalRisks: 1,
+            risksByLevel: [],
+            risks: [
+              {
+                id: 1,
+                name: null,
+                description: "",
+                riskLevel: "High",
+                impact: "Major",
+                likelihood: "Likely",
+                mitigationStatus: "Open",
+                owner: "Alice",
+              },
+            ],
+          },
+        } as unknown as ReportData["sections"],
+      });
+      expect(result.success).toBe(true);
+      expect(await docxText(result.content)).toContain("Alice");
+    });
+  });
+
+  describe("framework requirements", () => {
+    const rollup = (total: number, done: number) => ({
+      total,
+      done,
+      unassigned: 0,
+      noEvidence: 0,
+      overdue: 0,
+      statusBreakdown: {},
+    });
+    const row = (over: Record<string, unknown>) => ({
+      implId: 1,
+      level: 2 as const,
+      title: "Req",
+      orderNo: 1,
+      status: "In progress",
+      owner: null,
+      reviewer: null,
+      approver: null,
+      dueDate: null,
+      isDone: false,
+      isOverdue: false,
+      evidenceCount: 0,
+      evidenceFiles: [] as string[],
+      riskCount: 0,
+      ...over,
+    });
+    const frameworkData = (): ReportData => ({
+      ...mockReportData,
+      sections: {
+        frameworkRequirements: {
+          frameworks: [
+            {
+              frameworkId: 26,
+              frameworkName: "OSFI E-23",
+              rollup: rollup(3, 1),
+              groups: [
+                {
+                  title: "Governance",
+                  orderNo: 1,
+                  useCase: "Credit scoring",
+                  rollup: rollup(3, 1),
+                  requirements: [
+                    row({
+                      implId: 10,
+                      title: "Model inventory",
+                      status: "Implemented",
+                      isDone: true,
+                      owner: "Jane Doe",
+                      dueDate: "2026-12-01",
+                      evidenceCount: 3,
+                      evidenceFiles: ["a.pdf", "b.docx"],
+                      children: [
+                        row({
+                          implId: 11,
+                          level: 3,
+                          title: "Inventory sub item",
+                        }),
+                      ],
+                    }),
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    });
+
+    it("renders framework requirements with progress line, group headings and evidence line", async () => {
+      const result = await generateDOCX(frameworkData());
+      const text = await docxText(result.content);
+
+      expect(result.success).toBe(true);
+      expect(text).toContain("OSFI E-23");
+      expect(text).toContain("1 of 3 requirements implemented or audited");
+      expect(text).toContain("Credit scoring · Governance");
+      expect(text).toContain("Requirement");
+      expect(text).toContain("Due date");
+      expect(text).toContain("Model inventory");
+      expect(text).toContain("Jane Doe");
+      expect(text).toContain("2026-12-01");
+      expect(text).toContain("Inventory sub item");
+      expect(text).toContain("Evidence: a.pdf, b.docx, and 1 more");
+    });
+
+    it("includes frameworkRequirements in the compliance group guard", async () => {
+      const result = await generateDOCX(frameworkData());
+      const text = await docxText(result.content);
+      expect(text).toContain("1. Compliance &amp; governance");
+      // The heading is its own run; the TOC entry above carries the number.
+      expect(text).toContain("\nCompliance &amp; governance\n");
+    });
+
+    it("labels the notice for the section", async () => {
+      const result = await generateDOCX({
+        ...mockReportData,
+        sections: {},
+        sectionNotices: [{ sectionKey: "frameworkRequirements", reason: "no_data" }],
+      });
+      expect(await docxText(result.content)).toContain("Framework requirements");
+    });
+  });
+
   describe("section notices", () => {
     it("names the section and explains why it is empty", async () => {
       // Nothing but notices: both "has any section" guards return [], so this
@@ -685,6 +868,42 @@ describe("DOCX Generator", () => {
       expect(text).toContain("brand_new_reason");
     });
 
+    describe("collection_failed", () => {
+      const failed = {
+        sectionKey: "frameworkRequirements",
+        reason: "collection_failed",
+        detail: "SOC 2 for <b>Chatbot</b>",
+      } as const;
+
+      it("renders its own subsection with the pairing and what to do", async () => {
+        const result = await generateDOCX({ ...mockReportData, sectionNotices: [failed] });
+        const text = await docxText(result.content);
+
+        expect(text).toContain("Sections that could not be completed");
+        expect(text).toContain("Part of these sections could not be read");
+        expect(text).toContain("Framework requirements");
+        expect(text).toContain("SOC 2 for &lt;b&gt;Chatbot&lt;/b&gt;: could not be read.");
+        expect(text).toContain("could not be read.");
+        expect(text).toContain("What to do: generate the report again.");
+        expect(text).not.toContain("Sections with no data");
+      });
+
+      it("keeps no_data notices under Sections with no data only", async () => {
+        const result = await generateDOCX({
+          ...mockReportData,
+          sectionNotices: [failed, { sectionKey: "vendors", reason: "no_data" }],
+        });
+        const text = await docxText(result.content);
+
+        expect(text.indexOf("Sections that could not be completed")).toBeLessThan(
+          text.indexOf("Sections with no data"),
+        );
+        const noDataPart = text.slice(text.indexOf("Sections with no data"));
+        expect(noDataPart).toContain("Vendors");
+        expect(noDataPart).not.toContain("Framework requirements");
+      });
+    });
+
     it("renders nothing when there are no notices", async () => {
       const result = await generateDOCX({ ...mockReportData, sectionNotices: [] });
       const text = await docxText(result.content);
@@ -699,6 +918,38 @@ describe("DOCX Generator", () => {
 
       expect(result.success).toBe(true);
       expect(text).not.toContain("Sections with no data");
+    });
+  });
+
+  describe("incident management section", () => {
+    const withIncidents = (archivedIncidents: number): ReportData => ({
+      ...mockReportData,
+      metadata: { ...mockReportData.metadata, isOrganizational: true },
+      sections: {
+        incidentManagement: {
+          totalIncidents: 1,
+          archivedIncidents,
+          incidents: [
+            { id: 1, incidentId: "INC-1", type: "Malfunction", severity: "Minor", status: "Open" },
+          ],
+        },
+      },
+    });
+
+    it("says how many archived incidents were left out", async () => {
+      const result = await generateDOCX(withIncidents(3));
+      const text = await docxText(result.content);
+      expect(text).toContain("3 archived incidents are not included.");
+    });
+
+    it("uses the singular for one archived incident", async () => {
+      const text = await docxText((await generateDOCX(withIncidents(1))).content);
+      expect(text).toContain("1 archived incident is not included.");
+    });
+
+    it("says nothing when no incident is archived", async () => {
+      const text = await docxText((await generateDOCX(withIncidents(0))).content);
+      expect(text).not.toContain("archived");
     });
   });
 });

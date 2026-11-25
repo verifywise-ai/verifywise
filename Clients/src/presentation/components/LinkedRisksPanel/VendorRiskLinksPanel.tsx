@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Alert, Box, CircularProgress, Stack, Typography } from "@mui/material";
-import { Network } from "lucide-react";
+import { Alert, Box, CircularProgress, Divider, Stack, Typography } from "@mui/material";
+import { Link2, Network, Plus } from "lucide-react";
 import { CustomizableButton } from "../button/customizable-button";
 import { EmptyState } from "../EmptyState";
 import { textStyles } from "../../themes/typography";
@@ -21,6 +21,7 @@ import { useWatchedLinks } from "./useWatchedLinks";
 import { useFormFocus } from "./useFormFocus";
 import { groupingNotice } from "./groupingNotice";
 import { useCan } from "../../../application/hooks/useCan";
+import { radiusPx } from "../../themes/palette";
 
 interface VendorRiskLinksPanelProps {
   vendorRiskId: number;
@@ -53,6 +54,12 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
   const [dismissing, setDismissing] = useState<RiskLink | null>(null);
   // Scans, suggestions and the graph authorize on riskLinks.admin.
   const isAdmin = useCan("riskLinks.admin");
+  // The same keys the server checks: creating a link needs riskLinks.edit
+  // (Admin, Editor); confirming, dismissing, removing or restoring one is a
+  // status change and needs riskLinks.review (Admin, Editor, Reviewer). An
+  // Auditor holds neither and sees no link actions.
+  const canEdit = useCan("riskLinks.edit");
+  const canReview = useCan("riskLinks.review");
   const { t } = useTranslation();
   const { formRef, openerRef } = useFormFocus(form);
 
@@ -159,31 +166,37 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
 
   return (
     <Stack spacing="16px" sx={{ py: "16px" }}>
-      <Stack direction="row" justifyContent="space-between">
-        <Stack direction="row" spacing="8px">
+      <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Stack direction="row" spacing="8px" alignItems="center">
           {/*
             Each form has its own Cancel, so these buttons only open a form, and
             stay in place (disabled while theirs is open) so nothing shifts
             under the pointer. Same as the project risk panel.
           */}
-          <CustomizableButton
-            ref={openerRef("child")}
-            size="small"
-            variant="text"
-            onClick={() => setForm("child")}
-            isDisabled={form === "child"}
-          >
-            Link a project risk
-          </CustomizableButton>
-          <CustomizableButton
-            ref={openerRef("related")}
-            size="small"
-            variant="text"
-            onClick={() => setForm("related")}
-            isDisabled={form === "related"}
-          >
-            Relate a vendor risk
-          </CustomizableButton>
+          {canEdit && (
+            <>
+              <CustomizableButton
+                ref={openerRef("child")}
+                size="small"
+                variant="text"
+                startIcon={<Link2 size={16} />}
+                onClick={() => setForm("child")}
+                isDisabled={form === "child"}
+              >
+                Link a project risk
+              </CustomizableButton>
+              <CustomizableButton
+                ref={openerRef("related")}
+                size="small"
+                variant="text"
+                startIcon={<Plus size={16} />}
+                onClick={() => setForm("related")}
+                isDisabled={form === "related"}
+              >
+                Relate a vendor risk
+              </CustomizableButton>
+            </>
+          )}
           {isAdmin && (
             <CustomizableButton
               size="small"
@@ -206,7 +219,7 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
         </CustomizableButton>
       </Stack>
 
-      {form && (
+      {canEdit && form && (
         <Box ref={formRef}>
           {form === "child" ? (
             <LinkChildRiskForm
@@ -235,10 +248,12 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
       {!isLoading && links.length === 0 && (
         <Stack spacing="8px" alignItems="center">
           <EmptyState icon={Network} message="No linked risks yet." showBorder={false} />
-          <Typography sx={{ ...textStyles.caption, color: "text.accent" }}>
-            Link a project risk that this vendor risk applies to, or relate another vendor risk.
-            Suggestions appear here too.
-          </Typography>
+          {canEdit && (
+            <Typography sx={{ ...textStyles.caption, color: "text.accent" }}>
+              Link a project risk that this vendor risk applies to, or relate another vendor risk.
+              Suggestions appear here too.
+            </Typography>
+          )}
           {isAdmin ? (
             <CustomizableButton
               size="small"
@@ -262,19 +277,36 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
         if (group.length === 0) return null;
         return (
           <Box key={title}>
-            <Typography sx={{ ...textStyles.subsectionTitle, color: "text.primary", mb: "4px" }}>
-              {title}
-            </Typography>
-            <Typography sx={{ ...textStyles.caption, color: "text.accent", mb: "8px" }}>
+            <Stack direction="row" spacing="8px" alignItems="baseline">
+              <Typography sx={{ ...textStyles.subsectionTitle, color: "text.primary" }}>
+                {title}
+              </Typography>
+              <Typography sx={{ ...textStyles.bodySmall, color: "text.tertiary" }}>
+                {group.length}
+              </Typography>
+            </Stack>
+            <Typography sx={{ ...textStyles.body, color: "text.tertiary", mb: "8px" }}>
               {caption}
             </Typography>
-            <Stack spacing="8px">
+            {/* One bordered list per group, a divider between rows, so each
+                link's chips and actions read as one line. */}
+            <Stack
+              divider={<Divider flexItem />}
+              sx={{
+                "border": 1,
+                "borderColor": "border.light",
+                "borderRadius": radiusPx.sm,
+                "bgcolor": "background.main",
+                "& > :not(hr)": { px: "14px", py: "10px" },
+              }}
+            >
               {group.map((link) => (
                 <LinkRow
                   key={link.id}
                   link={link}
                   dismissing={dismissing?.id === link.id}
                   statusPending={updateStatus.isPending}
+                  canReview={canReview}
                   onAction={handleAction}
                   onSubmitDismissal={(dismissal) => submitDismissal(link, dismissal)}
                   onCancelDismissal={() => setDismissing(null)}

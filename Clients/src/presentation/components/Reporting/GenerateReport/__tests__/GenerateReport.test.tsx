@@ -172,4 +172,29 @@ describe("GenerateReport", () => {
     // Not stuck on the generating/status view.
     expect(screen.queryByText(/Generating report/i)).not.toBeInTheDocument();
   });
+
+  it("downloads a partial_success run and warns with the gap instead of an error", async () => {
+    mockReporting.reportRun = {
+      data: {
+        id: 8,
+        status: "partial_success",
+        file_id: 11,
+        output_filename: "report.pdf",
+        error_message: "Report generated with gaps: SOC 2 for Chatbot could not be read.",
+      },
+    };
+    const onClose = vi.fn();
+
+    renderWithProviders(<GenerateReport onClose={onClose} reportType="project" />);
+
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+    expect(mockDownload.fn).toHaveBeenCalledWith(8);
+    expect(alerts).toContainEqual(
+      expect.objectContaining({
+        variant: "warning",
+        body: "Report generated with gaps: SOC 2 for Chatbot could not be read.",
+      }),
+    );
+    expect(alerts.some((a) => a.variant === "error")).toBe(false);
+  });
 });

@@ -5,6 +5,11 @@ import Field from "../../../components/Inputs/Field";
 import Select from "../../../components/Inputs/Select";
 import DatePicker from "../../../components/Inputs/Datepicker";
 import { CustomizableButton } from "../../../components/button/customizable-button";
+import {
+  computeModelRiskLevel,
+  MODEL_RISK_LIKELIHOOD_OPTIONS,
+  MODEL_RISK_SEVERITY_OPTIONS,
+} from "../../../tools/modelRiskLevel";
 import type {
   IntakeSuggestedRisk,
   SuggestedRiskPatch,
@@ -12,20 +17,6 @@ import type {
   SuggestionSeverity,
 } from "../../../../application/repository/intakeForm.repository";
 
-export const LIKELIHOODS: SuggestionLikelihood[] = [
-  "Rare",
-  "Unlikely",
-  "Possible",
-  "Likely",
-  "Almost Certain",
-];
-export const SEVERITIES: SuggestionSeverity[] = [
-  "Negligible",
-  "Minor",
-  "Moderate",
-  "Major",
-  "Catastrophic",
-];
 export const MODEL_RISK_CATEGORIES = [
   "Performance",
   "Bias & Fairness",
@@ -33,7 +24,6 @@ export const MODEL_RISK_CATEGORIES = [
   "Data Quality",
   "Compliance",
 ];
-export const MODEL_RISK_LEVELS = ["Low", "Medium", "High", "Critical"];
 
 const items = (values: string[]) => values.map((v) => ({ _id: v, name: v }));
 
@@ -65,7 +55,6 @@ function SuggestedRiskEditor({
     implementationStrategy: risk.implementationStrategy,
     deadline: risk.deadline,
     modelRiskCategory: risk.modelRiskCategory ?? "",
-    modelRiskLevel: risk.modelRiskLevel ?? "",
   });
   const set = <K extends keyof typeof draft>(key: K, value: (typeof draft)[K]) =>
     setDraft((prev) => ({ ...prev, [key]: value }));
@@ -77,11 +66,15 @@ function SuggestedRiskEditor({
       : undefined;
   const tooLong = (v: string) =>
     v.trim().length > TEXT_MAX ? `Must be at most ${TEXT_MAX} characters` : undefined;
-  const mitigationError =
-    risk.state === "accepted" && !draft.mitigationPlan.trim()
-      ? "An accepted risk needs a mitigation plan"
-      : tooLong(draft.mitigationPlan);
+  // The mitigation plan is optional, as in the risk register.
+  const mitigationError = tooLong(draft.mitigationPlan);
+  // A model risk's level comes from likelihood and severity (decision 10);
+  // both must be on the list before the suggestion can be saved.
+  const modelLevel = computeModelRiskLevel(draft.likelihood, draft.severity);
+  const levelError =
+    isModel && !modelLevel ? "Pick a likelihood and a severity to set the level" : undefined;
   const invalid =
+    !!levelError ||
     !!nameError ||
     !!tooLong(draft.description) ||
     !!mitigationError ||
@@ -102,9 +95,6 @@ function SuggestedRiskEditor({
     if (draft.deadline !== risk.deadline) patch.deadline = draft.deadline;
     if (isModel && draft.modelRiskCategory && draft.modelRiskCategory !== risk.modelRiskCategory) {
       patch.modelRiskCategory = draft.modelRiskCategory;
-    }
-    if (isModel && draft.modelRiskLevel && draft.modelRiskLevel !== risk.modelRiskLevel) {
-      patch.modelRiskLevel = draft.modelRiskLevel;
     }
     if (Object.keys(patch).length === 0) {
       onCancel();
@@ -135,14 +125,14 @@ function SuggestedRiskEditor({
           id={`suggestion-${risk.id}-likelihood`}
           label="Likelihood"
           value={draft.likelihood}
-          items={items(LIKELIHOODS)}
+          items={MODEL_RISK_LIKELIHOOD_OPTIONS}
           onChange={(e) => set("likelihood", e.target.value as SuggestionLikelihood)}
         />
         <Select
           id={`suggestion-${risk.id}-severity`}
           label="Severity"
           value={draft.severity}
-          items={items(SEVERITIES)}
+          items={MODEL_RISK_SEVERITY_OPTIONS}
           onChange={(e) => set("severity", e.target.value as SuggestionSeverity)}
         />
         {isModel && (
@@ -154,12 +144,13 @@ function SuggestedRiskEditor({
               items={items(MODEL_RISK_CATEGORIES)}
               onChange={(e) => set("modelRiskCategory", String(e.target.value))}
             />
-            <Select
+            <Field
               id={`suggestion-${risk.id}-model-level`}
               label="Model risk level"
-              value={draft.modelRiskLevel}
-              items={items(MODEL_RISK_LEVELS)}
-              onChange={(e) => set("modelRiskLevel", String(e.target.value))}
+              value={modelLevel ?? ""}
+              disabled
+              placeholder="Set by likelihood and severity"
+              error={levelError}
             />
           </>
         )}

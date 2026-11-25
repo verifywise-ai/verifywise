@@ -1,15 +1,27 @@
 /**
  * Post-approval executor for `agent_register_model`.
  *
- * Runs inside the approval transaction. Inserts a row into
- * `model_inventories` and (if a project_id was supplied) a row in
- * `model_inventories_projects_frameworks` linking the new model to the
- * project. Throws on any failure so the surrounding transaction rolls
- * back the approval state change.
+ * Runs inside the approval transaction, as the requester. The model is
+ * created through `createModelInventoryService` and a use case link added
+ * through `linkModelToUseCaseService`, so the console's rules apply
+ * (model.edit, write access to the use case) and the change history, the
+ * "model added" automation and the notices follow (after the approval
+ * commits). Throws on any failure so the surrounding transaction rolls back
+ * the approval state change.
  */
 
 import { sequelize } from "../../../database/db";
 import logger from "../../../utils/logger/fileLogger";
+import {
+  createModelInventoryService,
+  linkModelToUseCaseService,
+} from "../../../services/modelInventory.service";
+import { ModelInventoryStatus } from "../../../domain.layer/enums/model-inventory-status.enum";
+import {
+  ForbiddenException,
+  ValidationException,
+} from "../../../domain.layer/exceptions/custom.exception";
+import { isRefusal, modelWriteContextForUser } from "../../functions/modelWriteScope";
 import type { AiActionExecuteContext, AiActionExecuteResult } from "../types";
 import type { AgentRegisterModelInput } from "./schema";
 
@@ -17,11 +29,27 @@ export async function executeRegisterModel(
   ctx: AiActionExecuteContext<AgentRegisterModelInput>,
 ): Promise<AiActionExecuteResult> {
   const input = ctx.inputParams;
-  const now = new Date();
 
   logger.info(
     `[executeRegisterModel] START name="${input.name}" provider="${input.model_type ?? ""}" org=${ctx.organizationId} requesterId=${ctx.requesterId}`,
   );
+
+  const writer = await modelWriteContextForUser(ctx.organizationId, ctx.requesterId);
+  if (isRefusal(writer)) throw new Error(writer.message);
+
+  // A use case the model cannot be linked to, in words the approver reads.
+  // Any other failure (a framework, an approver) keeps its own message.
+  const linkError = (error: unknown): Error => {
+    if (error instanceof ValidationException && error.metadata.field === "projects") {
+      return new Error(
+        `Project #${input.project_id} no longer exists in this organization — cannot link the new model.`,
+      );
+    }
+    if (error instanceof ForbiddenException && error.metadata.resource === "project") {
+      return new Error(`You do not have access to use case #${input.project_id}.`);
+    }
+    return error as Error;
+  };
 
   // Idempotency at the data layer: if a model with the same
   // (organization, provider, name, version) already exists in this org,
@@ -60,33 +88,16 @@ export async function executeRegisterModel(
     );
 
     // Still ensure the project link exists (project_id may have been
-    // added on the second registration attempt).
+    // added on the second registration attempt). A use case that no longer
+    // exists is skipped, as before; one the requester may not write to
+    // refuses the approval.
     if (input.project_id !== undefined) {
-      const [projectRows] = (await sequelize.query(
-        `SELECT id FROM projects
-           WHERE id = :project_id AND organization_id = :organization_id`,
-        {
-          replacements: {
-            project_id: input.project_id,
-            organization_id: ctx.organizationId,
-          },
-          transaction: ctx.transaction,
-        },
-      )) as [Array<{ id: number }>, unknown];
-      if (projectRows && projectRows.length > 0) {
-        await sequelize.query(
-          `INSERT INTO model_inventories_projects_frameworks
-             (organization_id, model_inventory_id, project_id)
-           VALUES (:organization_id, :model_inventory_id, :project_id)
-           ON CONFLICT DO NOTHING`,
-          {
-            replacements: {
-              organization_id: ctx.organizationId,
-              model_inventory_id: existing.id,
-              project_id: input.project_id,
-            },
-            transaction: ctx.transaction,
-          },
+      try {
+        await linkModelToUseCaseService(existing.id, input.project_id, writer, ctx.transaction);
+      } catch (error) {
+        if (!(error instanceof ValidationException)) throw linkError(error);
+        logger.warn(
+          `[executeRegisterModel] use case ${input.project_id} not linked to model ${existing.id}: ${error.message}`,
         );
       }
     }
@@ -94,56 +105,28 @@ export async function executeRegisterModel(
     return { entityId: existing.id };
   }
 
-  // Re-check the project FK at execute time. Between file-time and
-  // execute-time the project could have been deleted.
-  if (input.project_id !== undefined) {
-    const [projectRows] = (await sequelize.query(
-      `SELECT id FROM projects
-         WHERE id = :project_id AND organization_id = :organization_id`,
+  let created: Awaited<ReturnType<typeof createModelInventoryService>>;
+  try {
+    created = await createModelInventoryService(
       {
-        replacements: {
-          project_id: input.project_id,
-          organization_id: ctx.organizationId,
-        },
-        transaction: ctx.transaction,
-      },
-    )) as [Array<{ id: number }>, unknown];
-    if (!projectRows || projectRows.length === 0) {
-      throw new Error(
-        `Project #${input.project_id} no longer exists in this organization — cannot link the new model.`,
-      );
-    }
-  }
-
-  const [insertRows] = (await sequelize.query(
-    `INSERT INTO model_inventories
-       (organization_id, provider_model, provider, model, version, capabilities,
-        security_assessment, status, status_date, biases, limitations,
-        hosting_provider, security_assessment_data, is_demo, created_at, updated_at)
-     VALUES
-       (:organization_id, :provider_model, :provider, :model, :version, :capabilities,
-        false, 'Pending', :status_date, '', '',
-        '', '[]', false, :created_at, :updated_at)
-     RETURNING id`,
-    {
-      replacements: {
-        organization_id: ctx.organizationId,
         provider_model: input.model_type ? `${input.model_type} / ${input.name}` : input.name,
         provider: input.model_type ?? "",
         model: input.name,
         version: input.version ?? "",
         capabilities: input.description ?? "",
-        status_date: now,
-        created_at: now,
-        updated_at: now,
+        status: ModelInventoryStatus.PENDING,
+        status_date: new Date(),
+        projects: input.project_id !== undefined ? [input.project_id] : [],
       },
-      transaction: ctx.transaction,
-    },
-  )) as [Array<{ id: number }>, unknown];
+      writer,
+      ctx.transaction,
+    );
+  } catch (error) {
+    throw input.project_id !== undefined ? linkError(error) : error;
+  }
 
-  const created = insertRows[0];
   if (!created?.id) {
-    logger.error(`[executeRegisterModel] INSERT returned no id! input=${JSON.stringify(input)}`);
+    logger.error(`[executeRegisterModel] create returned no id! input=${JSON.stringify(input)}`);
     throw new Error(
       "model_inventories INSERT returned no id — refusing to record an empty execution result.",
     );
@@ -151,22 +134,6 @@ export async function executeRegisterModel(
   logger.info(
     `[executeRegisterModel] inserted model_inventories.id=${created.id} name="${input.name}" org=${ctx.organizationId}`,
   );
-
-  if (input.project_id !== undefined) {
-    await sequelize.query(
-      `INSERT INTO model_inventories_projects_frameworks
-         (organization_id, model_inventory_id, project_id)
-       VALUES (:organization_id, :model_inventory_id, :project_id)`,
-      {
-        replacements: {
-          organization_id: ctx.organizationId,
-          model_inventory_id: created.id,
-          project_id: input.project_id,
-        },
-        transaction: ctx.transaction,
-      },
-    );
-  }
 
   return { entityId: created.id };
 }

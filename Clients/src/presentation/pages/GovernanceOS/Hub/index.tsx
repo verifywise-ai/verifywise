@@ -1,4 +1,4 @@
-import React, { useContext, useMemo } from "react";
+import React, { useMemo } from "react";
 import {
   Stack,
   Box,
@@ -44,7 +44,7 @@ import {
   useGovernancePreferences,
   useCoverage,
 } from "../../../../application/hooks/useGovernanceOs";
-import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
+import { useProjects } from "../../../../application/hooks/useProjects";
 
 interface ModuleCardProps {
   title: string;
@@ -162,7 +162,7 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
 
 const GovernanceHub: React.FC = () => {
   const navigate = useNavigate();
-  const { projects, currentProjectId } = useContext(VerifyWiseContext);
+  const { data: projects } = useProjects();
   const { data: mappings } = useMappings();
   const { data: scenarios } = useScenarios();
   const { data: preferences } = useGovernancePreferences();
@@ -189,17 +189,16 @@ const GovernanceHub: React.FC = () => {
     return Array.from(ids);
   }, [activeScenarioPriority]);
 
-  // Pick a project to show coverage from: current project, or first project with frameworks
+  // Pick a project to show coverage from: the first project with frameworks.
+  // The legacy VerifyWiseContext.currentProjectId was never set anywhere in the
+  // app (always ""), so the old "current project" lookup always fell through to
+  // this same fallback; it was dropped during the migration off the context.
   const projectForCoverage = useMemo(() => {
-    if (currentProjectId) {
-      const parsed = Number(currentProjectId);
-      if (!isNaN(parsed) && parsed > 0) return parsed;
-    }
     const projectWithFrameworks = (projects || []).find(
       (p: any) => p.framework && p.framework.length > 0,
     );
     return projectWithFrameworks?.id || 0;
-  }, [currentProjectId, projects]);
+  }, [projects]);
 
   const { data: coverage } = useCoverage(projectForCoverage);
 

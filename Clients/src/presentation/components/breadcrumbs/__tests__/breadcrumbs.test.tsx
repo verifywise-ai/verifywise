@@ -1,22 +1,34 @@
 import { screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useLocation } from "react-router";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { Breadcrumbs } from "../index";
 
-// Mock the routeMapping module
-vi.mock("../routeMapping", () => ({
-  getRouteMapping: (path: string) => {
-    const map: Record<string, string> = {
-      "/projects": "Projects",
-      "/projects/details": "Details",
-      "/settings": "Settings",
-    };
-    // Default: capitalize last segment
-    const segments = path.split("/").filter(Boolean);
-    const last = segments[segments.length - 1] || "Home";
-    return map[path] || last.charAt(0).toUpperCase() + last.slice(1);
-  },
-  getRouteIcon: () => null,
-}));
+// Keep the small label map these tests were written against. Scan-detail
+// paths use the real mapping so the visible label stays "Scan history".
+vi.mock("../routeMapping", async () => {
+  const actual = await vi.importActual<typeof import("../routeMapping")>("../routeMapping");
+  const labels: Record<string, string> = {
+    "/projects": "Projects",
+    "/projects/details": "Details",
+    "/settings": "Settings",
+  };
+  return {
+    getRouteMapping: (path: string) => {
+      if (labels[path]) return labels[path];
+      if (path.startsWith("/ai-detection")) return actual.getRouteMapping(path);
+      const segments = path.split("/").filter(Boolean);
+      const last = segments[segments.length - 1] || "Home";
+      return last.charAt(0).toUpperCase() + last.slice(1);
+    },
+    getRouteIcon: () => null,
+  };
+});
+
+function LocationProbe() {
+  const { pathname } = useLocation();
+  return <div data-testid="location">{pathname}</div>;
+}
 
 describe("Breadcrumbs", () => {
   it("renders breadcrumb items from props", () => {
@@ -84,6 +96,26 @@ describe("Breadcrumbs", () => {
     renderWithProviders(<Breadcrumbs items={items} truncateLabels={false} />);
 
     expect(screen.getByText(longLabel)).toBeInTheDocument();
+  });
+
+  it("links /ai-detection/scans/:scanId to scan history", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <>
+        <Breadcrumbs autoGenerate />
+        <LocationProbe />
+      </>,
+      { route: "/ai-detection/scans/42" },
+    );
+
+    expect(screen.getByText("AI detection")).toBeInTheDocument();
+    expect(screen.getByText("Scan history")).toBeInTheDocument();
+    expect(screen.getByText("Scan details")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Navigate to Scans" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Scans")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Navigate to Scan history" }));
+    expect(screen.getByTestId("location")).toHaveTextContent("/ai-detection/history");
   });
 
   it("marks the last item as the current page", () => {

@@ -9,6 +9,8 @@ import {
   countSubControlsByProjectId,
   getAllProjectsQuery,
   getProjectByIdQuery,
+  getUseCaseApprovalSnapshotQuery,
+  getUseCaseApprovalWorkflowQuery,
   lockUseCaseWorkflowQuery,
   updateProjectByIdQuery,
 } from "../utils/project.utils";
@@ -27,14 +29,8 @@ import {
   ValidationException,
   BusinessLogicException,
 } from "../domain.layer/exceptions/custom.exception";
-import {
-  sendProjectCreatedNotification,
-  sendUserAddedToProjectNotification,
-  ProjectRole,
-} from "../services/userNotification/projectNotifications";
-import { sendSlackNotification } from "../services/slack/slackNotificationService";
-import { SlackNotificationRoutingType } from "../domain.layer/enums/slack.enum";
 import { recordMultipleFieldChanges } from "../utils/useCaseChangeHistory.utils";
+import { recordEntityChange } from "../utils/changeHistory.base.utils";
 import {
   hasPendingApprovalQuery,
   getApprovalStatusQuery,
@@ -47,19 +43,21 @@ import { getRisksLinkedOnlyToProjectQuery } from "../utils/risk.utils";
 import {
   createUseCaseApprovalRequest,
   getUsableUseCaseWorkflow,
-  notifyUseCaseApprovalRequested,
   type UsableUseCaseWorkflow,
 } from "../services/projects/approvalRequest.service";
 import { roleHasPermission } from "../utils/rolePermissions.utils";
 import { createUseCaseService, updateUseCaseService } from "../services/useCase.service";
-import { notifyExternalOwnerAssigned } from "../services/externalOwnerNotification.service";
-import { stripExternalOwnerFields } from "../utils/externalOwner.utils";
 import {
-  notifyUserAssigned,
-  notifyApprovalAutoApproved,
-} from "../services/inAppNotification.service";
+  notifyUseCaseApprovalOutcome,
+  notifyUseCaseCreated,
+  notifyUseCaseUpdated,
+} from "../services/useCaseNotifications.service";
+import { stripExternalOwnerFields } from "../utils/externalOwner.utils";
 
 import { translateError } from "../utils/i18n.utils";
+
+const CREATE_LOG = { functionName: "createProject", fileName: "project.ctrl.ts" };
+const UPDATE_LOG = { functionName: "updateProjectById", fileName: "project.ctrl.ts" };
 
 /**
  * A ValidationException as a 400 body. On /api/v1/projects one that names a
@@ -272,25 +270,6 @@ export async function createProject(req: Request, res: Response): Promise<any> {
     if (createdProject) {
       await transaction.commit();
 
-      // Auto-approved requests skip approver notifications; tell the
-      // requester instead (fire-and-forget, after commit)
-      if (approvalResult?.autoApproved) {
-        const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-        notifyApprovalAutoApproved(
-          req.organizationId!,
-          req.userId!,
-          {
-            id: approvalResult.request.id!,
-            name: approvalResult.request.request_name,
-          },
-          approvalResult.riskLevel!,
-          approvalResult.threshold!,
-          baseUrl,
-        ).catch((notifyError) => {
-          console.error("Failed to send auto-approval notification:", notifyError);
-        });
-      }
-
       await logSuccess({
         eventType: "Create",
         description: "Created new project",
@@ -300,105 +279,15 @@ export async function createProject(req: Request, res: Response): Promise<any> {
         organizationId: req.organizationId!,
       });
 
-      // #4905: step-1 approvers are told a request awaits them. Skipped for
-      // auto-approved requests (the requester is notified above instead).
-      // Fire-and-forget after commit; a failure never fails the creation.
-      if (approvalResult && !approvalResult.autoApproved) {
-        notifyUseCaseApprovalRequested(
-          createdProject,
-          approvalResult,
-          req.userId!,
-          req.organizationId!,
-        ).catch(async (notifyError) => {
-          await logFailure({
-            eventType: "Create",
-            description: "Failed to notify step 1 approvers of the use case approval request",
-            functionName: "createProject",
-            fileName: "project.ctrl.ts",
-            error: notifyError as Error,
-            userId: req.userId!,
-            organizationId: req.organizationId!,
-          });
-        });
-      }
-
-      // Send project creation notification to admin (fire-and-forget, don't block response)
-      // An external owner has no user id; they get the external notice below.
-      if (createdProject.owner) {
-        sendProjectCreatedNotification({
-          projectId: createdProject.id!,
-          projectName: createdProject.project_title,
-          adminId: createdProject.owner,
-          organizationId: req.organizationId!,
-          userId: req.userId!,
-        }).catch(async (emailError) => {
-          // Log the email error but don't fail the project creation
-          await logFailure({
-            eventType: "Create",
-            description: "Failed to send project creation notification email",
-            functionName: "createProject",
-            fileName: "project.ctrl.ts",
-            error: emailError as Error,
-            userId: req.userId!,
-            organizationId: req.organizationId!,
-          });
-        });
-      }
-
-      const actor = await getUserByIdQuery(req.userId!);
-
-      sendSlackNotification(
-        {
-          organizationId: req.organizationId!,
-          userId: actor.id!,
-          routingType: SlackNotificationRoutingType.PROJECTS_AND_ORGANIZATIONS,
-        },
-        {
-          title: `Project created`,
-          message: `${actor.name} ${actor.surname} created Project ${createdProject.project_title}.`,
-        },
-      ).catch(async (slackError) => {
-        await logFailure({
-          eventType: "Create",
-          description: "Failed to send Slack notification for project creation",
-          functionName: "createProject",
-          fileName: "project.ctrl.ts",
-          error: slackError as Error,
-          userId: req.userId!,
-          organizationId: req.organizationId!,
-        });
-      });
-
-      // Send owner assignment notification
-      const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-      if (createdProject.owner) {
-        const assignerName = `${actor.name} ${actor.surname}`.trim();
-        notifyUserAssigned(
-          req.organizationId!,
-          createdProject.owner,
-          {
-            entityType: "project",
-            entityId: createdProject.id!,
-            entityName: createdProject.project_title,
-            roleType: "Owner",
-            entityUrl: `/project-view?projectId=${createdProject.id}`,
-          },
-          assignerName,
-          baseUrl,
-        ).catch((err) => console.error("Failed to send owner notification:", err));
-      } else if (createdProject.external_owner_email) {
-        // Email only: an external owner has no in-app notifications. Awaited
-        // for its lookups; it does not wait for the mail provider.
-        await notifyExternalOwnerAssigned({
-          organizationId: req.organizationId!,
-          useCaseTitle: createdProject.project_title,
-          recipient: {
-            name: createdProject.external_owner_name || createdProject.external_owner_email,
-            email: createdProject.external_owner_email,
-          },
-          assignedByUserId: req.userId!,
-        }).catch((err) => console.error("Failed to notify external owner:", err));
-      }
+      // The approval notice, the creation email, Slack and the owner's
+      // assignment notice; best effort, after commit.
+      await notifyUseCaseCreated(
+        createdProject,
+        approvalResult,
+        req.userId!,
+        req.organizationId!,
+        CREATE_LOG,
+      );
 
       return res.status(201).json(
         STATUS_CODE[201]({
@@ -668,42 +557,15 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
 
       await transaction.commit();
 
-      if (updateApprovalResult && !updateApprovalResult.autoApproved) {
-        // #4905: tell the workflow's step-1 approvers a request awaits them.
-        // Fire-and-forget, as on create; a failure never fails the update.
-        notifyUseCaseApprovalRequested(
-          project as unknown as ProjectModel,
-          updateApprovalResult,
-          req.userId!,
-          req.organizationId!,
-        ).catch(async (notifyError) => {
-          await logFailure({
-            eventType: "Update",
-            description: "Failed to notify step 1 approvers of the use case approval request",
-            functionName: "updateProjectById",
-            fileName: "project.ctrl.ts",
-            error: notifyError as Error,
-            userId: req.userId!,
-            organizationId: req.organizationId!,
-          });
-        });
-      } else if (updateApprovalResult?.autoApproved) {
-        // Same courtesy as the create path: the requester learns the edit-time
-        // request was auto-approved.
-        notifyApprovalAutoApproved(
-          req.organizationId!,
-          req.userId!,
-          {
-            id: updateApprovalResult.request.id!,
-            name: updateApprovalResult.request.request_name,
-          },
-          updateApprovalResult.riskLevel!,
-          updateApprovalResult.threshold!,
-          process.env.FRONTEND_URL || "http://localhost:3000",
-        ).catch((error) => {
-          console.error("Error sending auto-approval notification:", error);
-        });
-      }
+      // Same approval notice as on create (#4904, #4905).
+      notifyUseCaseApprovalOutcome(
+        project as unknown as ProjectModel,
+        updateApprovalResult,
+        req.userId!,
+        req.organizationId!,
+        "Update",
+        UPDATE_LOG,
+      );
 
       await logSuccess({
         eventType: "Update",
@@ -714,122 +576,15 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
         organizationId: req.organizationId!,
       });
 
-      // Send owner assignment notification if owner changed
-      const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-      const oldOwner = existingProject.owner;
-      const newOwner = project.owner;
-      if (newOwner && newOwner !== oldOwner && newOwner !== userId) {
-        const assigner = await getUserByIdQuery(userId);
-        const assignerName = assigner ? `${assigner.name} ${assigner.surname}`.trim() : "Someone";
-        notifyUserAssigned(
-          req.organizationId!,
-          newOwner,
-          {
-            entityType: "project",
-            entityId: projectId,
-            entityName: project.project_title,
-            roleType: "Owner",
-            entityUrl: `/project-view?projectId=${projectId}`,
-          },
-          assignerName,
-          baseUrl,
-        ).catch((err) => console.error("Failed to send owner notification:", err));
-      }
-
-      // Same notice for an external owner, by email only. Naming the same
-      // person again (a name fix, a case change) does not re-send it.
-      const newExternalEmail = project.external_owner_email;
-      if (newExternalEmail && newExternalEmail !== existingProject.external_owner_email) {
-        await notifyExternalOwnerAssigned({
-          organizationId: req.organizationId!,
-          useCaseTitle: project.project_title,
-          recipient: {
-            name: project.external_owner_name || newExternalEmail,
-            email: newExternalEmail,
-          },
-          assignedByUserId: userId,
-        }).catch((err) => console.error("Failed to notify external owner:", err));
-      }
-
-      // Calculate which members actually got added (both new and re-added)
-      // This includes users who weren't in currentMembers but are now in the final project
-      const finalMembers = project.members || [];
-      const addedMembers = finalMembers.filter((m) => !currentMembers.includes(m));
-
-      // Send notification to users who were added (fire-and-forget, don't block response)
-      for (const memberId of addedMembers) {
-        try {
-          // Get user details to check their role
-          const memberUser = await getUserByIdQuery(memberId, null, req.organizationId!);
-
-          if (memberUser) {
-            // Validate role_id is a number
-            if (typeof memberUser.role_id !== "number" || !Number.isInteger(memberUser.role_id)) {
-              await logFailure({
-                eventType: "Update",
-                description: `Invalid role_id type for member ${memberId}: expected number, got ${typeof memberUser.role_id} (${memberUser.role_id})`,
-                functionName: "updateProjectById",
-                fileName: "project.ctrl.ts",
-                error: new Error(`Invalid role_id type: ${typeof memberUser.role_id}`),
-                userId: req.userId!,
-                organizationId: req.organizationId!,
-              });
-              continue;
-            }
-
-            // Map role_id to role name
-            const roleMap: Record<number, ProjectRole> = {
-              1: "admin",
-              2: "reviewer",
-              3: "editor",
-              4: "auditor",
-            };
-
-            const role = roleMap[memberUser.role_id];
-
-            if (role) {
-              sendUserAddedToProjectNotification({
-                projectId: projectId,
-                projectName: project.project_title,
-                adminId: req.userId!,
-                userId: memberId,
-                role: role,
-                organizationId: req.organizationId!,
-              }).catch(async (emailError) => {
-                await logFailure({
-                  eventType: "Update",
-                  description: `Failed to send user added as ${role} notification email to user ${memberId}`,
-                  functionName: "updateProjectById",
-                  fileName: "project.ctrl.ts",
-                  error: emailError as Error,
-                  userId: req.userId!,
-                  organizationId: req.organizationId!,
-                });
-              });
-            } else {
-              await logFailure({
-                eventType: "Update",
-                description: `Unmapped role_id ${memberUser.role_id} for member ${memberId} in project ${projectId} (${project.project_title}) - notification skipped`,
-                functionName: "updateProjectById",
-                fileName: "project.ctrl.ts",
-                error: new Error(`Unmapped role_id: ${memberUser.role_id}`),
-                userId: req.userId!,
-                organizationId: req.organizationId!,
-              });
-            }
-          }
-        } catch (userLookupError) {
-          await logFailure({
-            eventType: "Update",
-            description: `Failed to lookup user role for member ${memberId}`,
-            functionName: "updateProjectById",
-            fileName: "project.ctrl.ts",
-            error: userLookupError as Error,
-            userId: req.userId!,
-            organizationId: req.organizationId!,
-          });
-        }
-      }
+      // A new owner's assignment notice and the email to each added member.
+      await notifyUseCaseUpdated(
+        existingProject,
+        project,
+        currentMembers,
+        userId,
+        req.organizationId!,
+        UPDATE_LOG,
+      );
 
       return res.status(202).json(STATUS_CODE[202](project));
     }
@@ -1066,6 +821,227 @@ export async function getRisksLinkedOnlyToProject(req: Request, res: Response): 
       organizationId: req.organizationId!,
     });
 
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * GET /api/v1/projects/:id/approval-workflow: the use case's approval
+ * workflow (id, title, still active or archived) and the status of its latest
+ * approval request. The legacy project responses never carried the workflow
+ * id and are frozen, so the use case overview reads it here.
+ */
+export async function getUseCaseApprovalWorkflow(req: Request, res: Response): Promise<any> {
+  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const log = { functionName: "getUseCaseApprovalWorkflow", fileName: "project.ctrl.ts" };
+
+  try {
+    const workflow = await getUseCaseApprovalWorkflowQuery(projectId, req.organizationId!);
+    if (!workflow) {
+      return res.status(404).json(STATUS_CODE[404]({}));
+    }
+    const approvalStatus = await getApprovalStatusQuery(projectId, "use_case", req.organizationId!);
+
+    return res.status(200).json(STATUS_CODE[200]({ ...workflow, approval_status: approvalStatus }));
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: `Failed to read the approval workflow of project ID ${projectId}`,
+      ...log,
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * POST /api/v1/projects/:id/resubmit-approval: send a rejected use case for
+ * approval again under the workflow already attached to it. Saving the same
+ * workflow is a no-op and, while the request is rejected, only an approval
+ * workflow admin may change it, so without this a rejected use case could
+ * never be reviewed again.
+ *
+ * The use case row is locked first, so two resubmits at once cannot both open
+ * a request: the second waits, then sees the first one's pending request (409).
+ * The request is opened as attaching a workflow opens it
+ * (createUseCaseApprovalRequest: planned moves to in review), and the step 1
+ * approvers get the same notice once the transaction commits. It is never
+ * auto-approved: a person rejected the use case, so a person reviews it
+ * again. Otherwise an owner could lower the risk classification to the
+ * workflow's auto-approve level and resubmit past the rejection.
+ */
+export async function resubmitUseCaseApproval(req: Request, res: Response): Promise<any> {
+  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const organizationId = req.organizationId!;
+  const userId = req.userId!;
+  const log = { functionName: "resubmitUseCaseApproval", fileName: "project.ctrl.ts" };
+
+  logProcessing({
+    description: `starting resubmitUseCaseApproval for project ID ${projectId}`,
+    ...log,
+    userId,
+    organizationId,
+  });
+
+  const transaction = await sequelize.transaction();
+  // Set once the transaction is committed or rolled back, so the catch below
+  // never rolls it back a second time (that throws, and the request hangs).
+  let finished = false;
+  const rollback = async () => {
+    if (finished) return;
+    finished = true;
+    await transaction.rollback();
+  };
+  const refuse = async (status: 400 | 404 | 409, message: string | object, reason: string) => {
+    await rollback();
+    await logFailure({
+      eventType: "Update",
+      description: `Resubmit refused on use case ${projectId}: ${reason}`,
+      ...log,
+      error: new Error(reason),
+      userId,
+      organizationId,
+    });
+    return res.status(status).json(STATUS_CODE[status](message));
+  };
+
+  try {
+    const locked = await lockUseCaseWorkflowQuery(projectId, organizationId, transaction);
+    // Read under the lock, on the transaction's connection.
+    const project = locked
+      ? await getUseCaseApprovalSnapshotQuery(projectId, organizationId, transaction)
+      : null;
+    if (!locked || !project) {
+      return refuse(404, {}, "not found");
+    }
+
+    const approvalStatus = await getApprovalStatusQuery(
+      projectId,
+      "use_case",
+      organizationId,
+      transaction,
+    );
+    if (approvalStatus === "pending") {
+      return refuse(
+        409,
+        req.t!("This use case is already waiting for approval"),
+        "approval already pending",
+      );
+    }
+    if (approvalStatus !== "rejected") {
+      return refuse(
+        409,
+        req.t!("Only a rejected use case can be resubmitted for approval"),
+        "latest approval is not rejected",
+      );
+    }
+
+    const workflowId = locked.approval_workflow_id;
+    if (!workflowId) {
+      return refuse(
+        400,
+        req.t!("This use case has no approval workflow. Attach one to send it for approval."),
+        "no workflow attached",
+      );
+    }
+
+    let usable: UsableUseCaseWorkflow;
+    try {
+      usable = await getUsableUseCaseWorkflow(workflowId, organizationId, transaction);
+    } catch (error) {
+      if (!(error instanceof ValidationException)) throw error;
+      return refuse(
+        400,
+        req.t!(
+          "{reason}. Ask an approval workflow admin to change this use case's approval workflow.",
+          { reason: translateError(req, error) },
+        ),
+        `workflow ${workflowId} unusable: ${error.message}`,
+      );
+    }
+
+    const useCase = {
+      ...project,
+      id: projectId,
+      approval_workflow_id: workflowId,
+    } as unknown as ProjectModel;
+    const approval = await createUseCaseApprovalRequest(
+      useCase,
+      userId,
+      organizationId,
+      transaction,
+      usable,
+      { allowAutoApprove: false },
+    );
+    if (!approval) {
+      // Unreachable with a workflow attached; never commit without a request.
+      throw new Error(`No approval request opened for use case ${projectId}`);
+    }
+
+    // The resubmission is part of the use case's record, as the lifecycle
+    // move it causes already is.
+    await recordEntityChange(
+      "use_case",
+      projectId,
+      "updated",
+      userId,
+      organizationId,
+      "approval_status",
+      "Rejected",
+      "Pending",
+      transaction,
+    );
+
+    finished = true;
+    await transaction.commit();
+
+    // The same notice as attaching a workflow: the step 1 approvers.
+    notifyUseCaseApprovalOutcome(useCase, approval, userId, organizationId, "Update", log);
+
+    await logSuccess({
+      eventType: "Update",
+      description: `Resubmitted use case ${projectId} for approval (request ${approval.request.id})`,
+      ...log,
+      userId,
+      organizationId,
+    });
+
+    return res.status(201).json(
+      STATUS_CODE[201]({
+        approval_request_id: approval.request.id,
+        // Never auto-approved (see above); the fields keep the contract.
+        status: "pending",
+        auto_approved: false,
+      }),
+    );
+  } catch (error) {
+    await rollback();
+
+    // Raised by opening the request (createApprovalRequestQuery); the
+    // workflow itself was checked above.
+    if (error instanceof ValidationException) {
+      await logFailure({
+        eventType: "Update",
+        description: `Resubmit failed validation: ${error.message}`,
+        ...log,
+        error,
+        userId,
+        organizationId,
+      });
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+    }
+
+    await logFailure({
+      eventType: "Update",
+      description: `Failed to resubmit use case ${projectId} for approval`,
+      ...log,
+      error: error as Error,
+      userId,
+      organizationId,
+    });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

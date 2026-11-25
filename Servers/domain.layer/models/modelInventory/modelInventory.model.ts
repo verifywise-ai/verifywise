@@ -459,7 +459,8 @@ export class ModelInventoryModel extends Model<ModelInventoryModel> implements I
       security_assessment: data.security_assessment || false,
       status: data.status || ModelInventoryStatus.PENDING,
       status_date: data.status_date || new Date(),
-      type: data.type ?? undefined,
+      // "" (the form's "no type") is unclassified, stored as NULL.
+      type: data.type || undefined,
       reference_link: data.reference_link || "",
       biases: data.biases || "",
       limitations: data.limitations || "",
@@ -513,7 +514,8 @@ export class ModelInventoryModel extends Model<ModelInventoryModel> implements I
       existingModel.status_date = data.status_date;
     }
     if (data.type !== undefined) {
-      existingModel.type = data.type;
+      // "" or null clears the type (unclassified), never reaches the enum.
+      existingModel.type = (data.type || null) as any;
     }
     if (data.reference_link !== undefined) {
       existingModel.reference_link = data.reference_link;
@@ -539,7 +541,8 @@ export class ModelInventoryModel extends Model<ModelInventoryModel> implements I
     if (data.external_key !== undefined) {
       // Blank or whitespace-only values must become NULL (partial unique index,
       // issue #4755) — same normalization as createNewModelInventory.
-      existingModel.external_key = data.external_key.trim() || undefined;
+      // null clears the key as an empty one does.
+      existingModel.external_key = data.external_key?.trim() || undefined;
     }
 
     // Always update the updated_at timestamp

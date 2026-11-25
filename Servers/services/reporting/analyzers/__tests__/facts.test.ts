@@ -4,7 +4,14 @@
 // leaving it unmocked opens a DB connection during a unit test.
 jest.mock("../../../../database/db", () => ({ sequelize: {} }));
 
-import { collectFacts, referenceDay, renderFacts, type FactsSnapshot } from "../facts";
+import {
+  collectFacts,
+  FACTS_SCHEMA_VERSION,
+  referenceDay,
+  renderFacts,
+  type FactsSnapshot,
+} from "../facts";
+import { e23FixItReportData } from "../../tests/helpers/e23ReportData";
 
 // Every fixture below uses the vocabulary dataCollector ACTUALLY emits for that
 // section, not a plausible-looking one. Project and vendor risks carry the
@@ -727,5 +734,200 @@ describe("renderFacts", () => {
     const out = renderFacts(collectFacts(full));
     expect(out.length).toBeLessThan(3000);
     expect(out).toContain('top_showing="showing 3 of 60"');
+  });
+
+  it("FACTS_SCHEMA_VERSION is 3", () => {
+    expect(FACTS_SCHEMA_VERSION).toBe(3);
+  });
+
+  it("collectFacts emits frameworkRequirements aggregates", () => {
+    const req = (title: string, over: any = {}) => ({
+      title,
+      status: "Waiting",
+      owner: "Alice",
+      dueDate: null,
+      isDone: false,
+      isOverdue: false,
+      ...over,
+    });
+    const statusBreakdown = (n: number) =>
+      Object.fromEntries(Array.from({ length: n }, (_, i) => [`S${i}`, i + 1]));
+    const data: any = {
+      metadata: { generatedAt: new Date(2026, 6, 22) },
+      sections: {
+        frameworkRequirements: {
+          frameworks: [
+            {
+              frameworkName: "SOC 2",
+              rollup: {
+                total: 10,
+                done: 4,
+                overdue: 2,
+                unassigned: 1,
+                noEvidence: 3,
+                statusBreakdown: statusBreakdown(10),
+              },
+              groups: [
+                {
+                  title: "CC1",
+                  requirements: [
+                    req("Finished", { isDone: true, status: "Done" }),
+                    req("Late", { isOverdue: true, dueDate: "2026-06-01" }),
+                    req("Ownerless", { owner: null }),
+                    req("Parent", {
+                      children: [req("Child late", { isOverdue: true, owner: null })],
+                    }),
+                    req("Plain"),
+                  ],
+                },
+              ],
+            },
+            {
+              frameworkName: "GDPR",
+              rollup: {
+                total: 5,
+                done: 1,
+                overdue: 0,
+                unassigned: 2,
+                noEvidence: 1,
+                statusBreakdown: { S0: 4 },
+              },
+              groups: [],
+            },
+          ],
+        },
+      },
+    };
+    const f = collectFacts(data).sections.frameworkRequirements;
+    expect(f.total).toBe(15);
+    expect(f.done).toBe(5);
+    expect(f.overdue).toBe(2);
+    expect(f.unassigned).toBe(3);
+    expect(f.noEvidence).toBe(4);
+    expect(f.status_S0).toBe(5);
+    const statusKeys = Object.keys(f).filter((k) => k.startsWith("status_S"));
+    expect(statusKeys).toHaveLength(8);
+    expect(f.status_showing).toBe("showing 8 of 10");
+    expect(f.status_distinct).toBe(10);
+    // Ranked before truncation: overdue + ownerless child first, then overdue.
+    expect(f.top1).toContain("Child late");
+    expect(f.top2).toContain("Late");
+    expect(f.top3).toContain("Ownerless");
+    expect(f.top_showing).toBe("showing 3 of 6");
+  });
+});
+
+describe("facts for the OSFI E-23 sections (spec 8.10)", () => {
+  const e23 = () => e23FixItReportData();
+
+  it("bumps the vocabulary version for the new aggregates", () => {
+    expect(FACTS_SCHEMA_VERSION).toBe(3);
+  });
+
+  it("aggregates the MRM status: fleet, tiers, validation, findings, monitoring and activity", () => {
+    const fleet = collectFacts(e23()).sections.mrmFleet;
+    expect(fleet).toEqual(
+      expect.objectContaining({
+        models: 9,
+        untiered: 3,
+        tier1: 2,
+        tier2: 3,
+        tier3: 1,
+        validatedPassed: 3,
+        lastValidationNotPassed: 0,
+        inReview: 2,
+        notStarted: 3,
+        overdueValidations: 1,
+        openCritical: 1,
+        openHigh: 2,
+        withActiveThresholds: 5,
+        withRecentMetric: 4,
+        validationsSignedOff: 2,
+        findingsOpened: 3,
+        // The exceptions are the ranked rows.
+        items: 2,
+      }),
+    );
+    // The old key meant "ever signed off"; a stored run's value must not be
+    // diffed against the exclusive row.
+    expect(fleet).not.toHaveProperty("validated");
+    expect(fleet.top1).toContain("Fraud detector");
+  });
+
+  it("aggregates the contradictions, and records nothing when the checks did not run", () => {
+    const c = collectFacts(e23()).sections.e23Contradictions;
+    expect(c).toEqual(
+      expect.objectContaining({
+        rulesFired: 1,
+        rulesChecked: 3,
+        rulesNotRun: 1,
+        groupsChecked: 2,
+        groupsSelfAssessmentOnly: 1,
+      }),
+    );
+    expect(c.top1).toContain("3 models have no MRM tier");
+
+    // Not run is not clean: zeros here would read as contradictions resolved.
+    const notOnFile = collectFacts(e23FixItReportData({ notOnFile: true })).sections;
+    expect(notOnFile.e23Contradictions).toBeUndefined();
+  });
+
+  it("aggregates the fix-it list by severity, every severity always present", () => {
+    const items = [{ ...e23().sections.e23FixItList!.items[0] }];
+    const f = collectFacts(e23FixItReportData({ items })).sections.e23FixItList;
+    expect(f).toEqual(expect.objectContaining({ items: 1, high: 1, medium: 0, low: 0 }));
+    expect(f.top1).toContain("3 models have no MRM tier");
+  });
+
+  it("still reports the change of an aggregate with a retired name that the current run holds", () => {
+    const prior = collectFacts(e23());
+    const now = collectFacts(e23());
+    (prior.sections.mrmFleet as Record<string, number>).validated = 3;
+    (now.sections.mrmFleet as Record<string, number>).validated = 5;
+    expect(renderFacts(now, prior)).toContain(
+      "Model risk management status validated: 5 (was 3, +2)",
+    );
+  });
+
+  it("reports no fake drop for the validated count stored under any earlier name", () => {
+    const prior = collectFacts(e23());
+    const fleet = prior.sections.mrmFleet as Record<string, number | string>;
+    fleet.validatedNothingOpen = fleet.validatedPassed;
+    delete fleet.validatedPassed;
+    const text = renderFacts(collectFacts(e23()), prior);
+    expect(text).not.toContain("validatedNothingOpen: 0 (was");
+    expect(text).not.toContain("Change since the previous report run");
+  });
+
+  it("reports no fake drop for an aggregate a stored run holds under a retired name", () => {
+    // Runs stored before the validation rows became exclusive hold the
+    // validated count as `validated`; it is `validatedNothingOpen` now. The
+    // old name is not a figure that fell to 0.
+    const prior = collectFacts(e23());
+    const fleet = prior.sections.mrmFleet as Record<string, number | string>;
+    fleet.validated = fleet.validatedPassed;
+    delete fleet.validatedPassed;
+    const text = renderFacts(collectFacts(e23()), prior);
+    expect(text).not.toMatch(/\bvalidated: 0 \(was/);
+    expect(text).not.toContain("Change since the previous report run");
+  });
+
+  it("reports the change since the previous run for the new aggregates", () => {
+    const prior = collectFacts(e23());
+    const nowData = e23FixItReportData({ items: [] });
+    nowData.sections.mrmFleet = {
+      ...nowData.sections.mrmFleet!,
+      totals: { ...nowData.sections.mrmFleet!.totals, untiered: 1 },
+      validationCoverage: { ...nowData.sections.mrmFleet!.validationCoverage, overdue: 0 },
+    };
+    nowData.sections.e23Contradictions = {
+      ...nowData.sections.e23Contradictions!,
+      fired: [],
+    };
+    const text = renderFacts(collectFacts(nowData), prior);
+    expect(text).toContain("Model risk management status untiered: 1 (was 3, -2)");
+    expect(text).toContain("Model risk management status overdueValidations: 0 (was 1, -1)");
+    expect(text).toContain("Where the checklist and the data disagree rulesFired: 0 (was 1, -1)");
+    expect(text).toContain("Fix-it list (internal document) high: 0 (was 2, -2)");
   });
 });

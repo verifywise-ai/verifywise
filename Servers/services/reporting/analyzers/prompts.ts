@@ -6,7 +6,20 @@
  * to the prompt that produced them.
  */
 
-export const ANALYZER_VERSION = "report-analyzer-v2";
+import type {
+  E23ContradictionsSectionData,
+  E23FixItItem,
+  E23FixItListSectionData,
+  FrameworkRequirementRow,
+  MrmFleetSectionData,
+  MrmInventoryAppendixSectionData,
+  MrmTierValue,
+} from "../../../domain.layer/interfaces/i.reportGeneration";
+import { hasNoActiveOwner } from "../collectors/frameworkRollup";
+import { COVERAGE_LABELS, FIX_IT_SEVERITY_LABELS } from "../e23/e23Text";
+import { METRIC_STALE_DAYS } from "../e23/mrmFleet";
+
+export const ANALYZER_VERSION = "report-analyzer-v9";
 
 const MAX_DATA_ITEMS = 50;
 /** Hard backstop on the joined section body, independent of the per-array
@@ -29,6 +42,12 @@ export const SECTION_LABELS: Record<string, string> = {
   trainingRegistry: "Training Registry",
   policyManager: "Policy Manager",
   incidentManagement: "Incident Management",
+  frameworkRequirements: "Framework requirements",
+  mrmFleet: "Model risk management status",
+  e23Contradictions: "Where the checklist and the data disagree",
+  e23FixItList: "Fix-it list (internal document)",
+  mrmInventoryAppendix: "Model inventory appendix",
+  signOff: "Sign-off",
 };
 
 /**
@@ -134,7 +153,62 @@ export const SECTION_INSTRUCTIONS: Record<string, string> = {
 - Which severities are over-represented among the open ones compared with the register as a whole?
 - Does one type recur, and how many incidents does it account for?
 - Name the incident a reader should look at first and say why.`,
+
+  // Every row here carries a real status, owner, due date and evidence count
+  // (collectors/frameworkRequirements.ts), so each question below has a backing
+  // field. `dueDate` goes through isoDate(), so day arithmetic against the
+  // reference date is askable, as for compliance controls.
+  frameworkRequirements: `- For each framework, what share of requirements is done, and which framework lags furthest behind the others?
+- How many requirements are overdue against the reference date, and which requirement groups hold them?
+- How many requirements have no owner, and how many have no evidence attached? Do the two overlap or sit in different groups?
+- Name the specific requirements furthest from done, overdue ones first, and say what is missing for each.`,
+
+  // OSFI E-23 sections. Every count below is a field of the section's compact
+  // text (prepareMrmFleet, prepareE23Contradictions, prepareE23FixItList).
+  // None asks for a compliance verdict: the report is a self-assessment.
+  mrmFleet: `- What share of the models in scope is untiered, and what share has an overdue validation?
+- How are open findings spread across critical, high, medium and low, and which tier carries the critical or high ones?
+- How many models have active thresholds, and how many of those received a metric in the monitoring window?
+- Name the models with exceptions that a reader should look at first, and say what the exceptions are.`,
+
+  e23Contradictions: `- How many rules fired out of the rules checked, and which requirements do they name?
+- Which fired rule affects the most models, and what does the data show against the claimed status?
+- Which requirement groups were checked against the model risk data, and which rest on self-assessment only?
+- Which rules were not run, and why? A rule not run is not a clean result; say so.`,
+
+  e23FixItList: `- How many items are high, medium and low severity, and how many of the high ones come from fired contradiction rules?
+- Which items are past their due date, and which have no owner?
+- Do the items cluster on a few requirements, models or owners, or are they spread across the list?
+- Name the items a reader should start with, and say what closes each.`,
 };
+
+/**
+ * The board version names no model (spec 8.3), so the sections whose general
+ * questions ask for model names get count-only questions instead.
+ */
+const BOARD_SECTION_INSTRUCTIONS: Record<string, string> = {
+  mrmFleet: `- What share of the models in scope is untiered, and what share has an overdue validation?
+- How are open findings spread across critical, high, medium and low, and which tier carries the critical or high ones?
+- How many models have active thresholds, and how many of those received a metric in the monitoring window?
+- How many models have exceptions, and what does that mean for the institution? Give counts; do not name models.`,
+};
+
+/** The questions for one section's summary, for the report's audience. */
+export function sectionInstruction(key: string, opts: E23PromptOptions = {}): string {
+  return (
+    (opts.board ? BOARD_SECTION_INSTRUCTIONS[key] : undefined) ??
+    SECTION_INSTRUCTIONS[key] ??
+    GENERIC_SECTION_INSTRUCTION
+  );
+}
+
+/**
+ * Sections no summary is written for: the sign-off page carries no data, the
+ * inventory appendix is a reference listing, and the at-a-glance figures
+ * repeat what the other E-23 sections and the facts block already state.
+ * Skipped rather than sent with the generic instruction.
+ */
+export const NO_SECTION_SUMMARY = new Set(["signOff", "mrmInventoryAppendix", "e23Glance"]);
 
 /** Fallback for a section key with no entry above: today's generic text, so an
  *  unmapped section degrades to current behaviour instead of losing its summary. */
@@ -311,13 +385,255 @@ function rankTruncateAndStamp(obj: any, field: string, max: number): any[] {
   return truncated;
 }
 
+/** A framework requirement flattened out of its framework and group, with L3
+ *  children promoted to rows of their own. */
+export interface FlatRequirement extends FrameworkRequirementRow {
+  _framework: string;
+  /** Group title, prefixed with the use case when the pairing has one. */
+  _group: string;
+  /** The use case of the pairing the row came from, "" when none. */
+  _useCase: string;
+}
+
+/** "Use case · Group" when the group sits under a use case pairing, else the title. */
+const groupLabel = (g: any): string => {
+  const title = oneLine(g?.title);
+  const useCase = oneLine(g?.useCase);
+  return useCase ? `${useCase} · ${title || "Untitled group"}` : title;
+};
+
+/**
+ * Every requirement in the section, L2 and L3 alike, tagged with where it sits.
+ * Shared by the prompt body and the facts block so both rank the same rows.
+ */
+export function flattenFrameworkRequirements(data: any): FlatRequirement[] {
+  const out: FlatRequirement[] = [];
+  const walk = (
+    rows: FrameworkRequirementRow[] | undefined,
+    framework: string,
+    group: string,
+    useCase: string,
+  ) =>
+    (rows ?? []).forEach((row) => {
+      if (!row) return;
+      out.push({ ...row, _framework: framework, _group: group, _useCase: useCase });
+      walk(row.children, framework, group, useCase);
+    });
+  (data?.frameworks ?? []).forEach((fw: any) =>
+    (fw?.groups ?? []).forEach((g: any) =>
+      walk(g?.requirements, String(fw?.frameworkName ?? ""), groupLabel(g), oneLine(g?.useCase)),
+    ),
+  );
+  return out;
+}
+
+/**
+ * Materiality of a requirement, HIGHER IS MORE MATERIAL: finished work 0, open
+ * work 1, +1 when it has no owner, +2 when it is overdue — so overdue ranks
+ * ahead of unassigned, and a row that is both ranks first of all.
+ */
+export const requirementRank = (row: FrameworkRequirementRow): number =>
+  row.isDone ? 0 : 1 + (row.isOverdue ? 2 : 0) + (hasNoActiveOwner(row.owner) ? 1 : 0);
+
+const MAX_FREE_TEXT_CHARS = 200;
+
+/**
+ * A free-text value (owner and requirement names are user-controlled) made safe
+ * to interpolate into one prompt line: control characters, newlines included,
+ * collapse to single spaces so a value cannot open a new instruction line, and
+ * a cut is marked with "…" like every other truncation here.
+ */
+export const oneLine = (v: unknown): string => {
+  const s = String(v ?? "")
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]+/g, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+  return s.length > MAX_FREE_TEXT_CHARS ? `${s.slice(0, MAX_FREE_TEXT_CHARS - 1)}…` : s;
+};
+
+const FRAMEWORK_TOP_N = 25;
+const FRAMEWORK_MAX_GROUP_LINES = 40;
+
+const rollupLine = (r: any): string =>
+  `${r?.done ?? 0}/${r?.total ?? 0} done, overdue ${r?.overdue ?? 0}, unassigned ${r?.unassigned ?? 0}, no evidence ${r?.noEvidence ?? 0}`;
+
+/**
+ * Compact text for the frameworkRequirements section: one rollup line per
+ * framework, one per group, then the top not-done requirements. Every cut says
+ * how much it dropped, so a truncated list never reads as the whole estate.
+ */
+function prepareFrameworkRequirements(data: any): string {
+  const lines: string[] = [];
+  (data.frameworks ?? []).forEach((fw: any) => {
+    lines.push(`${oneLine(fw?.frameworkName) || "Unknown framework"}: ${rollupLine(fw?.rollup)}`);
+    const groups: any[] = fw?.groups ?? [];
+    groups.slice(0, FRAMEWORK_MAX_GROUP_LINES).forEach((g) => {
+      lines.push(`  ${groupLabel(g) || "Untitled group"}: ${rollupLine(g?.rollup)}`);
+    });
+    if (groups.length > FRAMEWORK_MAX_GROUP_LINES) {
+      lines.push(`  … and ${groups.length - FRAMEWORK_MAX_GROUP_LINES} more groups`);
+    }
+  });
+
+  const notDone = flattenFrameworkRequirements(data)
+    .filter((r) => !r.isDone)
+    .sort((a, b) => requirementRank(b) - requirementRank(a) || dateOf(a) - dateOf(b));
+  lines.push("", "Requirements not done (overdue first, then unassigned):");
+  if (notDone.length === 0) lines.push("none");
+  notDone.slice(0, FRAMEWORK_TOP_N).forEach((r) => {
+    lines.push(
+      `- ${oneLine(r._framework)}${r._useCase ? ` (${r._useCase})` : ""}: ${oneLine(r.title)} [${oneLine(r.status)}] ${oneLine(r.owner) || "unassigned"} ${oneLine(r.dueDate) || "no due date"}`,
+    );
+  });
+  if (notDone.length > FRAMEWORK_TOP_N) {
+    lines.push(`… and ${notDone.length - FRAMEWORK_TOP_N} more`);
+  }
+  return lines.join("\n");
+}
+
+const E23_MAX_LINES = 25;
+
+/** "… and N more" when a list was cut at `max`. */
+const moreLine = (total: number, max: number): string[] =>
+  total > max ? [`… and ${total - max} more`] : [];
+
+const tierText = (tier: MrmTierValue | null | undefined): string =>
+  tier ? `Tier ${tier}` : "Untiered";
+
+/**
+ * How an E-23 section is put to the model. The board version of the report
+ * names no model (spec 8.3), so its prompts carry counts only.
+ */
+export interface E23PromptOptions {
+  board?: boolean;
+}
+
+/**
+ * Compact text for the MRM status section: figures, then the models with
+ * exceptions (only their count for the board).
+ */
+export function prepareMrmFleet(fleet: MrmFleetSectionData, opts: E23PromptOptions = {}): string {
+  const { totals, validationCoverage: v, openFindingsBySeverity: f, monitoring: m } = fleet;
+  const a = fleet.activity;
+  const lines = [
+    `Models in scope (not retired): ${totals.models}; tier 1: ${totals.byTier["1"]}, tier 2: ${totals.byTier["2"]}, tier 3: ${totals.byTier["3"]}, untiered: ${totals.untiered}`,
+    `Validation coverage (each model counted once; the five add up to the models in scope): validated with no validation open ${v.validated}, validation in progress ${v.inReview}, validation overdue ${v.overdue}, last validation not passed ${v.notPassed}, not started ${v.notStarted}`,
+    `Open findings by severity: critical ${f.critical}, high ${f.high}, medium ${f.medium}, low ${f.low}`,
+    `Monitoring: with active thresholds ${m.withActiveThresholds}, with a metric received in the last ${METRIC_STALE_DAYS} days ${m.withRecentMetric}`,
+    a.period
+      ? `Activity from ${a.period.start} to ${a.period.end}: validations signed off ${a.validationsSignedOff}, findings opened ${a.findingsOpened}, findings closed ${a.findingsClosed}, threshold breaches ${a.breaches}, revalidation events ${a.revalidationEvents}`
+      : "Activity in period: no report period was set, so none is counted",
+    "By tier:",
+    ...fleet.perTier.map(
+      (t) =>
+        `  ${tierText(t.tier)}: models ${t.models}, tiering current ${t.tieringCurrent}, with a passed signed-off validation ${t.validated}, monitoring active ${t.monitoringActive}, open findings ${t.openFindings}, critical or high findings ${t.criticalHighFindings}`,
+    ),
+  ];
+  if (opts.board) {
+    lines.push(`Models with exceptions: ${fleet.exceptions.length}`);
+    return lines.join("\n");
+  }
+  lines.push(`Models with exceptions (${fleet.exceptions.length}):`);
+  if (fleet.exceptions.length === 0) lines.push("none");
+  fleet.exceptions.slice(0, E23_MAX_LINES).forEach((e) => {
+    lines.push(`- ${oneLine(e.name)} (${tierText(e.tier)}): ${e.issues.map(oneLine).join(", ")}`);
+  });
+  lines.push(...moreLine(fleet.exceptions.length, E23_MAX_LINES));
+  return lines.join("\n");
+}
+
+/**
+ * The rules line, worded so it cannot be misread: a live run read "rules
+ * fired: 0" as "all 13 rules checked produced no result".
+ */
+export function rulesLine(c: E23ContradictionsSectionData): string {
+  const n = c.checked.length;
+  const fired = c.fired.length;
+  return `Rules checked: ${n}; rules that fired: ${fired} of ${n} (${
+    fired === 0 ? "no contradiction found" : "each one a contradiction listed below"
+  })`;
+}
+
+/**
+ * Compact text for the contradictions section: fired rules, rules not run,
+ * data coverage. The board version leaves out the example models.
+ */
+export function prepareE23Contradictions(
+  c: E23ContradictionsSectionData,
+  opts: E23PromptOptions = {},
+): string {
+  if (!c.available) {
+    return "The contradiction checks did not run: the E-23 checklist is not on file or could not be read. This is not a clean result.";
+  }
+  const lines = [rulesLine(c)];
+  lines.push("Fired rules:");
+  if (c.fired.length === 0) lines.push("none");
+  c.fired.forEach((f) => {
+    const examples =
+      !opts.board && f.examples.length
+        ? `; examples: ${f.examples.map(oneLine).join(", ")}${f.moreCount > 0 ? `, and ${f.moreCount} more` : ""}`
+        : "";
+    lines.push(
+      `- ${f.ruleId} ${oneLine(f.requirementTitle)}: claimed ${oneLine(f.claimedStatus)}; the data shows ${oneLine(f.finding)}; models affected ${f.affectedCount}${examples}`,
+    );
+  });
+  if (c.notRun.length > 0) {
+    lines.push("Rules not run:");
+    c.notRun.forEach((n) => lines.push(`- ${n.ruleId} (${n.requirement}): ${oneLine(n.reason)}`));
+  }
+  const coverage = Object.entries(c.coverage);
+  if (coverage.length > 0) {
+    lines.push("Data coverage by requirement group:");
+    coverage.forEach(([group, value]) =>
+      lines.push(`- ${oneLine(group)}: ${COVERAGE_LABELS[value]}`),
+    );
+  }
+  return lines.join("\n");
+}
+
+/** One fix-it item as a single prompt line. */
+export const fixItLine = (i: E23FixItItem): string =>
+  `- [${FIX_IT_SEVERITY_LABELS[i.severity]}] ${oneLine(i.what)} | ${oneLine(i.where)} | owner ${oneLine(i.owner)} | ${
+    i.dueDate ? `due ${oneLine(i.dueDate)}${i.overdue ? " (overdue)" : ""}` : "no due date"
+  }`;
+
+/** Compact text for the fix-it list: counts, then one line per item in list order. */
+export function prepareE23FixItList(list: E23FixItListSectionData, max = E23_MAX_LINES): string {
+  const { high, medium, low } = list.counts;
+  const lines = [
+    `${list.items.length} ${list.items.length === 1 ? "item" : "items"}: ${high} high, ${medium} medium, ${low} low`,
+  ];
+  list.items.slice(0, max).forEach((i) => lines.push(fixItLine(i)));
+  lines.push(...moreLine(list.items.length, max));
+  return lines.join("\n");
+}
+
+/** Compact text for the inventory appendix (not summarised, but bounded if ever sent). */
+function prepareMrmInventoryAppendix(a: MrmInventoryAppendixSectionData): string {
+  const row = (r: MrmInventoryAppendixSectionData["active"][number]) =>
+    `- ${oneLine(r.name)} ${oneLine(r.version)} (${tierText(r.tier)}, ${oneLine(r.status) || "no status"}; owner ${oneLine(r.owner) || "none"}; approver ${oneLine(r.approver) || "none"}; latest validation ${oneLine(r.latestOutcome) || "none"}; next review due ${oneLine(r.nextReviewDue) || "none"}; active thresholds ${r.activeThresholds ? "yes" : "no"}; open findings ${r.openFindings})`;
+  const list = (title: string, rows: MrmInventoryAppendixSectionData["active"]) => [
+    `${title} (${rows.length}):`,
+    ...rows.slice(0, E23_MAX_LINES).map(row),
+    ...moreLine(rows.length, E23_MAX_LINES),
+  ];
+  return [...list("Models in use", a.active), ...list("Retired models", a.retired)].join("\n");
+}
+
 /**
  * Ported from aiSummarizer.ts:74-125. The per-section caps are load-bearing:
  * without them a large tenant's report exceeds the model context window and
  * every analyzer fails at once.
  */
-export function prepareSectionData(key: string, data: any): string {
+export function prepareSectionData(key: string, data: any, opts: E23PromptOptions = {}): string {
   if (!data) return "No data available for this section.";
+
+  if (key === "frameworkRequirements") return prepareFrameworkRequirements(data);
+  if (key === "mrmFleet") return prepareMrmFleet(data, opts);
+  if (key === "e23Contradictions") return prepareE23Contradictions(data, opts);
+  if (key === "e23FixItList") return prepareE23FixItList(data);
+  if (key === "mrmInventoryAppendix") return prepareMrmInventoryAppendix(data);
 
   const clone = { ...data };
 

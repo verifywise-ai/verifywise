@@ -21,6 +21,9 @@ import modelLifecycleChangeHistoryRoutes from "./modelLifecycleChangeHistory.rou
 import controlEUChangeHistoryRoutes from "./controlEUChangeHistory.route";
 import subcontrolEUChangeHistoryRoutes from "./subcontrolEUChangeHistory.route";
 import annexCategoryChangeHistoryRoutes from "./annexCategoryChangeHistory.route";
+import vendorsRoutes from "./vendors.route";
+import vendorResearchRoutes from "./vendorResearch.route";
+import vendorRiskFindingsRoutes from "./vendorRiskFindings.route";
 import intakeFormReviewTimeRoutes from "./intakeFormReviewTime.route";
 import intakeTierSuggestionRoutes from "./intakeTierSuggestion.route";
 import useCaseOrgSettingsRoutes from "./useCaseOrgSettings.route";
@@ -42,6 +45,14 @@ import aiDetectionRoutes from "./aiDetection.route";
 import aiDetectionRepositoriesRoutes from "./aiDetectionRepositories.route";
 import homeQueueRoutes from "./homeQueue.route";
 import changeNoticeRoutes from "./changeNotice.route";
+import modelInventoriesRoutes from "./modelInventories.route";
+import modelRisksRoutes from "./modelRisks.route";
+import reportTemplatesRoutes from "./reportTemplates.route";
+import scheduledReportsRoutes from "./scheduledReports.route";
+import reportRunsRoutes from "./reportRuns.route";
+import vendorRisksRoutes from "./vendorRisks.route";
+import llmKeysRoutes from "./llmKeys.route";
+import tasksRoutes from "./tasks.route";
 
 const router = express.Router();
 
@@ -59,6 +70,14 @@ router.use("/model-lifecycle-change-history", modelLifecycleChangeHistoryRoutes)
 router.use("/control-eu-change-history", controlEUChangeHistoryRoutes);
 router.use("/subcontrol-eu-change-history", subcontrolEUChangeHistoryRoutes);
 router.use("/annex-category-change-history", annexCategoryChangeHistoryRoutes);
+
+// Vendor research agent and its findings, added after ADR 0001. /vendors holds the research
+// sub-routes and the create and the update of a vendor, which take the other names and the
+// identifiers (ADR 0001 sections 2 and 5). The code of the vendor reads and the delete did not
+// change, so they stay on the legacy /api/vendors; they return the five nullable columns.
+router.use("/vendors", vendorsRoutes);
+router.use("/vendor-research", vendorResearchRoutes);
+router.use("/vendor-risk-findings", vendorRiskFindingsRoutes);
 
 // An intake form's agreed review time (#5189); the legacy /api/intake form
 // contracts are frozen, so it is its own resource.
@@ -117,5 +136,25 @@ router.use("/home", homeQueueRoutes);
 
 // "What's changed" notices: per-user seen state and show rules.
 router.use("/change-notices", changeNoticeRoutes);
+
+// Model and model risk writes with strict validation; the legacy
+// /api/modelInventory and /api/modelRisks routers are frozen.
+router.use("/model-inventories", modelInventoriesRoutes);
+router.use("/model-risks", modelRisksRoutes);
+
+// Report runs and schedules that carry report parameters (OSFI E-23 report);
+// the legacy /api/reporting routers are frozen.
+router.use("/report-templates", reportTemplatesRoutes);
+router.use("/scheduled-reports", scheduledReportsRoutes);
+router.use("/report-runs", reportRunsRoutes);
+// Reading and restoring deleted vendor risks (vendors audit PR C); the
+// /api/vendorRisks router is frozen.
+router.use("/vendor-risks", vendorRisksRoutes);
+// LLM key create and update that check the key with its provider first; the
+// legacy /api/llm-keys writes are frozen and save without a check.
+router.use("/llm-keys", llmKeysRoutes);
+// Tasks linked to an entity (incident drawer's linked tasks); the legacy
+// /api/tasks router is frozen.
+router.use("/tasks", tasksRoutes);
 
 export default router;

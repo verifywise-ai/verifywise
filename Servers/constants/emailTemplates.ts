@@ -54,6 +54,9 @@ export const EMAIL_TEMPLATES = {
   // Vendor templates
   VENDOR_REVIEW_DUE: "vendor-review-due.mjml",
 
+  // Incident templates
+  INCIDENT_CRITICAL_ESCALATION: "incident-critical-escalation.mjml",
+
   // Risk deadline templates
   RISK_DEADLINE_DUE: "risk-deadline-due.mjml",
 

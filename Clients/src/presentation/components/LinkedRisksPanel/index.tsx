@@ -51,6 +51,12 @@ export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
   const [dismissing, setDismissing] = useState<RiskLink | null>(null);
   // Scans, suggestions and the graph authorize on riskLinks.admin.
   const isAdmin = useCan("riskLinks.admin");
+  // The same keys the server checks: creating a link and clearing a
+  // parent-level warning need riskLinks.edit (Admin, Editor); confirming,
+  // dismissing, removing or restoring one is a status change and needs
+  // riskLinks.review (Admin, Editor, Reviewer). An Auditor holds neither.
+  const canEdit = useCan("riskLinks.edit");
+  const canReview = useCan("riskLinks.review");
   const { t } = useTranslation();
   const { formRef, openerRef } = useFormFocus(showForm ? "link" : null);
 
@@ -192,15 +198,17 @@ export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
             "Suggest hierarchy" under the pointer, so a double-click would start
             an AI job.
           */}
-          <CustomizableButton
-            ref={openerRef("link")}
-            size="small"
-            variant="text"
-            onClick={() => setShowForm(true)}
-            isDisabled={showForm}
-          >
-            Link a risk
-          </CustomizableButton>
+          {canEdit && (
+            <CustomizableButton
+              ref={openerRef("link")}
+              size="small"
+              variant="text"
+              onClick={() => setShowForm(true)}
+              isDisabled={showForm}
+            >
+              Link a risk
+            </CustomizableButton>
+          )}
           {/*
             Here rather than in the empty state below: a hierarchy pass groups
             risks that are ALREADY related, so a button that only appeared when
@@ -240,7 +248,7 @@ export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
         selectable and stop excluding the actively-linked ones. Pass nothing
         instead and let the server's 409 do the explaining.
       */}
-      {showForm && (
+      {canEdit && showForm && (
         <Box ref={formRef}>
           <LinkRiskForm
             riskId={riskId}
@@ -294,10 +302,12 @@ export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
                   link={link}
                   dismissing={dismissing?.id === link.id}
                   statusPending={updateStatus.isPending}
+                  canReview={canReview}
                   onAction={handleAction}
                   onSubmitDismissal={(dismissal) => submitDismissal(link, dismissal)}
                   onCancelDismissal={() => setDismissing(null)}
                   onAcknowledge={handleAcknowledge}
+                  canAcknowledge={canEdit}
                   acknowledgePending={acknowledge.isPending}
                 />
               ))}

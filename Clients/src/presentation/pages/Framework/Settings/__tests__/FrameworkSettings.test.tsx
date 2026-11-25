@@ -121,7 +121,7 @@ const defaultProps = {
   filteredFrameworks: allFrameworks,
   onProjectDataChanged: vi.fn().mockResolvedValue(undefined),
   onFrameworksChanged: vi.fn(),
-  setProjects: vi.fn(),
+  setProjectsCache: vi.fn(),
 };
 
 describe("FrameworkSettings", () => {
@@ -165,7 +165,7 @@ describe("FrameworkSettings", () => {
     expect(dialog).not.toHaveTextContent("remove all associated data");
     fireEvent.click(screen.getByText("Delete"));
     await waitFor(() => {
-      expect(defaultProps.setProjects).toHaveBeenCalled();
+      expect(defaultProps.setProjectsCache).toHaveBeenCalled();
     });
     expect(screen.getByText("Framework deleted successfully")).toBeInTheDocument();
     expect(screen.queryByTestId("delete-use-case-modal")).not.toBeInTheDocument();
@@ -176,7 +176,7 @@ describe("FrameworkSettings", () => {
     fireEvent.click(screen.getByText("Delete framework"));
     fireEvent.click(screen.getByText("cancel"));
     expect(screen.queryByTestId("delete-use-case-modal")).not.toBeInTheDocument();
-    expect(defaultProps.setProjects).not.toHaveBeenCalled();
+    expect(defaultProps.setProjectsCache).not.toHaveBeenCalled();
   });
 
   it("adds a framework that has not been added yet", async () => {

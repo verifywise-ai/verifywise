@@ -15,6 +15,7 @@ import {
 import { useCallback, useMemo, useState, useEffect } from "react";
 import IconButton from "../../IconButton";
 import ViewRelationshipsButton from "../../ViewRelationshipsButton";
+import VendorResearchButton from "../../VendorResearchButton";
 import { EmptyState } from "../../EmptyState";
 import EmptyStateTip from "../../EmptyState/EmptyStateTip";
 import { TableEmptyStateLayout } from "../TableEmptyStateLayout";
@@ -29,13 +30,13 @@ import {
   ShieldCheck,
   FileSearch,
   AlertCircle,
+  SearchX,
 } from "lucide-react";
 import VendorRisksDialog from "../../VendorRisksDialog";
 import { useCanCheck } from "../../../../application/hooks/useCan";
 import { VendorModel } from "../../../../domain/models/Common/vendor/vendor.model";
 import { User } from "../../../../domain/types/User";
 import { ITableWithPlaceholderProps } from "../../../types/interfaces/i.table";
-import { ReviewStatus } from "../../../../domain/enums/status.enum";
 import { getRiskScoreColor } from "../../../../domain/utils/vendorScorecard.utils";
 import { VWLink } from "../../Link";
 import VendorLogo from "../../VendorLogo";
@@ -43,6 +44,12 @@ import { text, palette as vwPalette, radiusPx } from "../../../themes/palette";
 import { useCustomFieldDefinitions } from "../../../../application/hooks/useCustomFields";
 import { formatCustomFieldValue } from "../../CustomFieldsSection/formatCustomFieldValue";
 import { pageOfLabel } from "../pageOfLabel";
+import { vendorRiskCountByVendor } from "../../../../application/utils/vendorRiskRows";
+import { compareVendors } from "../../../../application/utils/vendorSort";
+import { buildUserSortNames } from "../../../../application/utils/userSort";
+import { clampPage } from "../../../../application/utils/tablePage";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
+import { fill, pluralKey } from "../../../../i18n/fill";
 
 const VENDORS_ROWS_PER_PAGE_KEY = "verifywise_vendors_rows_per_page";
 const VENDORS_SORTING_KEY = "verifywise_vendors_sorting";
@@ -54,12 +61,12 @@ type SortConfig = {
 };
 
 const titleOfTableColumns = [
-  { id: "vendor_name", label: "name", sortable: true },
-  { id: "assignee", label: "assignee", sortable: true },
-  { id: "review_status", label: "status", sortable: true },
-  { id: "risk", label: "risks", sortable: true },
-  { id: "scorecard", label: "scorecard", sortable: true },
-  { id: "review_date", label: "review date", sortable: true },
+  { id: "vendor_name", label: "Name", sortable: true },
+  { id: "assignee", label: "Assignee", sortable: true },
+  { id: "review_status", label: "Status", sortable: true },
+  { id: "risk", label: "Risks", sortable: true },
+  { id: "scorecard", label: "Scorecard", sortable: true },
+  { id: "review_date", label: "Review date", sortable: true },
   { id: "actions", label: "", sortable: false },
 ];
 
@@ -92,7 +99,8 @@ const SortableTableHead: React.FC<{
                     "cursor": "pointer",
                     "userSelect": "none",
                     "&:hover": {
-                      backgroundColor: "rgba(0, 0, 0, 0.04)",
+                      // One step darker than the header row (background.hover).
+                      backgroundColor: "border.light",
                     },
                   }
                 : {}),
@@ -149,10 +157,13 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
   hidePagination = false,
   vendorRisks = [],
   visibleColumns,
+  onNotify,
+  noMatchesMessage,
 }) => {
   const formatDate = useFormattedDate();
   const theme = useTheme();
   const can = useCanCheck();
+  const { t, lang } = useTranslation();
   const [page, setPage] = useState(0);
 
   // Initialize rowsPerPage from localStorage or default to 5
@@ -195,13 +206,13 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
     name: `${user.name} ${user.surname}`,
   }));
 
-  // Get risk count for a specific vendor
+  // Distinct risks per vendor: the API repeats a risk once per use case.
+  const riskCounts = useMemo(() => vendorRiskCountByVendor(vendorRisks), [vendorRisks]);
   const getVendorRiskCount = useCallback(
-    (vendorId: number) => {
-      return vendorRisks.filter((risk) => risk.vendor_id === vendorId).length;
-    },
-    [vendorRisks],
+    (vendorId: number) => riskCounts.get(vendorId) ?? 0,
+    [riskCounts],
   );
+  const userSortNames = useMemo(() => buildUserSortNames(users ?? []), [users]);
 
   const cellStyle = singleTheme.tableStyles.primary.body.cell;
 
@@ -261,75 +272,18 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
       return vendors || [];
     }
 
-    const sortableVendors = [...vendors];
+    const direction = sortConfig.direction;
+    return [...vendors].sort((a: VendorModel, b: VendorModel) =>
+      compareVendors(a, b, sortConfig.key, direction, { userNames: userSortNames, riskCounts }),
+    );
+  }, [vendors, sortConfig, userSortNames, riskCounts]);
 
-    return sortableVendors.sort((a: VendorModel, b: VendorModel) => {
-      // Status order function based on actual ReviewStatus enum values
-      const getStatusValue = (status: ReviewStatus) => {
-        switch (status) {
-          case ReviewStatus.NotStarted:
-            return 1; // "Not started"
-          case ReviewStatus.InReview:
-            return 2; // "In review"
-          case ReviewStatus.RequiresFollowUp:
-            return 3; // "Requires follow-up"
-          case ReviewStatus.Reviewed:
-            return 4; // "Reviewed"
-          default:
-            return 0; // fallback for unknown values
-        }
-      };
-
-      let aValue: string | number;
-      let bValue: string | number;
-
-      switch (sortConfig.key) {
-        case "vendor_name":
-          aValue = a.vendor_name.toLowerCase();
-          bValue = b.vendor_name.toLowerCase();
-          break;
-
-        case "assignee":
-          aValue = a.assignee;
-          bValue = b.assignee;
-          break;
-
-        case "review_status":
-          aValue = getStatusValue(a.review_status);
-          bValue = getStatusValue(b.review_status);
-          break;
-
-        case "review_date":
-          aValue = new Date(a.review_date).getTime();
-          bValue = new Date(b.review_date).getTime();
-          break;
-
-        case "scorecard":
-          aValue = a.risk_score ?? 0;
-          bValue = b.risk_score ?? 0;
-          break;
-
-        case "risk":
-          aValue = getVendorRiskCount(a.id!);
-          bValue = getVendorRiskCount(b.id!);
-          break;
-
-        default:
-          return 0;
-      }
-
-      // Handle string comparisons
-      if (typeof aValue === "string" && typeof bValue === "string") {
-        const comparison = aValue.localeCompare(bValue);
-        return sortConfig.direction === "asc" ? comparison : -comparison;
-      }
-
-      // Handle number comparisons
-      if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
-      return 0;
-    });
-  }, [vendors, sortConfig, getVendorRiskCount]);
+  // A filter or search can shrink the list below the current page: show the
+  // last page that still has rows instead of an empty body.
+  const validPage = clampPage(page, sortedVendors.length, rowsPerPage);
+  useEffect(() => {
+    if (page !== validPage) setPage(validPage);
+  }, [page, validPage]);
 
   const handleChangePage = useCallback((_: unknown, newPage: number) => {
     setPage(newPage);
@@ -351,10 +305,10 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
   }, []);
 
   const getRange = useMemo(() => {
-    const start = page * rowsPerPage + 1;
-    const end = Math.min(page * rowsPerPage + rowsPerPage, sortedVendors?.length ?? 0);
+    const start = validPage * rowsPerPage + 1;
+    const end = Math.min(validPage * rowsPerPage + rowsPerPage, sortedVendors?.length ?? 0);
     return `${start} - ${end}`;
-  }, [page, rowsPerPage, sortedVendors?.length]);
+  }, [validPage, rowsPerPage, sortedVendors?.length]);
 
   const tableBody = useMemo(
     () => (
@@ -362,10 +316,10 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
         {sortedVendors &&
           sortedVendors
             .slice(
-              hidePagination ? 0 : page * rowsPerPage,
+              hidePagination ? 0 : validPage * rowsPerPage,
               hidePagination
                 ? Math.min(sortedVendors.length, 100)
-                : page * rowsPerPage + rowsPerPage,
+                : validPage * rowsPerPage + rowsPerPage,
             )
             .map((row: VendorModel, index: number) => (
               <TableRow
@@ -439,7 +393,9 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                           }}
                           showIcon={false}
                         >
-                          {riskCount} risk{riskCount !== 1 ? "s" : ""}
+                          {fill(t(pluralKey(lang, riskCount, "{count} risk", "{count} risks")), {
+                            count: riskCount,
+                          })}
                         </VWLink>
                       ) : (
                         <Typography variant="body2" sx={{ color: "text.muted" }}>
@@ -457,10 +413,17 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                         sortConfig.key === "scorecard" ? "background.surface" : "inherit",
                     }}
                   >
-                    <Box display="flex" alignItems="center" gap={1}>
+                    <Box display="flex" alignItems="center" gap="2px">
                       {(() => {
-                        // Use only backend provided risk_score, no client-side calculations
-                        const riskScore = row.risk_score ?? 0;
+                        // The server computes risk_score; null means no scorecard answer.
+                        const riskScore = row.risk_score;
+                        if (riskScore === null || riskScore === undefined) {
+                          return (
+                            <Typography variant="body2" sx={{ color: "text.muted" }}>
+                              Not assessed
+                            </Typography>
+                          );
+                        }
                         const riskColor = getRiskScoreColor(riskScore);
 
                         return (
@@ -468,7 +431,7 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                             sx={{
                               display: "flex",
                               alignItems: "center",
-                              gap: 1,
+                              gap: "2px",
                               padding: "4px 8px",
                               borderRadius: radiusPx.sm,
                               backgroundColor: `${riskColor}20`,
@@ -525,7 +488,16 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                   }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <Stack direction="row" alignItems="center" gap={0.5}>
+                  <Stack direction="row" alignItems="center" gap="1px">
+                    {onNotify && typeof row.id === "number" && (
+                      <VendorResearchButton
+                        // The rows are keyed by position: a request in flight must stay with its vendor.
+                        key={row.id}
+                        vendorId={row.id}
+                        vendorName={row.vendor_name}
+                        onNotify={onNotify}
+                      />
+                    )}
                     <ViewRelationshipsButton
                       entityId={row.id || 0}
                       entityType="vendor"
@@ -549,7 +521,7 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
     ),
     [
       sortedVendors,
-      page,
+      validPage,
       rowsPerPage,
       cellStyle,
       openVendorRisksDialog,
@@ -564,6 +536,9 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
       customFieldDefs,
       formatCfValue,
       formatDate,
+      onNotify,
+      t,
+      lang,
     ],
   );
 
@@ -579,27 +554,31 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
             />
           }
         >
-          <EmptyState
-            icon={Building2}
-            message="No vendors registered yet. Track third-party AI providers and assess their risk."
-            showBorder
-          >
-            <EmptyStateTip
-              icon={ShieldCheck}
-              title="Assess vendor risk tiers"
-              description="Classify each vendor as low, medium, or high risk based on data access, system criticality, and contractual protections."
-            />
-            <EmptyStateTip
-              icon={FileSearch}
-              title="Track contracts and assessments"
-              description="Record contract dates and last assessment dates. Keep track of when renewals and reassessments are due."
-            />
-            <EmptyStateTip
-              icon={AlertCircle}
-              title="Common AI vendors to register"
-              description="OpenAI, Anthropic, Google Cloud AI, AWS Bedrock, Microsoft Azure AI, Hugging Face, and any custom ML service providers you use."
-            />
-          </EmptyState>
+          {noMatchesMessage ? (
+            <EmptyState icon={SearchX} message={noMatchesMessage} showBorder />
+          ) : (
+            <EmptyState
+              icon={Building2}
+              message="No vendors registered yet. Track third-party AI providers and assess their risk."
+              showBorder
+            >
+              <EmptyStateTip
+                icon={ShieldCheck}
+                title="Assess vendor risk tiers"
+                description="Classify each vendor as low, medium, or high risk based on data access, system criticality, and contractual protections."
+              />
+              <EmptyStateTip
+                icon={FileSearch}
+                title="Track contracts and assessments"
+                description="Record contract dates and last assessment dates. Keep track of when renewals and reassessments are due."
+              />
+              <EmptyStateTip
+                icon={AlertCircle}
+                title="Common AI vendors to register"
+                description="OpenAI, Anthropic, Google Cloud AI, AWS Bedrock, Microsoft Azure AI, Hugging Face, and any custom ML service providers you use."
+              />
+            </EmptyState>
+          )}
         </TableEmptyStateLayout>
       ) : (
         <TableContainer>
@@ -627,11 +606,21 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                       opacity: 0.7,
                     }}
                   >
-                    Showing {getRange} of {sortedVendors?.length} vendor(s)
+                    {fill(
+                      t(
+                        pluralKey(
+                          lang,
+                          sortedVendors?.length ?? 0,
+                          "Showing {range} of {total} vendor",
+                          "Showing {range} of {total} vendors",
+                        ),
+                      ),
+                      { range: getRange, total: sortedVendors?.length ?? 0 },
+                    )}
                   </TableCell>
                   <TablePagination
                     count={sortedVendors?.length}
-                    page={page}
+                    page={validPage}
                     onPageChange={handleChangePage}
                     rowsPerPage={rowsPerPage}
                     rowsPerPageOptions={[5, 10, 15, 25]}

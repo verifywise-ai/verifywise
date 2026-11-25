@@ -2,9 +2,7 @@ import { TrainingRegistarModel } from "../domain.layer/models/trainingRegistar/t
 import { sequelize } from "../database/db";
 import { QueryTypes, Transaction } from "sequelize";
 import { ITrainingRegister } from "../domain.layer/interfaces/i.trainingRegister";
-import { TenantAutomationActionModel } from "../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
-import { replaceTemplateVariables } from "./automation/automation.utils";
-import { enqueueAutomationAction } from "../services/automations/automationProducer";
+import { runEventAutomations } from "./automation/automationActions.utils";
 import {
   buildTrainingReplacements,
   buildTrainingUpdateReplacements,
@@ -43,49 +41,17 @@ export const createNewTrainingRegistarQuery = async (
     },
   );
   const createdTrainingRegistar = result[0];
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'training_added' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
-    if (automation["trigger_key"] === "training_added") {
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildTrainingReplacements({
-        ...createdTrainingRegistar.dataValues,
-      });
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // Enqueue with processed params
-      await enqueueAutomationAction(automation.action_key, {
-        ...processedParams,
-        organizationId,
-      });
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    }
-  }
+  // Every action of every active automation; one flagged legacy keeps only the
+  // event's first. Enqueued once the transaction commits.
+  await runEventAutomations(
+    organizationId,
+    "training_added",
+    () => buildTrainingReplacements({ ...createdTrainingRegistar.dataValues }),
+    {
+      transaction,
+      logContext: `training_added, training ${createdTrainingRegistar.id}`,
+    },
+  );
   // Return the created TrainingRegistar instance
   return createdTrainingRegistar;
 };
@@ -116,13 +82,17 @@ export const getAllTrainingRegistarQuery = async (
 export const getTrainingRegistarByIdQuery = async (
   id: number,
   organizationId: number,
+  options: { transaction?: Transaction; lock?: boolean } = {},
 ): Promise<ITrainingRegister> => {
   const trainingRegistarsById = await sequelize.query(
-    `SELECT * FROM trainingregistar WHERE organization_id = :organizationId AND id = :id`,
+    `SELECT * FROM trainingregistar WHERE organization_id = :organizationId AND id = :id${
+      options.lock ? " FOR UPDATE" : ""
+    }`,
     {
       replacements: { organizationId, id },
       mapToModel: true,
       model: TrainingRegistarModel,
+      ...(options.transaction ? { transaction: options.transaction } : {}),
     },
   );
   // Return the first training registar or null if none found
@@ -139,8 +109,11 @@ export const updateTrainingRegistarByIdQuery = async (
   trainingRegistar: Partial<TrainingRegistarModel>,
   organizationId: number,
   transaction: Transaction,
+  /** The row as it was, when the caller has already read (and locked) it. */
+  existing?: ITrainingRegister,
 ): Promise<TrainingRegistarModel> => {
-  const existingTrainingRegistar = await getTrainingRegistarByIdQuery(id, organizationId);
+  const existingTrainingRegistar =
+    existing ?? (await getTrainingRegistarByIdQuery(id, organizationId, { transaction }));
   const updateTrainingRegistar: Partial<
     Record<keyof TrainingRegistarModel, any> & { people?: number }
   > & { organizationId?: number } = {};
@@ -179,49 +152,22 @@ export const updateTrainingRegistarByIdQuery = async (
     transaction,
   });
   const updatedTrainingRegistar = result[0];
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'training_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
-    if (automation["trigger_key"] === "training_updated") {
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildTrainingUpdateReplacements(existingTrainingRegistar, {
+  // Not in this organization: nothing was updated, so no automation runs.
+  if (!updatedTrainingRegistar) return null as any;
+  // Every action of every active automation; one flagged legacy keeps only the
+  // event's first. Enqueued once the transaction commits.
+  await runEventAutomations(
+    organizationId,
+    "training_updated",
+    () =>
+      buildTrainingUpdateReplacements(existingTrainingRegistar, {
         ...updatedTrainingRegistar.dataValues,
-      });
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // Enqueue with processed params
-      await enqueueAutomationAction(automation.action_key, {
-        ...processedParams,
-        organizationId,
-      });
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    }
-  }
+      }),
+    {
+      transaction,
+      logContext: `training_updated, training ${id}`,
+    },
+  );
 
   // Return the first updated training registar or null if none found
   return Array.isArray(result) && result.length > 0
@@ -249,47 +195,19 @@ export const deleteTrainingRegistarByIdQuery = async (
     },
   );
   const deletedTrainingRegistar = result[0];
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'training_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
-    if (automation["trigger_key"] === "training_deleted") {
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildTrainingReplacements(deletedTrainingRegistar);
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // Enqueue with processed params
-      await enqueueAutomationAction(automation.action_key, {
-        ...processedParams,
-        organizationId,
-      });
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    }
-  }
+  // Not in this organization: nothing was deleted, so no automation runs.
+  if (!deletedTrainingRegistar) return false;
+  // Every action of every active automation; one flagged legacy keeps only the
+  // event's first. Enqueued once the transaction commits.
+  await runEventAutomations(
+    organizationId,
+    "training_deleted",
+    () => buildTrainingReplacements(deletedTrainingRegistar),
+    {
+      transaction,
+      logContext: `training_deleted, training ${id}`,
+    },
+  );
 
   // Check if any rows were affected
   return Array.isArray(result) && result.length > 0;

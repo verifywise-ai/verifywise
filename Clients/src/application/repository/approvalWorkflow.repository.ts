@@ -1,4 +1,8 @@
 import { apiServices } from "../../infrastructure/api/networkServices";
+import {
+  buildApprovalWorkflowBody,
+  type ApprovalWorkflowFormData,
+} from "../utils/approvalWorkflowBody";
 
 export async function getAllApprovalWorkflows({
   signal,
@@ -24,20 +28,60 @@ export async function getApprovalWorkflowById({
   return response.data;
 }
 
-export async function createApprovalWorkflow({ body }: { body: any }): Promise<any> {
-  const response = await apiServices.post("/approval-workflows", body);
+/** Shown by the caller (inline), so the global error toast is skipped. */
+type ErrorToastOption = { suppressGlobalErrorToast?: boolean };
+
+export async function createApprovalWorkflow({
+  body,
+  suppressGlobalErrorToast,
+}: { body: any } & ErrorToastOption): Promise<any> {
+  const response = suppressGlobalErrorToast
+    ? await apiServices.post("/approval-workflows", body, { suppressGlobalErrorToast })
+    : await apiServices.post("/approval-workflows", body);
   return response;
 }
 
 export async function updateApprovalWorkflow({
   id,
   body,
+  suppressGlobalErrorToast,
 }: {
   id: number;
   body: any;
-}): Promise<any> {
-  const response = await apiServices.put(`/approval-workflows/${id}`, body);
+} & ErrorToastOption): Promise<any> {
+  const response = suppressGlobalErrorToast
+    ? await apiServices.put(`/approval-workflows/${id}`, body, { suppressGlobalErrorToast })
+    : await apiServices.put(`/approval-workflows/${id}`, body);
   return response;
+}
+
+/** A saved approval workflow, as the API returns it. */
+export interface SavedApprovalWorkflow {
+  id: number;
+  workflow_title: string;
+  entity_type: string;
+}
+
+/**
+ * Create (no `id`) or update an approval workflow from the workflow modal's
+ * form data. Shared by the Approval workflows page and the use case screens
+ * that create a workflow in place. Returns the saved workflow. Both show a
+ * failed save inside the workflow modal, so the global error toast is
+ * skipped.
+ */
+export async function saveApprovalWorkflow({
+  id,
+  formData,
+}: {
+  id?: number;
+  formData: ApprovalWorkflowFormData;
+}): Promise<SavedApprovalWorkflow | undefined> {
+  const body = buildApprovalWorkflowBody(formData);
+  const response =
+    id === undefined
+      ? await createApprovalWorkflow({ body, suppressGlobalErrorToast: true })
+      : await updateApprovalWorkflow({ id, body, suppressGlobalErrorToast: true });
+  return (response?.data as { data?: SavedApprovalWorkflow } | undefined)?.data;
 }
 
 export async function deleteApprovalWorkflow({ id }: { id: number }): Promise<any> {

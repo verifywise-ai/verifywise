@@ -1,0 +1,37 @@
+{
+  "meta": {
+    "disclaimer": "Fictional disclaimer text for the tests.",
+    "terms": "https://example.test/terms/",
+    "license": "https://example.test/license/",
+    "last_updated": "2026-11-05",
+    "results": { "skip": 0, "limit": 1, "total": 60000 }
+  },
+  "results": [
+    {
+      "cfres_id": "ZZPRIVATE-cfres-0",
+      "product_res_number": "Z-0001-04",
+      "event_date_initiated": "2003-10-27",
+      "event_date_posted": "2003-10-29",
+      "recall_status": "Terminated",
+      "event_date_terminated": "2004-03-24",
+      "res_event_number": "27549",
+      "product_code": "ZZY",
+      "k_numbers": ["K020436"],
+      "product_description": "Fictional portable x-ray system, model FX-1",
+      "code_info": "ZZPRIVATE serial ZS-10058",
+      "firm_fei_number": "ZZPRIVATE-fei-1000139",
+      "recalling_firm": "Fictional Old Imaging Corp",
+      "address_1": "ZZPRIVATE 1 Invented Road",
+      "city": "ZZPRIVATE Inventville",
+      "state": "ZZ",
+      "postal_code": "ZZPRIVATE-00001",
+      "additional_info_contact": "ZZPRIVATE Mr. Invented Contact 555-0101",
+      "reason_for_recall": "Fictional reason: the system did not meet a fictional performance standard.",
+      "root_cause_description": "Other",
+      "action": "ZZPRIVATE Fictional notice to the one consignee.",
+      "product_quantity": "ZZPRIVATE 1 unit",
+      "distribution_pattern": "ZZPRIVATE One invented state",
+      "openfda": {}
+    }
+  ]
+}

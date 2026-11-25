@@ -58,6 +58,14 @@ export const de: Record<string, string> = {
   "Your changes have been saved.": "Ihre Änderungen wurden gespeichert.",
   "Tasks assigned to team members show up in their personal task list. Use the 'My tasks only' toggle on the list view to filter.":
     "Aufgaben, die Teammitgliedern zugewiesen sind, erscheinen in deren persönlicher Aufgabenliste. Verwenden Sie den Schalter 'Nur meine Aufgaben' in der Listenansicht zum Filtern.",
+  "Showing all tasks in your organization. You can create and manage tasks here.":
+    "Es werden alle Aufgaben Ihrer Organisation angezeigt. Hier können Sie Aufgaben erstellen und verwalten.",
+  "Showing tasks you created or are assigned to. You can create and manage your tasks here.":
+    "Es werden Aufgaben angezeigt, die Sie erstellt haben oder die Ihnen zugewiesen sind. Hier können Sie Ihre Aufgaben erstellen und verwalten.",
+  "Archive task": "Aufgabe archivieren",
+  "Could not load the linked tasks.": "Die verknüpften Aufgaben konnten nicht geladen werden.",
+  "No incidents to link": "Keine Vorfälle zum Verknüpfen",
+  "Could not load incidents.": "Vorfälle konnten nicht geladen werden.",
 };
 
 export const fr: Record<string, string> = {
@@ -117,6 +125,14 @@ export const fr: Record<string, string> = {
   "Your changes have been saved.": "Vos modifications ont été enregistrées.",
   "Tasks assigned to team members show up in their personal task list. Use the 'My tasks only' toggle on the list view to filter.":
     "Les tâches attribuées aux membres de l'équipe apparaissent dans leur liste de tâches personnelle. Utilisez le commutateur « Mes tâches uniquement » sur la vue en liste pour filtrer.",
+  "Showing all tasks in your organization. You can create and manage tasks here.":
+    "Toutes les tâches de votre organisation sont affichées. Vous pouvez créer et gérer des tâches ici.",
+  "Showing tasks you created or are assigned to. You can create and manage your tasks here.":
+    "Les tâches que vous avez créées ou qui vous sont assignées sont affichées. Vous pouvez créer et gérer vos tâches ici.",
+  "Archive task": "Archiver la tâche",
+  "Could not load the linked tasks.": "Impossible de charger les tâches liées.",
+  "No incidents to link": "Aucun incident à lier",
+  "Could not load incidents.": "Impossible de charger les incidents.",
 };
 
 export const es: Record<string, string> = {
@@ -176,4 +192,12 @@ export const es: Record<string, string> = {
   "Your changes have been saved.": "Sus cambios se han guardado.",
   "Tasks assigned to team members show up in their personal task list. Use the 'My tasks only' toggle on the list view to filter.":
     "Las tareas asignadas a los miembros del equipo aparecen en su lista de tareas personal. Utilice el interruptor «Solo mis tareas» en la vista de lista para filtrar.",
+  "Showing all tasks in your organization. You can create and manage tasks here.":
+    "Se muestran todas las tareas de su organización. Aquí puede crear y gestionar tareas.",
+  "Showing tasks you created or are assigned to. You can create and manage your tasks here.":
+    "Se muestran las tareas que usted creó o que tiene asignadas. Aquí puede crear y gestionar sus tareas.",
+  "Archive task": "Archivar tarea",
+  "Could not load the linked tasks.": "No se pudieron cargar las tareas vinculadas.",
+  "No incidents to link": "No hay incidentes para vincular",
+  "Could not load incidents.": "No se pudieron cargar los incidentes.",
 };

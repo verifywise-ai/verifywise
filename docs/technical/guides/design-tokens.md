@@ -248,14 +248,21 @@ const monoFontFamily = [
 
 ### Using Theme Spacing
 
+The theme sets `spacing: 2` (`themes/light.ts`), so `theme.spacing()` and
+numeric `sx` values use a **2px** base, not MUI's default 8px: `gap: 2` is
+4px, `padding: 8` is 16px. Screens use exact pixel strings instead, which
+read the same whatever the base:
+
 ```typescript
-// MUI theme.spacing() uses 8px base
 sx={{
-  padding: 2,        // 16px (2 * 8)
-  marginTop: 1,      // 8px (1 * 8)
-  gap: 1.5,          // 12px (1.5 * 8)
+  padding: "16px",
+  marginTop: "8px",
+  gap: "12px",
 }}
 ```
+
+The `theme.spacing(...)` calls in the style patterns below are on the same
+2px base (`theme.spacing(2)` is 4px).
 
 ## Component Sizes
 
@@ -283,11 +290,7 @@ sx={{
 
 ### Inputs
 
-| Size   | Height | Usage            |
-| ------ | ------ | ---------------- |
-| Small  | 32px   | Compact forms    |
-| Medium | 40px   | Default          |
-| Large  | 48px   | Prominent inputs |
+`Field`, `Select` and `SearchBox` render at 34px, the same as a medium button. Use their default height; don't set another one per page.
 
 ### Cards
 
@@ -591,7 +594,7 @@ import { cardMixins, typographyMixins } from "../themes/mixins";
 1. **Use theme values** - Always reference theme tokens instead of hardcoded values
 2. **Prefer sx prop** - Use MUI's sx prop over inline styles or styled-components
 3. **Consistent spacing** - Follow the spacing scale for predictable layouts
-4. **Standard sizes** - Use predefined component sizes (button: 34px, inputs: 40px)
+4. **Standard sizes** - Use predefined component sizes (buttons and inputs: 34px)
 5. **Border radius 4px** - Maintain consistent corner radius across components
 6. **No shadows** - Most components have no shadow; use sparingly for elevation
 7. **Disabled ripple** - Interactive elements don't show ripple effects

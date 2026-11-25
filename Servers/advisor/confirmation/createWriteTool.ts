@@ -7,6 +7,9 @@
  */
 
 import { submitForApproval } from "../approval/approvalGateway";
+import { REQUESTER_CLIENT_DATE_PARAM } from "../approval/types";
+import { getRequestClientDate } from "../../utils/context/context";
+import { acceptedClientDate } from "../../utils/validations/incidentManagementValidation.utils";
 import type { WarningLevel, ConfirmationToolResult } from "./types";
 
 export type WriteExecuteFn = (
@@ -17,8 +20,19 @@ export type WriteExecuteFn = (
 interface WriteToolConfig {
   toolName: string;
   warningLevel: WarningLevel;
-  descriptionFn: (params: Record<string, unknown>) => string;
+  /** What the approval card says; may look names up in the organization. */
+  descriptionFn: (
+    params: Record<string, unknown>,
+    organizationId: number,
+  ) => string | Promise<string>;
   executeFn: WriteExecuteFn;
+  /**
+   * Checks run before anything is submitted for approval, with the caller's
+   * params (including _userId). A message refuses the call at once, so nobody
+   * is asked to approve an action that cannot run. The executor still checks
+   * again when it runs: things can change while an approval waits.
+   */
+  precheckFn?: (params: Record<string, unknown>, organizationId: number) => Promise<string | null>;
 }
 
 /**
@@ -49,7 +63,15 @@ export function createWriteToolFn(
   ): Promise<ConfirmationToolResult | unknown> => {
     const userId = (params._userId as number) || 0;
     const sanitized = sanitizeParams(params);
-    const description = config.descriptionFn(sanitized);
+    // As the gateway runs the executor: the caller's params without internal
+    // fields, and the user the approval is submitted for. Never a
+    // _requesterId from the params, which would act as someone else.
+    const refusal = config.precheckFn
+      ? await config.precheckFn({ ...sanitized, _userId: userId }, organizationId)
+      : null;
+    if (refusal) return { success: false, message: refusal };
+
+    const description = await config.descriptionFn(sanitized, organizationId);
 
     const result = await submitForApproval({
       organizationId,
@@ -59,6 +81,9 @@ export function createWriteToolFn(
       riskLevel: config.warningLevel,
       description,
       inputParams: sanitized,
+      // The requester's own day, kept for when an approver runs the action
+      // later (their request carries their own date).
+      requesterClientDate: acceptedClientDate(getRequestClientDate()) ?? undefined,
     });
 
     switch (result.outcome) {
@@ -99,5 +124,6 @@ function sanitizeParams(params: Record<string, unknown>): Record<string, unknown
   delete sanitized._userId;
   delete sanitized._requesterId;
   delete sanitized._organizationId;
+  delete sanitized[REQUESTER_CLIENT_DATE_PARAM];
   return sanitized;
 }

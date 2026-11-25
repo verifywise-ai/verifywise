@@ -14,7 +14,7 @@ import { ChevronDown, ChevronRight, Plus, Sparkles } from "lucide-react";
 import { CustomizableButton } from "../../../../components/button/customizable-button";
 import Chip from "../../../../components/Chip";
 import AddNewRiskForm from "../../../../components/AddNewRiskForm";
-import { RISK_APPROVAL_STATUS } from "../../../../components/AddNewRiskForm/projectRiskValue";
+import { mitigationInitialState } from "../../../../components/AddNewRiskForm/hooks/useMitigationSection";
 import StandardModal from "../../../../components/Modals/StandardModal";
 import Alert from "../../../../components/Alert";
 import useUsers from "../../../../../application/hooks/useUsers";
@@ -144,35 +144,17 @@ export function AiRiskSuggestions({ onRiskSaved }: AiRiskSuggestionsProps) {
     if (item.kind === "matched") {
       const form = mapMatchedCatalogEntryToRiskForm(item.entry);
       setSelectedRisk(form);
-      setSelectedMitigation({
-        mitigationStatus: 1,
-        mitigationPlan: "",
-        currentRiskLevel: 0,
-        implementationStrategy: "",
-        deadline: "",
-        doc: "",
-        likelihood: form.likelihood,
-        riskSeverity: form.riskSeverity,
-        approver: 0,
-        approvalStatus: RISK_APPROVAL_STATUS.NotRequired,
-        dateOfAssessment: "",
-      });
+      // Nothing in the mitigation tab is pre-chosen: it is optional.
+      setSelectedMitigation(mitigationInitialState);
     } else {
       const form = mapFreeformSuggestionToRiskForm(item.suggestion);
       const mitigation = mapFreeformSuggestionToMitigationForm(item.suggestion);
       setSelectedRisk(form);
+      // Only the suggested plan text is filled in; nothing else in the
+      // mitigation tab is pre-chosen (status, residual pair stay empty).
       setSelectedMitigation({
-        mitigationStatus: 1,
+        ...mitigationInitialState,
         mitigationPlan: mitigation.mitigationPlan || "",
-        currentRiskLevel: 0,
-        implementationStrategy: "",
-        deadline: "",
-        doc: "",
-        likelihood: mitigation.likelihood ?? form.likelihood,
-        riskSeverity: mitigation.riskSeverity ?? form.riskSeverity,
-        approver: 0,
-        approvalStatus: RISK_APPROVAL_STATUS.NotRequired,
-        dateOfAssessment: "",
       });
     }
     setIsModalOpen(true);

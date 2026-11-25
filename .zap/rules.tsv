@@ -10,12 +10,14 @@
 # tighten (move rules to FAIL) as findings are triaged.
 # NOTE: zap-baseline requires 3 tab-separated tokens per line (id, threshold,
 # description). Lines with only 2 tokens abort the scan with exit code 3.
+# Weekly triage loop and justification standards:
+# docs/security/zap-triage-runbook.md
 
 # --- Known / accepted noise -------------------------------------------------
 # Timestamp disclosure (often build hashes, not real timestamps)
-10096	IGNORE	Timing disclosure false positive on async API responses (tuned during baseline triage)
+10096	IGNORE	Timing disclosure false positive: hits are build/deploy metadata timestamps, not sensitive data (tuned during baseline triage)
 # Private IP disclosure in responses (internal services by design)
-2	IGNORE	Private IP disclosure accepted: internal services by design
+2	IGNORE	Private IP disclosure: scans target localhost/CI-internal addresses, so hits are a scan-target artifact, not an app property
 # X-Backend-Server / X-ChromeLogger informational leakage
 10039	INFO	Informational header leakage (X-Backend-Server / X-ChromeLogger)
 
@@ -32,5 +34,5 @@
 10020	WARN	Missing X-Frame-Options header reported but not failing (OWASP A02)
 10021	WARN	Missing X-Content-Type-Options header reported but not failing (OWASP A02)
 10038	WARN	Content-Security-Policy header findings reported but not failing (OWASP A02)
-# A07: Authentication failures — session/fixation issues
-10010	WARN	Session fixation / cookie issues reported but not failing (OWASP A07)
+# A07: Identification & authentication failures — cookie flags
+10010	WARN	Cookie No HttpOnly Flag: fires on the intentionally JS-readable double-submit CSRF cookie (Servers/middleware/csrf.middleware.ts); the refresh cookie is httpOnly. CI also serves plain HTTP with NODE_ENV=test (OWASP A07)

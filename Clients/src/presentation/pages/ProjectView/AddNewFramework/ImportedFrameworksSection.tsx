@@ -154,22 +154,20 @@ const ImportedFrameworksSection: React.FC<ImportedFrameworksSectionProps> = ({
                     <CustomizableButton
                       variant="outlined"
                       color="error"
-                      size="small"
                       text="Remove"
                       ariaLabel={`Remove ${fw.name}`}
                       isDisabled={isBusy}
                       onClick={() => setToRemove({ linkId, name: fw.name })}
-                      sx={{ minWidth: "100px", height: "30px" }}
+                      sx={{ minWidth: "100px" }}
                     />
                   ) : (
                     <CustomizableButton
                       variant="contained"
-                      size="small"
                       text="Add"
                       ariaLabel={`Add ${fw.name}`}
                       isDisabled={isBusy}
                       onClick={() => handleAdd(fw)}
-                      sx={{ minWidth: "100px", height: "30px" }}
+                      sx={{ minWidth: "100px" }}
                     />
                   )}
                 </Box>

@@ -4,7 +4,7 @@ import { logEvent } from "./dbLogger";
 import logger from "./fileLogger";
 
 type LogState = "processing" | "successful" | "error";
-type EventType = "Create" | "Read" | "Update" | "Delete" | "Error";
+export type EventType = "Create" | "Read" | "Update" | "Delete" | "Error";
 
 interface LogProcessingParams {
   logState?: LogState;
@@ -74,7 +74,12 @@ export async function logFailure({
 }
 
 interface LogRollbackFailureParams {
-  req: Request;
+  /** The request, when there is one; its user, organization and path are logged. */
+  req?: Request;
+  /** Without a request (a service): who and where, logged in its place. */
+  userId?: number;
+  organizationId?: number;
+  path?: string;
   functionName: string;
   fileName: string;
   eventType: EventType;
@@ -92,6 +97,9 @@ interface LogRollbackFailureParams {
  */
 export async function logRollbackFailure({
   req,
+  userId: contextUserId,
+  organizationId: contextOrganizationId,
+  path: contextPath,
   functionName,
   fileName,
   eventType,
@@ -103,9 +111,9 @@ export async function logRollbackFailure({
   const rollbackErr =
     rollbackError instanceof Error ? rollbackError : new Error(String(rollbackError));
 
-  const userId = req.userId ?? 0;
-  const organizationId = req.organizationId;
-  const path = req.originalUrl || req.url || "unknown";
+  const userId = req?.userId ?? contextUserId ?? 0;
+  const organizationId = req?.organizationId ?? contextOrganizationId;
+  const path = req?.originalUrl || req?.url || contextPath || "unknown";
 
   logger.error(
     `[rollback] original error in ${functionName} (path=${path}, org=${organizationId ?? "n/a"}):`,

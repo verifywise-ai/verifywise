@@ -113,6 +113,16 @@ describe("keepLegacyFirstActionOnly", () => {
     ).toEqual([3]);
   });
 
+  it('sorts a NULL action order last, as ORDER BY aa."order" ASC did', () => {
+    const noOrder = { ...action(2, 1, true), order: null };
+    expect(keepLegacyFirstActionOnly([noOrder, action(5, 3, true)])).toEqual([action(5, 3, true)]);
+    const alsoNoOrder = { ...action(7, 1, true), order: undefined };
+    // Only NULLs: the lowest automation id, as for equal orders.
+    expect(
+      keepLegacyFirstActionOnly([alsoNoOrder, noOrder]).map((row) => row.automation_id),
+    ).toEqual([2]);
+  });
+
   it("keeps every row of new automations, in the given order", () => {
     expect(keepLegacyFirstActionOnly(LEGACY_AND_NEW)).toEqual([
       action(3, 1, true),

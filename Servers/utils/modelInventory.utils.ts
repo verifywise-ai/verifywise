@@ -1,9 +1,7 @@
 import { ModelInventoryModel } from "../domain.layer/models/modelInventory/modelInventory.model";
 import { sequelize } from "../database/db";
 import { QueryTypes, Transaction } from "sequelize";
-import { TenantAutomationActionModel } from "../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
-import { replaceTemplateVariables } from "./automation/automation.utils";
-import { enqueueAutomationAction } from "../services/automations/automationProducer";
+import { runEventAutomations } from "./automation/automationActions.utils";
 import {
   buildModelReplacements,
   buildModelUpdateReplacements,
@@ -111,13 +109,21 @@ export const getModelsByOrganizationIdQuery = async (organizationId: number) => 
   return modelInventory;
 };
 
-export const getModelInventoryByIdQuery = async (id: number, organizationId: number) => {
+export const getModelInventoryByIdQuery = async (
+  id: number,
+  organizationId: number,
+  // forUpdate (inside a transaction) locks the row, so a save checks and
+  // diffs against the row it then changes.
+  options: { transaction?: Transaction; forUpdate?: boolean } = {},
+) => {
+  const lock = options.forUpdate ? " FOR UPDATE" : "";
   const modelInventory = await sequelize.query(
-    `SELECT * FROM model_inventories WHERE organization_id = :organizationId AND id = :id`,
+    `SELECT * FROM model_inventories WHERE organization_id = :organizationId AND id = :id${lock}`,
     {
       replacements: { organizationId, id },
       mapToModel: true,
       model: ModelInventoryModel,
+      transaction: options.transaction,
     },
   );
 
@@ -129,6 +135,7 @@ export const getModelInventoryByIdQuery = async (id: number, organizationId: num
     `SELECT project_id, framework_id FROM model_inventories_projects_frameworks WHERE organization_id = :organizationId AND model_inventory_id = :model_inventory_id`,
     {
       replacements: { organizationId, model_inventory_id: model.id },
+      transaction: options.transaction,
     },
   )) as [IModelInventoryProjectFramework[], number];
   assignModelLinks(model, projectFrameworks[0]);
@@ -301,47 +308,15 @@ export const createNewModelInventoryQuery = async (
     (createdModel.dataValues as any).projects = projectIds;
     (createdModel.dataValues as any).frameworks = frameworkIds;
 
-    const automations = (await sequelize.query(
-      `SELECT
-        pat.key AS trigger_key,
-        paa.key AS action_key,
-        a.id AS automation_id,
-        aa.*
-      FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id JOIN automation_actions_data aa ON a.id = aa.automation_id JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE a.organization_id = :organization_id AND pat.key = 'model_added' AND a.is_active ORDER BY aa."order" ASC;`,
-      { replacements: { organization_id: organizationId }, transaction },
-    )) as [
-      (TenantAutomationActionModel & {
-        trigger_key: string;
-        action_key: string;
-        automation_id: number;
-      })[],
-      number,
-    ];
-    if (automations[0].length > 0) {
-      const automation = automations[0][0];
-      if (automation["trigger_key"] === "model_added") {
-        const params = automation.params!;
-
-        // Build replacements
-        const replacements = buildModelReplacements(createdModel);
-
-        // Replace variables in subject and body
-        const processedParams = {
-          ...params,
-          subject: replaceTemplateVariables(params.subject || "", replacements),
-          body: replaceTemplateVariables(params.body || "", replacements),
-          automation_id: automation.automation_id,
-        };
-
-        // Enqueue with processed params
-        await enqueueAutomationAction(automation.action_key, {
-          ...processedParams,
-          organizationId,
-        });
-      } else {
-        console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-      }
-    }
+    // Every action of every active automation; one flagged legacy keeps only the
+    // event's first. Enqueued once the transaction commits: a rolled-back write
+    // announces nothing.
+    await runEventAutomations(
+      organizationId,
+      "model_added",
+      () => buildModelReplacements(createdModel),
+      { transaction, logContext: `model_added, model ${createdModel.id}` },
+    );
 
     // Record history snapshot for status changes
     try {
@@ -369,9 +344,13 @@ export const updateModelInventoryByIdQuery = async (
   transaction: Transaction,
   // Set for a REST caller: see the use case link rules below.
   useCaseViewer?: UseCaseViewer,
+  // The row as the caller read it under its lock, before the save changed
+  // it; read here when not given.
+  previous?: Record<string, any> | null,
 ) => {
   const updated_at = new Date();
-  const oldModel = await getModelInventoryByIdQuery(id, organizationId);
+  const oldModel =
+    previous ?? (await getModelInventoryByIdQuery(id, organizationId, { transaction }));
 
   // An unchanged approver is not re-checked, so a model whose approver has
   // since left the organization can still be edited. A new one must be a member.
@@ -504,47 +483,15 @@ export const updateModelInventoryByIdQuery = async (
     )) as [IModelInventoryProjectFramework[], number];
     assignModelLinks(updatedModel, links[0]);
 
-    const automations = (await sequelize.query(
-      `SELECT
-        pat.key AS trigger_key,
-        paa.key AS action_key,
-        a.id AS automation_id,
-        aa.*
-      FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id JOIN automation_actions_data aa ON a.id = aa.automation_id JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE a.organization_id = :organization_id AND pat.key = 'model_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-      { replacements: { organization_id: organizationId }, transaction },
-    )) as [
-      (TenantAutomationActionModel & {
-        trigger_key: string;
-        action_key: string;
-        automation_id: number;
-      })[],
-      number,
-    ];
-    if (automations[0].length > 0) {
-      const automation = automations[0][0];
-      if (automation["trigger_key"] === "model_updated") {
-        const params = automation.params!;
-
-        // Build replacements
-        const replacements = buildModelUpdateReplacements(oldModel, updatedModel);
-
-        // Replace variables in subject and body
-        const processedParams = {
-          ...params,
-          subject: replaceTemplateVariables(params.subject || "", replacements),
-          body: replaceTemplateVariables(params.body || "", replacements),
-          automation_id: automation.automation_id,
-        };
-
-        // Enqueue with processed params
-        await enqueueAutomationAction(automation.action_key, {
-          ...processedParams,
-          organizationId,
-        });
-      } else {
-        console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-      }
-    }
+    // Every action of every active automation; one flagged legacy keeps only the
+    // event's first. Enqueued once the transaction commits: a rolled-back write
+    // announces nothing.
+    await runEventAutomations(
+      organizationId,
+      "model_updated",
+      () => buildModelUpdateReplacements(oldModel, updatedModel),
+      { transaction, logContext: `model_updated, model ${id}` },
+    );
 
     // Record history snapshot if status changed
     try {
@@ -642,47 +589,15 @@ export const deleteModelInventoryByIdQuery = async (
       },
     )) as [ModelInventoryModel[], number];
     const deletedModel = result[0][0];
-    const automations = (await sequelize.query(
-      `SELECT
-        pat.key AS trigger_key,
-        paa.key AS action_key,
-        a.id AS automation_id,
-        aa.*
-      FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id JOIN automation_actions_data aa ON a.id = aa.automation_id JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE a.organization_id = :organization_id AND pat.key = 'model_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
-      { replacements: { organization_id: organizationId }, transaction },
-    )) as [
-      (TenantAutomationActionModel & {
-        trigger_key: string;
-        action_key: string;
-        automation_id: number;
-      })[],
-      number,
-    ];
-    if (automations[0].length > 0) {
-      const automation = automations[0][0];
-      if (automation["trigger_key"] === "model_deleted") {
-        const params = automation.params!;
-
-        // Build replacements
-        const replacements = buildModelReplacements(deletedModel);
-
-        // Replace variables in subject and body
-        const processedParams = {
-          ...params,
-          subject: replaceTemplateVariables(params.subject || "", replacements),
-          body: replaceTemplateVariables(params.body || "", replacements),
-          automation_id: automation.automation_id,
-        };
-
-        // Enqueue with processed params
-        await enqueueAutomationAction(automation.action_key, {
-          ...processedParams,
-          organizationId,
-        });
-      } else {
-        console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-      }
-    }
+    // Every action of every active automation; one flagged legacy keeps only the
+    // event's first. Enqueued once the transaction commits: a rolled-back write
+    // announces nothing.
+    await runEventAutomations(
+      organizationId,
+      "model_deleted",
+      () => buildModelReplacements(deletedModel),
+      { transaction, logContext: `model_deleted, model ${id}` },
+    );
 
     // Record history snapshot after deletion
     try {

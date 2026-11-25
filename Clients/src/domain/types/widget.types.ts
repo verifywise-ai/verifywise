@@ -51,6 +51,8 @@ export interface DatePickerCoreProps {
   onAccept?: (date: Dayjs | null) => void;
   /** Blocks typing in the field, leaving the calendar as the only way to change the date. */
   isFieldReadOnly?: boolean;
+  /** Shows a clear button in the field, for an optional date that can be emptied. */
+  isClearable?: boolean;
 }
 
 export interface DropDownsProps {
@@ -76,6 +78,11 @@ export interface SelectCorProps {
     surname?: string;
     icon?: React.ComponentType<{ color?: string; size?: number }>;
     color?: string;
+    /**
+     * The name is the user's own text (a vendor's name, say), not a word of the app: the DOM
+     * translator leaves it alone, in the menu and as the selected value.
+     */
+    noTranslate?: boolean;
     /** Shown but not selectable. */
     disabled?: boolean;
   }[];

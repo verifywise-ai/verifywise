@@ -534,7 +534,8 @@ export const getApprovalRequestByIdQuery = async (
       aia.risk_level as ai_risk_level,
       aia.state as ai_state,
       aia.action_type as ai_action_type,
-      aia.input_params as ai_input_params,
+      -- Without the server's internal requester date (approvalGateway).
+      aia.input_params - '_requesterClientDate' as ai_input_params,
       -- Risk fields (entity_type = 'risk')
       r.risk_name,
       r.severity as risk_severity,

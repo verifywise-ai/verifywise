@@ -1,0 +1,905 @@
+/**
+ * The vendor researcher: the research loop of the web research toolkit, set up for one vendor.
+ *
+ * Every run gets a web session of its own (budgets, provenance, the lookback window of each
+ * category and the ledger), a page reader of its own and a search engine of its own. With a cache
+ * (see webResearch/webCache.ts) the reader and the engine of a run share the robots.txt of the
+ * sites, the pages, the news index of GDELT and the searches of a provider with the other runs;
+ * without one, the answers of robots.txt are kept for that run only. The loop is offered the
+ * categories that can be researched for the vendor: all five with a domain, without one only the
+ * three that search the news. A run only collects: it leaves the ledger, the calls that reached
+ * the web and how the loop ended, and the analysis is made from them afterwards.
+ *
+ * The engine of a run is built from the key the research uses (see searchEngineOf.ts and
+ * `createRunSearch`): the web search of the key's provider when it has one, with the news of the
+ * GDELT Project behind it for a key that is not allowed to search, and the news of the GDELT
+ * Project alone for every other key. The result says which engine the searches went to. The loops
+ * are told what that engine answers when they start (the kinds of search, and how far back its news
+ * reaches; see `buildLoopSystemPrompt`), and the session refuses a search of a kind it lacks.
+ *
+ * Before the loop starts, a run can have the routine work done by code (see gather.ts): the news
+ * searches and the reads of the vendor's own pages, all at once. The model is told what that
+ * collected and spends its steps on what is missing. The time limit of that work (30 seconds)
+ * stops while the news engine waits out a pause of GDELT: each wait it tells of, plus one ask, is
+ * added to it, up to GATHER_MAX_PAUSE_MS, and the clock stops with the work, so a wait of a later
+ * loop moves nothing. The same engine tells the run of each 429 it meets and of the failure that
+ * ends its one request for another reason, and each is written to the run's trace as a step with a
+ * fixed word (see `RunHooks`).
+ *
+ * The loop can run as one loop for each category, all at the same time (see loops.ts): each gets a
+ * budget of its own from the session, a few model turns, a task that names its category and a
+ * briefing of what the code collected for that category only. The run ends as they end.
+ */
+import { type LanguageModel, wrapLanguageModel } from "ai";
+import {
+  type TokenUsage,
+  generateObjectWithSelfCorrection,
+  jsonObjectFallbackMiddleware,
+} from "../../advisor/llmSelfCorrect";
+import {
+  RESEARCH_CATEGORIES,
+  ResearchCategory,
+  type RunCoverage,
+  RunProgress,
+} from "../../domain.layer/interfaces/i.vendorResearch";
+import { GDELT_ASK_MS, type GdeltFailureKind, createGdeltEngine } from "../webResearch/gdeltSearch";
+import { createBraveEngine } from "../webResearch/braveSearch";
+import { createProviderSearchEngine, withFallback } from "../webResearch/providerSearch";
+import { PageReader, createPageReader } from "../webResearch/readPage";
+import type { PageRenderer } from "../webResearch/renderPage";
+import { LoopObserver, StopReason, runResearchLoop } from "../webResearch/researchLoop";
+import { type WebCache, withSearchCache } from "../webResearch/webCache";
+import type { SearchEngine, SearchEngineId } from "../webResearch/webSearch";
+import { CallRecord, LedgerEntry, WebSession, createWebSession } from "../webResearch/webSession";
+import { withAliases } from "./aliases";
+import {
+  LOOKBACK_MONTHS,
+  SITE_CATEGORIES,
+  monthsBefore,
+  researchableCategories,
+} from "./categories";
+import {
+  type GatherClock,
+  type GatheredAction,
+  createGatherClock,
+  describeGathered,
+  gatherSources,
+  traceStepOfRecords,
+  traceStepOfSitemap,
+} from "./gather";
+import { requestHints } from "./hints";
+import { createVendorMatcher } from "./identity";
+import { CATEGORY_LOOP_STEPS, combineEndings, loopGrants } from "./loops";
+import { regulatorTopicsOf } from "./market";
+import { type ResearchMetrics, researchMetrics } from "./metrics";
+import {
+  PREFLIGHT_TIMEOUT_MS,
+  aliasesOf,
+  callsOfClosedSite,
+  checkWebsite,
+  closedHostsOf,
+  describeWebsite,
+  siteNamesOf,
+  traceStepOf,
+} from "./preflight";
+import { buildLoopSystemPrompt, buildLoopTaskPrompt } from "./prompts";
+import { type PolicyPage, collectPolicyPages } from "./policySnapshots";
+import { NEWS_TOPIC_WORDS, normalizeQuery } from "./queries";
+import type { RecordsLookup } from "./records";
+import type { SearchSpec } from "./searchEngineOf";
+import { workedCategories } from "./summary";
+import { ResearchTarget } from "./target";
+import type { TraceRecorder } from "./trace";
+import type { VrdbLookup } from "./vrdb/types";
+
+export interface ResearchResult {
+  /** The ledger of the run: one entry per URL, a result's snippet or a page's excerpt. */
+  entries: LedgerEntry<ResearchCategory>[];
+  /** The calls that reached the web, each with its category. */
+  calls: CallRecord<ResearchCategory>[];
+  searchesUsed: number;
+  pagesRead: number;
+  stoppedBecause: StopReason;
+  /** The error that ended the loop as `model_error`; null otherwise. */
+  modelError: unknown | null;
+  /**
+   * True when a call of the loop had to fall back to JSON-object mode: the provider rejects
+   * json_schema, and the analysis can start in JSON-object mode too.
+   */
+  jsonObjectFallback: boolean;
+  /**
+   * The categories in which a search failed because the engine did not answer
+   * (`search_unavailable`) and no search was answered, the code's and the model's alike. It is
+   * read from the turns of the run, not from `calls`: a search that the clock of the routine work
+   * cut off while the engine had not answered leaves no call (see webSession.ts), and still means
+   * that the news of the category was not searched. Absent from a researcher that does not tell.
+   */
+  searchUnavailable?: ResearchCategory[];
+  /**
+   * The other names of the vendor that its home page gave (see aliases.ts), after the ones a person
+   * wrote. The analysis adds them to its target, so that it names the vendor as the research did.
+   * This researcher always gives it; a researcher that does not names the vendor by the record only.
+   */
+  siteNames?: string[];
+  /**
+   * The page reader the run researched with, handed on for the analysis: a finding that rests on
+   * snippets alone has the page of its best source read with it (see verifySnippets.ts), under the
+   * same rules of robots.txt and of the guarded fetch. This researcher always gives it; a
+   * researcher that does not leaves the findings unchecked.
+   */
+  readPage?: PageReader;
+  /**
+   * The pages of the vendor's own site that state its terms (its privacy policy, its terms, its
+   * data processing addendum, its list of subprocessors, its security page) that the run read,
+   * with their whole text and not the excerpt of the ledger (see policySnapshots.ts). The pipeline
+   * compares them with the ones kept from the earlier runs. A researcher that does not give them
+   * leaves those pages unwatched.
+   */
+  policyPages?: PolicyPage[];
+  /**
+   * What the run checked in the public databases: the lists of the vendor risk database and the
+   * databases asked beside it (see gather.ts). Only a run that looked the vendor up in the vendor
+   * risk database gives it; the pipeline adds the version of the registry and the cited counts.
+   */
+  coverage?: Omit<RunCoverage, "cited" | "registry_version">;
+  /**
+   * The engine whose answers are in the run: `anthropic` (the web search of the key), `gdelt` (the
+   * news of the GDELT Project: the engine of every key with no search of its own, and the credit of
+   * a run of an Anthropic key whose fallback to it answered a search), or the id of the engine that
+   * was given to the researcher. null when no search was answered, which includes a run that
+   * searched nothing and one whose searches all failed. The pipeline records it with the run. A
+   * researcher that does not say leaves it out.
+   */
+  searchEngine?: SearchEngineId | null;
+  /**
+   * True when a search of the run answered with a result whose text may not be kept (Brave Search,
+   * see `SearchResult.transient`), whatever engine the run is credited to: the model has seen that
+   * text, so the pipeline keeps the text of the model's rejected candidates out of the trace. A
+   * researcher that does not say leaves it out.
+   */
+  transientText?: boolean;
+}
+
+/** The outcome of a search turn of the loop, as the counter of searches names it. */
+const SEARCH_OUTCOME = {
+  ok: "results",
+  empty: "empty",
+  refused: "refused",
+  failed: "failed",
+} as const;
+
+/**
+ * A search or a read, as the counters and the trace take it: a turn of the model, or an action of
+ * the code, which has no number, no thought and never reads a part of a page.
+ */
+type RecordedTurn = GatheredAction & { n?: number; thought?: string | null; part?: number };
+
+/** One loop of a run: the single loop of all the categories, or the loop of one category. */
+interface LoopPlan {
+  /** The category of the loop; null for the one loop of all the categories. */
+  scope: ResearchCategory | null;
+  /** The session the loop works through: the run's own, or a pool of it. */
+  session: WebSession<ResearchCategory>;
+  /** The categories the loop may use. */
+  categories: readonly ResearchCategory[];
+}
+
+/**
+ * Where the research loop is, after a turn: the part of a run's progress that the loop knows (the
+ * run adds the phase and the time). Counts and closed words only.
+ */
+export type ResearchProgress = Omit<RunProgress, "phase" | "updatedAt">;
+
+export type VendorResearcher = (input: {
+  target: ResearchTarget;
+  model: unknown;
+  /** The id of the model, for the trace; the researcher calls `model`, never this. */
+  modelId?: string;
+  /**
+   * The organization the run is for. What a provider's search answers is bought with the key of
+   * this organization, so the cache keeps it under this id and serves it to no other. Without it
+   * a provider's answers are not cached at all.
+   */
+  organizationId?: number;
+  /**
+   * How the key of the research searches (see searchEngineOf.ts). Without it the run searches the
+   * news through the GDELT Project, which needs no key.
+   */
+  search?: SearchSpec;
+  now: Date;
+  /** Told about every turn of the loop and every model call of it; the run's trace. */
+  trace?: TraceRecorder;
+  /**
+   * Told where the loop is after every turn, so that the run can show it while it is going. It
+   * is not part of the research: a sink that throws changes nothing.
+   */
+  progress?: (progress: ResearchProgress) => void;
+}) => Promise<ResearchResult>;
+
+/** What a run searches with, and the means to say which engine its searches went to. */
+export interface RunSearch {
+  engine: SearchEngine;
+  /**
+   * The id of the engine whose answers are in the run: for a key of Anthropic, `gdelt` when the
+   * fallback answered a search, else `anthropic` when Claude's search answered one, else null (see
+   * `withFallback`), which includes a run whose searches all failed; for the news of GDELT alone,
+   * `gdelt` once it was asked.
+   */
+  used(): SearchEngineId | null;
+}
+
+/**
+ * The engine of a run that also notes whether any search answered with a result whose text may not
+ * be kept (`SearchResult.transient`). It is the engine itself in every other way.
+ */
+function noteTransient(searching: RunSearch): RunSearch & { sawTransient(): boolean } {
+  const { engine } = searching;
+  let saw = false;
+  return {
+    engine: {
+      get id() {
+        return engine.id;
+      },
+      get kinds() {
+        return engine.kinds;
+      },
+      get newsWindowMonths() {
+        return engine.newsWindowMonths;
+      },
+      async search(query, kind, signal) {
+        const results = await engine.search(query, kind, signal);
+        if (Array.isArray(results) && results.some((result) => result?.transient === true)) {
+          saw = true;
+        }
+        return results;
+      },
+    },
+    used: () => searching.used(),
+    sawTransient: () => saw,
+  };
+}
+
+/**
+ * An engine that notes whether it was asked, to report the engine a run searched with. It is the
+ * engine itself in every other way: it reports its id, kinds and window as the engine does now.
+ */
+function noteUse(engine: SearchEngine): RunSearch {
+  let asked = false;
+  return {
+    engine: {
+      get id() {
+        return engine.id;
+      },
+      get kinds() {
+        return engine.kinds;
+      },
+      get newsWindowMonths() {
+        return engine.newsWindowMonths;
+      },
+      search(query, kind, signal) {
+        asked = true;
+        return engine.search(query, kind, signal);
+      },
+    },
+    used: () => (asked ? engine.id : null),
+  };
+}
+
+export interface RunSearchInput {
+  /**
+   * How the key of the research searches, with the organization's Brave key when it has one; the
+   * news of the GDELT Project when absent.
+   */
+  search?: SearchSpec;
+  /**
+   * The model made from the key of the research. The search of Claude calls it, so that the call
+   * goes to the host of the key. Anything that is not an object cannot be called that way, and the
+   * run then searches the news.
+   */
+  model: unknown;
+  /** The id of the model, for the trace. */
+  modelId?: string;
+  /** The organization whose key pays for a provider's search; its answers are cached per organization. */
+  organizationId?: number;
+  /** The vendor, with all the names it is known by: the news is searched under every one of them. */
+  target: ResearchTarget;
+  /** The cache that runs share (see webResearch/webCache.ts). */
+  cache?: WebCache;
+  /** Told of every call that a provider's search makes to the model, with its tokens. */
+  trace?: TraceRecorder;
+  /**
+   * Told each time the GDELT engine asks its feed a second time, after a failure that passes. The
+   * researcher counts it as a retried search of the news.
+   */
+  onRetry?: () => void;
+  /**
+   * Told, with the wait in ms, each time the GDELT engine starts to wait out a pause of GDELT (see
+   * `GdeltEngineDeps.onPause`). The researcher moves the clock of the routine work by it.
+   */
+  onPause?: (waitMs: number) => void;
+  /**
+   * Told of each 429 that GDELT answered a request of this run with, `final` on the one that is the
+   * answer of the run (see `GdeltEngineDeps.onRefused`). The researcher counts it.
+   */
+  onRefused?: (refusal: { final: boolean }) => void;
+  /**
+   * Told once, with its kind, when the GDELT engine's one request has failed for good for a reason
+   * that is not a 429, and when the vendor has no name that can be asked for (see
+   * `GdeltEngineDeps.onFailed`). The researcher writes it to the trace.
+   */
+  onFailed?: (failure: { kind: GdeltFailureKind }) => void;
+}
+
+/**
+ * The search engine of one run, from the key it researches with and the organization's Brave key.
+ *
+ * - **Brave Search** for a key with no search of its own when the organization has a Brave key
+ *   (`search.engine` is `brave`), with the news of GDELT behind it for a Brave key that is refused
+ *   (see `withFallback`). For a key of Anthropic, Brave stands between Claude's search and GDELT.
+ *   Its answers are never cached, since Brave's terms allow them to be used and not kept; the
+ *   engine marks them `transient` (see braveSearch.ts). `used()` names the engine that answered
+ *   through the nesting: `brave` after Claude was refused, `gdelt` after Brave was refused too.
+ *   A model that cannot be called as Claude's search searches with Brave too, when there is a key.
+ * - **Claude's web search** for a key of Anthropic (`search.engine` is `anthropic`). Each search is
+ *   a call to the model of the key, and is told to the trace as a model call for the search. With a
+ *   cache and an organization the answers are kept for that organization (see `withSearchCache`),
+ *   and a key that is not allowed to search moves the run to the news of GDELT for that search and
+ *   every later one (see `withFallback`).
+ * - **The news of the GDELT Project** for every other key, a run that says nothing of its key, and
+ *   a model that cannot be called as Claude's search is. It is the engine behind Claude's too. Its
+ *   one request per run is made under the names of the vendor and the words of the news, and its
+ *   index is kept in the cache by the engine itself, so it is not put behind the cache of searches.
+ *
+ * The engine is made for this run alone: nothing of one run's engine, a switch to the fallback
+ * included, reaches the next.
+ */
+export function createRunSearch(input: RunSearchInput): RunSearch {
+  const gdelt = createGdeltEngine({
+    names: [input.target.name, ...(input.target.aliases ?? [])],
+    topics: [...NEWS_TOPIC_WORDS, ...regulatorTopicsOf(input.target)],
+    ...(input.cache === undefined ? {} : { cache: input.cache }),
+    ...(input.onRetry === undefined ? {} : { onRetry: input.onRetry }),
+    ...(input.onPause === undefined ? {} : { onPause: input.onPause }),
+    ...(input.onRefused === undefined ? {} : { onRefused: input.onRefused }),
+    ...(input.onFailed === undefined ? {} : { onFailed: input.onFailed }),
+  });
+  const { model } = input;
+  const braveKey = input.search?.braveKey;
+  // Brave answers before GDELT when the organization has a key; a key Brave refuses moves the run
+  // on to GDELT. It is never put behind the cache: Brave's answers may not be kept.
+  const brave =
+    typeof braveKey === "string" && braveKey !== ""
+      ? withFallback(createBraveEngine({ apiKey: braveKey }), gdelt)
+      : null;
+  const engineOf = input.search?.engine;
+  // A key of Anthropic whose model cannot run Claude's search searches as a key without one.
+  const claudeUsable = engineOf === "anthropic" && typeof model === "object" && model !== null;
+  if (!claudeUsable) {
+    return (engineOf === "brave" || engineOf === "anthropic") && brave !== null
+      ? { engine: brave, used: brave.usedId }
+      : noteUse(gdelt);
+  }
+  const claude = createProviderSearchEngine({
+    provider: "anthropic",
+    model: model as LanguageModel,
+    onCall: (call) =>
+      input.trace?.modelCall({
+        purpose: "search",
+        model: input.modelId,
+        ms: call.ms,
+        inputTokens: call.inputTokens,
+        outputTokens: call.outputTokens,
+        totalTokens: call.totalTokens,
+        ok: call.ok,
+      }),
+  });
+  // The cache goes around Claude's engine and the fallback around both: a cache around the
+  // fallback would file the answer of the search that made it fall back under Claude's key.
+  const kept =
+    input.cache === undefined
+      ? claude
+      : withSearchCache(claude, input.cache, { organizationId: input.organizationId });
+  const engine = withFallback(kept, brave ?? gdelt);
+  return { engine, used: engine.usedId };
+}
+
+/**
+ * What a run offers to the engine that searches for it, to be told of what happens to the news:
+ * a retried request, a wait for a pause of GDELT (which moves the clock of the routine work), a
+ * refusal (which is counted and written to the trace), and a failure of another kind (which is
+ * written to the trace). `createRunSearch` takes them one by one;
+ * an engine that was built before the run, as a live evaluation builds it, is handed them through
+ * `bindHooks` (see `createVendorResearcher`).
+ */
+export interface RunHooks {
+  onRetry(): void;
+  onPause(waitMs: number): void;
+  onRefused(refusal: { final: boolean }): void;
+  onFailed(failure: { kind: GdeltFailureKind }): void;
+}
+
+/**
+ * Writes one step to the run's trace for a 429 of GDELT, so that a person who opens the run can
+ * tell why it lost its news: the counter of the refusals does nothing unless monitoring is on and
+ * names no run. The step has fixed words only (`gdelt_refused`, or `gdelt_refused_final` for the
+ * refusal that is the answer of the run), with no query, no address and nothing of the vendor. The
+ * trace is no part of the research, so a failure of it is let go.
+ */
+function traceGdeltRefusal(trace: TraceRecorder | undefined, refusal: { final: boolean }): void {
+  try {
+    trace?.step({
+      by: "code",
+      tool: "search",
+      kind: "news",
+      outcome: "failed",
+      reason: refusal.final ? "gdelt_refused_final" : "gdelt_refused",
+    });
+  } catch {
+    // Not part of the research.
+  }
+}
+
+/** The word of the trace for each failure of GDELT that is not a 429 (see `GdeltFailureKind`). */
+const GDELT_FAILURE_REASONS: Readonly<Record<GdeltFailureKind, string>> = {
+  not_json: "gdelt_not_json",
+  bad_answer: "gdelt_bad_answer",
+  unreachable: "gdelt_unreachable",
+  server_error: "gdelt_server_error",
+  bad_status: "gdelt_bad_status",
+  robots: "gdelt_robots",
+  no_query: "gdelt_no_query",
+  failed: "gdelt_failed",
+};
+
+/**
+ * Writes one step to the run's trace for the failure that ended the GDELT engine's one request for
+ * a reason that is not a 429, so that a person who opens the run can tell a query that GDELT
+ * refuses (`gdelt_not_json`) or a vendor with no name to ask for (`gdelt_no_query`) from an outage
+ * (`gdelt_unreachable`, `gdelt_server_error`). The step is one of a closed set of words and has no
+ * query, no address and nothing of the vendor or of what GDELT answered; a kind that is not in the
+ * set is written as `gdelt_failed`, and never as its own text. It goes to the trace and not
+ * through the session, so the counter of the searches does not move. The trace is no part of the
+ * research, so a failure of it is let go.
+ */
+function traceGdeltFailure(
+  trace: TraceRecorder | undefined,
+  failure: { kind: GdeltFailureKind },
+): void {
+  try {
+    const reason = Object.prototype.hasOwnProperty.call(GDELT_FAILURE_REASONS, failure.kind)
+      ? GDELT_FAILURE_REASONS[failure.kind]
+      : GDELT_FAILURE_REASONS.failed;
+    trace?.step({ by: "code", tool: "search", kind: "news", outcome: "failed", reason });
+  } catch {
+    // Not part of the research.
+  }
+}
+
+/**
+ * A researcher that runs the loop once per call. It rejects only when the loop does, which is a bug
+ * of the session (or of the routine work, which uses the session); every other ending, a model
+ * error included, is a result.
+ *
+ * @param deps.engine Replaces the engine that each run builds from its key (see `createRunSearch`),
+ *   for tests and for the replay of a recording. It is used as it is, whatever the key says.
+ * @param deps.bindHooks Told, at the start of each run that searches with `deps.engine`, of the hooks
+ *   that the run gives its own engine (see `RunHooks`). An engine that is given is used as it is,
+ *   and so it would never move the clock of the routine work, count a refusal or write it to the
+ *   trace; the live evaluation builds its engine before the run and passes the hooks on through
+ *   this. Nothing is told when the run builds its engine itself.
+ * @param deps.readPage Replaces the page reader that each run builds, for tests.
+ * @param deps.generate Replaces the self-correcting structured call, for tests.
+ * @param deps.metrics Replaces the counters of the process (searches by outcome), for tests.
+ * @param deps.cache The cache that runs share. It is given to the engine and the page reader that
+ *   the researcher builds; an engine or reader that is injected is used as it is. The engine of a
+ *   provider's search keeps its answers in it per organization, and does so only for a run that is
+ *   told its organization. None by default, which is what a live evaluation wants: it measures the
+ *   web, not the cache.
+ * @param deps.render The headless browser that the page reader of each run hands a page to when
+ *   the page is a shell for a script and carries no text with it (see webResearch/renderPage.ts).
+ *   It is given to the page reader that the researcher builds; a reader that is injected is used as
+ *   it is. None by default: without one, such a page is reported as one that needs JavaScript.
+ * @param deps.records Looks the vendor up in the public databases (the CISA catalog of exploited
+ *   vulnerabilities, the NVD, Have I Been Pwned, the filings of the SEC) as part of the routine
+ *   work (see records/). None by default, and without `gather` it is not used.
+ * @param deps.gather Has the code do the routine work before the loop starts (see gather.ts). Off by
+ *   default: a replay of recorded model answers should see only the calls that its model made.
+ * @param deps.vrdb Looks the vendor up in the vendor risk database (see vrdb/) as part of the
+ *   routine work, and gives the run its coverage. None by default, and without `gather` it is not
+ *   used.
+ * @param deps.perCategory Runs one loop for each category at the same time instead of one loop for
+ *   all of them (see loops.ts). Off by default, like `gather`, which it is meant to follow: each
+ *   loop is told what the code collected for its category.
+ */
+export function createVendorResearcher(
+  deps: {
+    engine?: SearchEngine;
+    bindHooks?: (hooks: RunHooks) => void;
+    readPage?: PageReader;
+    generate?: typeof generateObjectWithSelfCorrection;
+    metrics?: ResearchMetrics;
+    cache?: WebCache;
+    render?: PageRenderer;
+    gather?: boolean;
+    perCategory?: boolean;
+    records?: RecordsLookup;
+    vrdb?: VrdbLookup;
+  } = {},
+): VendorResearcher {
+  const generate = deps.generate ?? generateObjectWithSelfCorrection;
+
+  return async ({ target, model, modelId, organizationId, search, now, trace, progress }) => {
+    const researchable = researchableCategories(target);
+    const cutoffs: Partial<Record<ResearchCategory, string>> = {};
+    for (const category of RESEARCH_CATEGORIES) {
+      cutoffs[category] = monthsBefore(now, LOOKBACK_MONTHS[category]);
+    }
+    // One reader for the check and the session, so that the robots.txt of the site is asked once.
+    const readPage =
+      deps.readPage ??
+      createPageReader({ cache: deps.cache, ...(deps.render ? { render: deps.render } : {}) });
+    // A provider that rejects json_schema (DeepSeek, or OpenAI's strict mode for the step schema)
+    // would cost a rejected request and a warning on every step. So once a call of this run had to
+    // fall back to JSON-object mode, the rest of the run starts there. The call says so as it falls
+    // back, so a call that then throws counts too; a result that reports the fall back counts as
+    // well. The wrapped model is built once, and nothing undoes it.
+    let jsonObjectModel: unknown = null;
+    const learnFallback = () => {
+      jsonObjectModel ??= wrapLanguageModel({
+        model: model as Parameters<typeof wrapLanguageModel>[0]["model"],
+        middleware: jsonObjectFallbackMiddleware,
+      });
+    };
+    const generateFor =
+      (purpose: "loop" | "hints", loop?: ResearchCategory): typeof generate =>
+      async (params, generateImpl) => {
+        const startedAt = Date.now();
+        // What the call used, counted as the calls report it, so that a call that ends by throwing
+        // still says what it cost.
+        const used: TokenUsage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
+        const onUsage = (usage: TokenUsage) => {
+          used.inputTokens += usage.inputTokens;
+          used.outputTokens += usage.outputTokens;
+          used.totalTokens += usage.totalTokens;
+          params.onUsage?.(usage);
+        };
+        try {
+          const result = await generate(
+            {
+              ...params,
+              ...(jsonObjectModel === null ? {} : { model: jsonObjectModel }),
+              onJsonObjectFallback: learnFallback,
+              onUsage,
+            },
+            generateImpl,
+          );
+          if (result.fellBackToJsonObject) learnFallback();
+          trace?.modelCall({
+            purpose,
+            model: modelId,
+            loop,
+            ms: Date.now() - startedAt,
+            attempts: result.attempts,
+            ...(result.usage ?? used),
+            ok: true,
+          });
+          return result;
+        } catch (error) {
+          trace?.modelCall({
+            purpose,
+            model: modelId,
+            loop,
+            ms: Date.now() - startedAt,
+            ...used,
+            ok: false,
+          });
+          throw error;
+        }
+      };
+
+    // The model's memory, asked for while the website is checked: queries and nothing else (see
+    // hints.ts). It never fails, so nothing waits on it but the routine work that uses it.
+    const hintsAsked =
+      deps.gather === true
+        ? requestHints({ target, researchable, model }, { generate: generateFor("hints") })
+        : null;
+
+    // Before the loop, one read of the vendor's home page: whether the site can be read at all, and
+    // the pages it links to. It runs outside the session and uses none of its budget.
+    const checkStartedAt = performance.now();
+    const website = await checkWebsite({
+      target,
+      readPage,
+      signal: AbortSignal.timeout(PREFLIGHT_TIMEOUT_MS),
+    });
+    const checkStep = traceStepOf(website, target, Math.round(performance.now() - checkStartedAt));
+    if (checkStep !== null) trace?.step(checkStep);
+    // The vendor is also known by the names its home page gave it, after the ones a person wrote.
+    // From here on the run names the vendor by all of them: the results it keeps, the queries it
+    // makes, the pages it reads around the names and what the model is told.
+    const siteNames = siteNamesOf(website);
+    const known = withAliases(target, siteNames);
+    // A result that does not name the vendor in its title, snippet or address is the answer of an
+    // engine that does not know the name, and it would only crowd the evidence.
+    const mentionsVendor = createVendorMatcher(known);
+    const metrics = deps.metrics ?? researchMetrics();
+    // The pages that the session reads, for the model and for the routine work, are noted on the
+    // way for the vendor's own pages that state its terms. The check above and the sitemap read
+    // outside the session, and the analysis reads with the reader itself.
+    const policies = collectPolicyPages(
+      readPage,
+      [target.domain, ...aliasesOf(website)].filter(
+        (own): own is string => own !== null && own !== "",
+      ),
+    );
+    // The clock of the routine work while it runs, so that the waits of the news engine for a pause
+    // of GDELT move it (see gather.ts); none before and after.
+    let gatherClock: GatherClock | null = null;
+    // The engine of this run: the one given, or the one the key of the research has, under all the
+    // names of the vendor now known. It says afterwards whether it was used, and which it was.
+    const hooks: RunHooks = {
+      onRetry: () => metrics.searchRetried({ kind: "news" }),
+      onPause: (waitMs) => gatherClock?.extend(waitMs + GDELT_ASK_MS),
+      onRefused: (refusal) => {
+        metrics.gdeltRefused(refusal);
+        traceGdeltRefusal(trace, refusal);
+      },
+      onFailed: (failure) => traceGdeltFailure(trace, failure),
+    };
+    let built: RunSearch;
+    if (deps.engine !== undefined) {
+      deps.bindHooks?.(hooks);
+      built = noteUse(deps.engine);
+    } else {
+      built = createRunSearch({
+        search,
+        model,
+        modelId,
+        organizationId,
+        target: known,
+        cache: deps.cache,
+        trace,
+        ...hooks,
+      });
+    }
+    const searching = noteTransient(built);
+    const session = createWebSession<ResearchCategory>({
+      engine: searching.engine,
+      readPage: policies.read,
+      domain: target.domain,
+      // A site the recorded domain moved to is the vendor's website too.
+      aliasDomains: aliasesOf(website),
+      // A site that did not answer is not read again for every page the model tries.
+      closedHosts: closedHostsOf(website, target),
+      cutoffs,
+      isRelevant: ({ title, snippet, url }) => mentionsVendor({ title, content: snippet, url }),
+      // The engines answer a name and one to three topic words best, and do not understand
+      // operators, so whatever the model writes is made that.
+      normalizeQuery: (query) => normalizeQuery(query, known),
+    });
+
+    /**
+     * What a search or a read came to, for the counters and the trace: the same for a turn of the
+     * model and for what the code did before the loop (`by`). `loop` is the category of the loop
+     * that took the turn, when the loops are one for each category.
+     */
+    // For each category, how many of its searches failed for want of an answer and how many
+    // were answered (see `searchUnavailable`).
+    const searchesOf = new Map<ResearchCategory, { failed: number; answered: number }>();
+    const record = (turn: RecordedTurn, by?: "code", loop?: ResearchCategory) => {
+      if (turn.tool === "search" && turn.category !== undefined) {
+        const counted = searchesOf.get(turn.category) ?? { failed: 0, answered: 0 };
+        if (turn.outcome === "failed" && turn.reason === "search_unavailable") counted.failed += 1;
+        if (turn.outcome === "ok" || turn.outcome === "empty") counted.answered += 1;
+        searchesOf.set(turn.category, counted);
+      }
+      // What came of each search is counted whether or not the run keeps a trace.
+      if (turn.tool === "search" && turn.kind !== undefined) {
+        metrics.searchFinished({ kind: turn.kind, outcome: SEARCH_OUTCOME[turn.outcome] });
+      }
+      if (trace === undefined) return;
+      const omitted = Object.fromEntries(
+        Object.entries(turn.omitted ?? {}).filter(([, count]) => (count ?? 0) > 0),
+      ) as Record<string, number>;
+      trace.step({
+        turn: turn.n,
+        by,
+        loop,
+        tool: turn.tool,
+        category: turn.category,
+        kind: turn.kind,
+        query: turn.query,
+        usedQuery: turn.usedQuery,
+        url: turn.url,
+        part: turn.part,
+        thought: turn.thought ?? undefined,
+        outcome: turn.outcome,
+        reason: turn.reason,
+        results: turn.results,
+        omitted: Object.keys(omitted).length === 0 ? undefined : omitted,
+        ms: turn.ms,
+      });
+      // What never reached the evidence, counted by why, next to what the checks of the
+      // analysis turn away.
+      for (const [reason, count] of Object.entries(omitted)) {
+        trace.dropped(`source.${reason}`, count);
+      }
+      if (turn.tool === "read" && turn.reason === "same_text") trace.dropped("source.same_text");
+    };
+
+    /** Tells the run where the research is: after a turn of the model (`steps`), or step 0 for the code. */
+    const reportProgress = (
+      steps: number,
+      turn: Pick<RecordedTurn, "tool" | "category"> | null,
+    ) => {
+      if (progress === undefined) return;
+      const { calls, searchesUsed, pagesRead } = session.snapshot();
+      progress({
+        steps,
+        action:
+          turn !== null && (turn.tool === "search" || turn.tool === "read") ? turn.tool : null,
+        category: turn?.category ?? null,
+        searchesUsed,
+        pagesRead,
+        categories: workedCategories(calls),
+      });
+    };
+
+    // The latest model turn of each loop, so that the progress counts the turns of all of them.
+    const latestTurns = new Map<ResearchCategory | null, number>();
+    const observerOf = (loop: ResearchCategory | null): LoopObserver<ResearchCategory> => ({
+      turn: (turn) => {
+        record(turn, undefined, loop ?? undefined);
+        latestTurns.set(loop, turn.n);
+        reportProgress(
+          [...latestTurns.values()].reduce((sum, n) => sum + n, 0),
+          turn,
+        );
+      },
+    });
+
+    // The routine work, done by code and at once before the model's first step (see gather.ts).
+    // It does not throw for what the web does; what it does is told to the counters, the trace and
+    // the progress, which are not part of the research: one of them that throws changes nothing.
+    const gathered =
+      hintsAsked !== null
+        ? await (async () => {
+            const hints = await hintsAsked;
+            const clock = createGatherClock();
+            gatherClock = clock;
+            try {
+              return await gatherSources(
+                {
+                  target: known,
+                  researchable,
+                  website,
+                  hints,
+                  now,
+                  cutoffs,
+                  signal: clock.signal,
+                },
+                {
+                  session,
+                  readPage,
+                  records: deps.records,
+                  ...(deps.vrdb === undefined ? {} : { vrdb: deps.vrdb }),
+                },
+              );
+            } finally {
+              clock.stop();
+              gatherClock = null;
+            }
+          })()
+        : null;
+    if (gathered !== null) {
+      const quietly = (work: () => void) => {
+        try {
+          work();
+        } catch {
+          // Not part of the research.
+        }
+      };
+      const sitemapStep = traceStepOfSitemap(gathered.sitemap);
+      if (sitemapStep !== null) quietly(() => trace?.step(sitemapStep));
+      for (const outcome of gathered.records) {
+        quietly(() => trace?.step(traceStepOfRecords(outcome)));
+      }
+      for (const action of gathered.actions) quietly(() => record(action, "code"));
+      quietly(() => reportProgress(0, null));
+    }
+    // One loop for all the categories, or one for each. The pools are cut from the model's own
+    // budget before any loop runs, so that no loop's budget depends on another's pace.
+    const { searchesLeft, readsLeft } = session.budget();
+    const plans: LoopPlan[] =
+      deps.perCategory === true
+        ? loopGrants(researchable, { searches: searchesLeft, reads: readsLeft }).map(
+            ({ category, searches, reads }) => ({
+              scope: category,
+              session: session.pool({ searches, reads }),
+              categories: [category],
+            }),
+          )
+        : [{ scope: null, session, categories: researchable }];
+    const ledgerAfterGather = session.snapshot().ledger;
+    const briefingOf = ({ scope, categories }: LoopPlan): string | undefined => {
+      const digest =
+        gathered === null
+          ? null
+          : scope === null
+            ? gathered.digest
+            : describeGathered(gathered.actions, ledgerAfterGather, categories, gathered.records);
+      // What the website check found out is for the loops that read the website.
+      const siteLoop = scope === null || categories.some((c) => SITE_CATEGORIES.includes(c));
+      const text = [siteLoop ? describeWebsite(website, known) : null, digest]
+        .filter((part): part is string => part !== null)
+        .join("\n\n");
+      return text === "" ? undefined : text;
+    };
+
+    // The loops are told what the engine answers as they start: the routine work above may have
+    // moved a run of a key that is not allowed to search to the news of the GDELT Project, which
+    // cannot search the web and reaches back three months only. Read from the engine, not kept.
+    const system = buildLoopSystemPrompt({
+      kinds: searching.engine.kinds,
+      newsWindowMonths: searching.engine.newsWindowMonths,
+    });
+    // Every loop is waited for, also when one of them breaks: none is left to run behind the run.
+    const settled = await Promise.allSettled(
+      plans.map((plan) =>
+        runResearchLoop<ResearchCategory>(
+          {
+            system,
+            task: buildLoopTaskPrompt({
+              target: known,
+              now,
+              researchable: plan.categories,
+              searched: gathered !== null,
+              scope: plan.scope ?? undefined,
+            }),
+            briefing: briefingOf(plan),
+            categories: RESEARCH_CATEGORIES,
+            researchable: plan.categories,
+            // The briefing says what the code searched for, so an empty answer is an answer.
+            allowEmptyFinish: gathered !== null,
+            ...(plan.scope === null ? {} : { limits: { maxSteps: CATEGORY_LOOP_STEPS } }),
+          },
+          {
+            generate: generateFor("loop", plan.scope ?? undefined),
+            model,
+            session: plan.session,
+            observer: observerOf(plan.scope),
+          },
+        ),
+      ),
+    );
+    const broken = settled.find((outcome) => outcome.status === "rejected");
+    if (broken !== undefined) throw broken.reason;
+    const { stoppedBecause, modelError } = combineEndings(
+      settled.flatMap((outcome) => (outcome.status === "fulfilled" ? [outcome.value] : [])),
+    );
+
+    const { ledger, calls, searchesUsed, pagesRead } = session.snapshot();
+    return {
+      entries: ledger,
+      // A closed site counts for the categories that needed it as pages that could not be read.
+      calls: [...calls, ...callsOfClosedSite(website, researchable, calls)],
+      searchesUsed,
+      pagesRead,
+      stoppedBecause,
+      modelError,
+      jsonObjectFallback: jsonObjectModel !== null,
+      searchUnavailable: RESEARCH_CATEGORIES.filter((category) => {
+        const counted = searchesOf.get(category);
+        return counted !== undefined && counted.failed > 0 && counted.answered === 0;
+      }),
+      siteNames,
+      readPage,
+      policyPages: policies.pages(),
+      searchEngine: searching.used(),
+      ...(searching.sawTransient() ? { transientText: true } : {}),
+      ...(gathered?.vrdb == null
+        ? {}
+        : { coverage: { sources: gathered.vrdb.coverage, lookups: gathered.lookups } }),
+    };
+  };
+}

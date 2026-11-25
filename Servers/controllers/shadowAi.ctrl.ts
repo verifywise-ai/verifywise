@@ -56,9 +56,10 @@ import { ShadowAiToolStatus } from "../domain.layer/interfaces/i.shadowAi";
 import { translateError } from "../utils/i18n.utils";
 import { normalizeIp } from "../services/shadowAiSyslog/ip";
 import { buildGovernanceModelRisk } from "../services/shadowAiGovernance";
-import { createNewModelRiskQuery } from "../utils/modelRisk.utils";
+import { createModelInventoryService } from "../services/modelInventory.service";
+import { createModelRiskService } from "../services/modelRisk.service";
+import { ModelInventoryStatus } from "../domain.layer/enums/model-inventory-status.enum";
 import { getUserByIdQuery } from "../utils/user.utils";
-import { recordEntityCreation } from "../utils/changeHistory.base.utils";
 import { readSyslogListenerConfig } from "../services/shadowAiSyslog/config";
 import { getSyslogListenerState } from "../services/shadowAiSyslog/listener";
 import { invalidateSourceCacheAfterCommit } from "../services/shadowAiSyslog/sourceCache";
@@ -688,41 +689,36 @@ export async function startGovernance(req: Request, res: Response) {
     try {
       transaction = await sequelize.transaction();
 
-      // Create model inventory entry
-      const [miResult] = await sequelize.query(
-        `INSERT INTO model_inventories
-           (organization_id, provider, model, provider_model, version, status, status_date,
-            capabilities, reference_link, biases, limitations, hosting_provider,
-            approver, created_at, updated_at)
-         VALUES (:organizationId, :provider, :model, :provider_model, :version, :status, NOW(),
-            :capabilities, :reference_link, :biases, :limitations, :hosting_provider,
-            :approver, NOW(), NOW())
-         RETURNING id`,
+      // Create the model through the model service: change history, the
+      // "model added" automation and, for a model added as Approved, the
+      // deployment step, as for a model created in the inventory. No approver
+      // is named, so the approval rule leaves the status to the caller.
+      const status = (Object.values(ModelInventoryStatus) as string[]).includes(
+        model_inventory.status,
+      )
+        ? (model_inventory.status as ModelInventoryStatus)
+        : ModelInventoryStatus.PENDING;
+      const createdModel = await createModelInventoryService(
         {
-          replacements: {
-            organizationId,
-            provider: model_inventory.provider,
-            model: model_inventory.model,
-            provider_model: `${model_inventory.provider} / ${model_inventory.model}`,
-            version: model_inventory.version || "N/A",
-            status: ["Approved", "Restricted", "Pending", "Blocked", "Retired"].includes(
-              model_inventory.status,
-            )
-              ? model_inventory.status
-              : "Pending",
-            capabilities: "To be assessed",
-            reference_link: "",
-            biases: "",
-            limitations: "",
-            hosting_provider: model_inventory.provider,
-            approver: null,
-          },
-          transaction,
+          provider: model_inventory.provider,
+          model: model_inventory.model,
+          provider_model: `${model_inventory.provider} / ${model_inventory.model}`,
+          version: model_inventory.version || "N/A",
+          status,
+          capabilities: "To be assessed",
+          reference_link: "",
+          biases: "",
+          limitations: "",
+          hosting_provider: model_inventory.provider,
+          approver: null,
         },
+        { organizationId, userId, callerIsAdmin: false },
+        transaction,
       );
-      const modelInventoryId = (miResult as any[])[0].id;
+      const modelInventoryId = createdModel.id!;
 
-      // Record the form's risk assessment as a risk on the new model
+      // Record the form's risk assessment as a risk on the new model; the
+      // service records its history and tells its owner after commit.
       let riskEntryId: number | null = null;
       const modelRisk = buildGovernanceModelRisk(req.body.risk_assessment ?? undefined, {
         toolName: tool.name,
@@ -731,18 +727,12 @@ export async function startGovernance(req: Request, res: Response) {
         startedAt: new Date(),
       });
       if (modelRisk) {
-        const created = await createNewModelRiskQuery(modelRisk, organizationId, transaction);
+        const created = await createModelRiskService(
+          modelRisk,
+          { organizationId, userId },
+          transaction,
+        );
         riskEntryId = created.id ?? null;
-        if (riskEntryId !== null) {
-          await recordEntityCreation(
-            "model_risk",
-            riskEntryId,
-            userId,
-            organizationId,
-            modelRisk,
-            transaction,
-          );
-        }
       }
 
       // Link tool to model inventory and to the risk created above

@@ -20,7 +20,6 @@ import type { IAiAppImportResult, IAiAppImportRow } from "../../../domain/interf
 import { CountSummary, RowIssuesTable } from "./AIAppAssessments/AssessmentDisplay";
 import { triggerBrowserDownload } from "../../utils/browserDownload.utils";
 import { mapImportRows, MAX_BULK_ROWS } from "./bulkUtils";
-import { controlButtonSx } from "./style";
 
 interface AIAppImportModalProps {
   onClose: () => void;
@@ -176,7 +175,6 @@ export default function AIAppImportModal({ onClose }: AIAppImportModalProps) {
                 onClick={handleDownloadTemplate}
                 loading={templateMutation.isPending}
                 testId="ai-apps-import-download-template"
-                sx={controlButtonSx}
               />
               <CustomizableButton
                 text="Choose file"
@@ -185,7 +183,6 @@ export default function AIAppImportModal({ onClose }: AIAppImportModalProps) {
                 onClick={() => inputRef.current?.click()}
                 disabled={isChecking || isCommitting}
                 testId="ai-apps-import-choose-file"
-                sx={controlButtonSx}
               />
               <input
                 ref={inputRef}

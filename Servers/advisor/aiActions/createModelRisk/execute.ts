@@ -1,13 +1,14 @@
 /**
  * Post-approval executor for `agent_create_model_risk` (user-driven).
  *
- * Runs inside the approval transaction. Delegates to
- * `createNewModelRiskQuery` so manual-UI risk creation and AI-driven
- * creation share the same insert path.
+ * Runs inside the approval transaction, as the requester. Delegates to
+ * `createModelRiskService`, as the console does: the same insert, the change
+ * history, and the owner and candidate notices after the approval commits.
  */
 
 import { sequelize } from "../../../database/db";
-import { createNewModelRiskQuery } from "../../../utils/modelRisk.utils";
+import { createModelRiskService } from "../../../services/modelRisk.service";
+import { isRefusal, modelWriteContextForUser } from "../../functions/modelWriteScope";
 import { MODEL_NOT_IN_ORGANIZATION } from "../../../utils/modelReferences.utils";
 import { ValidationException } from "../../../domain.layer/exceptions/custom.exception";
 import { TransientApprovalError } from "../../approval/approvalGateway";
@@ -18,6 +19,10 @@ export async function executeCreateModelRisk(
   ctx: AiActionExecuteContext<AgentCreateModelRiskInput>,
 ): Promise<AiActionExecuteResult> {
   const input = ctx.inputParams;
+
+  // model.edit, as the console's model risk routes ask.
+  const writer = await modelWriteContextForUser(ctx.organizationId, ctx.requesterId);
+  if (isRefusal(writer)) throw new Error(writer.message);
 
   // Resolve the model id. Two paths:
   //   1. Direct model_id (existing model).
@@ -65,12 +70,12 @@ export async function executeCreateModelRisk(
     resolvedModelId = approval.entity_id;
   }
 
-  // createNewModelRiskQuery checks the model in this transaction, as every
-  // model risk write does: between file-time and execute-time the model could
-  // have been deleted. Only that refusal gets the message below.
-  let created: Awaited<ReturnType<typeof createNewModelRiskQuery>>;
+  // The insert checks the model in this transaction, as every model risk
+  // write does: between file-time and execute-time the model could have been
+  // deleted. Only that refusal gets the message below.
+  let created: Awaited<ReturnType<typeof createModelRiskService>>;
   try {
-    created = await createNewModelRiskQuery(
+    created = await createModelRiskService(
       {
         model_id: resolvedModelId,
         risk_name: input.risk_name,
@@ -82,9 +87,10 @@ export async function executeCreateModelRisk(
         target_date: input.target_date as any,
         mitigation_plan: input.mitigation_plan ?? "",
         impact: input.impact ?? "",
-        likelihood: input.likelihood ?? "",
+        likelihood: input.likelihood ?? null,
+        severity: input.severity ?? null,
       },
-      ctx.organizationId,
+      { organizationId: ctx.organizationId, userId: writer.userId },
       ctx.transaction,
     );
   } catch (error) {
@@ -98,7 +104,7 @@ export async function executeCreateModelRisk(
 
   if (created.id == null) {
     throw new Error(
-      "createNewModelRiskQuery returned a model risk without an id — refusing to record an empty execution result.",
+      "createModelRiskService returned a model risk without an id — refusing to record an empty execution result.",
     );
   }
 

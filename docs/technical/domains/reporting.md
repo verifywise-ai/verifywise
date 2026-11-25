@@ -1,6 +1,6 @@
 # Reporting Domain
 
-> **Last Updated:** 2026-10-18
+> **Last Updated:** 2026-11-23
 
 ## Overview
 
@@ -47,6 +47,7 @@ Reports are organized into three groups:
 - Assessment Tracker (EU AI Act)
 - Clauses & Annexes (ISO 42001, ISO 27001)
 - NIST Subcategories (NIST AI RMF)
+- Framework Requirements (the bundled frameworks, ids 5–28: SOC 2, GDPR, HIPAA, OSFI E-23 and the rest)
 
 **Organization:**
 - AI Models
@@ -63,6 +64,7 @@ Reports are organized into three groups:
 | ISO 42001 | Clauses & Annexes, Project Risks, Organization |
 | ISO 27001 | Clauses & Annexes, Project Risks, Organization |
 | NIST AI RMF | NIST Subcategories, Project Risks, Organization |
+| Bundled frameworks (ids 5–28) | Framework Requirements, Project Risks, Organization |
 
 ## API Endpoints
 
@@ -216,6 +218,36 @@ has no labels and renders exactly as it did before scope existed.
 renderers read it to drop the project line. The report's own scope is
 `metadata.scope`; do not conflate them.
 
+### Framework requirements section
+
+`frameworkRequirements` ("Framework requirements", group "Compliance and
+governance") covers the bundled frameworks, `frameworks.id` 5–28. The collector is
+`services/reporting/collectors/frameworkRequirements.ts`, with its SQL in
+`frameworkRequirements.queries.ts` and the arithmetic in `frameworkRollup.ts`. It
+reads each framework's tables through its `Servers/structures` definition, so one
+collector serves every bundled framework.
+
+Per framework the report prints:
+
+- one line, "`<done>` of `<total>` requirements implemented or audited", where
+  done means status `Implemented` or `Audited`,
+- a completeness-by-group chart (PDF only; the DOCX renderer has no charts),
+- per group, a table `Requirement | Status | Owner | Due date | Evidence`. Level
+  3 rows are indented under their parent. The Evidence column shows the linked-file
+  count; the file names (up to 10, then ", and N more") appear in a small line
+  under the requirement title.
+
+A requirement is overdue when its due date is before the report date and it is
+not done. When a framework has more than one pairing in scope, the pairings are
+merged and rows carry a use-case label; with a single pairing there is no label.
+
+When the section is requested by name and no bundled framework is in scope, the
+report carries the existing `no_framework_target` notice. The section is
+selectable in custom templates (the TemplateBuilder reads the catalog) and on the
+legacy Generate page only for `frameworkId >= 5`. The analyzers receive it:
+`complianceGap` gets it beside `compliance` and `clausesAndAnnexes`, and the facts
+block carries it. Imported (Excel) frameworks are not covered.
+
 ### Framework selection
 
 `frameworkIds` is a **string** array, and every entry carries a namespace
@@ -239,13 +271,14 @@ framework gates in `collectAllData`, which is the shipped bug documented above,
 so every parser branch rejects it rather than passing it through.
 
 > **Since August 2026 (PR #4443):** the 21 former plugin frameworks are native
-> `frameworks` rows (ids 5–25), so `native:5`…`native:25` parse and their
-> `projects_frameworks` pairings exist. The collector still builds framework
-> sections only for ids 1–4 (`dataCollector.ts`), so generated reports **do not
-> cover** the bundled frameworks yet. The `plugin:` and `custom:` namespaces
-> remain in the parser and point at the legacy `custom_framework_*` tables,
-> which were kept. See
-> [Compliance Frameworks](./compliance-frameworks.md#reporting-limitation).
+> `frameworks` rows (ids 5–25), and `native:5`…`native:28` parse with their
+> `projects_frameworks` pairings. Since November 2026 the bundled frameworks
+> (ids 5–28, from `Servers/structures`) are covered by one generic section,
+> `frameworkRequirements` (see [Framework requirements section](#framework-requirements-section)).
+> Imported (Excel) frameworks are still **not covered**. The `plugin:` and
+> `custom:` namespaces remain in the parser and point at the legacy
+> `custom_framework_*` tables, which reports do not read either. See
+> [Compliance Frameworks](./compliance-frameworks.md#reporting).
 
 **Empty or NULL means every framework in scope.** That is the entire
 backward-compatibility story: every row written before the column existed keeps
@@ -282,11 +315,11 @@ Framework selection is a template/schedule feature.
 
 ### The three narrowing tiers
 
-A selection narrows the twelve sections in three different ways, and the third
+A selection narrows the thirteen sections in three different ways, and the third
 way is *not at all*.
 
 **Framework-gated** — `compliance`, `assessment`, `clausesAndAnnexes`,
-`nistSubcategories`. These were already collected once per pairing that carries
+`nistSubcategories`, `frameworkRequirements`. These were already collected once per pairing that carries
 the right framework and merged, so nothing in the sections themselves changes;
 the narrowed target set is the whole of it. The narrowing happens once, in
 `resolveFrameworkTargets`.
@@ -331,6 +364,23 @@ whose only content is notices must still say so.
 | `no_framework_target` | "No project in scope uses a framework that provides this section." | no resolved pairing serves the section — including an invalid-only selection such as `["abc"]` or `["plugin:SOC2"]` |
 | `unresolved_framework` | "The selected framework is a plugin framework, which reports do not yet cover." | the selection named a `plugin:`/`custom:` framework and **no** native one |
 | `no_data` | "No records were found in scope." | **declared but never emitted — see below** |
+| `collection_failed` | "<section> — <detail>: could not be read." | the `frameworkRequirements` query for one bundled-framework pairing threw; `detail` is "<framework> for <use case>" (just the framework for an organizational project) |
+
+`collection_failed` is the only notice that means something broke rather than
+that something is empty, so it renders in its own subsection, *Sections that
+could not be completed*, ahead of *Sections with no data* (which excludes it),
+with a "what to do" line: generate the report again, and if the same part is
+still missing, ask the administrator to check the server logs. The copy lives
+once in `services/reporting/noticeText.ts` (passed to the EJS render data and
+imported by `docxGenerator.ts`). `dataCollector.ts` collects each bundled
+pairing independently: the failing one is logged (organization, framework and
+pairing ids, message) and skipped, the others merge normally, and if every
+pairing fails the section is absent and only the notices remain. ISO, NIST and
+EU sections still fail the whole run on a thrown error. `generateReport` copies
+the details to `ReportGenerationResult.collectionFailures`; the run orchestrator
+then records the run as `partial_success` with `error_message` "Report generated
+with gaps: <detail>; <detail> could not be read." The report is downloadable.
+Analyzers never see `sectionNotices`, so the AI prompts are unaffected.
 
 `unresolved_framework` requires both halves of that test — no native entry *and*
 a plugin or custom entry present. An invalid-only selection has neither, so it
@@ -353,7 +403,7 @@ name for the distinction whenever a section starts drawing it.
 
 **A notice fires only for a section named explicitly in the request.** The
 legacy `sections: ["all"]` shape means "whatever this estate has", not "I
-expected these twelve", and one notice per unserved section would turn every
+expected these thirteen", and one notice per unserved section would turn every
 single-framework estate's report into a wall of them. Templates always name
 their sections, so template and schedule runs still get notices.
 
@@ -471,6 +521,7 @@ literal `NULL` and counted as "unowned".
 | assessment         | assessments, topics, questions         | answer, progress                                                                                                              |
 | clausesAndAnnexes  | subclauses_iso, annexcategories_iso    | status (the `*_struct` parent tables carry none)                                                                              |
 | nistSubcategories  | nist_ai_rmf_subcategories + `*_struct` | function, category, status                                                                                                    |
+| frameworkRequirements | the framework's own tables from its structure (`l1`/`l2`/`l3` struct and impl tables, `Servers/structures`), `file_entity_links` + `files` (evidence), the l2/l3 risk link tables + `risks` (live linked risks) | status, owner, due_date, evidence file names |
 | vendors            | vendors, vendors_projects              | vendor_name, review_status, assignee                                                                                          |
 | models             | model_inventories                      | **model** (not `name`), version, status, **approver** (there is no `owner` column)                                            |
 | trainingRegistry   | trainingregistar                       | training_name, status (no assignee, no completion date)                                                                       |
@@ -525,7 +576,7 @@ finding expressible — `keyFindings` carries `related_sections` for exactly tha
 | `keyFindings`        | 5–8 findings, each attributed to a section key         | Facts + section summaries                                    |
 | `recommendedActions` | 3–5 prioritised actions                                | Facts + section summaries                                    |
 | `riskAnalysis`       | Risk narrative + up to 6 named risks                   | Facts + `projectRisks`, `vendorRisks`, `modelRisks`          |
-| `complianceGap`      | Explanation of STORED readiness scores + evidence gaps | Facts + readiness scores, evidence gaps, compliance sections |
+| `complianceGap`      | Explanation of STORED readiness scores + evidence gaps | Facts + readiness scores, evidence gaps, compliance sections (`compliance`, `clausesAndAnnexes`, `frameworkRequirements`) |
 | `vendorRisk`         | Third-party risk narrative + named vendor concerns     | Facts + `vendors`, `vendorRisks`                             |
 
 `sectionSummaries` (ported from the removed `aiSummarizer.ts`) is a seventh gateable block, but it is **not** a registry entry in `ANALYZERS`: its output is `Record<string, string>` prose rather than a schema-validated object, so it does not fit `AnalyzerDefinition`. It runs as a separate stage whose output the first three analyzers consume — feeding them raw section JSON instead measured ~38k tokens per prompt against ~6k, three times per report.
@@ -641,7 +692,7 @@ Three standing rendering constraints:
 
 ### Versioning
 
-`ANALYZER_VERSION` (`analyzers/prompts.ts`) is stamped into `report_run_analyses.audit_metadata`; it currently reads `report-analyzer-v2`. **Bump it on any prompt or schema change** — it is how a stored analysis is traced back to the prompt and schema that produced it.
+`ANALYZER_VERSION` (`analyzers/prompts.ts`) is stamped into `report_run_analyses.audit_metadata`; it currently reads `report-analyzer-v9`. **Bump it on any prompt or schema change** — it is how a stored analysis is traced back to the prompt and schema that produced it.
 
 ## PDF Generation
 
@@ -763,6 +814,7 @@ interface ReportData {
     assessment?: AssessmentSectionData;
     clausesAndAnnexes?: ClausesAndAnnexesSectionData;
     nistSubcategories?: NistSubcategoriesSectionData;
+    frameworkRequirements?: FrameworkRequirementsSectionData;
     vendors?: VendorsListSectionData;
     models?: ModelsListSectionData;
     trainingRegistry?: TrainingRegistrySectionData;
@@ -944,6 +996,8 @@ framework-gated section to the frameworks that open it, mirroring the gates in
 | Use Case Risk Deep Dive | `use-case-risk-deep-dive` | project | weekly | all in scope |
 | New Use Case Onboarding Assessment | `use-case-onboarding-assessment` | project | monthly | EU AI Act |
 
+The OSFI E-23 completeness template is seeded separately, by its own migration, and is not in this table or file; see [OSFI E-23 completeness report](#osfi-e23-completeness-report).
+
 "All in scope" is the empty selection — the seeded `framework_config` is
 `{"frameworkIds": []}`. Every template also carries one of five canonical
 categories (`executive`, `compliance`, `risk`, `operational`, `governance`) and
@@ -999,20 +1053,20 @@ All endpoints are auth-protected and org-scoped.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/api/reporting/sections` | Section catalog (the 12-section taxonomy) |
+| GET | `/api/reporting/sections` | Section catalog (the 18-section taxonomy) |
 | GET | `/api/reporting/templates` | List available templates |
 | GET | `/api/reporting/templates/:id` | Get a template |
 | POST | `/api/reporting/templates` | Create a template |
 | PATCH | `/api/reporting/templates/:id` | Update a template (see [Template Write Path](#template-write-path)) |
 | DELETE | `/api/reporting/templates/:id` | Delete a template — soft (`is_active = false`), surfaced in the UI as **Delete** since nothing restores it (see [Templates Tab](#frontend-status)) |
 | POST | `/api/reporting/templates/:id/run` | Run a template once, ad hoc, with no schedule row (see [Run Now](#run-now-ad-hoc-template-runs)) |
-| GET | `/api/reporting/scheduled-reports` | List scheduled reports |
+| GET | `/api/reporting/scheduled-reports` | List scheduled reports the caller may read: Admins see all, others see organization-wide schedules and those of projects they own, are a member of or reach through a group (same rule as runs, `utils/reportVisibility.utils.ts`) |
 | POST | `/api/reporting/scheduled-reports` | Create a scheduled report (recipients are format-validated here) |
 | PATCH | `/api/reporting/scheduled-reports/:id` | Update a scheduled report (see [Updating a Schedule](#updating-a-schedule)) |
 | POST | `/api/reporting/scheduled-reports/:id/run-now` | Trigger an immediate run of an existing schedule |
-| POST | `/api/reporting/scheduled-reports/:id/pause` | Pause schedule |
+| POST | `/api/reporting/scheduled-reports/:id/pause` | Pause schedule (same scope gate as resume: `assertReportScopeAllowed` on the row's scope) |
 | POST | `/api/reporting/scheduled-reports/:id/resume` | Resume schedule |
-| DELETE | `/api/reporting/scheduled-reports/:id` | Soft-delete a scheduled report |
+| DELETE | `/api/reporting/scheduled-reports/:id` | Soft-delete a scheduled report (same scope gate as resume) |
 | GET | `/api/reporting/runs` | List report runs — **paginated**, returns `{rows, total, limit, offset}`, and filterable by `?archived=true\|false` (see [Run Listing is Paginated](#run-listing-is-paginated) and [Run Archiving](#run-archiving)) |
 | GET | `/api/reporting/runs/:id` | Get a run (org-scoped **and** membership-scoped — see [One Rule, Applied to Every Per-Run Endpoint](#one-rule-applied-to-every-per-run-endpoint)) |
 | GET | `/api/reporting/runs/:id/download` | Download a run's output (same gate, then org-scoped run and org-scoped file) |
@@ -1021,13 +1075,19 @@ All endpoints are auth-protected and org-scoped.
 | PATCH | `/api/reporting/runs/:id/restore` | Move a run back into the Generate tab |
 | DELETE | `/api/reporting/runs/:id` | Permanently delete a run |
 
+Every write to an existing schedule (PATCH, run-now, pause, resume, delete) first loads it as the caller sees it, under the same visibility rule as the read endpoints (`utils/reportVisibility.utils.ts`). A schedule the caller cannot read is treated like a missing one: PATCH and run-now answer 404, and pause, resume and delete answer a 200 no-op that writes nothing, as they do for another organization's id. A 403 is left only for a schedule the caller can already see but may not change, such as an organization-wide schedule for a non-Admin, so no write endpoint confirms that an id exists.
+
 ### Template Write Path
 
 **System templates are read-only for every org.** `organization_id IS NULL` marks a seeded template. The guard lives in the query WHERE clause — `organization_id = :org AND is_system_template = false` — not in a controller branch, so a write against a system template matches zero rows and the controller returns **404**. There is no code path that can be reordered into a bypass.
 
 **DELETE is a soft delete.** It sets `is_active = false`. `scheduled_reports.template_id` is a NOT NULL FK with no `ON DELETE` clause, so hard-deleting a referenced template fails at the database; archiving is the only safe removal.
 
-**Template versions are append-only.** A `PATCH` carrying any of `sections_config`, `ai_blocks_config`, `format_config`, `branding_config`, `schedule_defaults` or `delivery_defaults` inserts a **new** `report_template_versions` row at `MAX(version) + 1`. Metadata fields (name, description, and the like) update the `report_templates` row in place. Existing scheduled reports keep pointing at the version they were created against.
+**Template versions are append-only.** A `PATCH` carrying a non-null value for any of `sections_config`, `ai_blocks_config`, `framework_config`, `parameters_config` (v1 only), `format_config`, `branding_config`, `schedule_defaults` or `delivery_defaults` inserts a **new** `report_template_versions` row at `MAX(version) + 1`. Metadata fields (name, description, and the like) update the `report_templates` row in place. Existing scheduled reports keep pointing at the version they were created against.
+
+**A new version inherits what the PATCH leaves out.** `createTemplateVersionQuery` writes `COALESCE(sent, previous version, default)` for every config column, so a sections-only edit keeps the AI blocks, framework selection, report kind, format, branding and defaults. An explicit value, `{}` included, is stored as sent; a null is treated like a missing field, so a body whose config fields are all null is "no updatable fields supplied". A first version gets `{ sections: [] }` for sections and `{}` for the rest. The column list lives in `utils/reportTemplateVersionColumns.ts` and is shared by the INSERT, the controller's "append a version" check and `duplicateTemplate`. Before this, every column the body left out was reset to `{}`; the legacy PATCH gets the same fix, since it shares the controller.
+
+**A kind change must not strand sections.** A v1 `PATCH` that sends `parameters_config` without `sections_config` inherits the previous sections. When the new kind refuses one of them (for example an E-23 section after the kind is removed), the write is refused with 400 and the section named, instead of storing a version every run would refuse. Sending sections that fit the new kind in the same PATCH is accepted.
 
 **Slugs are derived server-side** from the template name. Uniqueness is enforced by `uq_report_templates_org_slug` on `(COALESCE(organization_id, 0), slug)`, which makes system templates share the org-0 namespace. A collision returns **409**.
 
@@ -1045,7 +1105,7 @@ The frontend wizard (`ConfigureReportWizard.tsx`, `mode="run-now"`) skips the Sc
 
 ### Section Catalog
 
-`Servers/services/reporting/sectionCatalog.ts` is the single owner of the 12-section taxonomy; it backs `GET /api/reporting/sections` and `VALID_SECTION_KEYS` derives from it (catalog keys plus the `all` wildcard). A test pins the catalog against the frontend's `REPORT_SECTION_GROUPS` backend-key set, so drift between the two fails CI rather than silently rejecting a section the wizard can still offer.
+`Servers/services/reporting/sectionCatalog.ts` is the single owner of the 18-section taxonomy; it backs `GET /api/reporting/sections` and `VALID_SECTION_KEYS` derives from it (catalog keys plus the `all` wildcard). A test pins the catalog against the frontend's `REPORT_SECTION_GROUPS` backend-key set, so drift between the two fails CI rather than silently rejecting a section the wizard can still offer.
 
 ### Services
 
@@ -1153,11 +1213,11 @@ The rule, in order: Admin and SuperAdmin bypass it entirely. `"organization"` sc
 | Controller function | Scope evaluated |
 |---|---|
 | `createScheduledReport` | `body.scope`, `body.projectId` |
-| `updateScheduledReport` | the **effective post-patch** scope/projectId — the row's stored values with the patch applied, computed even when the patch itself carries neither field, since `deliveryConfig` alone can redirect who receives the report |
-| `runScheduledReportNow` and `resumeScheduledReport` | the stored schedule's `scope` and `project_id` |
+| `updateScheduledReport` | the stored schedule's `scope` and `project_id` **and** the effective post-patch scope/projectId — the row's stored values with the patch applied, computed even when the patch itself carries neither field, since `deliveryConfig` alone can redirect who receives the report. The stored scope is checked too so an Editor cannot move an organization-wide schedule into a project of theirs |
+| `runScheduledReportNow`, `pauseScheduledReport`, `resumeScheduledReport`, `deleteScheduledReport` | the stored schedule's `scope` and `project_id` |
 | `runTemplateNow` | the resolved scope — an omitted body defaults to `"organization"`, the widest case, so an absent scope is refused for a non-Admin rather than silently permitted |
 
-**Refusal is 403, not 404.** This diverges from the read side deliberately: the read side hides a denied run behind a 404 to avoid confirming another organization's id exists over a sequential id space, but every produce-side call already knows its own organization's row — there is nothing to hide, and the client needs to distinguish "malformed request" (400) from "not allowed" (403). Validation is ordered before authorization on every one of these endpoints, so a malformed body still gets its 400 even for a caller who would otherwise be refused.
+**Refusal is 403 only for a schedule the caller can see.** A write to an existing schedule first loads it under the read side's visibility rule. A schedule the caller cannot read (another project's) answers exactly like a missing id: 404 for PATCH and run-now, a 200 no-op for pause, resume and delete, so the sequential id space is not an oracle. A schedule the caller can see but may not produce, such as an organization-wide one for a non-Admin, is refused with 403, which reveals nothing they could not already read. Body validation that needs no stored row runs first, so a malformed body still gets its 400; checks against the stored row (scope invariants, the report kind) run after the lookup, so an unreadable schedule gets its 404 first.
 
 **Every field a PATCH can touch is covered, not only `scope` and `projectId`.** `updateScheduledReport` fetches the row unconditionally and authorizes against its post-patch scope on every PATCH — including one that touches only `deliveryConfig`. A PATCH carrying `{ deliveryConfig: { attachFile: true, recipients: [...] } }` and nothing else can redirect a project schedule's email recipients without ever mentioning `scope` or `projectId`; fetching the row (and therefore authorizing) only when those two fields were present in the body left exactly that path ungated. `resumeScheduledReport` is gated the same way, since resuming re-enables delivery on whatever scope the schedule already has.
 
@@ -1179,7 +1239,7 @@ The wizard (`ConfigureReportWizard.tsx`) now:
 
 | Operation | Access |
 |-----------|--------|
-| Writes (create/update/run-now/pause/resume/delete scheduled reports) | Admin / Editor via `authorize` middleware, additionally scope-gated by `assertReportScopeAllowed` — organization scope requires Admin, project scope requires ownership or membership (Admin/SuperAdmin unrestricted); refusal is **403** — see [One Rule, Applied to Every Produce-Side Endpoint](#one-rule-applied-to-every-produce-side-endpoint) |
+| Writes (create/update/run-now/pause/resume/delete scheduled reports) | Admin / Editor via `authorize` middleware, additionally scope-gated by `assertReportScopeAllowed` — organization scope requires Admin, project scope requires ownership, membership or a group attached to the use case (Admin/SuperAdmin unrestricted); a schedule the caller cannot read answers like a missing id (404, or a 200 no-op for pause/resume/delete), refusal of a visible one is **403** — see [One Rule, Applied to Every Produce-Side Endpoint](#one-rule-applied-to-every-produce-side-endpoint) |
 | Template writes (create / update / archive) | Admin / Editor (via `authorize` middleware) |
 | Reads (section catalog, templates, scheduled reports, runs) | Any authenticated user (JWT) |
 | Any single run — fetch, download, analyses, archive, restore, delete | Authenticated + org-scoped + project-membership-scoped via `canViewRunQuery` (Admin/SuperAdmin unrestricted); denial is 404 — see [One Rule, Applied to Every Per-Run Endpoint](#one-rule-applied-to-every-per-run-endpoint) |
@@ -1193,16 +1253,14 @@ The existing **Admin-only** manual generate endpoints are preserved.
 ### Known MVP Limitations
 
 - Structured `recommendedActions` emission is **scaffolding only** — runs currently render the existing recommendations rather than emitting structured actions.
-- A `PATCH` carrying **both** metadata and config performs two un-transacted writes. If the version insert fails, the metadata update is already committed.
 - The `no_data` section-notice reason is **declared but never emitted** (see [Section Notices](#section-notices)). Both renderers carry a branch for it that cannot currently be reached.
 - A `plugin:` or `custom:` framework selection parses and stores, but resolves to no target: `projects_frameworks` holds native pairings only. Such a report renders `unresolved_framework` notices for its framework-gated sections rather than plugin content. The custom-framework data path is a later phase.
-- **`framework_config` has no API write path.** Only the seed migration writes a template's default selection; `createTemplateVersionQuery` does not carry it into the new version a config `PATCH` inserts, `createTemplateQuery` does not accept it, and `TemplatesTab`'s **Duplicate** copies `sections_config` and `ai_blocks_config` but not `framework_config`. A duplicated "ISO 42001 Internal Audit Pack" therefore comes back defaulting to every framework. The schedule the wizard creates still carries whatever the user picked, so this loses a default, not a report's filter.
 
 ### Frontend surface (complete)
 
 The UI half of the templates/schedules/runs stack is wired. The Reporting page (`Clients/src/presentation/pages/Reporting/index.tsx`) has four tabs — Generate, Templates, Scheduled, Archive:
 
-- **`TemplatesTab`** — splits templates into two sections, **My templates** and **System templates**, on `is_system_template` (`Clients/src/presentation/pages/Reporting/TemplatesTab.tsx`). Every card offers **Use Template** (opens the wizard in schedule mode, `onUse(id, "schedule")`) and **Run now** (opens it in run-now mode, `onUse(id, "run-now")`, see [Run Now](#run-now-ad-hoc-template-runs)). My-templates cards additionally get **Edit** (name, description, category, over `useUpdateTemplate`) and **Delete** (over `useArchiveTemplate`, behind a confirmation). The endpoint behind Delete is a soft delete (`is_active = false`) because `scheduled_reports.template_id` is a `NOT NULL` FK with no `ON DELETE` clause, so a hard `DELETE` of a referenced template fails at the database — but that is invisible to the user: `getTemplatesQuery` filters `is_active = true` and no UI path restores a template, so the button says **Delete** and the dialog says it cannot be undone. The one consequence the dialog does surface is that schedules already pointing at the template keep running. **System-template cards get neither Edit nor Delete** — writes match on `organization_id = :org AND is_system_template = false`, so the backend 404s for them and the UI omits buttons that cannot succeed. In their place, System-template cards offer **Duplicate**, which `POST`s a new org-owned `report_templates` row seeded from the source template's name (`"<name> (copy)"`), description, category, scope and section/AI-block config (`handleDuplicate`, `useCreateTemplate`) — but **not** its `framework_config`, so a duplicate of a framework-targeted system template defaults back to every framework (see [Known MVP Limitations](#known-mvp-limitations)). This is how an org turns a read-only system template into something it can edit. **Duplicate fetches the full template first** (`getTemplate(id)`): `useTemplates` is backed by `SELECT * FROM report_templates`, which carries no version, and only `GET /templates/:id` attaches `latestVersion`. Reading the section config off the list row produced copies with an empty `sections_config`, which the wizard will not accept (its Sections step requires one enabled section) and the Edit modal cannot repair. If that fetch fails, nothing is created. A 409 from any of these surfaces as a duplicate-name message.
+- **`TemplatesTab`** — splits templates into two sections, **My templates** and **System templates**, on `is_system_template` (`Clients/src/presentation/pages/Reporting/TemplatesTab.tsx`). Every card offers **Use Template** (opens the wizard in schedule mode, `onUse(id, "schedule")`) and **Run now** (opens it in run-now mode, `onUse(id, "run-now")`, see [Run Now](#run-now-ad-hoc-template-runs)). My-templates cards additionally get **Edit** (name, description, category, over `useUpdateTemplate`) and **Delete** (over `useArchiveTemplate`, behind a confirmation). The endpoint behind Delete is a soft delete (`is_active = false`) because `scheduled_reports.template_id` is a `NOT NULL` FK with no `ON DELETE` clause, so a hard `DELETE` of a referenced template fails at the database — but that is invisible to the user: `getTemplatesQuery` filters `is_active = true` and no UI path restores a template, so the button says **Delete** and the dialog says it cannot be undone. The one consequence the dialog does surface is that schedules already pointing at the template keep running. **System-template cards get neither Edit nor Delete** — writes match on `organization_id = :org AND is_system_template = false`, so the backend 404s for them and the UI omits buttons that cannot succeed. In their place, System-template cards offer **Duplicate** (`handleDuplicate`, `useDuplicateTemplate`), which calls `POST /api/v1/report-templates/:id/duplicate` with the id only. The server builds the copy, an org-owned template named `"<name> (copy)"` (or the next free `"(copy N)"`) with the source's description, category, scopes and recommended frequency and its latest version's whole config, in one transaction through the same inserts as create. The button is disabled while a copy is in flight, and a toast confirms it. This is how an org turns a read-only system template into something it can edit. A 409 from any of these surfaces as a duplicate-name message.
 - **`ScheduledReportsTab`** — edit (name, format, schedule) and delete, over `useUpdateScheduledReport` / `useDeleteScheduledReport`. Both destructive paths require a confirmation naming the schedule. Edits always send `scheduleConfig`, because `updateScheduledReportQuery` only recomputes `next_run_at` when that key is present.
 - **`ReportRunsTable`** (`Clients/src/presentation/pages/Reporting/ReportRunsTable.tsx`) — the one table backing both the Generate and Archive tabs (see [Run Archiving](#run-archiving)). It takes a `variant: "live" | "archived"` prop and passes `archived: variant === "archived"` to `useReportRunsPage`, so the two tabs differ only in which half of `report_runs` they query — same columns (Report / Template / Status / Scope / Created / Triggered by / Actions), same empty-state component, same drawer. `output_filename` is `NULL` until a run succeeds, so a queued, running or failed row is named `Run #<id>` and identified by the adjacent Template and Scope columns rather than a bare dash. Pagination is server-side via `StandardTablePagination`, gated on the server-reported `total` rather than the current page's row count, so paging past the end reads as "you paged past the end", not "there is nothing here"; `page` is pulled back in range when archiving the last row shrinks the total below it. Status renders through a fixed label/variant map on the shared `Chip` — `partial_success` is styled `warning`, never `error`, because a partial-success run is still downloadable (see the run-status vocabulary note below) — and its tooltip falls back from `error_message`, which is `NULL` on that path, to the failed channels in `delivery_status`. Download re-materializes the returned Blob through a throwaway `<a>` element; Delete is gated behind a `ConfirmationModal` since, unlike Archive, it cannot be undone. Each row also opens `ReportAnalysisPanel` in a drawer, independent of variant.
 - **`ReportAnalysisPanel`** — presentational (`{analyses, isLoading}`), caller owns `useRunAnalyses`. Renders all seven section keys including `sectionSummaries`, handles a `null` payload (a real runtime case — `runAnalyzers` writes `payload: null` when a section produced nothing) and surfaces `abstain_reason`.
@@ -1242,6 +1300,131 @@ Any new report source goes into `REPORT_FILE_SOURCES` and nowhere else; a source
 - `validateId("id")`: a non-numeric id, 0, or an id above 2147483647 (the Postgres `INTEGER` maximum) answers **400**.
 - One statement: `DELETE FROM files WHERE organization_id = :org AND id = :id AND source IN (REPORT_FILE_SOURCES) RETURNING id`. Folder mappings go with the row through `file_folder_mappings.file_id ... ON DELETE CASCADE`.
 - When nothing was deleted (missing id, another organization's file, or any non-report file such as evidence or a File Manager upload) it answers **404** and touches nothing.
+
+## OSFI E-23 completeness report
+
+A report of kind `osfi_e23` sets the self-assessed OSFI Guideline E-23 checklist (bundled framework 26) against the model risk management records and says where the two disagree. It is shipped as one system template. Spec: `docs/superpowers/specs/2026-11-22-osfi-e23-mrm-completeness-report-design.md`. MRM side: [mrm.md](./mrm.md).
+
+### The system template
+
+Seeded by `Servers/database/migrations/20261122130000-seed-osfi-e23-report-template.js`, idempotent per slug like the library seed (an existing system row is reactivated, `down()` deactivates).
+
+| Field | Value |
+|-------|-------|
+| Slug / name | `osfi-e23-completeness` / "OSFI E-23 completeness report" |
+| Category | `compliance` |
+| Scope | `default_scope` organization, `supported_scopes` `["organization"]` (the library seed hard-codes both) |
+| Recommended frequency | `quarterly` (the wizard opens the Schedule step on it) |
+| `framework_config` | `{"frameworkIds":["native:26"]}`. A literal id is safe here: bundled framework ids are fixed by their structure file, not a SERIAL |
+| `format_config` | `{"format":"pdf"}` |
+| Sections on | `frameworkRequirements`, `mrmFleet`, `e23Contradictions`, `e23FixItList`, `signOff` |
+| Sections off | `mrmInventoryAppendix` (listed with `defaultEnabled: false`); no other catalog section is listed |
+| AI blocks on | `executiveSummary`, `keyFindings`, `recommendedActions`, `e23Gap`; every other block false |
+| `parameters_config` | `{"kind":"osfi_e23","fields":[...]}` |
+
+It seeds whether or not any organization has added E-23; without the framework the report prints the "not on file" notices and runs no rule. The migration holds the parameter fields as a JSON copy of `E23_PARAMETER_FIELDS` (`services/reporting/e23/e23Parameters.ts`), since migrations do not import TypeScript. `database/seeders/__tests__/osfiE23ReportTemplate.test.ts` asserts the copy deep-equals the constant, that every seeded section key is in the catalog and passes `kindViolations` for `osfi_e23`, and that no library template uses a kind-gated section or `e23Gap`.
+
+### Report kind and parameters
+
+`report_template_versions.parameters_config` (JSONB, default `{}`) carries `kind` and `fields`. The kind, not the slug, drives every E-23 behaviour, so a duplicated template stays an E-23 report. `KNOWN_REPORT_KINDS` in `services/reporting/reportParameters.ts` lists the accepted kinds; any other value is refused.
+
+- **Kind-gated sections.** Catalog entries `mrmFleet`, `e23Contradictions`, `e23FixItList`, `mrmInventoryAppendix` and `signOff` carry `kinds: ["osfi_e23"]`. `validateRunInput` refuses them, with 400, in any request whose template is not of that kind, including the legacy Generate page (`reporting.ctrl.ts`, which has no template and so no kind). `frameworkRequirements` has no `kinds`.
+- **Organization scope only.** `validateRunInput` refuses an `osfi_e23` run or schedule with any other scope. Organization-scope reports are Admin-only (`reportAuthorization.ts`), so this report is too.
+- **Parameter fields.** `periodStart`, `periodEnd`, `institutionName`, `accountableExecutiveName`/`Title`, `headOfValidationName`/`Title` (optional), `preparedByName`/`Title`, `audience` (`osfi` | `board`), `scopeNote` (optional, 1000 chars), `isFinal` (boolean). Text fields cap at 200 characters. Validation checks required fields, lengths, real dates, start ≤ end, no future end date and select values; unknown keys are rejected, not dropped. Messages go through `req.t`.
+- **Storage.** A schedule keeps its answers in `scheduled_reports.report_parameters`; each run records what it used in `report_runs.config_snapshot.report_parameters`. A schedule never stores the period: at run time `rollingPeriod` (`scheduleCalculator.ts`) sets it to one interval ending the day before the run, by the run's calendar date in the schedule's `timezone` (UTC when none), the same timezone `computeNextRun` fires in.
+- **Draft or final.** `isFinal` false (the default) puts "Draft: not for distribution" on every page of the formal report (PDF watermark, DOCX header) and prints "Draft" in place of the signature lines. The run list reads `is_final` from the snapshot to show a Draft or Final chip.
+- **Content language.** All fixed E-23 text (`services/reporting/e23/e23Text.ts`) is English only.
+
+### Quarterly schedules
+
+`quarterly` is a `ReportFrequency` for every template. The schedule config needs `anchorMonth` (1–12, the month of one of the four runs); `dayOfMonth` is optional, 1–28. `computeNextRun` builds the cron from the four months `anchorMonth`, +3, +6, +9. An invalid stored anchor logs a warning and falls back to January rather than building a bad cron. `rollingPeriod("quarterly", runDate)` is the three months ending the day before the run, clamped to month end.
+
+### Endpoints (`/api/v1`)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/v1/report-templates` | Create a custom template with its first version; accepts `parameters_config` (`reportTemplate.edit`) |
+| PATCH | `/api/v1/report-templates/:id` | Update a custom template's metadata and, when a config field is sent, append a version; accepts `parameters_config`. A config field the body leaves out (missing or null) keeps the previous version's value, so a partial edit never resets the rest; an explicit value, `{}` included, is stored as sent (an empty `framework_config` means every framework); a body whose config fields are all null has nothing to write, and a kind change that would keep sections the new kind refuses is a 400 (`reportTemplate.edit`) |
+| POST | `/api/v1/report-templates/:id/duplicate` | Copy a system template or one of the organization's own into the caller's organization, with its metadata and the latest version's whole config (sections, AI blocks, framework selection, report kind, format, branding, schedule and delivery defaults). The server names it `"<name> (copy)"`, then `"(copy 2)"`, `"(copy 3)"`, ... past any slug the organization already holds, archived templates included (the slug index covers them); a slug taken by a concurrent copy is retried up to three times. 404 for a template the organization cannot see or an archived one (`reportTemplate.edit`) |
+| POST | `/api/v1/report-templates/:id/run` | Run a template now, with `reportParameters` for kinds that take them (`reportTemplate.edit`) |
+| GET | `/api/v1/report-templates/:id/last-parameters` | Answers from the organization's latest `success` or `partial_success` run of the template that the caller may see (the same two statuses the prior glance reads), for the wizard prefill. Period and `isFinal` are left out; the old `periodEnd` comes back separately so the next period starts the day after it (`reportTemplate.edit`) |
+| GET | `/api/v1/scheduled-reports/:id` | One schedule of the organization with its template version's `parameters_config`, which the legacy list lacks; the schedule edit dialog uses it to show and save the stored report details (`report_parameters`). Same read rule as the list and as runs: Admins read any schedule, others organization-wide schedules and those of projects they own, are a member of or reach through a group. 404 for a missing, other-organization, unreadable or non-integer id |
+| GET | `/api/v1/report-runs/:id/download/fix-it-list` | Download the run's internal fix-it list. Same visibility gate and organization checks as the formal report download |
+| POST | `/api/v1/scheduled-reports` | Create a schedule; accepts `reportParameters` and the `quarterly` frequency (`scheduledReport.edit`) |
+| PATCH | `/api/v1/scheduled-reports/:id` | Update a schedule; accepts `reportParameters` and the `quarterly` frequency (`scheduledReport.edit`) |
+
+The client writes templates and schedules only through these v1 routes; the reads, archive, pause/resume and run-now stay on `/api/reporting`.
+
+#### Legacy freeze
+
+`parameters_config`, `reportParameters` and the quarterly frequency are v1 contracts. The legacy `/api/reporting` writes keep their pre-E-23 contract through adapters in `middleware/legacyReportingContract.middleware.ts`, applied after auth and RBAC on those routes only, in front of the same controllers:
+
+- `POST /api/reporting/templates` and `PATCH /api/reporting/templates/:id` drop `parameters_config`, as an unknown field was before. A legacy update keeps the stored kind, because `createTemplateVersionQuery` falls back to the previous version's value; a body with only `parameters_config` is "no updatable fields supplied".
+- `POST /api/reporting/templates/:id/run` drops `reportParameters`, so a kind template that needs answers is refused with its missing fields.
+- `POST /api/reporting/scheduled-reports` and `PATCH /api/reporting/scheduled-reports/:id` drop `reportParameters` and refuse `scheduleConfig.frequency: "quarterly"` with 400 ("quarterly schedules are created and changed through /api/v1/scheduled-reports"). Before E-23 that route accepted an unknown frequency and ran it monthly; refusing it is the honest freeze.
+
+The refusal of kind-gated sections outside a kind template is a protection, not a contract, and stays on every route, legacy included. Parity tests: `routes/__tests__/reportTemplate.legacyContract.route.test.ts` and `routes/__tests__/scheduledReport.legacyContract.route.test.ts`.
+
+### Sections and the formal report
+
+Data collection (`dataCollector.ts`) reads the same data for both audiences:
+
+- `frameworkRequirements` for `native:26`, with a data coverage label per group ("Checked against MRM data" when at least one contradiction rule targets a requirement in it, else "Self-assessment only").
+- `mrmFleet` (`e23/mrmFleet.ts`): a report-only collector over the MRM tables. Every count leaves out retired models and no per-tier verdict is printed. `getAttestationSummary` is unchanged. Validation coverage puts each model in scope in exactly one row, so the rows add up to the models in scope: "Validation overdue" (an open validation past its next due date) first, then "Validation in progress" (any other open validation, first or revalidation), then "Last validation not passed" (the latest sign-off's outcome is `not_validated`, nothing open), then "Validated, no validation open" (the latest outcome passed, `validated` or `validated_with_findings`, nothing open; the wording keeps it from reading as "no open findings"), else "Not started" (no sign-off, or one with no outcome recorded). Only `validated` and `validated_with_findings` count as validated, here and in the "By tier" table, whose column reads "Validation passed" (and "with a passed signed-off validation" in the prompts) so it is not confused with the exclusive row. A model whose latest outcome is `not_validated` is therefore never counted as validated, while C13 (an Approved model whose latest outcome is `not_validated`) keeps its own condition. Labels live in `e23Text.ts` (`VALIDATION_COVERAGE_LABELS`). The facts block stores the rows as `validatedPassed` and `lastValidationNotPassed` and prints them on E-23 runs as "validated with no validation open" and "last validation not passed". The earlier names of the validated count, `validated` (any sign-off) and `validatedNothingOpen` (any outcome), are listed in `RETIRED_AGGREGATES` (`facts.ts`): when the current run no longer writes them they are neither diffed against the new row nor reported as a drop to 0; a retired name the current run still writes reports its change as usual.
+- `e23Contradictions` (`e23/contradictionRules.ts`): the fixed rules below.
+- `e23FixItList` (`e23/fixItList.ts`): the deterministic fix-it list.
+- `mrmInventoryAppendix` and `signOff`.
+
+`e23/formalView.ts` turns the data into renderer-neutral blocks that `report-pdf.ejs` and the DOCX builder only lay out, so both formats say the same thing. Order: cover, Scope and method (with limitations), At a glance, executive summary (AI), E-23 program completeness, Model risk management status, Where the checklist and the data disagree, E-23 gap analysis (AI), Model inventory appendix, notices, Sign-off.
+
+`audience` decides the level of detail, never the figures. The board version shows one line per requirement group, no requirement rows and no model names, and never the appendix. Its AI prompts name no model either: the MRM status and contradiction text the prompts receive (`prepareMrmFleet`, `prepareE23Contradictions` with `board`) keep the counts and drop the exception list and rule examples, the `mrmFleet` section summary asks for counts instead of names, and the formal facts block (`formalFactsView` with `board`) drops the named MRM exceptions.
+
+**At a glance** (`e23/glance.ts`, no AI): requirements done of the total, groups checked against MRM data, rules fired of 13, models in scope, untiered models, overdue validations, open critical or high findings, and fix-it items by severity. With E-23 on more than one pairing (the organization project and use cases), a requirement counts once by its number, and as done only when every pairing's row for it is done. A figure whose source could not be read prints "Not checked". Each run stores its figures in `config_snapshot.e23_glance`. The change since the previous comparable run comes from the latest finished run of the same schedule, or for a manual run, of the same template whatever triggered it.
+
+### Contradiction rules
+
+A rule fires only when its requirement is `Implemented` or `Audited` in the organization's E-23 checklist and the data condition holds for at least one non-retired model (C1: when there are none). Rules find their requirement by number, matched against the title prefix (text before the first space). A number that matches no row puts the rule under "Rules not run", never counted as clean. A unit test pins every rule number against the structure file.
+
+| Rule | Requirement | Fires when |
+|------|-------------|------------|
+| C1 | 2.1.4 | No models in the inventory |
+| C2 | 2.2.3 | A model has no MRM tier |
+| C3 | 2.2.4 | A tiered model's rating was last set or affirmed (later of `mrm_tiered_at` and its latest validation sign-off) longer ago than its tier cadence (`REVALIDATION_CADENCE_MONTHS`: 12/18/24 months), or it is flagged for revalidation with no open validation |
+| C4 | 3.1.3 | A model has no `owner` MRM role |
+| C5 | 3.4.1 | A model's latest validator currently also holds its `developer` role |
+| C6 | 3.4.2 | A model has an overdue validation |
+| C7 | 3.4.6 | A model's latest signed-off validation report has one of its six sections missing or empty |
+| C8 | 3.4.7 | A model has neither an `approver` MRM role nor an inventory approver |
+| C9 | 3.4.9 | An `Approved` model has a critical or high finding at stage `open` with an empty remediation plan |
+| C10 | 3.6.4 | A tier 1 or tier 2 model has no active threshold |
+| C11 | 3.6.1 | A model has active thresholds but no metric received in the last 90 days (`METRIC_STALE_DAYS`) |
+| C12 | 2.2.8 | An open critical or high finding is past its due date |
+| C13 | 3.4.7 | An `Approved` model's latest signed-off validation outcome is `not_validated` |
+
+When no rule fires, the section says "No contradictions found by the rules in this report" and lists the rules checked.
+
+### Fix-it list: a second file
+
+When `e23FixItList` is on, one run produces two files in the run's format: the formal report and the internal fix-it list (`e23/fixItView.ts`, `e23-fixit-pdf.ejs` / `docxFixIt.ts`). The fix-it list has its own cover and "Internal: not for external distribution" on the cover and every page footer. Its body is the fix-it items, then the AI recommended actions, which for this report render only here and never in the formal report. The formal renderers print `E23FormalView.aiSummaries`, which leaves out both `recommendedActions` and the `recommendations` list derived from them, and `report-pdf.ejs` also guards its Recommendations block with `!isE23`.
+
+- **Items** come from fired rules, open E-23 requirements (no owner, overdue, needs rework, done without evidence, other not done) and model-level gaps. Severity is high, medium or low by item type. The list is sorted by severity, then overdue first, then requirement order or model name. The AI does not rank or edit it. With E-23 on more than one pairing, a requirement gives one item per item type: the most urgent pairing's text and due date, every owner, and the pairings named after the requirement in Where.
+- **Both or neither.** If the fix-it list fails to render, `generateReport` fails the whole result. If it cannot be stored, the orchestrator marks the run failed before anything is delivered.
+- **Storage.** The orchestrator uploads the fix-it list first, whatever "Save to storage" says, and records it in `report_runs.companion_file_id`, `companion_filename` and `companion_mime_type`. "Save to storage" governs the formal report only.
+- **Never emailed.** `deliverReport` is handed the formal report only, so no email link or attachment can carry the fix-it list.
+- **Deleting a run** deletes both files.
+- **Late failure.** A run that fails after its files are stored (persisting analyses, or the final status write) keeps the files and keeps them linked on the run, so both stay downloadable and are deleted with it.
+
+### Analyzers
+
+- **`e23Gap`** (`analyzers/e23Gap.ts`, registered in `registry.ts`). Input: the E-23 groups of `frameworkRequirements` with their rollups and coverage label (when that section is not selected, the same rows the rules ran on, which the collector keeps on `ReportData.e23Requirements`), `e23Contradictions`, `mrmFleet`, the formal facts block, and the audience line. Output (zod, strict): `narrative`, `principles[]` (`group` verbatim, `position` of `consistent` / `partly consistent` / `inconsistent` / `not assessable`, `explanation`, `basis`, `what_would_close_this`) and `abstain_reason`. Positions print as "Data consistent with self-assessment" and so on, never as a compliance rating. The analyzer abstains without a call when the run is not an E-23 report or has no E-23 requirements.
+- **E-23 prose guard** (`analyzers/e23Guard.ts`, run in `runAnalyzers.ts` after the shallowness gate and before `enforce`). On an E-23 run only, the prose of executiveSummary, keyFindings, e23Gap and recommendedActions (fix-it file) is checked against the exact prompt the analyzer received, with no model call. (a) Compliance and regulator-view claims (`COMPLIANCE_CLAIM_PATTERNS`), allowed when a negation governs them in the same clause ("does not state that any requirement is fulfilled"; a clause ends at ; : a dash, or a comma plus and/but/so/which...), two known misreadings, and internal field names (camelCase, `name=value`). (b) Figures are checked per item (a paragraph of a whole field, or one finding/action/principle with all its prose fields): a number must be in the input, or follow in one step (difference or sum) from two grounded figures the same item cites, or be a day count between two input dates; an "X of Y" must sit on one input line; a group count must be one the input states (totals and the per-section lines); a percentage must be stated as a percentage in the input, or be the ratio (within 0.5) of two grounded figures of the same kind in the same item, the kind read off the next words ("13 models", "6 of 16 groups"), so 6 groups over 13 models is no percentage; dates must be in the input or a day either side of one; "as of/as at" must name the as-at day; a sentence that puts period activity in the monitoring window with no mention of the period is flagged. (c) A violation re-issues the call once with the sentences named. What still fails is removed smallest cut first: the sentence; then a nullable field cut under its schema minimum becomes null, and a row whose required field is cut under its minimum is dropped; the analyzer abstains with "the AI text made claims the report data does not support" only when a required whole field falls under its minimum or a list analyzer has no row left. `audit_metadata.guard_retried` and `guard_rejections` record it.
+- **E-23 analyzer inputs** (`e23DataBlock` in `analyzers/e23Gap.ts`, in the four formal prompts on E-23 runs): requirements with due date, overdue, owner and evidence counts and the status split; groups and requirements per section (read off the group title suffix: B.1, B.2, B.3 collapse to B; D.1 and D.2 stay apart because D.2 holds several groups) and by coverage; every group with its requirement count and coverage; the rules line ("rules that fired: 0 of 13 (no contradiction found)"); models and open findings by severity per tier. An E-23 run's facts block is rendered with words instead of field names (`factNameAsWords`); other reports keep `name=value`. The header also states the group split, that self-assessment-only groups are no gap, and the as-at date vs the reporting period.
+- **Position enforcement.** `enforceE23GapPositions` runs after parsing. A group that is self-assessment only, or that resolves to no known group, becomes `not assessable`. A group holding a requirement a fired rule names cannot be `consistent` and becomes `partly consistent`. A corrected row is kept, not dropped, and each change is stored in the analysis row's `audit_metadata.position_corrections` (`{group, from, to}`), which is present only when something changed.
+- **Formal versus internal inputs.** Analyzers whose output prints in the formal report (`executiveSummary`, `keyFindings`, `e23Gap`) get the formal facts block, in which the fix-it list is reduced to counts, and no fix-it section summary. `recommendedActions` gets the full facts and up to 20 fix-it items (`fixItPromptBlock`) so its actions point at real items. Every prompt of an E-23 run carries the audience line.
+- **Gating.** `e23Gap` is a flag in `AiBlocksConfig`. It is off in `LEGACY_BLOCKS` and `NO_BLOCKS`, and the wizard offers it only for an `osfi_e23` template (`aiBlocksForKind`).
+- **Prior facts.** For an E-23 manual run, `collectPriorFacts` compares against the organization's previous run of the same template. Scheduled runs keep comparing against their own schedule. `FACTS_SCHEMA_VERSION` is 3.
+
+Without an LLM key the AI blocks abstain as in any report. At a glance, completeness, MRM status, contradictions and the fix-it list never depend on the LLM.
 
 ## Related Documentation
 

@@ -187,6 +187,10 @@ export function bridgeTools(
           // LLMs tend to auto-fill optional fields with type defaults which causes filtering issues.
           const cleaned: Record<string, unknown> = {};
           for (const [key, value] of Object.entries(params)) {
+            // Underscore keys (_userId, _requesterId, _organizationId) are set
+            // by the server only. One from the model could make a tool act or
+            // read as another user, so it is dropped.
+            if (key.startsWith("_")) continue;
             if (value === "" || value === null || value === undefined) continue;
             // Strip `archived: false` — implicit default, skip entirely
             if (key === "archived" && value === false) continue;

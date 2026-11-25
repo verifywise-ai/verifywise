@@ -79,6 +79,11 @@ const sharedTables: SharedTableEntry[] = [
     justification:
       "Framework structure/reference tables are global by convention; the wildcard matches all struct tables.",
   },
+  {
+    name: "vrdb_*",
+    justification:
+      "Public records mirrored from official sources (vendor risk database); no tenant data; written only by the sync job and the run-time lookup.",
+  },
 ];
 
 /**
@@ -675,11 +680,6 @@ const deferredScopedTables: SharedTableEntry[] = [
   },
   {
     name: "entity_graph_views",
-    justification:
-      "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
-  },
-  {
-    name: "evidence_ai_analysis",
     justification:
       "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
   },

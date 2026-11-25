@@ -1,30 +1,28 @@
 import { Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
-import logger from "../utils/logger/fileLogger";
 import { roleHasPermission } from "../utils/rolePermissions.utils";
-import { recordMultipleFieldChanges } from "../utils/changeHistory.base.utils";
-import { notifyTrainingAssigned } from "../services/inAppNotification.service";
+import {
+  assignTraining,
+  personName,
+  recordAssignmentHistory as recordHistory,
+  type TrainingAssignmentActor,
+} from "../services/trainingAssignment.service";
 import {
   completeAllTrainingAssignmentsQuery,
   completeTrainingAssignmentQuery,
-  createTrainingAssignmentsQuery,
   deleteTrainingAssignmentQuery,
   getAssignableTrainingQuery,
   getMyTrainingAssignmentsQuery,
-  getNonMemberUserIdsQuery,
   getTrainingAssignmentByIdQuery,
   getTrainingAssignmentsQuery,
   getTrainingAssignmentSummaryQuery,
-  getUserFullNameQuery,
   reopenTrainingAssignmentQuery,
   updateTrainingAssignmentDueDateQuery,
-  type AssignableTraining,
   type TrainingAssignment,
 } from "../utils/trainingAssignment.utils";
 import {
   parseAssignmentId,
-  parseCreateAssignments,
   parseDueDate,
   parseTrainingId,
   parseTrainingIdQuery,
@@ -80,8 +78,6 @@ async function handle(
   }
 }
 
-const personName = (name: string, surname: string): string => `${name} ${surname}`.trim();
-
 const dateOnly = (value: string): string => new Date(value).toISOString().slice(0, 10);
 
 const describeAssignment = (assignment: TrainingAssignment): string =>
@@ -89,46 +85,17 @@ const describeAssignment = (assignment: TrainingAssignment): string =>
     ? `Completed on ${dateOnly(assignment.completed_at)}, due ${assignment.due_date}`
     : `Open, due ${assignment.due_date}`;
 
-/**
- * Writes assignment events to the training's change history, so reopening or
- * removing an assignment leaves a record of what it was and who changed it.
- * Ledger entries run one at a time afterwards: an assignment can name 500
- * people, and each ledger append takes a pool connection.
- *
- * The change itself is already saved, so a history failure is logged rather
- * than turned into an error response that would hide a completed change.
- */
-async function recordAssignmentHistory(
+const actorOf = (req: Request): TrainingAssignmentActor => ({
+  userId: req.userId!,
+  organizationId: req.organizationId!,
+});
+
+/** The training's change history, recorded as the request's user. */
+const recordAssignmentHistory = (
   req: Request,
   trainingId: number,
   entries: Array<{ person: string; oldValue: string; newValue: string }>,
-): Promise<void> {
-  const ledgerAppends: Array<() => void> = [];
-  try {
-    await recordMultipleFieldChanges(
-      "training",
-      trainingId,
-      req.userId!,
-      req.organizationId!,
-      entries.map(({ person, oldValue, newValue }) => ({
-        // field_name is VARCHAR(255).
-        fieldName: `Assignment: ${person}`.slice(0, 255),
-        oldValue,
-        newValue,
-      })),
-      undefined,
-      false,
-      (append) => {
-        ledgerAppends.push(append);
-      },
-    );
-  } catch (error) {
-    logger.error(`Failed to record assignment history for training ${trainingId}:`, error);
-  }
-  void (async () => {
-    for (const append of ledgerAppends) await append();
-  })();
-}
+): Promise<void> => recordHistory(actorOf(req), trainingId, entries);
 
 /**
  * An assignment change by its assignee or by anyone who can edit training.
@@ -158,50 +125,6 @@ async function changeAsAssigneeOrEditor(
   await change(existing);
   const updated = await getTrainingAssignmentByIdQuery(id.value, req.organizationId!);
   return updated ? { status: 200, data: updated } : notFound("Training assignment not found");
-}
-
-/**
- * One failed notice never fails the save. These awaits are short: the emails
- * themselves join a queue un-awaited inside notifyTrainingAssigned.
- */
-async function notifyAssignees(
-  req: Request,
-  training: AssignableTraining,
-  created: TrainingAssignment[],
-): Promise<void> {
-  if (created.length === 0) return;
-  const organizationId = req.organizationId!;
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-
-  let assignerName = "A colleague";
-  try {
-    assignerName = (await getUserFullNameQuery(req.userId!)) || assignerName;
-  } catch (error) {
-    logger.error(`Failed to load the name of training assigner ${req.userId}:`, error);
-  }
-
-  for (const assignment of created) {
-    try {
-      await notifyTrainingAssigned(
-        organizationId,
-        assignment.user_id,
-        {
-          id: training.id,
-          name: training.training_name,
-          description: training.description ?? undefined,
-          duration: training.duration ?? undefined,
-          dueDate: assignment.due_date,
-        },
-        assignerName,
-        baseUrl,
-      );
-    } catch (error) {
-      logger.error(
-        `Failed to notify user ${assignment.user_id} about training ${training.id}:`,
-        error,
-      );
-    }
-  }
 }
 
 export async function listTrainingAssignments(req: Request, res: Response) {
@@ -270,33 +193,12 @@ export async function createTrainingAssignments(req: Request, res: Response) {
       failure: "Failed to create training assignments",
     },
     async () => {
-      const input = parseCreateAssignments(req.body);
-      if (!input.ok) return invalid(input);
-      const { training_id: trainingId, user_ids: userIds, due_date: dueDate } = input.value;
-
-      const training = await getAssignableTrainingQuery(trainingId, req.organizationId!);
-      if (!training) return notFound("Training not found");
-
-      const nonMembers = await getNonMemberUserIdsQuery(userIds, req.organizationId!);
-      if (nonMembers.length > 0) {
-        return { status: 400, message: "Every person must be a member of this organization" };
-      }
-
-      const { created, skippedUserIds } = await createTrainingAssignmentsQuery(
-        { trainingId, userIds, dueDate, assignedBy: req.userId! },
-        req.organizationId!,
-      );
-      await recordAssignmentHistory(
-        req,
-        trainingId,
-        created.map((assignment) => ({
-          person: personName(assignment.user_name, assignment.user_surname),
-          oldValue: "-",
-          newValue: `Assigned, due ${assignment.due_date}`,
-        })),
-      );
-      await notifyAssignees(req, training, created);
-      return { status: 201, data: { created, skipped_user_ids: skippedUserIds } };
+      const result = await assignTraining(req.body, actorOf(req));
+      if (!result.ok) return { status: result.status, message: result.message, vars: result.vars };
+      return {
+        status: 201,
+        data: { created: result.created, skipped_user_ids: result.skippedUserIds },
+      };
     },
   );
 }

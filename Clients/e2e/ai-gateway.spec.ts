@@ -116,6 +116,10 @@ test.describe("AI Gateway", () => {
     await expect(page.getByRole("heading", { name: /endpoints/i }).first()).toBeVisible({
       timeout: 10_000,
     });
+    // The button is enabled while the page is still loading its API keys (it
+    // shows a skeleton then) and turns disabled once none come back, so decide
+    // only after loading has finished.
+    await expect(page.locator(".MuiSkeleton-root")).toHaveCount(0, { timeout: 15_000 });
     const canAdd =
       (await addBtn
         .first()

@@ -13,22 +13,9 @@ import {
   useTemplates,
   useUpdateTemplate,
   useArchiveTemplate,
-  useCreateTemplate,
+  useDuplicateTemplate,
 } from "../../../application/hooks/useReporting";
-import { getTemplate } from "../../../application/repository/reporting.repository";
 import { showAlert } from "../../../infrastructure/api/customAxios";
-import type {
-  FrameworkConfig,
-  ReportTemplateWriteBody,
-} from "../../../domain/interfaces/i.reporting";
-
-// The create body carries framework_config the same way it carries
-// sections_config — createTemplateVersionQuery reads all three off one body.
-// ReportTemplateWriteBody does not declare it yet, so widen here rather than
-// send the field untyped.
-type TemplateCreateBody = ReportTemplateWriteBody & {
-  framework_config?: FrameworkConfig;
-};
 
 // Same three the builder offers. Kept in sync by hand — the backend takes any
 // string, so a mismatch is a UX bug, not a type error.
@@ -39,7 +26,7 @@ const CATEGORY_ITEMS = CATEGORIES.map((c) => ({
   name: c.charAt(0).toUpperCase() + c.slice(1),
 }));
 
-// A 409 from PATCH/POST /templates is always a unique-name violation. Saying
+// A 409 from an edit is always a unique-name violation. Saying
 // "failed" there sends the user hunting for a server problem that isn't one.
 const mutationError = (fallback: string) => (err: any) =>
   showAlert({
@@ -60,7 +47,7 @@ export default function TemplatesTab({
   const { data: templates = [], isLoading } = useTemplates();
   const update = useUpdateTemplate();
   const archive = useArchiveTemplate();
-  const duplicate = useCreateTemplate();
+  const duplicate = useDuplicateTemplate();
 
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ name: "", description: "", category: "" });
@@ -104,54 +91,20 @@ export default function TemplatesTab({
   // System templates cannot be edited in place (see the is_system_template
   // guard below), so Duplicate is how an org turns one into a starting point
   // it can customize: a new, org-owned template seeded from the same config.
-  // Field names match ReportTemplateWriteBody (snake_case, same as
-  // TemplateBuilder's create call) rather than the camelCase the wizard's
-  // own run/schedule bodies use — this goes through POST /templates, not
-  // POST /templates/:id/run.
+  // The server builds the copy (POST /v1/report-templates/:id/duplicate) from
+  // the template's latest version, including its framework selection and
+  // report kind, so nothing has to be fetched and re-sent from here.
   //
-  // The section config has to be fetched first: useTemplates is backed by
-  // `SELECT * FROM report_templates`, which carries no version — only
-  // GET /templates/:id attaches latestVersion. Reading it off the list row
-  // gave every copy an empty sections_config, and the wizard then refuses to
-  // leave its Sections step (canNext needs one enabled section), so the copy
-  // could never be run or scheduled and the Edit modal could not repair it.
-  //
-  // createTemplateQuery (Servers/utils/reportTemplate.utils.ts) 400s unless
-  // default_scope is exactly "project" or "organization"; the source
-  // template always has one, but fall back to "project" defensively rather
-  // than send undefined and 400 on every click.
-  //
-  // framework_config travels with the section config for the same reason it is
-  // fetched at all: an omitted selection is not "no preference", it means every
-  // framework in scope. Dropping it turns a copy of a framework-specific
-  // template into an org-wide report carrying the original's name and
-  // description — the silent widening the run/schedule 400-gates exist to stop.
-  const handleDuplicate = async (t: any) => {
-    let source;
-    try {
-      source = await getTemplate(t.id);
-    } catch {
-      showAlert({
-        variant: "error",
-        body: "Failed to load the template to duplicate.",
-        isToast: true,
-      });
-      return;
-    }
-
-    const body: TemplateCreateBody = {
-      name: `${source.name} (copy)`,
-      description: source.description ?? null,
-      category: source.category ?? CATEGORIES[0],
-      default_scope: source.default_scope ?? "project",
-      supported_scopes: source.supported_scopes ?? undefined,
-      recommended_frequency: source.recommended_frequency ?? undefined,
-      sections_config: source.latestVersion?.sections_config ?? undefined,
-      ai_blocks_config: source.latestVersion?.ai_blocks_config ?? undefined,
-      framework_config: source.latestVersion?.framework_config ?? undefined,
-    };
-
-    duplicate.mutate(body, { onError: mutationError("Failed to duplicate template") });
+  // The server also picks the name ("(copy)", "(copy 2)", ...), so the
+  // duplicate-name message from mutationError does not apply: the user never
+  // chose a name, and a 409 left here (a lost slug race) is a plain failure.
+  const handleDuplicate = (t: any) => {
+    duplicate.mutate(t.id, {
+      onSuccess: () =>
+        showAlert({ variant: "success", body: "Template duplicated", isToast: true }),
+      onError: () =>
+        showAlert({ variant: "error", body: "Failed to duplicate template", isToast: true }),
+    });
   };
 
   if (isLoading) {
@@ -272,6 +225,7 @@ export default function TemplatesTab({
             variant="outlined"
             text="Duplicate"
             onClick={() => handleDuplicate(t)}
+            isDisabled={duplicate.isPending}
             sx={secondaryButtonSx}
           />
         )}

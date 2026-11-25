@@ -2,6 +2,7 @@ import type { z } from "zod";
 import type { ReportData } from "../../../domain.layer/interfaces/i.reportGeneration";
 import {
   complianceGapSchema,
+  e23GapSchema,
   executiveSummarySchema,
   keyFindingsSchema,
   recommendedActionsSchema,
@@ -9,6 +10,18 @@ import {
   vendorRiskSchema,
 } from "./schemas";
 import { GROUNDING_RULES, renderSections, SECTION_LABELS } from "./prompts";
+import {
+  e23DataBlock,
+  e23GapData,
+  e23HeaderLines,
+  enforceE23GapPositions,
+  enforceE23SectionKeys,
+  fixItListEmptyAndComplete,
+  fixItPromptBlock,
+  isE23Run,
+  type PositionCorrection,
+} from "./e23Gap";
+import { NO_FIX_IT_ITEMS } from "./abstainReasons";
 
 export { ANALYZER_VERSION } from "./prompts";
 
@@ -18,7 +31,8 @@ export type AnalysisSectionKey =
   | "recommendedActions"
   | "riskAnalysis"
   | "complianceGap"
-  | "vendorRisk";
+  | "vendorRisk"
+  | "e23Gap";
 
 export const ANALYSIS_SECTION_KEYS: AnalysisSectionKey[] = [
   "executiveSummary",
@@ -27,6 +41,7 @@ export const ANALYSIS_SECTION_KEYS: AnalysisSectionKey[] = [
   "riskAnalysis",
   "complianceGap",
   "vendorRisk",
+  "e23Gap",
 ];
 
 /**
@@ -53,14 +68,33 @@ export interface AnalyzerExtras {
   /** Rendered output of renderFacts(). Whole-estate, so a single prompt can
    *  relate one section to another. */
   facts?: string;
+  /** The facts block for the analyzers whose output prints in the formal
+   *  report: on an E-23 run the fix-it list is counts only. Falls back to
+   *  `facts` when absent. */
+  formalFacts?: string;
 }
 
 export interface AnalyzerDefinition {
   key: AnalysisSectionKey;
   schema: z.ZodTypeAny;
   buildSystemPrompt: () => string;
+  /**
+   * A stated reason to abstain without an LLM call, decided from the data
+   * alone; null to go on. Checked before buildUserPrompt, whose "" carries no
+   * reason of its own.
+   */
+  abstainWithoutCall?: (reportData: ReportData) => string | null;
   /** Returns "" when there is nothing worth spending an LLM call on. */
   buildUserPrompt: (reportData: ReportData, extras: AnalyzerExtras) => string;
+  /**
+   * Constraints enforced in code on a parsed, provenance-checked payload,
+   * where asking the model is not enough. Returns the corrected payload and
+   * what was changed; runAnalyzers records the changes in audit_metadata.
+   */
+  enforce?: (
+    payload: any,
+    reportData: ReportData,
+  ) => { payload: any; corrections: PositionCorrection[] };
 }
 
 const RISK_SECTIONS = ["projectRisks", "vendorRisks", "modelRisks"];
@@ -75,9 +109,16 @@ function subjectOf(reportData: ReportData): { fw: string; subject: string } {
   };
 }
 
+/**
+ * The shared prompt header. An E-23 run adds its audience line, the
+ * no-compliance rule and the group count, so every analyzer writes for the
+ * board or the examiner within spec §3; any other report's header is exactly
+ * what it was.
+ */
 function header(reportData: ReportData): string {
   const { fw, subject } = subjectOf(reportData);
-  return `Framework: ${fw}\nSubject: ${subject}`;
+  const e23 = e23HeaderLines(reportData);
+  return `Framework: ${fw}\nSubject: ${subject}${e23 ? `\n${e23}` : ""}`;
 }
 
 /**
@@ -88,11 +129,22 @@ function header(reportData: ReportData): string {
  * reason: raw sections run ~38k tokens per prompt vs ~6k for summaries, sent
  * three times per report.
  */
-function renderSummaries(summaries: Record<string, string> | undefined): string {
-  return Object.entries(summaries ?? {})
-    .filter(([, v]) => v && v.length > 0)
-    .map(([key, summary]) => `[${SECTION_LABELS[key] || key}]\n${summary}`)
+function renderSummaries(
+  summaries: Record<string, string> | undefined,
+  opts: { formal?: boolean; withKeys?: boolean } = {},
+): string {
+  const entries = Object.entries(summaries ?? {}).filter(
+    ([key, v]) => v && v.length > 0 && !(opts.formal && INTERNAL_ONLY_SUMMARIES.has(key)),
+  );
+  const body = entries
+    .map(
+      ([key, summary]) =>
+        `[${SECTION_LABELS[key] || key}]${opts.withKeys ? ` (section key: ${key})` : ""}\n${summary}`,
+    )
     .join("\n\n");
+  return body && opts.withKeys
+    ? `${body}\n\nSection keys in this input (section and related_sections must use these exactly): ${entries.map(([key]) => key).join(", ")}`
+    : body;
 }
 
 /**
@@ -101,9 +153,22 @@ function renderSummaries(summaries: Record<string, string> | undefined): string 
  * ALL six analyzers: aggregates are exactly what the raw-section analyzers
  * lack, and a whole-estate block is what makes cross-section claims possible.
  */
-function factsBlock(extras: AnalyzerExtras): string {
-  return extras.facts ? `${extras.facts}\n\n` : "";
+function factsBlock(extras: AnalyzerExtras, opts: { formal?: boolean } = {}): string {
+  const facts = opts.formal ? (extras.formalFacts ?? extras.facts) : extras.facts;
+  return facts ? `${facts}\n\n` : "";
 }
+
+/**
+ * Section summaries that never reach an analyzer whose output prints in the
+ * formal report (spec 8.5 vs 8.6): the fix-it list's summary names items,
+ * owners and what closes each, which belong to the internal document only.
+ * executiveSummary, keyFindings and e23Gap get the fix-it counts from the
+ * formal facts block instead; recommendedActions keeps everything.
+ */
+const INTERNAL_ONLY_SUMMARIES = new Set(["e23FixItList"]);
+
+/** The formal-report inputs: no internal-only summaries, fix-it as counts. */
+const FORMAL = { formal: true } as const;
 
 export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
   executiveSummary: {
@@ -112,10 +177,10 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
     buildSystemPrompt: () =>
       `${GROUNDING_RULES}\n\nYou are writing the Executive Summary, in three to five paragraphs.\n\nRequired lead: open with the single most consequential finding in this report and the specific evidence that supports it — a count, a share, a date or a named item. Everything after the lead follows from it: why it matters under this framework, what else in the estate it connects to, and what the reader should do about it. Do not work through a fixed outline, and do not give a paragraph to a topic the data does not support.\n\nName the framework and the subject explicitly wherever you would otherwise write "the framework" or "the organization" — never write "the framework" when the input names it.`,
     buildUserPrompt: (rd, extras) => {
-      const body = renderSummaries(extras.sectionSummaries);
+      const body = renderSummaries(extras.sectionSummaries, FORMAL);
       if (!body) return "";
       const { fw, subject } = subjectOf(rd);
-      return `${header(rd)}\n\n${factsBlock(extras)}Section analyses:\n${body}\n\nWrite the executive summary for ${subject} against ${fw}.`;
+      return `${header(rd)}\n\n${factsBlock(extras, FORMAL)}${e23DataBlock(rd)}Section analyses:\n${body}\n\nWrite the executive summary for ${subject} against ${fw}.`;
     },
   },
 
@@ -124,10 +189,17 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
     schema: keyFindingsSchema,
     buildSystemPrompt: () =>
       `${GROUNDING_RULES}\n\nYou are extracting Key Findings: five to eight of the most important observations across the supplied sections. Attribute each finding to the section key it came from.\n\nA finding must carry the evidence that makes it a finding — a count, a share, a status, a date or a named item — and must not simply restate a sentence from the section analyses. Where the estate facts show the same weakness in more than one section, say so in the finding text and name the sections it spans; one finding that connects two sections is worth more than two findings that repeat each other.\n\nEvery finding also carries three further fields, and each key must be present:\n- basis: "observed" when the supplied data states the claim directly, "inferred" when it follows from the supplied data by reasoning the data does not itself state, "absent" when the claim is that something required is missing. The label describes the CLAIM. It never licenses naming a control, vendor, risk or person that does not appear verbatim in the supplied data. Use null only when none of the three fits.\n- what_would_close_this: the specific condition under which this stops being a finding, written so the next report could check it against the same fields. Use null only when the data gives you no concrete condition to name.\n- related_sections: the other section keys this finding draws on, spelled exactly as they appear in the input. Use an empty array when the finding sits inside a single section.`,
+    // An E-23 run shows each summary's section key: the field takes a key,
+    // and a model shown only labels copies one (up to 41 characters, past the
+    // 40 the schema allows) and loses the whole analysis. A general report
+    // keeps today's prompt; its labels all fit the field.
     buildUserPrompt: (rd, extras) => {
-      const body = renderSummaries(extras.sectionSummaries);
-      return body ? `${header(rd)}\n\n${factsBlock(extras)}Section analyses:\n${body}` : "";
+      const body = renderSummaries(extras.sectionSummaries, { ...FORMAL, withKeys: isE23Run(rd) });
+      return body
+        ? `${header(rd)}\n\n${factsBlock(extras, FORMAL)}${e23DataBlock(rd)}Section analyses:\n${body}`
+        : "";
     },
+    enforce: enforceE23SectionKeys,
   },
 
   recommendedActions: {
@@ -135,9 +207,16 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
     schema: recommendedActionsSchema,
     buildSystemPrompt: () =>
       `${GROUNDING_RULES}\n\nYou are producing three to five prioritised, actionable recommendations.\n\nOwner rule: set suggestedOwner ONLY when that exact person or role name appears verbatim in the supplied data. Otherwise it MUST be null. Never infer an owner from context and never invent one.\n\nEvery action also carries basis, and the key must be present: "observed" when the supplied data states the problem this action addresses, "inferred" when the problem follows from the supplied data by reasoning the data does not itself state, "absent" when the problem is that something required is missing. The label describes the CLAIM, not the subject — an "inferred" action still may not name anything absent from the supplied data. Use null only when none of the three fits.`,
+    // An E-23 run whose fix-it list is complete and empty has nothing to act
+    // on: abstain with that reason instead of letting the model invent work.
+    abstainWithoutCall: (rd) => (fixItListEmptyAndComplete(rd) ? NO_FIX_IT_ITEMS : null),
+    // An E-23 run also hands it the fix-it list, so its actions point at real
+    // items; fixItPromptBlock is "" for every other report.
     buildUserPrompt: (rd, extras) => {
       const body = renderSummaries(extras.sectionSummaries);
-      return body ? `${header(rd)}\n\n${factsBlock(extras)}Section analyses:\n${body}` : "";
+      return body
+        ? `${header(rd)}\n\n${factsBlock(extras)}${e23DataBlock(rd)}Section analyses:\n${body}${fixItPromptBlock(rd)}`
+        : "";
     },
   },
 
@@ -160,7 +239,11 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
     buildUserPrompt: (rd, extras) => {
       const readiness = extras.readiness;
       const evidenceGaps = extras.evidenceGaps;
-      const compliance = renderSections(rd.sections as any, ["compliance", "clausesAndAnnexes"]);
+      const compliance = renderSections(rd.sections as any, [
+        "compliance",
+        "clausesAndAnnexes",
+        "frameworkRequirements",
+      ]);
       const hasReadiness = !!(
         readiness?.controlScores?.length ||
         readiness?.weakestControls?.length ||
@@ -212,5 +295,19 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
       const body = renderSections(rd.sections as any, VENDOR_SECTIONS);
       return body ? `${header(rd)}\n\n${factsBlock(extras)}Vendor data:\n${body}` : "";
     },
+  },
+
+  e23Gap: {
+    key: "e23Gap",
+    schema: e23GapSchema,
+    buildSystemPrompt: () =>
+      `${GROUNDING_RULES}\n\nYou are writing the E-23 gap analysis of a self-assessment report on model risk management under OSFI Guideline E-23. Never state or imply OSFI's view, a certification or compliance. Explain the contradictions listed; never add new ones. \`position\` describes how far the MRM data is consistent with the self-assessed statuses.\n\nWrite one principles entry per E-23 requirement group in the input, with the group title copied exactly as written. Position rules:\n- A group whose data coverage is "Self-assessment only" is "not assessable": no rule compares it with the model risk management records.\n- A group holding a requirement that a listed contradiction names is never "consistent".\n- Otherwise choose "consistent", "partly consistent" or "inconsistent" from the contradictions and the model risk management status in the input.\n\nEvery principle also carries two further fields, and each key must be present:\n- basis: "observed" when the input states what the explanation says, "inferred" when it follows from the input by reasoning the input does not state, "absent" when the point is that something required is missing from the records. The label describes the claim; the group must still appear verbatim in the input. Use null only when none of the three fits.\n- what_would_close_this: the specific condition under which the records would bear out the self-assessed status, written so the next report could check it. Use null only when the input gives no concrete condition to name.`,
+    buildUserPrompt: (rd, extras) => {
+      const data = e23GapData(rd);
+      return data
+        ? `${header(rd)}\n\n${factsBlock(extras, FORMAL)}${e23DataBlock(rd)}${data}\n\nWrite the E-23 gap analysis for ${subjectOf(rd).subject}.`
+        : "";
+    },
+    enforce: enforceE23GapPositions,
   },
 };

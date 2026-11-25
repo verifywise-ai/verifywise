@@ -46,7 +46,10 @@ describe("useCreateVendorRisk", () => {
     result.current.mutate({ risk_name: "Test Risk" });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(mockCreate).toHaveBeenCalledWith({ body: { risk_name: "Test Risk" } });
+    expect(mockCreate).toHaveBeenCalledWith({
+      body: { risk_name: "Test Risk" },
+      config: { suppressGlobalErrorToast: true },
+    });
   });
 });
 
@@ -60,7 +63,11 @@ describe("useUpdateVendorRisk", () => {
     result.current.mutate({ id: 1, data: { risk_name: "Updated" } });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(mockUpdate).toHaveBeenCalledWith({ id: 1, body: { risk_name: "Updated" } });
+    expect(mockUpdate).toHaveBeenCalledWith({
+      id: 1,
+      body: { risk_name: "Updated" },
+      config: { suppressGlobalErrorToast: true },
+    });
   });
 });
 
@@ -74,7 +81,7 @@ describe("useDeleteVendorRisk", () => {
     result.current.mutate(5);
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(mockDelete).toHaveBeenCalledWith({ id: 5 });
+    expect(mockDelete).toHaveBeenCalledWith({ id: 5, config: { suppressGlobalErrorToast: true } });
   });
 });
 
@@ -88,5 +95,40 @@ describe("useVendorRisk", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual({ id: 3, risk_name: "Data Leak" });
+  });
+});
+
+// VC-L6: every vendor risk write refreshes the insight reports, wherever it
+// was made (the Vendors page or a vendor's risk dialog).
+describe("vendor risk writes refresh the insights", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const renderWithSpy = <T>(hook: () => T) => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    });
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    const wrapper = ({ children }: { children: React.ReactNode }) =>
+      React.createElement(QueryClientProvider, { client: queryClient }, children);
+    return { ...renderHook(hook, { wrapper }), invalidate };
+  };
+
+  const invalidatedKeys = (invalidate: { mock: { calls: unknown[][] } }) =>
+    invalidate.mock.calls.map((call) => (call[0] as { queryKey: unknown[] }).queryKey);
+
+  it.each([
+    ["create", () => useCreateVendorRisk(), (m: any) => m.mutate({ risk_description: "x" })],
+    ["update", () => useUpdateVendorRisk(), (m: any) => m.mutate({ id: 1, data: {} })],
+    ["delete", () => useDeleteVendorRisk(), (m: any) => m.mutate(1)],
+  ])("on %s", async (_name, hook, run) => {
+    mockCreate.mockResolvedValue({ status: 201 });
+    mockUpdate.mockResolvedValue({ status: 202 });
+    mockDelete.mockResolvedValue({ status: 202 });
+    const { result, invalidate } = renderWithSpy(hook as () => any);
+
+    run(result.current);
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(invalidatedKeys(invalidate)).toContainEqual(["vendorRiskInsights"]);
   });
 });

@@ -1,0 +1,242 @@
+/**
+ * @fileoverview Deterministic OSFI E-23 fix-it list (spec 8.6). A pure function
+ * over the requirement rows, the fired contradiction rules and the MRM model
+ * facts; the AI never ranks or edits it.
+ *
+ * @module services/reporting/e23/fixItList
+ */
+
+import type {
+  E23ContradictionsSectionData,
+  E23FixItItem,
+  E23FixItListSectionData,
+  FrameworkRequirementRow,
+  FrameworkRequirementsSectionData,
+  MrmModelFacts,
+} from "../../../domain.layer/interfaces/i.reportGeneration";
+import type { Status } from "../../../types/status.type";
+import { hasNoActiveOwner } from "../collectors/frameworkRollup";
+import { e23RowsByNumber, type E23RuleId, type PlacedE23Row } from "./contradictionRules";
+import { FIX_IT_CLOSES_WHEN } from "./e23Text";
+import { isCriticalOrHigh, isOpenFinding, isValidationOverdue, time } from "./mrmFleet";
+import { E23_FRAMEWORK_ID } from "./e23Parameters";
+
+const UNASSIGNED = "Unassigned";
+// Typed against the shared status list, so a rename fails the typecheck.
+const NEEDS_REWORK: Status = "Needs rework";
+const SEVERITY_RANK = { high: 0, medium: 1, low: 2 } as const;
+
+const flatten = (rows: FrameworkRequirementRow[]): FrameworkRequirementRow[] =>
+  rows.flatMap((r) => [r, ...flatten(r.children ?? [])]);
+
+const ownerOf = (owner: string | null): string =>
+  hasNoActiveOwner(owner) ? UNASSIGNED : (owner as string);
+
+/** First matching source in order 3, 2, 4, 5, 6; null when the row needs nothing. */
+function requirementItem(row: FrameworkRequirementRow): E23FixItItem | null {
+  const base = {
+    where: row.title.trim(),
+    owner: ownerOf(row.owner),
+    dueDate: row.dueDate,
+    overdue: row.isOverdue,
+    sortKey: row.orderNo,
+  };
+  if (!row.isDone && row.isOverdue) {
+    return {
+      ...base,
+      severity: "high",
+      source: 3,
+      what: `Past its due date and not done (status: ${row.status})`,
+      closesWhen: FIX_IT_CLOSES_WHEN["3"],
+    };
+  }
+  if (!row.isDone && hasNoActiveOwner(row.owner)) {
+    return {
+      ...base,
+      severity: "medium",
+      source: 2,
+      what: `Not done and has no owner (status: ${row.status})`,
+      closesWhen: FIX_IT_CLOSES_WHEN["2"],
+    };
+  }
+  if (row.status === NEEDS_REWORK) {
+    return {
+      ...base,
+      severity: "medium",
+      source: 4,
+      what: "Marked as needing rework",
+      closesWhen: FIX_IT_CLOSES_WHEN["4"],
+    };
+  }
+  if (row.isDone && row.evidenceCount === 0) {
+    return {
+      ...base,
+      severity: "medium",
+      source: 5,
+      what: `Marked ${row.status} with no evidence attached`,
+      closesWhen: FIX_IT_CLOSES_WHEN["5"],
+    };
+  }
+  if (!row.isDone) {
+    return {
+      ...base,
+      severity: "low",
+      source: 6,
+      what: `Not done (status: ${row.status})`,
+      closesWhen: FIX_IT_CLOSES_WHEN["6"],
+    };
+  }
+  return null;
+}
+
+// More urgent first: overdue, then the earlier due date (none last).
+function moreUrgent(a: E23FixItItem, b: E23FixItItem): boolean {
+  if (a.overdue !== b.overdue) return a.overdue;
+  return (a.dueDate ?? "\uffff") < (b.dueDate ?? "\uffff");
+}
+
+/**
+ * The requirement items, one per (source, requirement number). With E-23 on
+ * several pairings each requirement appears once per pairing; their items
+ * merge into one: the worst severity, the most urgent pairing's text and due
+ * date, every owner, and the pairings named in `where`.
+ */
+function requirementItems(byNumber: Map<string, PlacedE23Row[]>): E23FixItItem[] {
+  const pairingCount = new Set(
+    [...byNumber.values()].flat().flatMap((p) => (p.useCase === undefined ? [] : [p.useCase])),
+  ).size;
+  const items: E23FixItItem[] = [];
+  for (const placed of byNumber.values()) {
+    const bySource = new Map<number, Array<{ item: E23FixItItem; useCase?: string }>>();
+    for (const p of placed) {
+      const item = requirementItem(p.row);
+      if (!item) continue;
+      bySource.set(item.source, [
+        ...(bySource.get(item.source) ?? []),
+        { item, useCase: p.useCase },
+      ]);
+    }
+    for (const list of bySource.values()) {
+      const lead = list.reduce((a, c) => (moreUrgent(c.item, a.item) ? c : a)).item;
+      const useCases = [...new Set(list.flatMap((e) => (e.useCase ? [e.useCase] : [])))];
+      items.push({
+        ...lead,
+        severity: list
+          .map((e) => e.item.severity)
+          .reduce((a, c) => (SEVERITY_RANK[c] < SEVERITY_RANK[a] ? c : a)),
+        overdue: list.some((e) => e.item.overdue),
+        owner: [...new Set(list.map((e) => e.item.owner))].join(", "),
+        where:
+          pairingCount > 1 && useCases.length > 0
+            ? `${lead.where} (${useCases.join(", ")})`
+            : lead.where,
+      });
+    }
+  }
+  return items;
+}
+
+function modelItem(m: MrmModelFacts, generatedAt: Date): E23FixItItem | null {
+  const now = generatedAt.getTime();
+  const openCriticalHigh = m.findings.filter((f) => isOpenFinding(f) && isCriticalOrHigh(f));
+  const validationOverdue = isValidationOverdue(m, generatedAt);
+  const validationDueIso = m.openValidationNextDue;
+
+  const gaps: string[] = [];
+  if (!m.tier) gaps.push("Untiered");
+  if (validationOverdue) gaps.push("Overdue validation");
+  if (m.roles.owner.length === 0) gaps.push("No owner role");
+  if (m.roles.approver.length === 0 && m.inventoryApproverId == null) gaps.push("No approver");
+  if ((m.tier === "1" || m.tier === "2") && m.activeThresholds === 0) {
+    gaps.push("No active threshold");
+  }
+  if (openCriticalHigh.length > 0) gaps.push("Open critical or high finding");
+  if (gaps.length === 0) return null;
+
+  // Candidate dates: open critical/high finding dues, plus the validation due date when overdue.
+  const candidates = [
+    ...openCriticalHigh.map((f) => ({ iso: f.dueDate, at: time(f.dueDate) })),
+    { iso: validationDueIso, at: validationOverdue ? time(validationDueIso) : null },
+  ].filter((c): c is { iso: string; at: number } => c.iso !== null && c.at !== null);
+  const earliest = (list: typeof candidates) =>
+    list.reduce<(typeof candidates)[number] | null>(
+      (a, c) => (a === null || c.at < a.at ? c : a),
+      null,
+    );
+  // When something is past due, show the earliest date that actually is; else the earliest upcoming one.
+  const pastDue = earliest(candidates.filter((c) => c.at < now));
+  const chosen = pastDue ?? earliest(candidates);
+  const dueDate = chosen?.iso ?? null;
+  const overdue = pastDue !== null;
+
+  return {
+    severity: m.tier === "1" || openCriticalHigh.length > 0 ? "high" : "medium",
+    source: 7,
+    what: gaps.join("; "),
+    where: m.name,
+    owner: m.roles.owner[0] ?? UNASSIGNED,
+    dueDate,
+    overdue,
+    closesWhen: FIX_IT_CLOSES_WHEN["7"],
+    sortKey: 0,
+  };
+}
+
+export function buildE23FixItList(input: {
+  requirements: FrameworkRequirementsSectionData | undefined;
+  contradictions: E23ContradictionsSectionData;
+  models: MrmModelFacts[];
+  generatedAt: Date;
+}): E23FixItListSectionData {
+  const rows = (input.requirements?.frameworks ?? [])
+    .filter((f) => f.frameworkId === E23_FRAMEWORK_ID)
+    .flatMap((f) => f.groups.flatMap((g) => flatten(g.requirements)));
+
+  const items: E23FixItItem[] = [];
+  // Rule number per source 1 item, for the final sort tiebreak (natural C1..C13 order).
+  const ruleNumber = new Map<E23FixItItem, number>();
+
+  for (const rule of input.contradictions.fired) {
+    const title = rule.requirementTitle.trim();
+    const matched =
+      rows.find((r) => r.title.trim() === title && r.isDone) ??
+      rows.find((r) => r.title.trim() === title);
+    // A requirement can carry both a source 1 item (a rule fired on it) and a
+    // source 5 item (done without evidence). That is intended: the fixes differ.
+    const item: E23FixItItem = {
+      severity: "high",
+      source: 1,
+      what: rule.finding,
+      where: title,
+      owner: matched ? ownerOf(matched.owner) : UNASSIGNED,
+      dueDate: null,
+      overdue: false,
+      closesWhen: FIX_IT_CLOSES_WHEN[rule.ruleId as E23RuleId],
+      sortKey: 0,
+    };
+    ruleNumber.set(item, Number(rule.ruleId.slice(1)));
+    items.push(item);
+  }
+
+  items.push(...requirementItems(e23RowsByNumber(input.requirements)));
+
+  for (const m of input.models.filter((x) => !x.retired)) {
+    const item = modelItem(m, input.generatedAt);
+    if (item) items.push(item);
+  }
+
+  items.sort(
+    (a, b) =>
+      SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] ||
+      Number(b.overdue) - Number(a.overdue) ||
+      a.sortKey - b.sortKey ||
+      a.where.localeCompare(b.where) ||
+      a.source - b.source ||
+      (ruleNumber.get(a) ?? 0) - (ruleNumber.get(b) ?? 0) ||
+      a.what.localeCompare(b.what),
+  );
+
+  const counts = { high: 0, medium: 0, low: 0 };
+  for (const i of items) counts[i.severity] += 1;
+  return { items, counts };
+}

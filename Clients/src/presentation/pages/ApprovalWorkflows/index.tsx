@@ -13,8 +13,11 @@ import { useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCan } from "../../../application/hooks/useCan";
 import { HOME_QUEUE_QUERY_KEY } from "../../../application/hooks/useHomeQueue";
+import {
+  useCaseApprovalWorkflowKeys,
+  useCaseApprovalWorkflowsQueryKey,
+} from "../../../application/hooks/useUseCaseApprovalWorkflows";
 import { dispatchApprovalRequestsChanged } from "../../../application/events/approvalRequestEvents";
-import { ApprovalWorkflowStepModel } from "../../../domain/models/Common/approvalWorkflow/approvalWorkflowStepModel";
 import { ApprovalStatus } from "../../../domain/enums/aiApprovalWorkflow.enum";
 import { FilterColumn } from "../../components/Table/FilterBy";
 import { TableFilter } from "../../components/Table/TableFilter";
@@ -25,10 +28,10 @@ import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/us
 import {
   getAllApprovalWorkflows,
   getApprovalWorkflowById,
-  createApprovalWorkflow,
-  updateApprovalWorkflow,
+  saveApprovalWorkflow,
   deleteApprovalWorkflow,
 } from "../../../application/repository/approvalWorkflow.repository";
+import type { ApprovalWorkflowFormData } from "../../../application/utils/approvalWorkflowBody";
 
 type ApprovalWorkflowColumnKey =
   "workflow_title" | "entity_name" | "steps" | "date_updated" | "actions";
@@ -67,6 +70,17 @@ const ApprovalWorkflows: React.FC = () => {
   }, [setSearchParams]);
   // A decision here removes the request from Home and changes the top-bar count.
   const queryClient = useQueryClient();
+  // The use case workflow select (create form, use case overview) caches
+  // its list; a saved or archived workflow must show up there at once.
+  // The overview's attached workflow shows the title and archived state too.
+  const invalidateUseCaseWorkflows = useCallback(
+    () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: useCaseApprovalWorkflowsQueryKey }),
+        queryClient.invalidateQueries({ queryKey: useCaseApprovalWorkflowKeys.all }),
+      ]),
+    [queryClient],
+  );
   const handleLinkedRequestDecided = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: HOME_QUEUE_QUERY_KEY });
     dispatchApprovalRequestsChanged();
@@ -230,106 +244,25 @@ const ApprovalWorkflows: React.FC = () => {
     setIsNewWorkflowModalOpen(true);
   };
 
-  // Map entity ID to entity_type string
-  const getEntityType = (entityId: number): string => {
-    switch (entityId) {
-      case 1:
-        return "use_case";
-      case 2:
-        return "file";
-      case 3:
-        return "risk";
-      case 4:
-        return "vendor";
-      case 5:
-        return "model_inventory";
-      case 6:
-        return "policy";
-      case 7:
-        return "incident";
-      case 8:
-        return "task";
-      case 9:
-        return "dataset";
-      case 10:
-        return "training";
-      case 11:
-        return "evidence";
-      case 12:
-        return "ai_action";
-      case 13:
-        return "automation";
-      case 14:
-        return "pmm_config";
-      case 15:
-        return "note";
-      default:
-        return "use_case";
-    }
-  };
-
-  const handleWorkflowSuccess = async (formData: {
-    workflow_title: string;
-    entity: number;
-    steps: ApprovalWorkflowStepModel[];
-    auto_approve_max_risk: string | null;
-  }) => {
+  const handleWorkflowSuccess = async (formData: ApprovalWorkflowFormData) => {
     try {
-      const entityType = getEntityType(formData.entity);
-      const autoApproveMaxRisk =
-        entityType === "use_case" ? (formData.auto_approve_max_risk ?? null) : null;
-
-      if (selectWorkflow) {
-        await updateApprovalWorkflow({
-          id: selectWorkflow.id!,
-          body: {
-            workflow_title: formData.workflow_title,
-            entity_type: entityType,
-            auto_approve_max_risk: autoApproveMaxRisk,
-            steps: formData.steps.map((step) => ({
-              step_name: step.step_name,
-              description: step.description,
-              approver_ids: step.approver_ids || [],
-              requires_all_approvers: step.requires_all_approvers ?? false,
-              sla_hours: step.sla_hours ?? null,
-              escalation_user_id: step.escalation_user_id ?? null,
-            })),
-          },
-        });
-
-        logEngine({
-          type: "info",
-          message: "Workflow updated successfully!",
-        });
-      } else {
-        await createApprovalWorkflow({
-          body: {
-            workflow_title: formData.workflow_title,
-            entity_type: entityType,
-            auto_approve_max_risk: autoApproveMaxRisk,
-            steps: formData.steps.map((step) => ({
-              step_name: step.step_name,
-              description: step.description,
-              approver_ids: step.approver_ids || [],
-              requires_all_approvers: step.requires_all_approvers ?? false,
-              sla_hours: step.sla_hours ?? null,
-              escalation_user_id: step.escalation_user_id ?? null,
-            })),
-          },
-        });
-
-        logEngine({
-          type: "info",
-          message: "Workflow created successfully!",
-        });
-      }
+      await saveApprovalWorkflow({ id: selectWorkflow?.id ?? undefined, formData });
+      logEngine({
+        type: "info",
+        message: selectWorkflow
+          ? "Workflow updated successfully!"
+          : "Workflow created successfully!",
+      });
       handleCloseModal();
+      void invalidateUseCaseWorkflows();
       await fetchApprovalWorkflowData(false);
     } catch (error) {
       logEngine({
         type: "error",
         message: `Failed to save workflow: ${error}`,
       });
+      // The modal keeps the input and shows the message.
+      throw error;
     }
   };
 
@@ -343,6 +276,7 @@ const ApprovalWorkflows: React.FC = () => {
       setArchivedId(id);
 
       await deleteApprovalWorkflow({ id: parseInt(id, 10) });
+      void invalidateUseCaseWorkflows();
 
       logEngine({
         type: "info",
@@ -364,6 +298,20 @@ const ApprovalWorkflows: React.FC = () => {
       });
     }
   };
+
+  // Stable between renders, so the modal does not reset what the user typed.
+  const workflowInitialData = useMemo(
+    () =>
+      selectWorkflow
+        ? {
+            workflow_title: selectWorkflow.workflow_title || "",
+            entity: selectWorkflow.entity ?? 0,
+            steps: selectWorkflow.steps || [],
+            auto_approve_max_risk: selectWorkflow.auto_approve_max_risk ?? null,
+          }
+        : undefined,
+    [selectWorkflow],
+  );
 
   /** -------------------- RENDER -------------------- */
   return (
@@ -427,16 +375,7 @@ const ApprovalWorkflows: React.FC = () => {
       <CreateNewApprovalWorkflow
         isOpen={isNewWorkflowModalOpen}
         setIsOpen={handleCloseModal}
-        initialData={
-          selectWorkflow
-            ? {
-                workflow_title: selectWorkflow.workflow_title || "",
-                entity: selectWorkflow.entity ?? 0,
-                steps: selectWorkflow?.steps || [],
-                auto_approve_max_risk: selectWorkflow.auto_approve_max_risk ?? null,
-              }
-            : undefined
-        }
+        initialData={workflowInitialData}
         isEdit={!!selectWorkflow}
         onSuccess={handleWorkflowSuccess}
       />

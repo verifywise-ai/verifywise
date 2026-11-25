@@ -27,14 +27,7 @@ import type {
   IAiAppAssessment,
 } from "../../../../domain/interfaces/i.aiAppBulk";
 import { triggerBrowserDownload } from "../../../utils/browserDownload.utils";
-import {
-  controlButtonSx,
-  controlSearchSx,
-  controlSelectSx,
-  filterRowStyle,
-  mainStackStyle,
-  toolbarStyle,
-} from "../style";
+import { filterRowStyle, mainStackStyle, toolbarStyle } from "../style";
 import { AssessmentAnswers, questionsFor } from "./AssessmentDisplay";
 import AssessmentAnswerModal from "./AssessmentAnswerModal";
 import AssessmentsTable from "./AssessmentsTable";
@@ -236,7 +229,6 @@ export default function AIAppAssessments() {
             startIcon={<ArrowLeft size={16} strokeWidth={1.5} />}
             onClick={() => navigate("/ai-apps")}
             testId="ai-app-assessments-back"
-            sx={controlButtonSx}
           />
         </Box>
         <Box sx={toolbarStyle}>
@@ -246,7 +238,7 @@ export default function AIAppAssessments() {
               value={searchTerm}
               onChange={setSearchTerm}
               inputProps={{ "data-testid": "ai-app-assessments-search" }}
-              sx={{ ...controlSearchSx, width: 220 }}
+              sx={{ width: 220 }}
             />
             <Select
               id="ai-app-assessments-status"
@@ -255,7 +247,7 @@ export default function AIAppAssessments() {
               onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
               items={STATUS_OPTIONS}
               dataTestId="ai-app-assessments-status"
-              sx={{ ...controlSelectSx, width: 150 }}
+              sx={{ width: 150 }}
             />
             <Select
               id="ai-app-assessments-questionnaire"
@@ -270,7 +262,7 @@ export default function AIAppAssessments() {
               ]}
               disabled={isLoadingQuestionnaires}
               dataTestId="ai-app-assessments-questionnaire"
-              sx={{ ...controlSelectSx, width: 200 }}
+              sx={{ width: 200 }}
             />
             <Checkbox
               id="ai-app-assessments-assigned-to-me"
@@ -291,7 +283,6 @@ export default function AIAppAssessments() {
                   disabled={!selectedQuestionnaire}
                   loading={worksheetMutation.isPending}
                   testId="ai-app-assessments-download-worksheet"
-                  sx={controlButtonSx}
                 />
               </span>
             </Tooltip>
@@ -304,7 +295,6 @@ export default function AIAppAssessments() {
                   onClick={() => setIsUploadOpen(true)}
                   disabled={!selectedQuestionnaire}
                   testId="ai-app-assessments-upload-answers"
-                  sx={controlButtonSx}
                 />
               </span>
             </Tooltip>
@@ -315,7 +305,6 @@ export default function AIAppAssessments() {
                 startIcon={<ListChecks size={16} strokeWidth={1.5} />}
                 onClick={() => setIsManagerOpen(true)}
                 testId="ai-app-assessments-questionnaires"
-                sx={controlButtonSx}
               />
             )}
           </Box>

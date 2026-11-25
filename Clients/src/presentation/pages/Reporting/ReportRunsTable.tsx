@@ -39,7 +39,11 @@ import {
   useRunAnalyses,
 } from "../../../application/hooks/useReporting";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
-import { downloadReportRun } from "../../../application/repository/reporting.repository";
+import { showAlert } from "../../../infrastructure/api/customAxios";
+import {
+  downloadReportRun,
+  downloadReportRunFixItList,
+} from "../../../application/repository/reporting.repository";
 
 const ROWS_PER_PAGE_DEFAULT = 10;
 
@@ -55,8 +59,8 @@ const STATUS_LABEL: Record<string, string> = {
   failed: "Failed",
 };
 
-// partial_success is a success with a delivery caveat — the file exists and is
-// downloadable, so it must not read as an error.
+// partial_success is a success with a caveat (a delivery channel failed or part of a
+// section could not be read) — the file exists and is downloadable, so it must not read as an error.
 const STATUS_VARIANT: Record<string, "default" | "info" | "success" | "warning" | "error"> = {
   queued: "default",
   running: "info",
@@ -74,18 +78,21 @@ const CHANNEL_LABEL: Record<string, string> = {
 /**
  * What to show on hover over the status.
  *
- * error_message is only written on the failed path; a partial_success has a
- * NULL one and records which channel broke in delivery_status instead. Without
- * the second branch "Partial success" is a dead end for the user.
+ * A partial_success can carry both reasons at once: error_message says which
+ * parts of the report could not be read, delivery_status says which channel
+ * broke. Both are shown, so neither hides the other.
  */
 const statusDetail = (r: any): string => {
-  if (r.error_message) return r.error_message;
+  const parts: string[] = [];
+  if (r.error_message) parts.push(r.error_message);
   const delivery = r.delivery_status;
-  if (!delivery || typeof delivery !== "object") return "";
-  const failed = Object.keys(CHANNEL_LABEL)
-    .filter((k) => delivery[k]?.status === "failed")
-    .map((k) => CHANNEL_LABEL[k]);
-  return failed.length ? `Delivery failed: ${failed.join(", ")}` : "";
+  if (delivery && typeof delivery === "object") {
+    const failed = Object.keys(CHANNEL_LABEL)
+      .filter((k) => delivery[k]?.status === "failed")
+      .map((k) => CHANNEL_LABEL[k]);
+    if (failed.length) parts.push(`Delivery failed: ${failed.join(", ")}`);
+  }
+  return parts.join(" ");
 };
 
 /**
@@ -96,6 +103,24 @@ const statusDetail = (r: any): string => {
  * came from is the adjacent column; repeating it here would say nothing new.
  */
 const reportName = (r: any): string => r.output_filename ?? `Run #${r.id}`;
+
+/**
+ * Draft or Final, for runs of a report that takes the final parameter (the
+ * OSFI E-23 report): is_final is "true" or "false" there and null otherwise,
+ * so other reports get no chip.
+ */
+const versionChip = (r: any) => {
+  if (r.is_final == null) return null;
+  const isFinal = r.is_final === "true";
+  return (
+    <Chip
+      label={isFinal ? "Final" : "Draft"}
+      variant={isFinal ? "info" : "default"}
+      size="small"
+      uppercase={false}
+    />
+  );
+};
 
 /**
  * scope_project_id is the run's project (from config_snapshot, falling back to
@@ -144,9 +169,15 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
   // Mirrors ArchiveTab's original handler: turn the Blob into an object URL,
   // trigger a save via a throwaway anchor, then revoke the URL. Without this
   // the returned Blob is discarded and clicking Download does nothing.
-  const handleDownload = async (id: number, filename: string | null) => {
+  // The fix-it list of an E-23 run downloads the same way, from its own endpoint.
+  const handleDownload = async (
+    id: number,
+    filename: string | null,
+    fetchFile: (id: number) => Promise<Blob> = downloadReportRun,
+    failureMessage = "Failed to download the report",
+  ) => {
     try {
-      const blob = await downloadReportRun(id);
+      const blob = await fetchFile(id);
       const url = URL.createObjectURL(blob);
       try {
         const a = document.createElement("a");
@@ -158,8 +189,9 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
       } finally {
         URL.revokeObjectURL(url);
       }
-    } catch (error) {
-      console.error("Failed to download report run:", error);
+    } catch {
+      // Same toast as the other Reporting tabs, so a failed download is never silent.
+      showAlert({ variant: "error", body: failureMessage, isToast: true });
     }
   };
 
@@ -214,7 +246,10 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
             {rows.map((r) => (
               <TableRow key={r.id} sx={singleTheme.tableStyles.primary.body.row}>
                 <TableCell sx={{ ...bodyCell, color: textColors.primary }}>
-                  {reportName(r)}
+                  <Stack direction="row" alignItems="center" gap="8px">
+                    <span>{reportName(r)}</span>
+                    {versionChip(r)}
+                  </Stack>
                 </TableCell>
                 <TableCell sx={{ ...bodyCell, color: textColors.secondary }}>
                   {r.template_name ?? "—"}
@@ -256,6 +291,17 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
                     isArchived={variant === "archived"}
                     onDownload={
                       r.file_id ? () => handleDownload(r.id, r.output_filename ?? null) : undefined
+                    }
+                    onDownloadCompanion={
+                      r.companion_file_id
+                        ? () =>
+                            handleDownload(
+                              r.id,
+                              r.companion_filename ?? null,
+                              downloadReportRunFixItList,
+                              "Failed to download the fix-it list",
+                            )
+                        : undefined
                     }
                     onView={() => setSelectedRunId(r.id)}
                     onEdit={() => {}}

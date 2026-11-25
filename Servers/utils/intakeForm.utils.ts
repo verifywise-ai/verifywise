@@ -807,11 +807,6 @@ export const updateSuggestedRiskItemQuery = async (
         SELECT 1
         FROM jsonb_array_elements(s.suggested_risks->'items') AS e(item)
         WHERE e.item->>'id' = :suggestionId
-          -- an accepted risk always keeps a mitigation plan (the register requires one)
-          AND (
-            COALESCE((e.item || :patch::jsonb)->>'state', '') <> 'accepted'
-            OR btrim(COALESCE((e.item || :patch::jsonb)->>'mitigationPlan', '')) <> ''
-          )
       )
     RETURNING (
       SELECT e.item
@@ -836,9 +831,9 @@ export const updateSuggestedRiskItemQuery = async (
 
 /**
  * Move every suggestion in state `from` to state `to` (bulk accept / dismiss),
- * in one statement, on a pending submission only. With
- * `requireMitigationPlan`, items whose mitigation plan is blank are left as
- * they are (the risk register requires one). Returns how many items changed.
+ * in one statement, on a pending submission only. The mitigation plan is
+ * optional, so a suggestion without one moves too. Returns how many items
+ * changed.
  */
 export const setAllSuggestionStatesQuery = async (
   id: number,
@@ -846,11 +841,8 @@ export const setAllSuggestionStatesQuery = async (
   to: SuggestionState,
   userId: number,
   organizationId: number,
-  opts: { requireMitigationPlan?: boolean } = {},
 ): Promise<number> => {
-  const matches = opts.requireMitigationPlan
-    ? `e.item->>'state' = :from AND btrim(COALESCE(e.item->>'mitigationPlan', '')) <> ''`
-    : `e.item->>'state' = :from`;
+  const matches = `e.item->>'state' = :from`;
   const rows = (await sequelize.query(
     `WITH target AS (
       SELECT id,

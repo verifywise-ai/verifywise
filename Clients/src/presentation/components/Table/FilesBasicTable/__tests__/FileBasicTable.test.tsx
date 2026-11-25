@@ -30,6 +30,13 @@ const mockLLMKeyStatus = vi.hoisted(() => ({
   error: null as string | null,
 }));
 
+const mockPermissions = vi.hoisted(() => ({ keys: ["fileManager.contribute"] as string[] }));
+const mockUseCan = vi.hoisted(() => vi.fn((key: string) => mockPermissions.keys.includes(key)));
+
+vi.mock("../../../../../application/hooks/useCan", () => ({
+  useCan: mockUseCan,
+}));
+
 vi.mock("../../../../../application/hooks/useBulkSelection", () => ({
   useBulkSelection: () => mockBulkState,
 }));
@@ -326,6 +333,9 @@ describe("FileBasicTable", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     setBulkSelected([]);
     mockQuality.data = [];
+    mockPermissions.keys = ["fileManager.contribute"];
+    mockTrigger.mutate.mockReset();
+    mockTrigger.mutateAsync.mockReset().mockResolvedValue({});
     mockTrigger.isPending = false;
     mockLLMKeyStatus.data = { hasKeys: true, keyCount: 1, providers: ["Anthropic"] };
     mockLLMKeyStatus.loading = false;
@@ -784,7 +794,7 @@ describe("FileBasicTable", () => {
     renderWithProviders(<FileBasicTable {...defaultProps} />);
     const analyzeButtons = screen.getAllByRole("button", { name: /analyze with ai/i });
     await user.click(analyzeButtons[0]);
-    expect(mockTrigger.mutate).toHaveBeenCalledWith(1);
+    expect(mockTrigger.mutate).toHaveBeenCalledWith(1, expect.anything());
   });
 
   it("renders a quality badge and opens the analysis modal when a grade exists", async () => {
@@ -828,5 +838,58 @@ describe("FileBasicTable", () => {
     const analyzeButtons = screen.getAllByRole("button", { name: /analyze with ai/i });
     analyzeButtons.forEach((btn) => expect(btn).not.toBeDisabled());
     expect(screen.getByTestId("bulk-action-analyze_ai")).not.toBeDisabled();
+  });
+
+  it("hides the per-row and bulk analyze actions without fileManager.contribute", () => {
+    mockPermissions.keys = [];
+    renderWithProviders(<FileBasicTable {...defaultProps} canRunBulkActions />);
+    expect(mockUseCan).toHaveBeenCalledWith("fileManager.contribute");
+    expect(screen.queryAllByRole("button", { name: /analyze with ai/i })).toHaveLength(0);
+    expect(screen.queryByTestId("bulk-action-analyze_ai")).toBeNull();
+  });
+
+  // A custom role granted the permission gets the actions, as the server
+  // allows it to analyze.
+  it("shows the analyze actions to any role holding fileManager.contribute", () => {
+    renderWithProviders(<FileBasicTable {...defaultProps} canRunBulkActions />);
+    expect(screen.getAllByRole("button", { name: /analyze with ai/i }).length).toBeGreaterThan(0);
+    expect(screen.getByTestId("bulk-action-analyze_ai")).toBeInTheDocument();
+  });
+
+  // Promise.all stopped at the first failure and nothing told the user; the
+  // remaining files were still analyzed in the background.
+  it("bulk analyze runs every file and reports how many failed", async () => {
+    mockTrigger.mutateAsync.mockImplementation((id: number) =>
+      id === 2 ? Promise.reject(new Error("Access denied")) : Promise.resolve({}),
+    );
+    setBulkSelected([1, 2, 3]);
+    const user = userEvent.setup();
+    renderWithProviders(<FileBasicTable {...defaultProps} canRunBulkActions />);
+    await user.click(screen.getByTestId("bulk-action-analyze_ai"));
+    expect(mockTrigger.mutateAsync).toHaveBeenCalledTimes(3);
+    expect(await screen.findByText("1 of 3 files could not be analyzed")).toBeInTheDocument();
+  });
+
+  it("bulk analyze reports nothing when every file succeeds", async () => {
+    setBulkSelected([1, 2]);
+    const user = userEvent.setup();
+    renderWithProviders(<FileBasicTable {...defaultProps} canRunBulkActions />);
+    await user.click(screen.getByTestId("bulk-action-analyze_ai"));
+    expect(mockTrigger.mutateAsync).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText(/could not be analyzed/i)).toBeNull();
+  });
+
+  it("reports a failed per-row analysis to the user", async () => {
+    mockTrigger.mutate.mockImplementation((_id: number, options?: any) =>
+      options?.onError?.(new Error("Access denied")),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<FileBasicTable {...defaultProps} />);
+    await user.click(screen.getAllByRole("button", { name: /analyze with ai/i })[0]);
+    expect(mockTrigger.mutate).toHaveBeenCalledWith(
+      1,
+      expect.objectContaining({ onError: expect.any(Function) }),
+    );
+    expect(await screen.findByText("This file could not be analyzed")).toBeInTheDocument();
   });
 });

@@ -192,7 +192,7 @@ export const addingFrameworksContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'info',
-      text: 'Generated reports currently cover EU AI Act, ISO 42001, ISO 27001 and NIST AI RMF. The 24 bundled frameworks are not included in reports yet.',
+      text: 'Generated reports include the 24 bundled frameworks through the Framework requirements section, alongside EU AI Act, ISO 42001, ISO 27001 and NIST AI RMF. See Generating reports for how to select it.',
     },
     {
       type: 'heading',

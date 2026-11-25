@@ -1,6 +1,6 @@
 # Servers — Backend Development Guide
 
-> **Last Updated:** 2026-11-18
+> **Last Updated:** 2026-11-23
 
 ---
 
@@ -162,7 +162,12 @@ Bug fixes to existing unversioned endpoints stay on their legacy router in `rout
 ### Frameworks and Extensions
 
 - **Frameworks 5–28** (SOC 2, GDPR, HIPAA, ...) are declared in `structures/<Name>/*.structure.ts` (registry `structures/index.ts`) and served by the generic `routes/frameworkImpl.route.ts`. Migrations `require("../../dist/structures")`, so run `npm run build` before `npm run migrate-db`. Guide: `docs/technical/guides/adding-new-framework.md`.
+- **Framework wording needs no migration** (all 28 frameworks, plus each framework's description; names are never synced). On startup, `services/frameworkTextSync` rewrites struct text that differs from `structures/`. To change wording: edit the TS, bump that framework's text revision (`textRevision` in its `.structure.ts`, or its entry in `services/frameworkTextSync/builtins.ts` for EU AI Act, ISO 42001, ISO 27001 and NIST AI RMF), then run `npm run framework-text:record`; `structures/__tests__/frameworkTextRevisions.test.ts` fails otherwise. Adding, removing or reordering items still needs a migration. Details: "Changing an existing framework's text" in the guide.
 - **Extensions** live in `extensions/<key>/`. They are mounted at `/api/extensions/<key>` **after** the `/api/extensions` catalog router, and gated with `requireExtensionEnabled("<key>")`. Read config with `ExtensionService.getRuntimeConfiguration(key, orgId)`. Reference: `docs/technical/infrastructure/extensions.md`.
+
+### Background Jobs (BullMQ)
+
+`addAllJobs` (`jobs/producer.ts`) runs at every backend start, on every replica. Register a recurring job with `upsertJobScheduler`, which is idempotent by scheduler id, and never `obliterate` or `drain` a queue there: the automation queue also carries one-off jobs (extension sync runs, manual reports, emails, risk link recomputes) that other replicas queued or are running. To retire a scheduler, remove it by id with `removeJobScheduler`. The automation queue keeps a finished job that sets no retention of its own for a day (completed) or a week (failed); a scheduler template, on the automation or the Slack queue, keeps its failed runs a week (`FAILED_JOB_RETENTION`, exported by `services/automations/automationProducer.ts`), never `removeOnFail: false`. A job with a fixed `jobId` sets `removeOnComplete` and `removeOnFail` to `true`, since BullMQ ignores an add whose id is still in use. Reference: `docs/technical/infrastructure/automations.md#startup-flow`.
 
 ---
 
@@ -185,7 +190,8 @@ every contributor must follow:
   signature auth only for documented machine-ingestion surfaces.
 - **Swagger:** versioned operations get tags of the form `v1: <Resource>`; legacy
   operations keep their existing tags. Regenerate (`generate:swagger`,
-  `generate:endpoints`, `check:api-drift`) — never hand-edit `swagger.yaml`. Deprecation
+  `generate:endpoints`, `check:api-drift`) — never hand-edit the generated parts of
+  `swagger.yaml` (see **API Documentation Workflow** below for what may be edited). Deprecation
   markings go through the generator's deprecation list (`scripts/apiDeprecations.ts`),
   not manual edits. Add an entry there (method, OpenAPI path, sunset, replacement): the
   generator sets `deprecated: true` and prepends the Sunset notice ahead of the
@@ -207,8 +213,15 @@ every contributor must follow:
 ## API Documentation Workflow
 
 The Express route layer is the single source of truth for the API surface.
-`Servers/swagger.yaml` and `docs/api-docs/src/config/endpoints.ts` are generated
-from the route files and must never be edited by hand.
+`docs/api-docs/src/config/endpoints.ts` is generated and must never be edited by
+hand. In `Servers/swagger.yaml` the generator owns `info.description`
+(`API_DOC_DESCRIPTION` in `scripts/generateSwagger.ts`), the top-level `tags`
+list, which paths and methods exist, and each operation's tags,
+`operationId`, `security`, deprecation markings and `Requires role:` note;
+never hand-edit those. The rest of an operation (summary, description,
+parameters, request body, responses) and `components.schemas` have no other
+source: the generator keeps them as written. Correct it in `swagger.yaml`, then run step 3
+below and commit the regenerated output, so CI's drift check sees a stable file.
 
 ### Adding or changing an endpoint
 

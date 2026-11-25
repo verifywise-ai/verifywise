@@ -57,7 +57,11 @@ describe("reassignAgentOwnersOfDeletedUsersQuery", () => {
 describe("user removal keeps agent primary owners consistent", () => {
   it("removeUserFromOrganizationQuery reassigns agent owners before deleting the membership", async () => {
     mockQuery.mockImplementation(async (sql: any) =>
-      /DELETE FROM organization_members/.test(String(sql)) ? [{ user_id: 5 }] : [],
+      /DELETE FROM organization_members|FROM organization_members[\s\S]*FOR UPDATE/.test(
+        String(sql),
+      )
+        ? [{ user_id: 5 }]
+        : [],
     );
     await removeUserFromOrganizationQuery(5, ORG_ID, tx);
     const reassign = indexOfCall(/UPDATE agent_primitives ap/);
@@ -72,6 +76,9 @@ describe("user removal keeps agent primary owners consistent", () => {
   });
 
   it("revokes only that organization's refresh tokens", async () => {
+    mockQuery.mockImplementation(async (sql: any) =>
+      /FROM organization_members[\s\S]*FOR UPDATE/.test(String(sql)) ? [{ user_id: 5 }] : [],
+    );
     await removeUserFromOrganizationQuery(5, ORG_ID, tx);
     const revoke = indexOfCall(/UPDATE refresh_tokens SET revoked_at/);
     expect(revoke).toBeGreaterThanOrEqual(0);
@@ -84,7 +91,11 @@ describe("user removal keeps agent primary owners consistent", () => {
 
   it("keeps the account of a user who is still a member elsewhere", async () => {
     mockQuery.mockImplementation(async (sql: any) =>
-      /DELETE FROM organization_members/.test(String(sql)) ? [{ user_id: 5 }] : [],
+      /DELETE FROM organization_members|FROM organization_members[\s\S]*FOR UPDATE/.test(
+        String(sql),
+      )
+        ? [{ user_id: 5 }]
+        : [],
     );
     const result = await removeUserFromOrganizationQuery(5, ORG_ID, tx);
     const del = indexOfCall(/DELETE FROM users/);
@@ -97,7 +108,12 @@ describe("user removal keeps agent primary owners consistent", () => {
 
   it("deletes the account when it was the user's last membership", async () => {
     mockQuery.mockImplementation(async (sql: any) => {
-      if (/DELETE FROM organization_members/.test(String(sql))) return [{ user_id: 5 }];
+      if (
+        /DELETE FROM organization_members|FROM organization_members[\s\S]*FOR UPDATE/.test(
+          String(sql),
+        )
+      )
+        return [{ user_id: 5 }];
       if (/DELETE FROM users/.test(String(sql))) return [{ id: 5 }];
       return [];
     });
@@ -109,6 +125,33 @@ describe("user removal keeps agent primary owners consistent", () => {
     const result = await removeUserFromOrganizationQuery(5, ORG_ID, tx);
     expect(result).toEqual({ removed: false, accountDeleted: false });
     expect(indexOfCall(/DELETE FROM users/)).toBe(-1);
+    // Nothing is cleared for a non-member: the membership lock is the only query.
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+  });
+
+  it("still removes the member when the incident owner history write fails", async () => {
+    const tx2 = { id: "tx", afterCommit: jest.fn() } as any;
+    mockQuery.mockImplementation(async (sql: any) => {
+      const text = String(sql);
+      if (/DELETE FROM organization_members|FROM organization_members[\s\S]*FOR UPDATE/.test(text))
+        return [{ user_id: 5 }];
+      if (/UPDATE ai_incident_managements SET assignee_id = NULL/.test(text))
+        return [{ id: 11 }, { id: 12 }];
+      if (/INSERT INTO "incident_change_history"/.test(text)) throw new Error("history down");
+      return [];
+    });
+
+    const result = await removeUserFromOrganizationQuery(5, ORG_ID, tx2);
+
+    expect(result).toEqual({ removed: true, accountDeleted: false });
+    // One bulk insert for both incidents, inside a savepoint rolled back on failure.
+    const inserts = mockQuery.mock.calls.filter((c) =>
+      /INSERT INTO "incident_change_history"/.test(sqlOf(c)),
+    );
+    expect(inserts).toHaveLength(1);
+    expect(indexOfCall(/ROLLBACK TO SAVEPOINT/)).toBeGreaterThan(-1);
+    expect(indexOfCall(/DELETE FROM organization_members/)).toBeGreaterThan(-1);
+    expect(tx2.afterCommit).not.toHaveBeenCalled();
   });
 
   it("deleteUserAccountQuery clears every organization's references before deleting the user", async () => {

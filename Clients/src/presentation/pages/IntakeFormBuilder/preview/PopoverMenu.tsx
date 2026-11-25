@@ -72,7 +72,6 @@ export const PopoverMenu = ({ text, testId, startIcon, children }: PopoverMenuPr
     <>
       <CustomizableButton
         variant="outlined"
-        size="small"
         onClick={(e) => setAnchor(e.currentTarget)}
         startIcon={startIcon}
         endIcon={<ChevronDown size={14} />}

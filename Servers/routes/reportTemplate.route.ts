@@ -13,6 +13,10 @@ import {
   archiveTemplate,
   runTemplateNow,
 } from "../controllers/reportTemplate.ctrl";
+import {
+  legacyTemplateRunContract,
+  legacyTemplateWriteContract,
+} from "../middleware/legacyReportingContract.middleware";
 
 const router = express.Router();
 
@@ -23,11 +27,32 @@ router.get("/:id", authenticateJWT, getTemplate);
 // stricter Admin-only generate route: custom templates are org-shared content,
 // not a privileged operation. System templates are read-only for everyone,
 // enforced in the query WHERE clause rather than here.
-router.post("/", authenticateJWT, authorize("reportTemplate.edit"), createTemplate);
-router.patch("/:id", authenticateJWT, authorize("reportTemplate.edit"), updateTemplate);
+//
+// Frozen contract: parameters_config and reportParameters are v1 inputs
+// (/api/v1/report-templates); the legacy adapters drop them.
+router.post(
+  "/",
+  authenticateJWT,
+  authorize("reportTemplate.edit"),
+  legacyTemplateWriteContract,
+  createTemplate,
+);
+router.patch(
+  "/:id",
+  authenticateJWT,
+  authorize("reportTemplate.edit"),
+  legacyTemplateWriteContract,
+  updateTemplate,
+);
 router.delete("/:id", authenticateJWT, authorize("reportTemplate.edit"), archiveTemplate);
 
 // Ad-hoc run: same write RBAC as the rest of this router's mutating routes.
-router.post("/:id/run", authenticateJWT, authorize("reportTemplate.edit"), runTemplateNow);
+router.post(
+  "/:id/run",
+  authenticateJWT,
+  authorize("reportTemplate.edit"),
+  legacyTemplateRunContract,
+  runTemplateNow,
+);
 
 export default router;

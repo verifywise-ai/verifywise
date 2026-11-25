@@ -1,6 +1,8 @@
 import { sequelize } from "../database/db";
+import { reportVisibilityPredicate, ReportViewer } from "./reportVisibility.utils";
 import { QueryTypes } from "sequelize";
 import { deleteFileById } from "./fileUpload.utils";
+import type { ReportParameters } from "../domain.layer/interfaces/i.reportTemplate";
 
 export async function createRunQuery(input: any): Promise<any> {
   const rows: any[] = await sequelize.query(
@@ -30,15 +32,23 @@ const TERMINAL_RUN_STATUSES = ["success", "failed", "partial_success"];
 // completed_at is only stamped for terminal statuses. Setting it
 // unconditionally would mark a run complete on any future intermediate-progress
 // update through this same function.
+//
+// fields.configSnapshotPatch, when given, is merged into config_snapshot (top-
+// level keys replaced), e.g. { e23_glance } at the end of an E-23 run.
 export async function updateRunStatusQuery(
   id: number,
   organization_id: number,
   fields: any,
 ): Promise<void> {
   const completedAt = TERMINAL_RUN_STATUSES.includes(fields.status) ? "completed_at = NOW(), " : "";
+  const patch = fields.configSnapshotPatch
+    ? "config_snapshot = COALESCE(config_snapshot, '{}'::jsonb) || CAST(:config_snapshot_patch AS jsonb), "
+    : "";
   await sequelize.query(
-    `UPDATE report_runs SET status = :status, ${completedAt}file_id = :file_id, output_filename = :output_filename,
-       output_mime_type = :output_mime_type, delivery_status = :delivery_status, ai_status = :ai_status,
+    `UPDATE report_runs SET status = :status, ${completedAt}${patch}file_id = :file_id, output_filename = :output_filename,
+       output_mime_type = :output_mime_type, companion_file_id = :companion_file_id,
+       companion_filename = :companion_filename, companion_mime_type = :companion_mime_type,
+       delivery_status = :delivery_status, ai_status = :ai_status,
        ai_tokens_used = :ai_tokens_used, ai_cost = :ai_cost, duration_ms = :duration_ms, error_message = :error_message, updated_at = NOW()
      WHERE id = :id AND organization_id = :organization_id`,
     {
@@ -49,12 +59,18 @@ export async function updateRunStatusQuery(
         file_id: fields.file_id ?? null,
         output_filename: fields.output_filename ?? null,
         output_mime_type: fields.output_mime_type ?? null,
+        companion_file_id: fields.companion_file_id ?? null,
+        companion_filename: fields.companion_filename ?? null,
+        companion_mime_type: fields.companion_mime_type ?? null,
         delivery_status: JSON.stringify(fields.delivery_status ?? {}),
         ai_status: JSON.stringify(fields.ai_status ?? {}),
         ai_tokens_used: fields.ai_tokens_used ?? null,
         ai_cost: fields.ai_cost ?? null,
         duration_ms: fields.duration_ms ?? null,
         error_message: fields.error_message ?? null,
+        ...(fields.configSnapshotPatch && {
+          config_snapshot_patch: JSON.stringify(fields.configSnapshotPatch),
+        }),
       },
       type: QueryTypes.UPDATE,
     },
@@ -69,11 +85,7 @@ export async function updateRunStatusQuery(
  * cannot say who the viewer is must not get an organization-wide list by
  * default.
  */
-export type ReportRunViewer = {
-  userId: number | null;
-  /** Role name from the JWT: Admin, Reviewer, Editor, Auditor, SuperAdmin. */
-  role: string | null;
-};
+export type ReportRunViewer = ReportViewer;
 
 /**
  * The project a run covers, as text, or NULL when it covers the whole
@@ -88,6 +100,14 @@ export type ReportRunViewer = {
  */
 const RUN_PROJECT_ID_SQL = `COALESCE(rr.config_snapshot->>'project_id', sr.project_id::text)`;
 
+/**
+ * The run's final flag as text ('true' or 'false'), or NULL when its report
+ * takes no such parameter. The run history shows a Draft or Final chip only
+ * for runs where it is not NULL.
+ */
+const IS_FINAL_SQL = (alias: string) =>
+  `${alias}config_snapshot->'report_parameters'->>'isFinal' AS is_final`;
+
 // sr is joined for RUN_PROJECT_ID_SQL alone. Org-scoped on the join, like every
 // other table this file touches.
 const RUN_FROM_SQL = `FROM report_runs rr
@@ -95,24 +115,15 @@ const RUN_FROM_SQL = `FROM report_runs rr
        ON sr.id = rr.scheduled_report_id AND sr.organization_id = :organization_id`;
 
 /**
- * The membership predicate, or null when the viewer may see everything.
- *
- * Mirrors getGeneratedReportsQuery: Admin and SuperAdmin are unrestricted,
- * everyone else sees a project's report only if they own the project or are a
- * member of it. An organization-scoped report (no project) is visible to all —
- * the spec calls the legacy inner join to `projects` a bug precisely because it
- * hid those.
+ * The visibility predicate for a run, or null when the viewer may see
+ * everything. The rule is shared with schedules (reportVisibility.utils): a
+ * project's run is visible to the people who can open the project (owner,
+ * member, or through a group), and an organization-scoped run (no project) to
+ * all — the spec calls the legacy inner join to `projects` a bug precisely
+ * because it hid those.
  */
-function viewerVisibilitySql(viewer: ReportRunViewer): string | null {
-  if (viewer.role === "Admin" || viewer.role === "SuperAdmin") return null;
-  return `(${RUN_PROJECT_ID_SQL} IS NULL OR EXISTS (
-       SELECT 1 FROM projects p
-       LEFT JOIN projects_members pm
-         ON pm.project_id = p.id AND pm.organization_id = :organization_id
-       WHERE p.id::text = ${RUN_PROJECT_ID_SQL}
-         AND p.organization_id = :organization_id
-         AND (p.owner = :viewerUserId OR pm.user_id = :viewerUserId)
-     ))`;
+function viewerVisibilitySql(viewer: ReportRunViewer, organizationId: number) {
+  return reportVisibilityPredicate(viewer, organizationId, RUN_PROJECT_ID_SQL, { asText: true });
 }
 
 /**
@@ -142,10 +153,10 @@ export async function canViewRunQuery(
   const where: string[] = ["rr.id = :id", "rr.organization_id = :organization_id"];
   const replacements: any = { id, organization_id };
 
-  const visibility = viewerVisibilitySql(viewer);
+  const visibility = viewerVisibilitySql(viewer, organization_id);
   if (visibility) {
-    where.push(visibility);
-    replacements.viewerUserId = viewer.userId;
+    where.push(visibility.sql);
+    Object.assign(replacements, visibility.replacements);
   }
 
   const rows: any[] = await sequelize.query(
@@ -193,12 +204,12 @@ export async function listRunsQuery(
     where.push("rr.archived_at IS NULL");
   }
 
-  const visibility = viewerVisibilitySql(viewer);
+  const visibility = viewerVisibilitySql(viewer, organization_id);
   if (visibility) {
-    where.push(visibility);
-    // NULL here means "no user", which matches no project owner and no member
-    // row — a viewer we cannot identify sees organization-scoped runs only.
-    replacements.viewerUserId = viewer.userId;
+    where.push(visibility.sql);
+    // A null userId means "no user", which matches no owner, member or group,
+    // so a viewer we cannot identify sees organization-scoped runs only.
+    Object.assign(replacements, visibility.replacements);
   }
 
   const whereSql = where.join(" AND ");
@@ -215,6 +226,7 @@ export async function listRunsQuery(
   // since been archived still has to name its runs.
   const rows: any[] = await sequelize.query(
     `SELECT rr.*,
+            ${IS_FINAL_SQL("rr.")},
             t.name AS template_name,
             ${RUN_PROJECT_ID_SQL} AS scope_project_id,
             p.project_title AS scope_project_title
@@ -236,9 +248,107 @@ export async function listRunsQuery(
   return { rows, total: countRows[0]?.total ?? 0 };
 }
 
+/**
+ * The answers from the latest successful or partially successful run of a
+ * template that this viewer may see, for prefilling the next run. The period
+ * and the final flag are
+ * left out (each run asks for its own, and final must be a deliberate choice
+ * every time); the old end date is returned separately so the caller can
+ * start the next period the day after it.
+ *
+ * Runs are matched on organization_id as well as template_id: a system
+ * template is shared by every organization, and one organization's answers
+ * must never prefill another's form. Within the organization the run-list
+ * visibility rule applies (viewerVisibilitySql over RUN_FROM_SQL), so a
+ * member who cannot open a project's run cannot read its cover page here.
+ */
+export async function getLastParametersQuery(
+  templateId: number,
+  organization_id: number,
+  viewer: ReportRunViewer,
+): Promise<{ parameters: ReportParameters; periodEnd: string | null } | null> {
+  const where: string[] = [
+    "rr.template_id = :templateId",
+    "rr.organization_id = :organization_id",
+    // partial_success: the report was generated (a delivery channel or part
+    // of a section failed), so its answers are as good as a success's. The
+    // prior glance (getPriorE23GlanceQuery) uses the same two statuses.
+    "rr.status IN ('success', 'partial_success')",
+    "jsonb_typeof(rr.config_snapshot->'report_parameters') = 'object'",
+  ];
+  const replacements: Record<string, unknown> = { templateId, organization_id };
+  const visibility = viewerVisibilitySql(viewer, organization_id);
+  if (visibility) {
+    where.push(visibility.sql);
+    Object.assign(replacements, visibility.replacements);
+  }
+
+  const rows: { parameters: unknown }[] = await sequelize.query(
+    `SELECT rr.config_snapshot->'report_parameters' AS parameters
+     ${RUN_FROM_SQL}
+     WHERE ${where.join(" AND ")}
+     ORDER BY rr.completed_at DESC NULLS LAST, rr.id DESC
+     LIMIT 1`,
+    { replacements, type: QueryTypes.SELECT },
+  );
+  if (!rows[0]) return null;
+  const {
+    periodStart: _start,
+    periodEnd,
+    isFinal: _isFinal,
+    ...parameters
+  } = rows[0].parameters as ReportParameters;
+  return {
+    parameters,
+    periodEnd: typeof periodEnd === "string" ? periodEnd : null,
+  };
+}
+
+/**
+ * The "at a glance" figures of the previous comparable E-23 run, for the
+ * change-since-last-run line (spec 8.10): the latest finished run (success or
+ * partial_success) of the same schedule when the run has one, else of the same
+ * template whatever triggered it. Null when there is none or when neither id
+ * is known. Returned as stored: the caller validates the shape
+ * (parseStoredE23Glance in services/reporting/e23/glance.ts).
+ *
+ * No viewer rule here: the result goes into the report being generated, whose
+ * runner already reads the whole organization's data.
+ */
+export async function getPriorE23GlanceQuery(
+  organizationId: number,
+  opts: { scheduledReportId?: number; templateId?: number },
+): Promise<unknown> {
+  const where = [
+    "rr.organization_id = :organization_id",
+    "rr.status IN ('success', 'partial_success')",
+    "jsonb_typeof(rr.config_snapshot->'e23_glance') = 'object'",
+  ];
+  const replacements: Record<string, unknown> = { organization_id: organizationId };
+  if (opts.scheduledReportId) {
+    where.push("rr.scheduled_report_id = :scheduledReportId");
+    replacements.scheduledReportId = opts.scheduledReportId;
+  } else if (opts.templateId) {
+    where.push("rr.template_id = :templateId");
+    replacements.templateId = opts.templateId;
+  } else {
+    return null;
+  }
+
+  const rows: { glance: unknown }[] = await sequelize.query(
+    `SELECT rr.config_snapshot->'e23_glance' AS glance
+     FROM report_runs rr
+     WHERE ${where.join(" AND ")}
+     ORDER BY rr.completed_at DESC NULLS LAST, rr.id DESC
+     LIMIT 1`,
+    { replacements, type: QueryTypes.SELECT },
+  );
+  return rows[0]?.glance ?? null;
+}
+
 export async function getRunQuery(id: number, organization_id: number): Promise<any> {
   const rows: any[] = await sequelize.query(
-    `SELECT * FROM report_runs WHERE id = :id AND organization_id = :organization_id`,
+    `SELECT *, ${IS_FINAL_SQL("")} FROM report_runs WHERE id = :id AND organization_id = :organization_id`,
     { replacements: { id, organization_id }, type: QueryTypes.SELECT },
   );
   return rows[0] ?? null;
@@ -269,9 +379,10 @@ export async function setRunArchivedQuery(
 }
 
 /**
- * Permanently delete a run and the file it produced — the file is the report,
- * which is what DELETE /reporting/:id meant before runs became the list. A run
- * with no file_id (failed, or still running) deletes the row alone.
+ * Permanently delete a run and the files it produced — the file is the report,
+ * which is what DELETE /reporting/:id meant before runs became the list; an
+ * E-23 run also has its internal fix-it list (companion_file_id). A run with
+ * no file (failed, or still running) deletes the row alone.
  *
  * One transaction, because the two deletes are not independent: report_runs
  * .file_id is ON DELETE SET NULL, so if the file DELETE committed and the run
@@ -283,14 +394,15 @@ export async function setRunArchivedQuery(
 export async function deleteRunQuery(id: number, organization_id: number): Promise<boolean> {
   return await sequelize.transaction(async (transaction) => {
     const rows: any[] = await sequelize.query(
-      `SELECT id, file_id FROM report_runs WHERE id = :id AND organization_id = :organization_id`,
+      `SELECT id, file_id, companion_file_id FROM report_runs
+       WHERE id = :id AND organization_id = :organization_id`,
       { replacements: { id, organization_id }, type: QueryTypes.SELECT, transaction },
     );
     const run = rows[0];
     if (!run) return false;
 
-    if (run.file_id) {
-      await deleteFileById(run.file_id, organization_id, transaction);
+    for (const fileId of [run.file_id, run.companion_file_id]) {
+      if (fileId) await deleteFileById(fileId, organization_id, transaction);
     }
 
     await sequelize.query(

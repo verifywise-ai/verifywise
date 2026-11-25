@@ -1,0 +1,987 @@
+import type { EvidenceSource, NewFinding } from "../../../domain.layer/interfaces/i.vendorResearch";
+import { type FetchedPage, PageReadError, type PageReader } from "../../webResearch/readPage";
+import { credibilityOf } from "../credibility";
+import { buildTarget } from "../target";
+import { createTraceRecorder } from "../trace";
+import {
+  VERIFY_READS_PER_FINDING,
+  VERIFY_TIMEOUT_MS,
+  answeredOnCitedSite,
+  checkSnippetFindings,
+  quoteIsOnPage,
+  verifySnippetFindings,
+  withholdSearchText,
+} from "../verifySnippets";
+
+const TARGET = buildTarget({
+  vendor_name: "Acme Analytics",
+  website: "acme-analytics.com",
+  vendor_provides: "Analytics",
+});
+
+const QUOTE = "attackers copied customer records from a test system";
+
+// One address for each tier, the most credible first.
+const OWN = "https://acme-analytics.com/security/incident";
+const REGULATOR = "https://ico.org.uk/action/acme-analytics";
+const PUBLISHER = "https://www.reuters.com/acme-analytics-breach";
+const AGGREGATOR = "https://news.google.com/acme-analytics-breach";
+const OTHER = "https://blog.example.net/acme-analytics-breach";
+
+let counter = 0;
+
+function source(url: string, overrides: Partial<EvidenceSource> = {}): EvidenceSource {
+  counter += 1;
+  return {
+    id: `S${counter}`,
+    category: "security_incidents",
+    kind: "result",
+    onVendorSite: false,
+    url,
+    title: "Acme Analytics confirms a breach",
+    content: `Acme Analytics said that ${QUOTE}.`,
+    publishedAt: "2026-09-10",
+    ...overrides,
+  };
+}
+
+function finding(urls: string[], overrides: Partial<NewFinding> = {}): NewFinding {
+  return {
+    category: "security_incidents",
+    risk_description: "Attackers copied customer records from a vendor test system.",
+    impact_description: "Customer data we send to the vendor may be exposed.",
+    action_plan: "Ask the vendor for its incident report.",
+    likelihood: "Possible",
+    risk_severity: "Major",
+    risk_level: "High Risk",
+    rationale: null,
+    sources: urls.map((url) => ({
+      url,
+      title: "Acme Analytics confirms a breach",
+      quote: QUOTE,
+      published_at: "2026-09-10",
+    })),
+    ...overrides,
+  };
+}
+
+function pageOf(url: string, text: string): FetchedPage {
+  return { url, title: "Page", publishedAt: null, text, links: [] };
+}
+
+/** A reader that answers from `answers`: a text is a page, an error is thrown, no entry is not_found. */
+function readerOf(answers: Record<string, string | Error>) {
+  return jest.fn<ReturnType<PageReader>, Parameters<PageReader>>(async (url) => {
+    const answer = answers[url];
+    if (answer === undefined) throw new PageReadError("not_found");
+    if (answer instanceof Error) throw answer;
+    return pageOf(url, answer);
+  });
+}
+
+const HOLDING = `Acme Analytics said on Monday that ${QUOTE}. It is investigating.`;
+const NOT_HOLDING = "Acme Analytics said on Monday that it is investigating an incident.";
+
+const verify = (
+  findings: NewFinding[],
+  pack: EvidenceSource[],
+  readPage: PageReader,
+  extra: {
+    signal?: AbortSignal;
+    trace?: ReturnType<typeof createTraceRecorder>;
+  } = {},
+) => verifySnippetFindings({ findings, pack, target: TARGET, readPage, ...extra });
+
+describe("the limits of the check", () => {
+  it("reads two pages at most for a finding, within twenty seconds", () => {
+    expect(VERIFY_READS_PER_FINDING).toBe(2);
+    expect(VERIFY_TIMEOUT_MS).toBe(20_000);
+  });
+});
+
+describe("quoteIsOnPage", () => {
+  it("finds a quote that the page holds word for word", () => {
+    expect(quoteIsOnPage(QUOTE, HOLDING)).toBe(true);
+  });
+
+  it("ignores case, spacing and quotation marks", () => {
+    const quote = "ACME’s  servers\nwere “encrypted”";
+
+    expect(quoteIsOnPage(quote, "Acme's servers were encrypted on Monday.")).toBe(true);
+  });
+
+  it("does not find a quote that the page does not hold", () => {
+    expect(quoteIsOnPage(QUOTE, NOT_HOLDING)).toBe(false);
+  });
+
+  it.each(["…", "...", "[…]"])(
+    "holds a quote with the gap mark %s when every part of it is on the page",
+    (mark) => {
+      const quote = `attackers copied customer records ${mark} from a test system`;
+
+      expect(
+        quoteIsOnPage(quote, "Attackers copied customer records. A note says: from a test system."),
+      ).toBe(true);
+      expect(quoteIsOnPage(quote, "Attackers copied customer records last week.")).toBe(false);
+    },
+  );
+
+  it("does not hold a quote with a gap mark when a part of it is missing", () => {
+    expect(quoteIsOnPage("attackers copied customer records … and sold them", HOLDING)).toBe(false);
+  });
+
+  it("ignores a gap mark at the start or at the end of the quote", () => {
+    expect(quoteIsOnPage(`… ${QUOTE} …`, HOLDING)).toBe(true);
+    expect(quoteIsOnPage(`...${QUOTE}...`, HOLDING)).toBe(true);
+  });
+
+  it.each(["", "   ", "…", "[…] ... …"])("is not on any page when the quote is %j", (quote) => {
+    expect(quoteIsOnPage(quote, HOLDING)).toBe(false);
+  });
+});
+
+describe("verifySnippetFindings", () => {
+  it("leaves a finding alone when a source it cites is a page that was read, and reads nothing", async () => {
+    const readPage = readerOf({});
+    const pack = [source(OTHER, { kind: "result" }), source(PUBLISHER, { kind: "page" })];
+    const kept = [finding([OTHER, PUBLISHER])];
+
+    const result = await verify(kept, pack, readPage);
+
+    expect(result).toEqual(kept);
+    expect(readPage).not.toHaveBeenCalled();
+  });
+
+  it("keeps a finding as it is when the page of its best source holds the quote", async () => {
+    const readPage = readerOf({ [OTHER]: HOLDING });
+    const kept = [finding([OTHER])];
+
+    const [result] = await verify(kept, [source(OTHER)], readPage);
+
+    expect(result).toEqual(kept[0]);
+    expect(result.snippet_only).toBeUndefined();
+    expect(readPage).toHaveBeenCalledTimes(1);
+  });
+
+  it("marks a finding as snippet only, and gives it no confidence, when the page does not hold the quote", async () => {
+    const readPage = readerOf({ [OTHER]: NOT_HOLDING });
+
+    const [result] = await verify([finding([OTHER])], [source(OTHER)], readPage);
+
+    expect(result.snippet_only).toBe(true);
+    expect(result).not.toHaveProperty("confidence");
+  });
+
+  it("changes nothing else of a finding that it marks", async () => {
+    const readPage = readerOf({ [OTHER]: NOT_HOLDING });
+    const given = finding([OTHER], { rationale: "Because." });
+
+    const [result] = await verify([given], [source(OTHER)], readPage);
+
+    expect(result).toEqual({ ...given, snippet_only: true });
+  });
+
+  it("reads the most credible source first, by its registry category, and in the order of the citations among equals", async () => {
+    const pack = [OTHER, AGGREGATOR, OWN, PUBLISHER, REGULATOR].map((url) =>
+      source(url, { onVendorSite: url === OWN }),
+    );
+    const firstRead = async (urls: string[], holding: string) => {
+      const readPage = readerOf({ [holding]: HOLDING });
+      await verify([finding(urls)], pack, readPage);
+      return readPage.mock.calls.map(([url]) => url);
+    };
+
+    // Official, then trusted press, then the vendor, then the unverified, which are equals: an
+    // aggregator is no better than another site.
+    expect(await firstRead([OTHER, AGGREGATOR, OWN, PUBLISHER, REGULATOR], REGULATOR)).toEqual([
+      REGULATOR,
+    ]);
+    expect(await firstRead([OTHER, AGGREGATOR, OWN, PUBLISHER], PUBLISHER)).toEqual([PUBLISHER]);
+    expect(await firstRead([OTHER, AGGREGATOR, OWN], OWN)).toEqual([OWN]);
+    expect(await firstRead([OTHER, AGGREGATOR], OTHER)).toEqual([OTHER]);
+    expect(await firstRead([AGGREGATOR, OTHER], AGGREGATOR)).toEqual([AGGREGATOR]);
+
+    const other = "https://elsewhere.example.org/story";
+    const second = readerOf({ [OTHER]: HOLDING, [other]: HOLDING });
+    await verify([finding([OTHER, other])], [source(OTHER), source(other)], second);
+    expect(second.mock.calls.map(([url]) => url)).toEqual([OTHER]);
+  });
+
+  it("goes by the verdict of the first source that can be read", async () => {
+    const readPage = readerOf({
+      [PUBLISHER]: new PageReadError("blocked_by_site"),
+      [OTHER]: HOLDING,
+    });
+
+    const [result] = await verify(
+      [finding([OTHER, PUBLISHER])],
+      [source(OTHER), source(PUBLISHER)],
+      readPage,
+    );
+
+    expect(readPage.mock.calls.map(([url]) => url)).toEqual([PUBLISHER, OTHER]);
+    expect(result.snippet_only).toBeUndefined();
+  });
+
+  it("does not read a second page once the first has given its verdict", async () => {
+    const readPage = readerOf({ [PUBLISHER]: NOT_HOLDING, [OTHER]: HOLDING });
+
+    const [result] = await verify(
+      [finding([OTHER, PUBLISHER])],
+      [source(OTHER), source(PUBLISHER)],
+      readPage,
+    );
+
+    expect(readPage).toHaveBeenCalledTimes(1);
+    expect(result.snippet_only).toBe(true);
+  });
+
+  it("marks a finding as snippet only when no page can be read", async () => {
+    const readPage = readerOf({
+      [PUBLISHER]: new PageReadError("blocked_by_site"),
+      [OTHER]: new PageReadError("unreachable"),
+    });
+
+    const [result] = await verify(
+      [finding([OTHER, PUBLISHER])],
+      [source(OTHER), source(PUBLISHER)],
+      readPage,
+    );
+
+    expect(result.snippet_only).toBe(true);
+  });
+
+  it("reads two pages at most for a finding", async () => {
+    const urls = [OTHER, AGGREGATOR, PUBLISHER];
+    const readPage = readerOf(
+      Object.fromEntries(urls.map((url) => [url, new PageReadError("not_found")])),
+    );
+
+    const [result] = await verify(
+      [finding(urls)],
+      urls.map((url) => source(url)),
+      readPage,
+    );
+
+    expect(readPage).toHaveBeenCalledTimes(VERIFY_READS_PER_FINDING);
+    expect(result.snippet_only).toBe(true);
+  });
+
+  it("reads a page once, however many findings cite it", async () => {
+    const readPage = readerOf({ [OTHER]: HOLDING });
+    const kept = [finding([OTHER]), finding([OTHER], { category: "legal_regulatory" })];
+
+    const result = await verify(kept, [source(OTHER)], readPage);
+
+    expect(readPage).toHaveBeenCalledTimes(1);
+    expect(result).toEqual(kept);
+  });
+
+  it("holds a reader that throws anything but a page error for a page that cannot be read", async () => {
+    const readPage = readerOf({ [OTHER]: new TypeError("boom") });
+
+    const [result] = await verify([finding([OTHER])], [source(OTHER)], readPage);
+
+    expect(result.snippet_only).toBe(true);
+  });
+
+  it("gives the reader the signal it was given", async () => {
+    const readPage = readerOf({ [OTHER]: HOLDING });
+    const signal = new AbortController().signal;
+
+    await verify([finding([OTHER])], [source(OTHER)], readPage, { signal });
+
+    expect(readPage).toHaveBeenCalledWith(OTHER, signal);
+  });
+
+  it("reads nothing once its signal is aborted, and marks the finding", async () => {
+    const readPage = readerOf({ [OTHER]: HOLDING });
+    const controller = new AbortController();
+    controller.abort();
+
+    const [result] = await verify([finding([OTHER])], [source(OTHER)], readPage, {
+      signal: controller.signal,
+    });
+
+    expect(readPage).not.toHaveBeenCalled();
+    expect(result.snippet_only).toBe(true);
+  });
+
+  it("treats every finding on its own and keeps their order", async () => {
+    const readPage = readerOf({ [OTHER]: HOLDING, [AGGREGATOR]: NOT_HOLDING });
+    const kept = [
+      finding([AGGREGATOR], { risk_description: "First." }),
+      finding([PUBLISHER], { risk_description: "Second." }),
+      finding([OTHER], { risk_description: "Third." }),
+    ];
+    const pack = [source(AGGREGATOR), source(PUBLISHER, { kind: "page" }), source(OTHER)];
+
+    const result = await verify(kept, pack, readPage);
+
+    expect(result.map((one) => one.risk_description)).toEqual(["First.", "Second.", "Third."]);
+    expect(result.map((one) => one.snippet_only)).toEqual([true, undefined, undefined]);
+  });
+
+  it("does not change the findings it is given", async () => {
+    const readPage = readerOf({ [OTHER]: NOT_HOLDING });
+    const kept = [finding([OTHER])];
+    const before = JSON.stringify(kept);
+
+    await verify(kept, [source(OTHER)], readPage);
+
+    expect(JSON.stringify(kept)).toBe(before);
+  });
+
+  it("returns no findings for none, and reads nothing", async () => {
+    const readPage = readerOf({});
+
+    expect(await verify([], [source(OTHER)], readPage)).toEqual([]);
+    expect(readPage).not.toHaveBeenCalled();
+  });
+
+  describe("the trace", () => {
+    it("records a read by the code for every page, with what came of it", async () => {
+      const trace = createTraceRecorder();
+      const readPage = readerOf({
+        [PUBLISHER]: new PageReadError("blocked_by_site"),
+        [OTHER]: NOT_HOLDING,
+        [AGGREGATOR]: HOLDING,
+      });
+      const pack = [OTHER, PUBLISHER, AGGREGATOR].map((url) => source(url));
+
+      await verify(
+        [finding([PUBLISHER, OTHER]), finding([AGGREGATOR], { category: "legal_regulatory" })],
+        pack,
+        readPage,
+        { trace },
+      );
+
+      // The findings are checked at the same time, so the order of their steps is not fixed.
+      const steps = trace.snapshot().steps;
+      expect(steps).toHaveLength(3);
+      expect(steps).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            by: "verification",
+            tool: "read",
+            category: "security_incidents",
+            url: PUBLISHER,
+            outcome: "failed",
+            reason: "blocked_by_site",
+          }),
+          expect.objectContaining({
+            by: "verification",
+            tool: "read",
+            category: "security_incidents",
+            url: OTHER,
+            outcome: "not_on_page",
+          }),
+          expect.objectContaining({
+            by: "verification",
+            tool: "read",
+            category: "legal_regulatory",
+            url: AGGREGATOR,
+            outcome: "confirmed",
+          }),
+        ]),
+      );
+      expect(steps.find((step) => step.url === OTHER)?.reason).toBeUndefined();
+    });
+
+    it("gives a reader that throws anything else the reason unreachable", async () => {
+      const trace = createTraceRecorder();
+      const readPage = readerOf({ [OTHER]: new TypeError("boom") });
+
+      await verify([finding([OTHER])], [source(OTHER)], readPage, { trace });
+
+      expect(trace.snapshot().steps).toEqual([
+        expect.objectContaining({ outcome: "failed", reason: "unreachable" }),
+      ]);
+    });
+
+    it("holds neither the quote nor the text of a page", async () => {
+      const trace = createTraceRecorder();
+      const readPage = readerOf({ [OTHER]: NOT_HOLDING });
+
+      await verify([finding([OTHER])], [source(OTHER)], readPage, { trace });
+
+      const stored = JSON.stringify(trace.snapshot());
+      expect(stored).not.toContain(QUOTE);
+      expect(stored).not.toContain("investigating an incident");
+    });
+
+    it("records nothing when no finding rests on snippets", async () => {
+      const trace = createTraceRecorder();
+
+      await verify([finding([PUBLISHER])], [source(PUBLISHER, { kind: "page" })], readerOf({}), {
+        trace,
+      });
+
+      expect(trace.snapshot().steps).toEqual([]);
+    });
+  });
+});
+
+describe("checkSnippetFindings", () => {
+  const check = (
+    findings: NewFinding[],
+    pack: EvidenceSource[],
+    readPage: PageReader,
+    extra: { signal?: AbortSignal; trace?: ReturnType<typeof createTraceRecorder> } = {},
+  ) => checkSnippetFindings({ findings, pack, target: TARGET, readPage, ...extra });
+
+  it("gives no verdict for a finding that cites a page that was read", async () => {
+    const kept = [finding([OTHER, PUBLISHER])];
+
+    const [result] = await check(
+      kept,
+      [source(OTHER), source(PUBLISHER, { kind: "page" })],
+      readerOf({}),
+    );
+
+    expect(result).toEqual({ finding: kept[0], verdict: null });
+  });
+
+  it("confirms with the address of the page that holds the quote", async () => {
+    const kept = [finding([OTHER])];
+
+    const [result] = await check(kept, [source(OTHER)], readerOf({ [OTHER]: HOLDING }));
+
+    expect(result).toEqual({ finding: kept[0], verdict: { outcome: "confirmed", url: OTHER } });
+  });
+
+  it("says not_on_page with the address of the page that was read", async () => {
+    // The most credible source cannot be read, so the next one gives the verdict.
+    const given = finding([OTHER, PUBLISHER]);
+
+    const [result] = await check(
+      [given],
+      [source(OTHER), source(PUBLISHER)],
+      readerOf({ [PUBLISHER]: new PageReadError("blocked_by_site"), [OTHER]: NOT_HOLDING }),
+    );
+
+    expect(result).toEqual({
+      finding: { ...given, snippet_only: true },
+      verdict: { outcome: "not_on_page", url: OTHER },
+    });
+  });
+
+  it("says unread when no page can be read", async () => {
+    const given = finding([OTHER, PUBLISHER]);
+
+    const [result] = await check(
+      [given],
+      [source(OTHER), source(PUBLISHER)],
+      readerOf({
+        [PUBLISHER]: new PageReadError("blocked_by_site"),
+        [OTHER]: new PageReadError("unreachable"),
+      }),
+    );
+
+    expect(result).toEqual({
+      finding: { ...given, snippet_only: true },
+      verdict: { outcome: "unread" },
+    });
+  });
+
+  it("says unread once its signal is aborted", async () => {
+    const controller = new AbortController();
+    controller.abort();
+
+    const [result] = await check(
+      [finding([OTHER])],
+      [source(OTHER)],
+      readerOf({ [OTHER]: HOLDING }),
+      {
+        signal: controller.signal,
+      },
+    );
+
+    expect(result.verdict).toEqual({ outcome: "unread" });
+  });
+
+  // R4-VC-1: a page that answered from another site is not the cited page, so the text it holds
+  // must not earn the cited site's label.
+  describe("a page that answered from another site", () => {
+    const EXIT = "https://www.ico.org.uk/external-link?url=https%3A%2F%2Fattacker.example%2Fpost";
+    const LANDED = "https://attacker.example/post";
+    /** A reader whose page of `cited` answered from `landed`. */
+    const redirecting = (cited: string, landed: string, text: string) =>
+      jest.fn<ReturnType<PageReader>, Parameters<PageReader>>(async (url) => {
+        if (url !== cited) throw new PageReadError("not_found");
+        return pageOf(landed, text);
+      });
+
+    it("confirms nothing, and the finding is labelled as one nobody could confirm", async () => {
+      const kept = finding([EXIT]);
+      const pack = [source(EXIT)];
+      const trace = createTraceRecorder();
+
+      const [result] = await check([kept], pack, redirecting(EXIT, LANDED, HOLDING), { trace });
+
+      expect(result.verdict).toEqual({ outcome: "unread" });
+      expect(result.finding.snippet_only).toBe(true);
+      expect(trace.snapshot().steps).toEqual([
+        expect.objectContaining({ url: EXIT, outcome: "failed", reason: "redirected_off_site" }),
+      ]);
+      const label = credibilityOf({
+        finding: kept,
+        pack,
+        provenance: new Map(),
+        verdict: result.verdict,
+        target: TARGET,
+      });
+      expect(label.label).not.toBe("high");
+      expect(label.basis.sources[0].reading).toBe("unconfirmed");
+    });
+
+    it("contradicts nothing either, and the next source is tried", async () => {
+      const readPage = jest.fn<ReturnType<PageReader>, Parameters<PageReader>>(async (url) => {
+        if (url === REGULATOR) return pageOf(LANDED, NOT_HOLDING);
+        if (url === OTHER) return pageOf(OTHER, HOLDING);
+        throw new PageReadError("not_found");
+      });
+
+      const [result] = await check(
+        [finding([OTHER, REGULATOR])],
+        [source(OTHER), source(REGULATOR)],
+        readPage,
+      );
+
+      expect(readPage.mock.calls.map(([url]) => url)).toEqual([REGULATOR, OTHER]);
+      expect(result.verdict).toEqual({ outcome: "confirmed", url: OTHER });
+    });
+
+    it.each([
+      ["https://www.ico.org.uk/action/acme-analytics", "https://ico.org.uk/action/acme-analytics"],
+      ["https://ico.org.uk/action/acme-analytics", "https://www.ico.org.uk/action/acme-analytics"],
+      ["http://ico.org.uk/action/acme-analytics", "https://ico.org.uk/action/acme-analytics"],
+      ["https://ico.org.uk/action/old-path", "https://ico.org.uk/action/acme-analytics"],
+    ])("takes the page of %s that answered from %s as the cited site", async (cited, landed) => {
+      const [result] = await check(
+        [finding([cited])],
+        [source(cited)],
+        redirecting(cited, landed, HOLDING),
+      );
+
+      expect(result.verdict).toEqual({ outcome: "confirmed", url: cited });
+    });
+
+    // RVP-2: one publisher of the registry on two of its domains is the cited site.
+    it("takes a page cited on bbc.co.uk that answered from bbc.com as the cited site", async () => {
+      const cited = "https://www.bbc.co.uk/news/articles/c0acme";
+      const kept = finding([cited]);
+      const pack = [source(cited)];
+
+      const [result] = await check(
+        [kept],
+        pack,
+        redirecting(cited, "https://www.bbc.com/news/articles/c0acme", HOLDING),
+      );
+
+      expect(result.verdict).toEqual({ outcome: "confirmed", url: cited });
+      const label = credibilityOf({
+        finding: kept,
+        pack,
+        provenance: new Map(),
+        verdict: result.verdict,
+        target: TARGET,
+      });
+      expect(label.basis.sources[0].reading).toBe("read");
+    });
+
+    // RVP-2, RV6P-4: an explicit group of domains of one organisation counts as one site.
+    it.each([
+      ["https://www.bbc.co.uk/news/articles/c0acme", "https://www.bbc.com/news/articles/c0acme"],
+      ["https://www.bbc.com/news/articles/c0acme", "https://www.bbc.co.uk/news/articles/c0acme"],
+      ["https://abcnews.go.com/Technology/acme", "https://abcnews.com/Technology/acme"],
+      ["https://abcnews.com/Technology/acme", "https://abcnews.go.com/Technology/acme"],
+      // The Government of Canada moved its sites from gc.ca to canada.ca.
+      [
+        "https://www.tbs-sct.gc.ca/pol/doc-eng.aspx?id=32592",
+        "https://www.tbs-sct.canada.ca/pol/doc-eng.aspx?id=32592",
+      ],
+      [
+        "https://www.tbs-sct.gc.ca/pol/doc-eng.aspx?id=32592",
+        "https://www.canada.ca/en/treasury-board-secretariat/acme.html",
+      ],
+      ["https://www.canada.ca/en/acme.html", "https://www.ic.gc.ca/acme"],
+    ])(
+      "takes a page cited on %s that answered from %s as the cited site",
+      async (cited, landed) => {
+        const kept = finding([cited]);
+        const pack = [source(cited)];
+
+        const [result] = await check([kept], pack, redirecting(cited, landed, HOLDING));
+
+        expect(result.verdict).toEqual({ outcome: "confirmed", url: cited });
+        expect(answeredOnCitedSite(cited, landed, TARGET)).toBe(true);
+        // Without the target, only the hosts are compared.
+        expect(answeredOnCitedSite(cited, landed)).toBe(false);
+        const label = credibilityOf({
+          finding: kept,
+          pack,
+          provenance: new Map(),
+          verdict: result.verdict,
+          target: TARGET,
+        });
+        expect(label.basis.sources[0].reading).toBe("read");
+      },
+    );
+
+    it.each([
+      // One entry of the registry holds the authorities of several countries.
+      ["https://www.aepd.es/acme-analytics", "https://www.dataprotection.ie/acme-analytics"],
+      // Two governments under one suffix entry, with the same name in front of it.
+      ["https://www.health.gov.au/acme-analytics", "https://www.health.gov.in/acme-analytics"],
+      // An exit link of a publisher to a page of another site.
+      ["https://www.bbc.co.uk/news/c0acme", "https://acme-analytics-news.example/c0acme"],
+      // RV6P-4: the Norwegian and the Danish authority share a name and an entry of the registry.
+      ["https://www.datatilsynet.no/acme-analytics", "https://www.datatilsynet.dk/acme-analytics"],
+      ["https://www.datatilsynet.dk/acme-analytics", "https://www.datatilsynet.no/acme-analytics"],
+      // Politico's two domains are not in a group of one organisation.
+      ["https://www.politico.com/news/acme", "https://www.politico.eu/article/acme"],
+      // Another site under go.com is not ABC News.
+      ["https://www.espn.go.com/acme", "https://abcnews.com/acme"],
+      // The CBC is not the Government of Canada.
+      ["https://cbc.radio-canada.ca/acme", "https://www.canada.ca/acme"],
+      // Two governments under the one suffix entry of gc.ca, with the same name in front of it.
+      ["https://www.bmi.gov.de/acme", "https://www.bmi.gc.ca/acme"],
+      // Another government domain of the same entry as canada.ca.
+      ["https://www.bk.admin.ch/acme", "https://www.canada.ca/acme"],
+      ["https://www.oesterreich.gv.at/acme", "https://www.canada.ca/acme"],
+      // A host that only ends with the name of a group's domain.
+      ["https://www.evilbbc.com/acme", "https://www.bbc.com/acme"],
+      // Two groups.
+      ["https://www.bbc.com/news/acme", "https://abcnews.com/acme"],
+    ])(
+      "does not take a page cited on %s that answered from %s as the cited site",
+      async (cited, landed) => {
+        const [result] = await check(
+          [finding([cited])],
+          [source(cited)],
+          redirecting(cited, landed, HOLDING),
+        );
+
+        expect(result.verdict).toEqual({ outcome: "unread" });
+        expect(answeredOnCitedSite(cited, landed, TARGET)).toBe(false);
+      },
+    );
+
+    // RV7W-2: a page that answered from the vendor's own site is the vendor's word, whatever
+    // site was cited, so it never counts as the cited site of another publisher.
+    describe("when the page answered from the vendor's own site", () => {
+      const vendorOn = (website: string) =>
+        buildTarget({ vendor_name: "Acme Analytics", website, vendor_provides: "Analytics" });
+      const checkFor = (
+        target: ReturnType<typeof buildTarget>,
+        cited: string,
+        landed: string,
+        ownDomains?: string[],
+      ) => {
+        const kept = finding([cited]);
+        const pack = [source(cited)];
+        const trace = createTraceRecorder();
+        return checkSnippetFindings({
+          findings: [kept],
+          pack,
+          target,
+          readPage: redirecting(cited, landed, HOLDING),
+          trace,
+          ...(ownDomains === undefined ? {} : { ownDomains }),
+        }).then(([result]) => ({ result, kept, pack, trace }));
+      };
+
+      it.each([
+        // A vendor whose domain is in a group of SAME_SITE_GROUPS.
+        ["bbc.co.uk", "https://www.bbc.com/news/acme", "https://www.bbc.co.uk/news/acme"],
+        ["bbc.com", "https://www.bbc.co.uk/news/acme", "https://www.bbc.com/news/acme"],
+        ["abcnews.com", "https://abcnews.go.com/Technology/acme", "https://abcnews.com/acme"],
+        // A vendor whose domain is under a domain of a group.
+        ["tbs-sct.gc.ca", "https://www.canada.ca/en/acme.html", "https://www.tbs-sct.gc.ca/acme"],
+        ["tbs-sct.gc.ca", "https://www.canada.ca/en/acme.html", "https://a.b.tbs-sct.gc.ca/acme"],
+        // The host-within rule: the vendor's site is under the cited host.
+        ["news.bbc.co.uk", "https://www.bbc.co.uk/acme", "https://news.bbc.co.uk/acme"],
+        [
+          "trust.acme-analytics.com",
+          "https://acme-analytics.com/a",
+          "https://trust.acme-analytics.com/a",
+        ],
+      ])(
+        "for a vendor on %s, does not take a page cited on %s that answered from %s as the cited site",
+        async (website, cited, landed) => {
+          const target = vendorOn(website);
+          const { result, kept, pack, trace } = await checkFor(target, cited, landed);
+
+          expect(result.verdict).toEqual({ outcome: "unread" });
+          expect(answeredOnCitedSite(cited, landed, target)).toBe(false);
+          expect(trace.snapshot().steps).toEqual([
+            expect.objectContaining({
+              url: cited,
+              outcome: "failed",
+              reason: "redirected_off_site",
+            }),
+          ]);
+          const label = credibilityOf({
+            finding: kept,
+            pack,
+            provenance: new Map(),
+            verdict: result.verdict,
+            target,
+          });
+          expect(label.basis.sources[0].reading).toBe("unconfirmed");
+        },
+      );
+
+      it.each([
+        // A page cited on the vendor's site does not answer for the group's other domain either.
+        ["bbc.co.uk", "https://www.bbc.co.uk/news/acme", "https://www.bbc.com/news/acme"],
+        ["tbs-sct.gc.ca", "https://www.tbs-sct.gc.ca/acme", "https://www.canada.ca/en/acme.html"],
+      ])(
+        "for a vendor on %s, does not take its own page %s that answered from %s as the cited site",
+        async (website, cited, landed) => {
+          const target = vendorOn(website);
+          const { result } = await checkFor(target, cited, landed);
+
+          expect(result.verdict).toEqual({ outcome: "unread" });
+          expect(answeredOnCitedSite(cited, landed, target)).toBe(false);
+        },
+      );
+
+      it("does not take a page that answered from another domain of the vendor's website", async () => {
+        const target = vendorOn("acme-analytics.com");
+        const cited = "https://www.canada.ca/en/acme.html";
+        const landed = "https://www.acme.gc.ca/acme";
+        const { result } = await checkFor(target, cited, landed, ["acme.gc.ca"]);
+
+        expect(result.verdict).toEqual({ outcome: "unread" });
+        expect(answeredOnCitedSite(cited, landed, target, ["acme.gc.ca"])).toBe(false);
+        // Without the other domain the group still holds.
+        expect(answeredOnCitedSite(cited, landed, target)).toBe(true);
+      });
+
+      it.each([
+        // The group's other domain, but not the vendor's host.
+        ["tbs-sct.gc.ca", "https://www.canada.ca/en/acme.html", "https://www.ic.gc.ca/acme"],
+        ["news.bbc.co.uk", "https://www.bbc.com/news/acme", "https://www.bbc.co.uk/news/acme"],
+        // The cited host itself, for a vendor in its group.
+        ["bbc.co.uk", "https://www.bbc.com/news/acme", "https://www.bbc.com/news/acme-2"],
+        // Both addresses on the vendor's own site.
+        ["bbc.co.uk", "https://www.bbc.co.uk/news/acme", "https://bbc.co.uk/news/acme"],
+        ["acme-analytics.com", OWN, "https://www.acme-analytics.com/security/incident"],
+        ["acme-analytics.com", "https://www.acme-analytics.com/security/incident", OWN],
+        [
+          "trust.acme-analytics.com",
+          "https://trust.acme-analytics.com/a",
+          "https://www.trust.acme-analytics.com/b",
+        ],
+        // A vendor whose website is a page of a shared platform.
+        ["github.com/acme", "https://github.com/acme/a", "https://www.github.com/acme/b"],
+      ])(
+        "for a vendor on %s, still takes a page cited on %s that answered from %s as the cited site",
+        async (website, cited, landed) => {
+          const target = vendorOn(website);
+          const { result } = await checkFor(target, cited, landed);
+
+          expect(result.verdict).toEqual({ outcome: "confirmed", url: cited });
+          expect(answeredOnCitedSite(cited, landed, target)).toBe(true);
+        },
+      );
+
+      it("refuses a lookalike of the vendor's domain as any other site", async () => {
+        const target = vendorOn("bbc.co.uk");
+        expect(
+          answeredOnCitedSite("https://www.bbc.com/a", "https://www.evilbbc.co.uk/a", target),
+        ).toBe(false);
+        // A subdomain of the vendor's domain is the vendor's.
+        expect(
+          answeredOnCitedSite("https://www.bbc.com/a", "https://news.bbc.co.uk/a", target),
+        ).toBe(false);
+      });
+
+      it("compares the hosts alone for a vendor without a domain", () => {
+        const target = vendorOn("");
+        expect(target.domain).toBeNull();
+        expect(
+          answeredOnCitedSite("https://www.bbc.com/a", "https://www.bbc.co.uk/a", target),
+        ).toBe(true);
+        expect(answeredOnCitedSite("https://bbc.co.uk/a", "https://news.bbc.co.uk/a", target)).toBe(
+          true,
+        );
+      });
+    });
+
+    it("tells the sites apart by their hosts", () => {
+      expect(answeredOnCitedSite("https://www.acme.com/a", "https://acme.com/b")).toBe(true);
+      expect(answeredOnCitedSite("https://acme.com/a", "https://news.acme.com/b")).toBe(true);
+      expect(answeredOnCitedSite("https://acme.com/a", "https://acme.com.evil.example/b")).toBe(
+        false,
+      );
+      expect(answeredOnCitedSite("https://agency.gov/a", "https://other-agency.gov/b")).toBe(false);
+      expect(answeredOnCitedSite("https://agency.gov/a", "not an address")).toBe(false);
+      expect(
+        answeredOnCitedSite("https://agency.gov/a", "https://other-agency.gov/b", TARGET),
+      ).toBe(false);
+      // Without the target, only the hosts are compared.
+      expect(answeredOnCitedSite("https://bbc.co.uk/a", "https://bbc.com/a")).toBe(false);
+      expect(answeredOnCitedSite("https://bbc.co.uk/a", "https://bbc.com/a", TARGET)).toBe(true);
+    });
+  });
+
+  it("returns one check for each finding, in their order", async () => {
+    const kept = [
+      finding([AGGREGATOR], { risk_description: "First." }),
+      finding([PUBLISHER], { risk_description: "Second." }),
+      finding([OTHER], { risk_description: "Third." }),
+    ];
+    const pack = [source(AGGREGATOR), source(PUBLISHER, { kind: "page" }), source(OTHER)];
+
+    const result = await check(
+      kept,
+      pack,
+      readerOf({ [OTHER]: HOLDING, [AGGREGATOR]: NOT_HOLDING }),
+    );
+
+    expect(result.map(({ finding: one, verdict }) => [one.risk_description, verdict])).toEqual([
+      ["First.", { outcome: "not_on_page", url: AGGREGATOR }],
+      ["Second.", null],
+      ["Third.", { outcome: "confirmed", url: OTHER }],
+    ]);
+  });
+});
+
+describe("search results whose text may not be kept (Brave Search)", () => {
+  const titled = (url: string, text: string, title: string, publishedAt: string | null) =>
+    jest.fn<ReturnType<PageReader>, Parameters<PageReader>>(async (asked) => {
+      if (asked !== url) throw new PageReadError("not_found");
+      return { url, title, publishedAt, text, links: [] };
+    });
+
+  it("keeps the quote a page read here holds, with the page's own title and date", async () => {
+    const pack = [source(PUBLISHER)];
+    const [checked] = await checkSnippetFindings({
+      findings: [finding([PUBLISHER])],
+      pack,
+      target: TARGET,
+      readPage: titled(PUBLISHER, HOLDING, "Reuters: Acme breach", "2026-09-11"),
+      transientUrls: new Set([PUBLISHER]),
+    });
+
+    expect(checked.verdict).toEqual({ outcome: "confirmed", url: PUBLISHER });
+    expect(checked.finding.sources).toEqual([
+      { url: PUBLISHER, title: "Reuters: Acme breach", quote: QUOTE, published_at: "2026-09-11" },
+    ]);
+  });
+
+  it("names the source after its host when the page has no title", async () => {
+    const [checked] = await checkSnippetFindings({
+      findings: [finding([PUBLISHER])],
+      pack: [source(PUBLISHER)],
+      target: TARGET,
+      readPage: titled(PUBLISHER, HOLDING, "", null),
+      transientUrls: new Set([PUBLISHER]),
+    });
+
+    expect(checked.finding.sources[0]).toEqual(
+      expect.objectContaining({ title: "www.reuters.com", quote: QUOTE, published_at: null }),
+    );
+  });
+
+  it.each([
+    [
+      "the page does not hold the quote",
+      "Acme Analytics is looking into an incident.",
+      "not_on_page",
+    ],
+    ["the page cannot be read", null, "unread"],
+  ])("stores the address only when %s", async (_label, text, outcome) => {
+    const readPage =
+      text === null ? readerOf({}) : titled(PUBLISHER, text, "Reuters: Acme breach", "2026-09-11");
+    const [checked] = await checkSnippetFindings({
+      findings: [finding([PUBLISHER])],
+      pack: [source(PUBLISHER)],
+      target: TARGET,
+      readPage,
+      transientUrls: new Set([PUBLISHER]),
+    });
+
+    expect(checked.verdict?.outcome).toBe(outcome);
+    expect(checked.finding.snippet_only).toBe(true);
+    expect(checked.finding.sources).toEqual([
+      { url: PUBLISHER, title: "", quote: "", published_at: null, quote_withheld: true },
+    ]);
+  });
+
+  it("withholds such a source of a finding that cites a page too, which is not checked", async () => {
+    const page = source(OWN, { kind: "page", onVendorSite: true });
+    const [checked] = await checkSnippetFindings({
+      findings: [finding([OWN, PUBLISHER])],
+      pack: [page, source(PUBLISHER)],
+      target: TARGET,
+      readPage: readerOf({}),
+      transientUrls: new Set([PUBLISHER]),
+    });
+
+    expect(checked.verdict).toBeNull();
+    expect(checked.finding.sources).toEqual([
+      expect.objectContaining({
+        url: OWN,
+        quote: QUOTE,
+        title: "Acme Analytics confirms a breach",
+      }),
+      { url: PUBLISHER, title: "", quote: "", published_at: null, quote_withheld: true },
+    ]);
+  });
+
+  it("withholds a second such source that was not read, and keeps the one whose page confirmed", async () => {
+    const [checked] = await checkSnippetFindings({
+      findings: [finding([PUBLISHER, OTHER])],
+      pack: [source(PUBLISHER), source(OTHER)],
+      target: TARGET,
+      readPage: titled(PUBLISHER, HOLDING, "Reuters: Acme breach", null),
+      transientUrls: new Set([PUBLISHER, OTHER]),
+    });
+
+    expect(checked.finding.sources).toEqual([
+      expect.objectContaining({ url: PUBLISHER, quote: QUOTE, title: "Reuters: Acme breach" }),
+      { url: OTHER, title: "", quote: "", published_at: null, quote_withheld: true },
+    ]);
+  });
+
+  it("changes nothing without such sources", async () => {
+    const original = finding([PUBLISHER]);
+    const [checked] = await checkSnippetFindings({
+      findings: [original],
+      pack: [source(PUBLISHER)],
+      target: TARGET,
+      readPage: titled(PUBLISHER, HOLDING, "Reuters: Acme breach", "2026-09-11"),
+    });
+
+    expect(checked.finding).toBe(original);
+  });
+
+  describe("withholdSearchText", () => {
+    it("stores the address only without a confirmed page, and returns the same finding without such sources", () => {
+      const original = finding([PUBLISHER, OTHER]);
+
+      const withheld = withholdSearchText(original, new Set([OTHER]));
+
+      expect(withheld.sources).toEqual([
+        original.sources[0],
+        { url: OTHER, title: "", quote: "", published_at: null, quote_withheld: true },
+      ]);
+      expect(original.sources[1].quote).toBe(QUOTE);
+      expect(withholdSearchText(original, new Set())).toBe(original);
+    });
+
+    it("cleans and cuts the page's title, and drops a date that is not one", () => {
+      const withheld = withholdSearchText(finding([PUBLISHER]), new Set([PUBLISHER]), () => ({
+        title: `${"x".repeat(400)}`,
+        publishedAt: "y".repeat(100),
+      }));
+
+      expect(withheld.sources[0].title).toHaveLength(300);
+      expect(withheld.sources[0].published_at).toBeNull();
+    });
+  });
+});

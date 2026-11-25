@@ -47,7 +47,7 @@ import { riskViewer, riskVisibilitySql, SYSTEM_RISK_VIEWER } from "../utils/risk
 import { translateError } from "../utils/i18n.utils";
 import { IRisk } from "../domain.layer/interfaces/I.risk";
 import { BulkRiskChange } from "../utils/automation/risk.automation.utils";
-import { callerCanDecideAnyRisk } from "../utils/riskApproval.utils";
+import { requestCallerIsAdmin } from "../utils/organizationAdmin.utils";
 import {
   getUserNameById,
   notifyNewRiskApprover,
@@ -143,10 +143,6 @@ async function notifyNewRiskOwners(
     }
   }
 }
-
-/** Whether the signed-in user may decide any risk's approval (an Admin). */
-const requestCallerIsAdmin = (req: Request): Promise<boolean> =>
-  callerCanDecideAnyRisk(req.organizationId ?? null, req.role ?? "");
 
 export async function getAllRisks(req: Request, res: Response): Promise<any> {
   const filter = (req.query.filter as "active" | "deleted" | "all") || "active";

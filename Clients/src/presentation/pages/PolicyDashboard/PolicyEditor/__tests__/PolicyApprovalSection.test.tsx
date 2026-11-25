@@ -147,9 +147,9 @@ describe("PolicyApprovalSection", () => {
     fireEvent.click(screen.getByTestId("policy-withdraw-approval"));
     fireEvent.click(await screen.findByRole("button", { name: "Withdraw" }));
 
-    expect(
-      await screen.findByText("This approval request is no longer pending"),
-    ).toBeInTheDocument();
+    const message = await screen.findByText("This approval request is no longer pending");
+    // Under the withdraw button, not a fixed toast in the corner.
+    expect(message.closest('[role="alert"]')).toHaveStyle({ position: "static" });
   });
 
   it("shows who approved the policy and when", async () => {

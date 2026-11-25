@@ -41,6 +41,8 @@ const ARCHIVE_DELETE_PAIR_TYPES = ["task", "reportrun"];
 // The remove confirmation says "Delete {type}" by default, which reads badly
 // for camelCase type names — and is plain wrong where the item archives.
 const REMOVE_PROCEED_TEXT_BY_TYPE: Record<string, string> = {
+  incident: "Archive incident",
+  task: "Archive task",
   scheduledreport: "Delete report",
   reportrun: "Archive report",
   agent: "Delete agent",
@@ -62,12 +64,14 @@ function IconButton({
   onMouseEvent,
   onMakeVisible,
   onDownload,
+  onDownloadCompanion,
   isVisible,
   canDelete,
   canEdit = true,
   checkForRisks,
   onDeleteWithRisks,
   onView,
+  onApprove,
   openLinkedPolicies,
   entityId: _entityId,
   onSendTest,
@@ -97,7 +101,8 @@ function IconButton({
   const usesArchiveDeletePair = ARCHIVE_DELETE_PAIR_TYPES.includes(normalizedType ?? "");
   // The remove-family item archives (reversibly) for these types, so its
   // confirmation is a warning rather than a destructive delete.
-  const isArchiveRemoval = type === "Incident" || type === "Task" || normalizedType === "reportrun";
+  const isArchiveRemoval =
+    normalizedType === "incident" || normalizedType === "task" || normalizedType === "reportrun";
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [isOpenRemoveModal, setIsOpenRemoveModal] = useState(false);
   const [isOpenHardDeleteModal, setIsOpenHardDeleteModal] = useState(false);
@@ -208,24 +213,27 @@ function IconButton({
     }
   };
 
-  const handleDownload = async (e?: React.SyntheticEvent) => {
-    try {
-      if (onDownload) {
-        await onDownload();
+  const downloadWith =
+    (download?: () => void | Promise<void>) => async (e?: React.SyntheticEvent) => {
+      try {
+        if (download) {
+          await download();
+        }
+      } catch (error) {
+        console.error("Download failed:", error);
+        setAlert({
+          variant: "error",
+          body: "Failed to download file. Please try again.",
+          isToast: true,
+        });
+      } finally {
+        if (e) {
+          closeActionMenu(e);
+        }
       }
-    } catch (error) {
-      console.error("Download failed:", error);
-      setAlert({
-        variant: "error",
-        body: "Failed to download file. Please try again.",
-        isToast: true,
-      });
-    } finally {
-      if (e) {
-        closeActionMenu(e);
-      }
-    }
-  };
+    };
+  const handleDownload = downloadWith(onDownload);
+  const handleDownloadCompanion = downloadWith(onDownloadCompanion);
 
   const handleSendTestNotification = async (e?: React.SyntheticEvent) => {
     if (onSendTest) {
@@ -352,6 +360,8 @@ function IconButton({
       // A run only has a file once it succeeds, so the caller withholds
       // onDownload rather than offering an item that cannot work.
       if (onDownload) items.push("download");
+      // An OSFI E-23 run also stores its internal fix-it list.
+      if (onDownloadCompanion) items.push("download_companion");
       if (onView) items.push("view");
       items.push(isArchived ? "restore" : "archive");
       items.push("delete");
@@ -376,9 +386,25 @@ function IconButton({
       return items;
     }
 
+    // A deleted vendor risk: open it read-only, and restore it where allowed.
+    if (normalizedType === "risk" && isArchived) {
+      return onRestore ? ["view", "restore"] : ["view"];
+    }
+
     // Read-only roles keep the entry that opens the (view-only) record.
     if (normalizedType === "model risk" && canDelete === false) {
       return ["edit"];
+    }
+
+    // An archived incident opens read-only and can be restored (incident.edit).
+    if (normalizedType === "incident" && isArchived) {
+      return onRestore ? ["view", "restore"] : ["view"];
+    }
+
+    // Without incident.edit an incident opens read-only, unless the role
+    // records approval (incident.approve): then it can open it to approve.
+    if (normalizedType === "incident" && canEdit === false) {
+      return onApprove ? ["view", "approve"] : ["view"];
     }
 
     if (normalizedType === "vendor") {
@@ -432,6 +458,11 @@ function IconButton({
     const LABELS_BY_TYPE: Record<string, Record<string, string>> = {
       incident: {
         archive: "Archive incident",
+        approve: "Record approval",
+        restore: "Restore incident",
+      },
+      risk: {
+        restore: "Restore risk",
       },
       task: {
         archive: "Archive task",
@@ -439,6 +470,7 @@ function IconButton({
         restore: "Restore task",
       },
       reportrun: {
+        download_companion: "Download fix-it list",
         view: "View analyses",
         delete: "Delete permanently",
       },
@@ -524,10 +556,16 @@ function IconButton({
                   handleEdit(e);
                 } else if (item === "download") {
                   await handleDownload(e);
+                } else if (item === "download_companion") {
+                  await handleDownloadCompanion(e);
                 } else if (item === "make visible") {
                   handleMakeVisible(e);
                 } else if (item === "view") {
                   handleView(e);
+                } else if (item === "approve") {
+                  onApprove?.();
+                  closeActionMenu(e);
+                  onMouseEvent?.(e);
                 } else if (item === "Send Test") {
                   await handleSendTestNotification(e);
                 } else if (item === "Activate/Deactivate") {
@@ -537,7 +575,7 @@ function IconButton({
                 } else if (item === "pause_resume") {
                   await handleToggleStatus(e);
                 } else if (item === "restore") {
-                  // Task restore action
+                  // Restore an archived task, incident, report run or deleted risk
                   handleRestore(e);
                 } else if (item === "link_objects") {
                   handleLinkedObjects(e);
@@ -672,11 +710,7 @@ function IconButton({
             )
           }
           cancelText="Cancel"
-          proceedText={
-            type === "Incident" || type === "Task"
-              ? `Archive ${type.toLowerCase()}`
-              : (REMOVE_PROCEED_TEXT_BY_TYPE[normalizedType ?? ""] ?? `Delete ${type}`)
-          }
+          proceedText={REMOVE_PROCEED_TEXT_BY_TYPE[normalizedType ?? ""] ?? `Delete ${type}`}
           onCancel={() => handleCancel()}
           onProceed={() =>
             checkForRisks && onDeleteWithRisks ? handleDeleteWithRiskCheck() : handleDelete()

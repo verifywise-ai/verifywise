@@ -62,7 +62,7 @@ Submitter name, submitter email and schema fields of type `email` never reach th
 
 Stage statuses: `pending`, `complete`, `ai_not_configured` (form has no LLM key, or the key was deleted) and `ai_failed`.
 
-Per-suggestion writes are single atomic `UPDATE`s on the matching array element (`updateSuggestedRiskItemQuery`, `setAllSuggestionStatesQuery`). Two reviewers acting at once don't overwrite each other, and the same statement refuses to leave an accepted item without a mitigation plan. Every assessment and suggestion write requires `status = 'pending'`, so a job that finishes after approve or reject changes nothing. The assessment write keeps a reviewer override's band in `risk_tier`.
+Per-suggestion writes are single atomic `UPDATE`s on the matching array element (`updateSuggestedRiskItemQuery`, `setAllSuggestionStatesQuery`). Two reviewers acting at once don't overwrite each other. The mitigation plan is optional, as in the risk register, so an item is accepted with or without one. Every assessment and suggestion write requires `status = 'pending'`, so a job that finishes after approve or reject changes nothing. The assessment write keeps a reviewer override's band in `risk_tier`.
 
 ## Background job
 
@@ -100,8 +100,8 @@ All new writes use `authorize("intakeForm.edit")`.
 |---|---|
 | `GET /intake/submissions/:id/preview` | Adds `assessment`, `suggestedRisks`, `ruleMinimumPreview` (current rules) and `assessedLevel` (stored) |
 | `POST /intake/submissions/:id/assessment/retry` | 202 with the stages queued. Only failed stages, stages never stored, or stages pending over 10 minutes. 409 when nothing qualifies |
-| `PATCH /intake/submissions/:id/suggested-risks/:suggestionId` | Edit, accept, dismiss or restore one suggestion. Whitelisted fields only. Accepting needs a mitigation plan |
-| `POST /intake/submissions/:id/suggested-risks/accept-all` | Accepts open suggestions that have a mitigation plan. Returns `{ accepted, skipped, items }`, with items as stored. 409 when the submission isn't pending, including one decided during the call |
+| `PATCH /intake/submissions/:id/suggested-risks/:suggestionId` | Edit, accept, dismiss or restore one suggestion. Whitelisted fields only. The mitigation plan is optional. `modelRiskLevel` is refused (400): a model suggestion's level follows its likelihood and severity, and an edit of either recomputes the stored `modelRiskLevel` |
+| `POST /intake/submissions/:id/suggested-risks/accept-all` | Accepts every open suggestion (the mitigation plan is optional). Returns `{ accepted, skipped, items }`, with items as stored; `skipped` is kept for compatibility and is 0 unless the items changed during the call. 409 when the submission isn't pending, including one decided during the call |
 | `PATCH /intake/submissions/:id/risk-override` | Pending submissions only (409 otherwise). A pre-v2 tier name is stored as its band (`bandOfTier`). For v2, or a submission not scored yet, the tier must be a band at or above the band of the current rule minimum |
 
 ## Routing endpoints
@@ -217,7 +217,7 @@ Inside the existing approval transaction:
 
 1. A v2 assessment is re-floored under the level being approved (the reviewer may have changed it) with `recomputeAssessmentForLevel`. A stage still running is closed: scoring keeps the rule minimum (`ai_failed`, "Approved before AI scoring finished") and pending suggestions are marked `ai_failed`.
 2. A band override below that level's minimum is refused with 400, whether it comes with the request or was saved earlier through `PATCH /risk-override`. The stored override is built from whitelisted fields.
-3. Each accepted suggestion becomes a risk on the new entity. Use cases go through `createRiskService` (owner = approver, deadline = suggestion deadline or approval + 90 days, "Not Started", default category "Strategic risk"). Models go through `createNewModelRiskQuery` (owner = approver id as a string, status "Open"). Any failure rolls the whole approval back. Rejecting creates nothing, but closes running stages the same way as step 1 (`settleAssessmentOnDecision`), so a rejected submission never shows "Scoring…".
+3. Each accepted suggestion becomes a risk on the new entity. Use cases go through `createRiskService` (owner = approver, deadline = suggestion deadline or approval + 90 days, "Not Started", default category "Strategic risk"). Models go through `createModelRiskService` (owner = approver id as a string, status "Open") with the suggestion's likelihood and severity, so the level comes from the shared formula like every model risk's (models.md, decision 10). A model suggestion without a valid likelihood or severity is refused with 400 and the field message ("Likelihood must be one of: ..." / "Severity must be one of: ..."), and nothing is approved. The review dialog shows the model risk level read-only, computed from the two, and won't save a model suggestion until both are set. Any failure rolls the whole approval back. Rejecting creates nothing, but closes running stages the same way as step 1 (`settleAssessmentOnDecision`), so a rejected submission never shows "Scoring…".
 
 ## Release
 

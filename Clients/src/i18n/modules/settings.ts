@@ -480,6 +480,8 @@ export const de: Record<string, string> = {
     "Leer lassen oder 0 eingeben, um unbegrenzt aufzubewahren. Maximum {max}.",
   "Retention settings could not be loaded.":
     "Die Aufbewahrungseinstellungen konnten nicht geladen werden.",
+  "Extension": "Erweiterung",
+  "Configure and enable this extension.": "Konfigurieren und aktivieren Sie diese Erweiterung.",
   // Groups and custom roles (#5253)
   "Add a whole group to the use case in one step.":
     "Fügen Sie eine ganze Gruppe in einem Schritt zum Anwendungsfall hinzu.",
@@ -658,8 +660,6 @@ export const de: Record<string, string> = {
     "Optional – nur erforderlich, wenn Sie die Azure Resource Manager API verwenden.",
   "Configure to enable": "Zum Aktivieren konfigurieren",
   "Configuration required": "Konfiguration erforderlich",
-  "Extension": "Erweiterung",
-  "Configure and enable this extension.": "Konfigurieren und aktivieren Sie diese Erweiterung.",
   "Enable failed": "Aktivierung fehlgeschlagen",
   "Disable failed": "Deaktivierung fehlgeschlagen",
   "Test failed": "Test fehlgeschlagen",
@@ -773,6 +773,49 @@ export const de: Record<string, string> = {
   "No data to import. Please upload a valid Excel file.":
     "Keine Daten zum Importieren. Laden Sie eine gültige Excel-Datei hoch.",
   "Please upload an Excel file (.xlsx)": "Laden Sie eine Excel-Datei (.xlsx) hoch",
+  "Search API key": "Such-API-Schlüssel",
+  "Vendor research searches the news with Brave when the research key is not an Anthropic key. Without a Brave key, news comes from the GDELT Project, which sometimes refuses requests.":
+    "Die Anbieterrecherche durchsucht die Nachrichten mit Brave, wenn der Rechercheschlüssel kein Anthropic-Schlüssel ist. Ohne Brave-Schlüssel stammen die Nachrichten vom GDELT Project, das Anfragen manchmal ablehnt.",
+  "Brave Search · ending in {last4}": "Brave Search · endet auf {last4}",
+  "Brave Search": "Brave Search",
+  "Not set": "Nicht festgelegt",
+  "Replace key": "Schlüssel ersetzen",
+  "Add key": "Schlüssel hinzufügen",
+  "Brave search key": "Brave-Suchschlüssel",
+  "Vendor research searches the news with this key.":
+    "Die Anbieterrecherche durchsucht die Nachrichten mit diesem Schlüssel.",
+  "Get a key at brave.com/search/api": "Einen Schlüssel erhalten Sie unter brave.com/search/api",
+  "Brave charges about $5 per 1,000 searches after $5 of free credit a month. A research run makes about 20 to 30.":
+    "Brave berechnet etwa 5 $ pro 1.000 Suchen nach einem kostenlosen Guthaben von 5 $ pro Monat. Eine Recherche macht etwa 20 bis 30.",
+  "Brave rejected this key. Check that you copied all of it.":
+    "Brave hat diesen Schlüssel abgelehnt. Prüfen Sie, ob Sie ihn vollständig kopiert haben.",
+  "Could not reach Brave to check this key.":
+    "Brave konnte nicht erreicht werden, um diesen Schlüssel zu prüfen.",
+  "Could not save the key. Try again.":
+    "Der Schlüssel konnte nicht gespeichert werden. Versuchen Sie es erneut.",
+  "Save anyway": "Trotzdem speichern",
+  "Brave search key saved.": "Brave-Suchschlüssel gespeichert.",
+  "Brave search key removed.": "Brave-Suchschlüssel entfernt.",
+  "Remove the Brave search key?": "Brave-Suchschlüssel entfernen?",
+  "Vendor research will search the news with the GDELT Project instead.":
+    "Die Anbieterrecherche durchsucht die Nachrichten dann stattdessen mit dem GDELT Project.",
+  "Could not load the search key.": "Der Suchschlüssel konnte nicht geladen werden.",
+  "Loading the search key": "Suchschlüssel wird geladen",
+  "Workspace ID": "Workspace-ID",
+  "Only for keys that are not tied to a workspace.":
+    "Nur für Schlüssel, die keinem Workspace zugeordnet sind.",
+  "Workspace ID cannot contain spaces.": "Die Workspace-ID darf keine Leerzeichen enthalten.",
+  "Checking key…": "Schlüssel wird geprüft…",
+  "Could not reach Anthropic to check this key.":
+    "Anthropic war nicht erreichbar, um diesen Schlüssel zu prüfen.",
+  "Could not reach OpenAI to check this key.":
+    "OpenAI war nicht erreichbar, um diesen Schlüssel zu prüfen.",
+  "Could not reach OpenRouter to check this key.":
+    "OpenRouter war nicht erreichbar, um diesen Schlüssel zu prüfen.",
+  "Could not reach the endpoint to check this key.":
+    "Der Endpunkt war nicht erreichbar, um diesen Schlüssel zu prüfen.",
+  "You changed the provider or endpoint, so enter the API key again.":
+    "Sie haben den Anbieter oder den Endpunkt geändert. Geben Sie den API-Schlüssel daher erneut ein.",
 };
 
 export const fr: Record<string, string> = {
@@ -1254,6 +1297,8 @@ export const fr: Record<string, string> = {
     "Laissez vide ou saisissez 0 pour conserver indéfiniment. Maximum {max}.",
   "Retention settings could not be loaded.":
     "Les paramètres de conservation n'ont pas pu être chargés.",
+  "Extension": "Extension",
+  "Configure and enable this extension.": "Configurez et activez cette extension.",
   // Groups and custom roles (#5253)
   "Add a whole group to the use case in one step.":
     "Ajoutez un groupe entier au cas d'usage en une seule étape.",
@@ -1433,8 +1478,6 @@ export const fr: Record<string, string> = {
     "Facultatif : requis uniquement si vous utilisez l'API Azure Resource Manager.",
   "Configure to enable": "Configurer pour activer",
   "Configuration required": "Configuration requise",
-  "Extension": "Extension",
-  "Configure and enable this extension.": "Configurez et activez cette extension.",
   "Enable failed": "Échec de l'activation",
   "Disable failed": "Échec de la désactivation",
   "Test failed": "Échec du test",
@@ -1547,6 +1590,49 @@ export const fr: Record<string, string> = {
   "No data to import. Please upload a valid Excel file.":
     "Aucune donnée à importer. Téléversez un fichier Excel valide.",
   "Please upload an Excel file (.xlsx)": "Téléversez un fichier Excel (.xlsx)",
+  "Search API key": "Clé d'API de recherche",
+  "Vendor research searches the news with Brave when the research key is not an Anthropic key. Without a Brave key, news comes from the GDELT Project, which sometimes refuses requests.":
+    "La recherche sur les fournisseurs cherche dans les actualités avec Brave lorsque la clé de recherche n'est pas une clé Anthropic. Sans clé Brave, les actualités proviennent du GDELT Project, qui refuse parfois les requêtes.",
+  "Brave Search · ending in {last4}": "Brave Search · se terminant par {last4}",
+  "Brave Search": "Brave Search",
+  "Not set": "Non défini",
+  "Replace key": "Remplacer la clé",
+  "Add key": "Ajouter une clé",
+  "Brave search key": "Clé de recherche Brave",
+  "Vendor research searches the news with this key.":
+    "La recherche sur les fournisseurs cherche dans les actualités avec cette clé.",
+  "Get a key at brave.com/search/api": "Obtenez une clé sur brave.com/search/api",
+  "Brave charges about $5 per 1,000 searches after $5 of free credit a month. A research run makes about 20 to 30.":
+    "Brave facture environ 5 $ les 1 000 recherches après 5 $ de crédit gratuit par mois. Une recherche en effectue environ 20 à 30.",
+  "Brave rejected this key. Check that you copied all of it.":
+    "Brave a refusé cette clé. Vérifiez que vous l'avez copiée en entier.",
+  "Could not reach Brave to check this key.":
+    "Impossible de joindre Brave pour vérifier cette clé.",
+  "Could not save the key. Try again.": "Impossible d'enregistrer la clé. Réessayez.",
+  "Save anyway": "Enregistrer quand même",
+  "Brave search key saved.": "Clé de recherche Brave enregistrée.",
+  "Brave search key removed.": "Clé de recherche Brave supprimée.",
+  "Remove the Brave search key?": "Supprimer la clé de recherche Brave ?",
+  "Vendor research will search the news with the GDELT Project instead.":
+    "La recherche sur les fournisseurs cherchera alors dans les actualités avec le GDELT Project.",
+  "Could not load the search key.": "Impossible de charger la clé de recherche.",
+  "Loading the search key": "Chargement de la clé de recherche",
+  "Workspace ID": "ID de l'espace de travail",
+  "Only for keys that are not tied to a workspace.":
+    "Uniquement pour les clés qui ne sont liées à aucun espace de travail.",
+  "Workspace ID cannot contain spaces.":
+    "L'ID de l'espace de travail ne peut pas contenir d'espaces.",
+  "Checking key…": "Vérification de la clé…",
+  "Could not reach Anthropic to check this key.":
+    "Impossible de joindre Anthropic pour vérifier cette clé.",
+  "Could not reach OpenAI to check this key.":
+    "Impossible de joindre OpenAI pour vérifier cette clé.",
+  "Could not reach OpenRouter to check this key.":
+    "Impossible de joindre OpenRouter pour vérifier cette clé.",
+  "Could not reach the endpoint to check this key.":
+    "Impossible de joindre le point de terminaison pour vérifier cette clé.",
+  "You changed the provider or endpoint, so enter the API key again.":
+    "Vous avez changé de fournisseur ou de point de terminaison : saisissez à nouveau la clé API.",
 };
 
 export const es: Record<string, string> = {
@@ -2025,6 +2111,8 @@ export const es: Record<string, string> = {
   "Leave empty or enter 0 to keep indefinitely. Maximum {max}.":
     "Déjalo vacío o escribe 0 para conservar indefinidamente. Máximo {max}.",
   "Retention settings could not be loaded.": "No se pudo cargar la configuración de retención.",
+  "Extension": "Extensión",
+  "Configure and enable this extension.": "Configure y active esta extensión.",
   // Groups and custom roles (#5253)
   "Add a whole group to the use case in one step.":
     "Agregue un grupo completo al caso de uso en un solo paso.",
@@ -2201,8 +2289,6 @@ export const es: Record<string, string> = {
     "Opcional: solo es necesario si usa la API de Azure Resource Manager.",
   "Configure to enable": "Configurar para activar",
   "Configuration required": "Configuración necesaria",
-  "Extension": "Extensión",
-  "Configure and enable this extension.": "Configure y active esta extensión.",
   "Enable failed": "Error al activar",
   "Disable failed": "Error al desactivar",
   "Test failed": "Error en la prueba",
@@ -2315,4 +2401,46 @@ export const es: Record<string, string> = {
   "No data to import. Please upload a valid Excel file.":
     "No hay datos para importar. Suba un archivo Excel válido.",
   "Please upload an Excel file (.xlsx)": "Suba un archivo Excel (.xlsx)",
+  "Search API key": "Clave de API de búsqueda",
+  "Vendor research searches the news with Brave when the research key is not an Anthropic key. Without a Brave key, news comes from the GDELT Project, which sometimes refuses requests.":
+    "La investigación de proveedores busca en las noticias con Brave cuando la clave de investigación no es una clave de Anthropic. Sin una clave de Brave, las noticias provienen del GDELT Project, que a veces rechaza las solicitudes.",
+  "Brave Search · ending in {last4}": "Brave Search · terminada en {last4}",
+  "Brave Search": "Brave Search",
+  "Not set": "Sin definir",
+  "Replace key": "Reemplazar clave",
+  "Add key": "Añadir clave",
+  "Brave search key": "Clave de búsqueda de Brave",
+  "Vendor research searches the news with this key.":
+    "La investigación de proveedores busca en las noticias con esta clave.",
+  "Get a key at brave.com/search/api": "Obtenga una clave en brave.com/search/api",
+  "Brave charges about $5 per 1,000 searches after $5 of free credit a month. A research run makes about 20 to 30.":
+    "Brave cobra unos 5 $ por cada 1000 búsquedas tras 5 $ de crédito gratuito al mes. Una investigación hace unas 20 a 30.",
+  "Brave rejected this key. Check that you copied all of it.":
+    "Brave rechazó esta clave. Compruebe que la copió completa.",
+  "Could not reach Brave to check this key.":
+    "No se pudo contactar con Brave para comprobar esta clave.",
+  "Could not save the key. Try again.": "No se pudo guardar la clave. Inténtelo de nuevo.",
+  "Save anyway": "Guardar de todos modos",
+  "Brave search key saved.": "Clave de búsqueda de Brave guardada.",
+  "Brave search key removed.": "Clave de búsqueda de Brave eliminada.",
+  "Remove the Brave search key?": "¿Eliminar la clave de búsqueda de Brave?",
+  "Vendor research will search the news with the GDELT Project instead.":
+    "La investigación de proveedores buscará entonces en las noticias con el GDELT Project.",
+  "Could not load the search key.": "No se pudo cargar la clave de búsqueda.",
+  "Loading the search key": "Cargando la clave de búsqueda",
+  "Workspace ID": "ID del espacio de trabajo",
+  "Only for keys that are not tied to a workspace.":
+    "Solo para claves que no están vinculadas a un espacio de trabajo.",
+  "Workspace ID cannot contain spaces.": "El ID del espacio de trabajo no puede contener espacios.",
+  "Checking key…": "Comprobando la clave…",
+  "Could not reach Anthropic to check this key.":
+    "No se pudo contactar con Anthropic para comprobar esta clave.",
+  "Could not reach OpenAI to check this key.":
+    "No se pudo contactar con OpenAI para comprobar esta clave.",
+  "Could not reach OpenRouter to check this key.":
+    "No se pudo contactar con OpenRouter para comprobar esta clave.",
+  "Could not reach the endpoint to check this key.":
+    "No se pudo contactar con el endpoint para comprobar esta clave.",
+  "You changed the provider or endpoint, so enter the API key again.":
+    "Cambiaste el proveedor o el endpoint, así que vuelve a introducir la clave de API.",
 };

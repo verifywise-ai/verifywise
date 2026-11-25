@@ -32,6 +32,10 @@ export const approvalWorkflowsContent: ArticleContent = {
       ],
     },
     {
+      type: 'paragraph',
+      text: 'You can also create a use case workflow without leaving the use case. Choose **Create workflow** under the **Approval workflow** field, in the create use case form or in the workflow dialog on a use case\'s Overview tab. The entity is set to Use case, and the new workflow is selected once you save it.',
+    },
+    {
       type: 'heading',
       id: 'submitting',
       level: 2,
@@ -47,7 +51,7 @@ export const approvalWorkflowsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'A use case workflow follows the same rule: it must be active and have at least one approver on every step, or the use case is not saved. While a use case\'s request is pending or rejected, only people who manage approval workflows can change or remove its workflow.',
+      text: 'A use case workflow follows the same rule: it must be active and have at least one approver on every step, or the use case is not saved. While a use case\'s request is pending or rejected, only people who manage approval workflows can change or remove its workflow. After a rejection, anyone who can edit the use case can choose **Resubmit for approval** on its Overview tab to send it to the same workflow again. To attach or change the workflow of an existing use case, use the **Approval workflow** field on its Overview tab.',
     },
     {
       type: 'heading',
@@ -70,7 +74,7 @@ export const approvalWorkflowsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Only a pending request can be withdrawn, and only by the person who made it. If the item a request is about is deleted, such as a file or a policy, its pending request is rejected and the requestor is notified.',
+      text: 'When a request is rejected, the requestor is notified. For a policy or a use case, the notification opens that item, where it can be resubmitted. Only a pending request can be withdrawn, and only by the person who made it. If the item a request is about is deleted, such as a file or a policy, its pending request is rejected and the requestor is notified.',
     },
     {
       type: 'heading',
@@ -106,6 +110,12 @@ export const approvalWorkflowsContent: ArticleContent = {
       type: 'article-links',
       title: 'Related articles',
       items: [
+        {
+          collectionId: 'ai-governance',
+          articleId: 'use-cases',
+          title: 'Use cases',
+          description: 'Attach an approval workflow to a new or existing use case',
+        },
         {
           collectionId: 'policies',
           articleId: 'policy-approval',

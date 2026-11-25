@@ -142,6 +142,28 @@ describe("logRollbackFailure", () => {
     expect(organizationId).toBe(0);
   });
 
+  it("logs the user and organization a service passes when there is no request", async () => {
+    await logRollbackFailure({
+      userId: 9,
+      organizationId: 4,
+      functionName: "deleteModelInventoryService",
+      fileName: "modelInventory.service.ts",
+      eventType: "Delete",
+      originalError: new Error("write failed"),
+      rollbackError: new Error("rb failed"),
+    });
+
+    const [, description, userId, organizationId] = mockLogEvent.mock.calls[0];
+    expect(userId).toBe(9);
+    expect(organizationId).toBe(4);
+    expect(description).toContain("write failed");
+    expect(description).toContain("path=unknown");
+    const originalLogCall = mockLoggerError.mock.calls.find((c) =>
+      String(c[0]).startsWith("[rollback] original error"),
+    );
+    expect(originalLogCall![0]).toContain("org=4");
+  });
+
   it("uses req.url when originalUrl is missing", async () => {
     await logRollbackFailure({
       req: makeReq({ originalUrl: undefined, url: "/fallback" } as Partial<Request>),

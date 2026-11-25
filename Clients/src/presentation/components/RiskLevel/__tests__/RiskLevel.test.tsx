@@ -16,6 +16,14 @@ describe("RiskLevel", () => {
     expect(screen.getByText("Risk level")).toBeInTheDocument();
   });
 
+  // The residual pair is optional: with nothing picked there is no level yet.
+  it("shows placeholders and no level while neither value is picked", () => {
+    renderWithProviders(<RiskLevel {...defaultProps} />);
+    expect(screen.getByText("Select likelihood of risk to happen")).toBeInTheDocument();
+    expect(screen.getByText("Select risk severity")).toBeInTheDocument();
+    expect(screen.getByText("—")).toBeInTheDocument();
+  });
+
   it("renders the Likelihood select", () => {
     renderWithProviders(<RiskLevel {...defaultProps} />);
     expect(screen.getByText("Likelihood")).toBeInTheDocument();

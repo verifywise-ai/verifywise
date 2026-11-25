@@ -4,8 +4,30 @@ import { FileModel, FileSource } from "../domain.layer/models/file/file.model";
 import { Transaction, QueryTypes } from "sequelize";
 import { ProjectModel } from "../domain.layer/models/project/project.model";
 import { resolveFileExpiryOnCreate } from "./retention.utils";
+import { buildStorageKey, getFileStorage } from "../services/storage";
+import { deleteObjectOnCommit, registerPendingPut } from "../services/storage/transactionRegistry";
+import { StorageObjectRef } from "../services/storage/types";
 
 const sanitizeFilename = (name: string) => name.replace(/[^a-zA-Z0-9-_\.]/g, "_");
+
+/**
+ * Store the upload buffer via the configured storage provider. Under the
+ * default local provider this is a pass-through (the buffer goes into
+ * files.content); under S3 the object is stored and the row records the key.
+ */
+const storeFileContent = async (
+  file: UploadedFile,
+  organizationId: number,
+  transaction: Transaction | null,
+): Promise<{ content: Buffer | null; ref: StorageObjectRef }> => {
+  const stored = await getFileStorage().put({
+    key: buildStorageKey(organizationId, file.originalname),
+    body: file.buffer,
+    contentType: file.mimetype,
+  });
+  registerPendingPut(transaction, stored);
+  return { content: stored.key ? null : file.buffer, ref: stored };
+};
 
 export const uploadFile = async (
   file: UploadedFile,
@@ -42,18 +64,20 @@ export const uploadFile = async (
     null,
   );
 
+  const { content, ref } = await storeFileContent(file, organizationId, transaction);
+
   const query = `INSERT INTO files
     (
-      organization_id, filename, content, type, project_id, uploaded_by, uploaded_time, is_demo, source, size, file_path, org_id, model_id, expiry_date, retention_policy
+      organization_id, filename, content, type, project_id, uploaded_by, uploaded_time, is_demo, source, size, file_path, org_id, model_id, expiry_date, retention_policy, storage_provider, storage_key
     )
     VALUES (
-      :organization_id, :filename, :content, :type, :project_id, :uploaded_by, :uploaded_time, :is_demo, :source, :size, :file_path, :org_id, :model_id, :expiry_date, :retention_policy
+      :organization_id, :filename, :content, :type, :project_id, :uploaded_by, :uploaded_time, :is_demo, :source, :size, :file_path, :org_id, :model_id, :expiry_date, :retention_policy, :storage_provider, :storage_key
     ) RETURNING *`;
   const result = await sequelize.query(query, {
     replacements: {
       organization_id: organizationId,
       filename: sanitizeFilename(file.originalname),
-      content: file.buffer,
+      content,
       project_id: project_id,
       type: file.mimetype,
       uploaded_by: user_id,
@@ -66,6 +90,8 @@ export const uploadFile = async (
       model_id: options?.model_id || null,
       expiry_date,
       retention_policy,
+      storage_provider: ref.key ? ref.provider : null,
+      storage_key: ref.key,
     },
     mapToModel: true,
     model: FileModel,
@@ -89,7 +115,7 @@ export const deleteFileById = async (
     },
   );
 
-  const query = `DELETE FROM files WHERE organization_id = :organizationId AND id = :id returning id`;
+  const query = `DELETE FROM files WHERE organization_id = :organizationId AND id = :id returning id, storage_provider, storage_key`;
   console.log(`Executing query: ${query} with id: ${id}`);
   const result = await sequelize.query(query, {
     replacements: { organizationId, id },
@@ -98,6 +124,15 @@ export const deleteFileById = async (
     transaction,
   });
   console.log(`Delete result: ${result}`);
+  // Externally stored bytes are removed only after the row delete commits.
+  for (const row of result) {
+    if (row.storage_key) {
+      deleteObjectOnCommit(transaction, {
+        provider: row.storage_provider as StorageObjectRef["provider"],
+        key: row.storage_key,
+      });
+    }
+  }
   return result.length > 0;
 };
 
@@ -111,44 +146,81 @@ export const getFileById = async (id: number, organizationId: number) => {
   return result[0];
 };
 
+/** Roles that may read every file in their organization. */
+export const isFileAdminRole = (role: string) => role === "Admin" || role === "SuperAdmin";
+
 /**
- * Check if a user has access to a file.
- * Access is granted if:
- * - User is Admin
- * - User uploaded the file
- * - For project files: User has access to the project (owner or member)
- * - For org-level files: User belongs to the same organization
+ * SQL predicate: the caller (`:fileAccessUserId`) may read the files row
+ * `alias`. It is the rule the File Manager download applies
+ * (fileManager.ctrl.ts downloadFile), minus the Admin bypass, which callers
+ * handle with isFileAdminRole:
+ * - an organization-level file (project_id IS NULL) is readable by any member
+ *   of the organization. files.org_id is not consulted: migrated files and
+ *   uploadFile leave it NULL, and the row's organization_id already scopes it;
+ * - a project file by its uploader and the project's owner and members.
+ *
+ * The caller must already restrict `alias.organization_id` to the caller's
+ * organization.
+ */
+export const fileAccessPredicate = (alias: string) => `(
+      ${alias}.project_id IS NULL
+      OR ${alias}.uploaded_by = :fileAccessUserId
+      OR EXISTS (
+        SELECT 1 FROM projects fa_p
+         WHERE fa_p.id = ${alias}.project_id
+           AND fa_p.organization_id = ${alias}.organization_id
+           AND fa_p.owner = :fileAccessUserId
+      )
+      OR EXISTS (
+        SELECT 1 FROM projects_members fa_pm
+         WHERE fa_pm.project_id = ${alias}.project_id
+           AND fa_pm.organization_id = ${alias}.organization_id
+           AND fa_pm.user_id = :fileAccessUserId
+      )
+    )`;
+
+/**
+ * canUserAccessFile's rule as a WHERE fragment over a joined files row, for
+ * list queries. Empty for Admins. Otherwise the file must exist: a LEFT JOIN
+ * that found no file would otherwise pass as an organization-level file.
+ */
+export const buildFileAccessFilter = (
+  alias: string,
+  userId: number | null,
+  role: string,
+): { clause: string; replacements: Record<string, unknown> } => {
+  if (isFileAdminRole(role)) return { clause: "", replacements: {} };
+  return {
+    clause: `AND ${alias}.id IS NOT NULL AND ${fileAccessPredicate(alias)}`,
+    replacements: { fileAccessUserId: userId },
+  };
+};
+
+/**
+ * Whether the user may read the file: an Admin any file of the organization;
+ * anyone else see fileAccessPredicate. A missing file, or another
+ * organization's, answers false like a forbidden one.
  */
 export const canUserAccessFile = async (
   fileId: number,
   userId: number,
   role: string,
   organizationId: number,
-  userOrgId?: number,
 ): Promise<boolean> => {
-  // Admins can access all files
-  if (role === "Admin" || role === "SuperAdmin") {
-    return true;
-  }
-
-  // Query that handles both project-level and org-level files
-  const query = `
-    SELECT f.id
-    FROM files f
-    LEFT JOIN projects p ON f.project_id = p.id AND p.organization_id = :organizationId
-    LEFT JOIN projects_members pm ON p.id = pm.project_id AND pm.organization_id = :organizationId
-    WHERE f.organization_id = :organizationId AND f.id = :fileId
-      AND (
-        f.uploaded_by = :userId
-        OR p.owner = :userId
-        OR pm.user_id = :userId
-        OR (f.project_id IS NULL AND f.org_id = :userOrgId)
-      )
-    LIMIT 1
-  `;
+  // Admins skip the per-file rule, not the organization: the file must still
+  // be one of theirs.
+  const query = isFileAdminRole(role)
+    ? `SELECT f.id FROM files f
+        WHERE f.organization_id = :organizationId AND f.id = :fileId
+        LIMIT 1`
+    : `SELECT f.id
+         FROM files f
+        WHERE f.organization_id = :organizationId AND f.id = :fileId
+          AND ${fileAccessPredicate("f")}
+        LIMIT 1`;
 
   const result = await sequelize.query(query, {
-    replacements: { organizationId, fileId, userId, userOrgId: userOrgId || null },
+    replacements: { organizationId, fileId, fileAccessUserId: userId },
     type: QueryTypes.SELECT,
   });
 

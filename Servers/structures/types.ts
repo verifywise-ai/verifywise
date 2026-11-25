@@ -92,4 +92,14 @@ export interface FrameworkStructure {
    *  present in the FileSource union in file.model.ts. */
   source_labels: Record<string, FileSource>;
   seed: FrameworkSeed;
+  /**
+   * Revision of the seed's item text, 1 when omitted. Bump it whenever you
+   * change any title, description, summary, question or evidence example:
+   * on startup, services/frameworkTextSync writes the registry text into a
+   * database only when this is at least the revision the database records,
+   * so an older build (a rollback) never restores older wording.
+   * structures/__tests__/frameworkTextRevisions.test.ts fails when the text
+   * changed without a bump.
+   */
+  textRevision?: number;
 }

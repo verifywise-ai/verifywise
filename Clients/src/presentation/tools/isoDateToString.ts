@@ -97,6 +97,20 @@ function calendarDayOf(value: unknown, utcHours: number[]): Date | null {
     : new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
+/**
+ * A date-only value ("YYYY-MM-DD", or a string or Date toDateOnlyString
+ * reads) as local midnight of that day, for comparing with the user's
+ * calendar (filters such as "is today"). new Date("YYYY-MM-DD") is UTC
+ * midnight, the previous day west of UTC; this is not. null when there is no
+ * date.
+ */
+export const dateOnlyToLocalDay = (value: string | Date | null | undefined): Date | null => {
+  const day = toDateOnlyString(value);
+  if (!day) return null;
+  const parsed = parseISO(day); // a bare date parses as local midnight
+  return isValid(parsed) ? parsed : null;
+};
+
 /** A local date as "YYYY-MM-DD", or "" when there is none. */
 export const toLocalDateOnly = (date: Date | null | undefined): string =>
   date && isValid(date) ? format(date, "yyyy-MM-dd") : "";

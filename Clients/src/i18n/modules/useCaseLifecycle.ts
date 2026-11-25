@@ -150,6 +150,38 @@ export const de: Record<string, string> = {
     "Niemand hat innerhalb des für Ihre Organisation festgelegten Prüfintervalls bestätigt, dass dieser Anwendungsfall noch aktiv ist. Bestätigen Sie ihn oder nehmen Sie ihn außer Betrieb, wenn er nicht mehr genutzt wird.",
   "Not confirmed as live within the check interval set for your organization. The owner has been asked to confirm it or retire it.":
     "Innerhalb des für Ihre Organisation festgelegten Prüfintervalls nicht als aktiv bestätigt. Die verantwortliche Person wurde gebeten, ihn zu bestätigen oder außer Betrieb zu nehmen.",
+  // Approval workflow on the use case overview
+  "Its last approval request was rejected. An approval workflow admin needs to attach a workflow and get it approved before it can go live.":
+    "Seine letzte Freigabeanfrage wurde abgelehnt. Eine Person mit Adminrechten für Genehmigungsabläufe muss einen Ablauf anhängen und ihn freigeben lassen, bevor er live gehen kann.",
+  "Unavailable workflow": "Nicht verfügbarer Ablauf",
+  "Could not load the approval workflow.": "Der Genehmigungsablauf konnte nicht geladen werden.",
+  "Attach workflow": "Ablauf anhängen",
+  "Change workflow": "Ablauf ändern",
+  "Attach approval workflow": "Genehmigungsablauf anhängen",
+  "Change approval workflow": "Genehmigungsablauf ändern",
+  "Only an approval workflow admin can change it while approval is pending or rejected.":
+    "Solange die Freigabe aussteht oder abgelehnt ist, kann ihn nur eine Person mit Adminrechten für Genehmigungsabläufe ändern.",
+  "The workflow decides who reviews this use case before it can go live.":
+    "Der Ablauf legt fest, wer diesen Anwendungsfall prüft, bevor er live gehen kann.",
+  "Saving sends this use case for approval.":
+    "Beim Speichern wird dieser Anwendungsfall zur Freigabe gesendet.",
+  "It moves to In review until the request is approved or rejected.":
+    "Er wechselt zu „In Prüfung“, bis die Anfrage freigegeben oder abgelehnt wird.",
+  "If its risk classification is at or below the workflow's auto-approve level, it is approved at once.":
+    "Liegt seine Risikoeinstufung auf oder unter der Stufe für automatische Freigabe des Ablaufs, wird er sofort freigegeben.",
+  "Saving removes the approval workflow from this use case.":
+    "Beim Speichern wird der Genehmigungsablauf von diesem Anwendungsfall entfernt.",
+  "The pending approval request is withdrawn.":
+    "Die ausstehende Freigabeanfrage wird zurückgezogen.",
+  "Resubmit for approval": "Erneut zur Freigabe einreichen",
+  "Resubmit": "Erneut einreichen",
+  "Send this use case for approval again with {workflow}?":
+    "Diesen Anwendungsfall erneut mit {workflow} zur Freigabe senden?",
+  "Its last approval request was rejected. Resubmit it for approval and get it approved before marking it as live.":
+    "Seine letzte Freigabeanfrage wurde abgelehnt. Reichen Sie ihn erneut zur Freigabe ein und lassen Sie ihn freigeben, bevor Sie ihn als live markieren.",
+  "The use case was sent for approval.": "Der Anwendungsfall wurde zur Freigabe gesendet.",
+  "The use case could not be resubmitted.":
+    "Der Anwendungsfall konnte nicht erneut eingereicht werden.",
 };
 
 export const fr: Record<string, string> = {
@@ -304,6 +336,36 @@ export const fr: Record<string, string> = {
     "Personne n'a confirmé que ce cas d'usage est toujours en service dans l'intervalle de vérification défini pour votre organisation. Confirmez-le, ou retirez-le s'il n'est plus utilisé.",
   "Not confirmed as live within the check interval set for your organization. The owner has been asked to confirm it or retire it.":
     "Non confirmé comme en service dans l'intervalle de vérification défini pour votre organisation. Le responsable a été invité à le confirmer ou à le retirer.",
+  // Approval workflow on the use case overview
+  "Its last approval request was rejected. An approval workflow admin needs to attach a workflow and get it approved before it can go live.":
+    "Sa dernière demande d'approbation a été refusée. Un administrateur des flux d'approbation doit associer un flux et le faire approuver avant sa mise en service.",
+  "Unavailable workflow": "Flux indisponible",
+  "Could not load the approval workflow.": "Impossible de charger le flux d'approbation.",
+  "Attach workflow": "Associer un flux",
+  "Change workflow": "Changer de flux",
+  "Attach approval workflow": "Associer un flux d'approbation",
+  "Change approval workflow": "Changer de flux d'approbation",
+  "Only an approval workflow admin can change it while approval is pending or rejected.":
+    "Tant que l'approbation est en attente ou refusée, seul un administrateur des flux d'approbation peut le modifier.",
+  "The workflow decides who reviews this use case before it can go live.":
+    "Le flux détermine qui examine ce cas d'usage avant sa mise en service.",
+  "Saving sends this use case for approval.":
+    "L'enregistrement envoie ce cas d'usage en approbation.",
+  "It moves to In review until the request is approved or rejected.":
+    "Il passe à « En examen » jusqu'à ce que la demande soit approuvée ou refusée.",
+  "If its risk classification is at or below the workflow's auto-approve level, it is approved at once.":
+    "Si sa classification de risque est égale ou inférieure au niveau d'approbation automatique du flux, il est approuvé immédiatement.",
+  "Saving removes the approval workflow from this use case.":
+    "L'enregistrement retire le flux d'approbation de ce cas d'usage.",
+  "The pending approval request is withdrawn.": "La demande d'approbation en attente est retirée.",
+  "Resubmit for approval": "Soumettre de nouveau pour approbation",
+  "Resubmit": "Soumettre de nouveau",
+  "Send this use case for approval again with {workflow}?":
+    "Envoyer de nouveau ce cas d'usage en approbation avec {workflow} ?",
+  "Its last approval request was rejected. Resubmit it for approval and get it approved before marking it as live.":
+    "Sa dernière demande d'approbation a été refusée. Soumettez-le de nouveau pour approbation et faites-le approuver avant de le marquer comme en service.",
+  "The use case was sent for approval.": "Le cas d'usage a été envoyé en approbation.",
+  "The use case could not be resubmitted.": "Le cas d'usage n'a pas pu être soumis de nouveau.",
 };
 
 export const es: Record<string, string> = {
@@ -454,4 +516,33 @@ export const es: Record<string, string> = {
     "Nadie ha confirmado que este caso de uso siga en producción dentro del intervalo de comprobación de su organización. Confírmelo o retírelo si ya no se usa.",
   "Not confirmed as live within the check interval set for your organization. The owner has been asked to confirm it or retire it.":
     "No se ha confirmado que siga en producción dentro del intervalo de comprobación de su organización. Se ha pedido al responsable que lo confirme o lo retire.",
+  // Approval workflow on the use case overview
+  "Its last approval request was rejected. An approval workflow admin needs to attach a workflow and get it approved before it can go live.":
+    "Su última solicitud de aprobación fue rechazada. Un administrador de flujos de aprobación debe adjuntar un flujo y obtener la aprobación antes de que pase a producción.",
+  "Unavailable workflow": "Flujo no disponible",
+  "Could not load the approval workflow.": "No se pudo cargar el flujo de aprobación.",
+  "Attach workflow": "Adjuntar flujo",
+  "Change workflow": "Cambiar flujo",
+  "Attach approval workflow": "Adjuntar flujo de aprobación",
+  "Change approval workflow": "Cambiar flujo de aprobación",
+  "Only an approval workflow admin can change it while approval is pending or rejected.":
+    "Mientras la aprobación esté pendiente o rechazada, solo un administrador de flujos de aprobación puede cambiarlo.",
+  "The workflow decides who reviews this use case before it can go live.":
+    "El flujo decide quién revisa este caso de uso antes de que pase a producción.",
+  "Saving sends this use case for approval.": "Al guardar, este caso de uso se envía a aprobación.",
+  "It moves to In review until the request is approved or rejected.":
+    "Pasa a «En revisión» hasta que la solicitud se apruebe o se rechace.",
+  "If its risk classification is at or below the workflow's auto-approve level, it is approved at once.":
+    "Si su clasificación de riesgo está en el nivel de aprobación automática del flujo o por debajo, se aprueba de inmediato.",
+  "Saving removes the approval workflow from this use case.":
+    "Al guardar, se quita el flujo de aprobación de este caso de uso.",
+  "The pending approval request is withdrawn.": "La solicitud de aprobación pendiente se retira.",
+  "Resubmit for approval": "Volver a enviar a aprobación",
+  "Resubmit": "Volver a enviar",
+  "Send this use case for approval again with {workflow}?":
+    "¿Enviar de nuevo este caso de uso a aprobación con {workflow}?",
+  "Its last approval request was rejected. Resubmit it for approval and get it approved before marking it as live.":
+    "Su última solicitud de aprobación fue rechazada. Vuelva a enviarlo a aprobación y obtenga la aprobación antes de marcarlo como en producción.",
+  "The use case was sent for approval.": "El caso de uso se envió a aprobación.",
+  "The use case could not be resubmitted.": "No se pudo volver a enviar el caso de uso.",
 };

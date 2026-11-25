@@ -6,6 +6,7 @@ import Field from "../Inputs/Field";
 import { VWLink } from "../Link/VWLink";
 import { brand, status, palette as vwPalette, radiusPx } from "../../themes/palette";
 import { chartTheme } from "../../themes/chartTheme";
+import { NO_VALUE_FILTER_OPERATORS } from "../../../application/utils/filterConditions";
 
 // Column type determines available operators and value input type
 export type FilterColumnType = "select" | "text" | "date";
@@ -26,6 +27,12 @@ export interface FilterColumn {
    * lists every option without counts. The classic filter ignores it.
    */
   serverFiltered?: boolean;
+  /**
+   * Date columns only. "upcoming" (the default) offers "in N days" from today,
+   * for due dates. "recent" offers "in the last N days" up to today, for days
+   * that have already happened (an incident's occurred date).
+   */
+  dateRange?: "upcoming" | "recent";
 }
 
 export type FilterOperator =
@@ -40,6 +47,11 @@ export type FilterOperator =
   | "in_7_days"
   | "in_2_weeks"
   | "in_30_days"
+  // Recent date operators (dateRange: "recent")
+  | "in_last_1_day"
+  | "in_last_7_days"
+  | "in_last_2_weeks"
+  | "in_last_30_days"
   | "is_past"
   | "is_today";
 
@@ -87,32 +99,35 @@ const DATE_OPERATORS: Array<{ value: FilterOperator; label: string }> = [
   { value: "is_not_empty", label: "is not empty" },
 ];
 
-// All operators that don't require a value input
-const NO_VALUE_OPERATORS: FilterOperator[] = [
-  "is_empty",
-  "is_not_empty",
-  "in_1_day",
-  "in_7_days",
-  "in_2_weeks",
-  "in_30_days",
-  "is_past",
-  "is_today",
+// Operators for date columns whose days have already happened (dateRange: "recent")
+const RECENT_DATE_OPERATORS: Array<{ value: FilterOperator; label: string }> = [
+  { value: "is_today", label: "is today" },
+  { value: "in_last_1_day", label: "since yesterday" },
+  { value: "in_last_7_days", label: "in the last 7 days" },
+  { value: "in_last_2_weeks", label: "in the last 2 weeks" },
+  { value: "in_last_30_days", label: "in the last 30 days" },
+  { value: "is_empty", label: "is empty" },
+  { value: "is_not_empty", label: "is not empty" },
 ];
+
+// All operators that don't require a value input
+const NO_VALUE_OPERATORS: FilterOperator[] = NO_VALUE_FILTER_OPERATORS;
 
 // Check if operator requires a value
 const operatorRequiresValue = (operator: FilterOperator): boolean => {
   return !NO_VALUE_OPERATORS.includes(operator);
 };
 
-// Get operators based on column type
+// Get operators based on column type (and, for dates, whether they look ahead or back)
 const getOperatorsForColumnType = (
   type: FilterColumnType,
+  dateRange?: FilterColumn["dateRange"],
 ): Array<{ value: FilterOperator; label: string }> => {
   switch (type) {
     case "select":
       return SELECT_OPERATORS;
     case "date":
-      return DATE_OPERATORS;
+      return dateRange === "recent" ? RECENT_DATE_OPERATORS : DATE_OPERATORS;
     case "text":
     default:
       return TEXT_OPERATORS;
@@ -126,6 +141,27 @@ const generateFilterId = (): string => {
 
 // Shared width for WHERE badge and AND/OR toggle (68px + 30% = ~88px)
 const LOGIC_CONTROL_WIDTH = "88px";
+// Shared height for WHERE badge and AND/OR toggle: the house control height
+const LOGIC_CONTROL_HEIGHT = "34px";
+
+// Resets the browser's button look so a native <button> can be styled like a Box.
+const buttonReset = {
+  "appearance": "none",
+  "margin": 0,
+  "padding": 0,
+  "font": "inherit",
+  "background": "none",
+  "border": "none",
+  "&:focus-visible": {
+    outline: `2px solid ${brand.primary}`,
+    outlineOffset: "1px",
+  },
+} as const;
+
+const LOGIC_OPTIONS: Array<{ value: "and" | "or"; label: string }> = [
+  { value: "and", label: "AND" },
+  { value: "or", label: "OR" },
+];
 
 // Narrow AND/OR Toggle Component for filter rows
 const LogicToggle: React.FC<{
@@ -134,61 +170,54 @@ const LogicToggle: React.FC<{
 }> = ({ value, onChange }) => {
   return (
     <Box
+      role="group"
+      aria-label="Combine filters with"
       sx={{
         display: "flex",
         border: "1px solid",
         borderColor: "divider",
         borderRadius: radiusPx.sm,
         overflow: "hidden",
-        height: "30px",
+        height: LOGIC_CONTROL_HEIGHT,
         bgcolor: "action.hover",
         padding: "2px",
         gap: "2px",
         width: LOGIC_CONTROL_WIDTH,
       }}
     >
-      <Box
-        onClick={() => onChange("and")}
-        sx={{
-          cursor: "pointer",
-          flex: 1,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100%",
-          fontSize: "11px",
-          fontWeight: 600,
-          userSelect: "none",
-          borderRadius: "2px",
-          bgcolor: value === "and" ? "background.paper" : "transparent",
-          border: value === "and" ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid transparent",
-          color: "text.primary",
-          transition: "all 0.2s ease",
-        }}
-      >
-        AND
-      </Box>
-      <Box
-        onClick={() => onChange("or")}
-        sx={{
-          cursor: "pointer",
-          flex: 1,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100%",
-          fontSize: "11px",
-          fontWeight: 600,
-          userSelect: "none",
-          borderRadius: "2px",
-          bgcolor: value === "or" ? "background.paper" : "transparent",
-          border: value === "or" ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid transparent",
-          color: "text.primary",
-          transition: "all 0.2s ease",
-        }}
-      >
-        OR
-      </Box>
+      {LOGIC_OPTIONS.map((option) => {
+        const selected = value === option.value;
+        return (
+          <Box
+            key={option.value}
+            component="button"
+            type="button"
+            aria-pressed={selected}
+            onClick={() => onChange(option.value)}
+            sx={{
+              ...buttonReset,
+              // Inset: the group's overflow: hidden would clip an outside ring.
+              "&:focus-visible": { ...buttonReset["&:focus-visible"], outlineOffset: "-2px" },
+              "cursor": "pointer",
+              "flex": 1,
+              "display": "flex",
+              "alignItems": "center",
+              "justifyContent": "center",
+              "height": "100%",
+              "fontSize": "11px",
+              "fontWeight": 600,
+              "userSelect": "none",
+              "borderRadius": "2px",
+              "bgcolor": selected ? "background.paper" : "transparent",
+              "border": selected ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid transparent",
+              "color": "text.primary",
+              "transition": "all 0.2s ease",
+            }}
+          >
+            {option.label}
+          </Box>
+        );
+      })}
     </Box>
   );
 };
@@ -221,7 +250,7 @@ const WhereBadge: React.FC = () => (
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
-      height: "34px",
+      height: LOGIC_CONTROL_HEIGHT,
       width: LOGIC_CONTROL_WIDTH,
       borderRadius: radiusPx.sm,
       backgroundColor: vwPalette.background.hover,
@@ -279,7 +308,7 @@ const FilterRow: React.FC<{
 }> = ({ condition, columns, isFirst, logic, onLogicChange, onChange, onRemove, showRemove }) => {
   const currentColumn = columns.find((col) => col.id === condition.columnId);
   const columnType = currentColumn?.type || "text";
-  const operators = getOperatorsForColumnType(columnType);
+  const operators = getOperatorsForColumnType(columnType, currentColumn?.dateRange);
   const showValueField = operatorRequiresValue(condition.operator);
 
   // Column dropdown items
@@ -300,7 +329,7 @@ const FilterRow: React.FC<{
     const newColumnId = e.target.value;
     const newColumn = columns.find((col) => col.id === newColumnId);
     const newType = newColumn?.type || "text";
-    const newOperators = getOperatorsForColumnType(newType);
+    const newOperators = getOperatorsForColumnType(newType, newColumn?.dateRange);
 
     // Reset operator to first available for new column type
     onChange({
@@ -380,13 +409,19 @@ const FilterRow: React.FC<{
 
       {/* Remove button */}
       <Box
-        onClick={showRemove ? onRemove : undefined}
+        component="button"
+        type="button"
+        aria-label="Remove filter"
+        data-filter-remove=""
+        disabled={!showRemove}
+        onClick={onRemove}
         sx={{
-          "cursor": showRemove ? "pointer" : "default",
+          ...buttonReset,
+          "cursor": "pointer",
           "display": "flex",
           "alignItems": "center",
-          "opacity": showRemove ? 1 : 0.3,
-          "&:hover": showRemove ? { opacity: 0.7 } : {},
+          "&:hover": { opacity: 0.7 },
+          "&:disabled": { cursor: "default", opacity: 0.3 },
         }}
       >
         <X size={16} color={status.default.text} />
@@ -405,7 +440,10 @@ export const FilterBy: React.FC<FilterByProps> = ({
   // Create initial condition
   const createInitialCondition = useCallback((): FilterCondition => {
     const firstColumn = columns[0];
-    const operators = getOperatorsForColumnType(firstColumn?.type || "text");
+    const operators = getOperatorsForColumnType(
+      firstColumn?.type || "text",
+      firstColumn?.dateRange,
+    );
     return {
       id: generateFilterId(),
       columnId: firstColumn?.id || "",
@@ -481,13 +519,34 @@ export const FilterBy: React.FC<FilterByProps> = ({
     }
   };
 
+  const rowsRef = useRef<HTMLDivElement | null>(null);
+  // Row whose remove button had focus; focus moves to a remaining row once it is gone.
+  const removedIndexRef = useRef<number | null>(null);
+
   const handleRemoveFilter = (index: number) => {
     if (conditions.length > 1) {
       const newConditions = conditions.filter((_, i) => i !== index);
+      removedIndexRef.current = index;
       setConditions(newConditions);
       onFilterChange(newConditions, logic);
     }
   };
+
+  useEffect(() => {
+    const index = removedIndexRef.current;
+    removedIndexRef.current = null;
+    if (index === null || !rowsRef.current) return;
+    const buttons = Array.from(
+      rowsRef.current.querySelectorAll<HTMLButtonElement>("[data-filter-remove]"),
+    );
+    const next = buttons[Math.min(index, buttons.length - 1)];
+    if (next && !next.disabled) {
+      next.focus();
+    } else {
+      // Only one row left (its remove is disabled): go to its first field.
+      rowsRef.current.querySelector<HTMLElement>('[role="combobox"]')?.focus();
+    }
+  }, [conditions]);
 
   const handleClearAll = () => {
     const initialCondition = createInitialCondition();
@@ -554,7 +613,7 @@ export const FilterBy: React.FC<FilterByProps> = ({
           },
         }}
       >
-        <Stack gap="12px">
+        <Stack gap="12px" ref={rowsRef}>
           <FilterByHeader onClose={handleClose} />
 
           {/* Filter rows */}
@@ -606,8 +665,11 @@ export const FilterBy: React.FC<FilterByProps> = ({
             }}
           >
             <Typography
+              component="button"
+              type="button"
               onClick={handleClearAll}
               sx={{
+                ...buttonReset,
                 "fontSize": "9px",
                 "fontWeight": 600,
                 "color": "status.default.text",

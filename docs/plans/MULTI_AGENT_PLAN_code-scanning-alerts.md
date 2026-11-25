@@ -16,7 +16,7 @@ Close all 136 open GitHub code-scanning alerts in `verifywise-ai/verifywise` usi
 | 1 | SQLAlchemy `text()` parameterization | 58 | Senior Backend Developer | AppSec Engineer / DBA | 🟢 Done | pushed |
 | 3b | Kubernetes Trivy hardening — namespace/resources + accepted-risk docs | 47 | DevSecOps Engineer | Cloud Architect / SRE | 🟢 Done | pushed |
 | 7 | Validation, regression, docs | — | QA Engineer | AppSec Engineer / Tech Writer | 🟢 Done | pushed |
-| 8 | CI failure remediation (CodeQL path-injection + Semgrep baseline) | — | Senior Backend Developer | AppSec Engineer | 🟡 In Progress | pushed |
+| 8 | CI failure remediation (CodeQL path-injection + Semgrep baseline) | — | Senior Backend Developer | AppSec Engineer | 🟢 Done | pushed |
 
 ## Git Convention
 - Branch: `mo-384-aug-13-vulnerability-issues`
@@ -60,7 +60,7 @@ Close all 136 open GitHub code-scanning alerts in `verifywise-ai/verifywise` usi
 - Update changelog / security runbook.
 - Open PR to `develop` to trigger Semgrep, CodeQL, and Trivy scans.
 
-### Batch 8 — CI failure remediation (CodeQL path-injection + Semgrep baseline) 🟡
+### Batch 8 — CI failure remediation (CodeQL path-injection + Semgrep baseline) ✅
 **Files:** `GRSModule/ui/backend/services/path_utils.py`, `watcher.py`, `snapshot.py`, `routers/results.py`; 27 Python files across `EvalServer/` and `AIGateway/` that use `sqlalchemy.text()`.
 **Done:**
 - Replaced the custom `assert_within()` helper in GRSModule with inline `os.path.normpath()` + `startswith()` checks immediately before each sink, matching CodeQL's recognized path-sanitizer pattern.
@@ -70,7 +70,8 @@ Close all 136 open GitHub code-scanning alerts in `verifywise-ai/verifywise` usi
 - Local Semgrep scan (`p/javascript`, `p/typescript`, `p/python`, `p/security-audit`, `p/secrets`) against the PR diff reports **0 findings**.
 - All modified Python files pass `py_compile`.
 - GRSModule test suite: **147 passed** (including the previously failing `test_watcher.py` tests after making `count_lines` `base` optional).
-**Pending:** CI re-run on GitHub to confirm Semgrep OSS annotations clear and CodeQL `py/path-injection` alerts close.
+**Pending:** ~~CI re-run on GitHub to confirm Semgrep OSS annotations clear and CodeQL `py/path-injection` alerts close.~~
+**Confirmed 2026-11-23:** Fresh GitHub Security API pull shows **0 open code-scanning alerts** (474 total: 404 fixed, 70 dismissed with justifications) and **0 open Dependabot alerts** (697 fixed). All batches complete.
 - Standardized all GRSModule containment helpers to the canonical `os.path.normpath(os.path.join(base, target)).startswith(os.path.normpath(base))` pattern recognized by CodeQL's `py/path-injection` sanitizer.
 
 ## Execution Order
@@ -83,7 +84,7 @@ Close all 136 open GitHub code-scanning alerts in `verifywise-ai/verifywise` usi
 6. Batch 1 ✅
 7. Batch 3b ✅
 8. Batch 7 (validation + docs) ✅
-9. Batch 8 (CI failure remediation)
+9. Batch 8 (CI failure remediation) ✅
 
 ## Notes / Decisions
 - Scope is the 136 **open** alerts. Dismissed alerts are out of scope unless they re-open during validation.

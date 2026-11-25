@@ -44,7 +44,6 @@ const BASE_COLUMNS: StandardColumn[] = [
 ];
 const ACTIONS_COLUMN: StandardColumn = { id: "actions", label: "", sortable: false };
 
-const CONTROL_SX = { height: "30px", minHeight: "30px" };
 const CELL_SX = { ...singleTheme.tableStyles.primary.body.cell, textTransform: "none" };
 
 interface AssignmentDueDateProps {
@@ -78,7 +77,7 @@ const AssignmentDueDate: FC<AssignmentDueDateProps> = ({ assignment, today, isBu
       isFieldReadOnly
       minDate={today}
       disabled={isBusy}
-      sx={{ "width": "150px", "& .MuiPickersOutlinedInput-root": { height: "30px" } }}
+      sx={{ width: "150px" }}
     />
   );
 };
@@ -267,7 +266,7 @@ const TrainingAssignmentsModal: FC<TrainingAssignmentsModalProps> = ({
                 loading={createAssignments.isPending}
                 testId="button-training-assignment-assign"
                 // Lines the button up with the date field, below its 22px label and gap.
-                sx={{ ...CONTROL_SX, marginTop: "30px" }}
+                sx={{ marginTop: "30px" }}
               />
             </Stack>
           </Stack>
@@ -281,7 +280,6 @@ const TrainingAssignmentsModal: FC<TrainingAssignmentsModalProps> = ({
               onClick={() => setIsConfirmingCompleteAll(true)}
               isDisabled={isBusy}
               testId="button-training-assignment-complete-all"
-              sx={CONTROL_SX}
             />
           </Stack>
         )}
@@ -333,21 +331,17 @@ const TrainingAssignmentsModal: FC<TrainingAssignmentsModalProps> = ({
                           <Stack direction="row" sx={{ gap: "8px" }}>
                             <CustomizableButton
                               variant="outlined"
-                              size="small"
                               text={isCompleted ? "Reopen" : "Mark complete"}
                               onClick={() => handleToggleComplete(assignment)}
                               isDisabled={isBusy}
                               testId={`button-training-assignment-toggle-${assignment.id}`}
-                              sx={CONTROL_SX}
                             />
                             <CustomizableButton
                               variant="text"
-                              size="small"
                               text="Remove"
                               onClick={() => setAssignmentToRemove(assignment)}
                               isDisabled={isBusy}
                               testId={`button-training-assignment-remove-${assignment.id}`}
-                              sx={CONTROL_SX}
                             />
                           </Stack>
                         </TableCell>

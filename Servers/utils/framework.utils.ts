@@ -1,4 +1,4 @@
-import { Transaction } from "sequelize";
+import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import { FrameworkModel } from "../domain.layer/models/frameworks/frameworks.model";
 import { ProjectFrameworksModel } from "../domain.layer/models/projectFrameworks/projectFrameworks.model";
@@ -7,6 +7,8 @@ import {
   frameworkDeletionMap,
   frameworkFilesDeletionSourceMap,
 } from "../types/framework.type";
+import { deleteObjectOnCommit } from "../services/storage/transactionRegistry";
+import { StorageObjectRef } from "../services/storage/types";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import { getStructureById } from "../structures";
 
@@ -263,13 +265,25 @@ const deleteFrameworkEvidenceFiles = async (
     },
   );
 
-  await sequelize.query(
-    `DELETE FROM files WHERE organization_id = :organizationId AND project_id = :project_id AND source IN (:source)`,
+  const deletedFiles = (await sequelize.query(
+    `DELETE FROM files WHERE organization_id = :organizationId AND project_id = :project_id AND source IN (:source)
+     RETURNING storage_provider, storage_key`,
     {
       replacements: { project_id: projectId, source, organizationId },
       transaction,
+      type: QueryTypes.SELECT,
     },
-  );
+  )) as unknown as { storage_provider: string | null; storage_key: string | null }[];
+
+  // Externally stored bytes are removed only after the row deletes commit.
+  for (const row of deletedFiles) {
+    if (row.storage_key) {
+      deleteObjectOnCommit(transaction, {
+        provider: row.storage_provider as StorageObjectRef["provider"],
+        key: row.storage_key,
+      });
+    }
+  }
 };
 
 export const deleteFrameworkFromProjectQuery = async (

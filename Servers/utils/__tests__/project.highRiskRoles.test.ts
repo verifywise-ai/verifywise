@@ -31,7 +31,7 @@ function mockDb(row: Record<string, unknown>) {
     if (sql.startsWith("UPDATE projects SET")) return [modelRow(row)];
     if (sql.startsWith("SELECT * FROM projects")) return [modelRow(row)];
     if (sql.includes("FROM projects_frameworks")) return [[], 0];
-    if (sql.includes("FROM automation_triggers")) return [[], 0];
+    if (sql.includes("FROM automation_triggers")) return [];
     return [];
   });
 }

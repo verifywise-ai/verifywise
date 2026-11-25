@@ -20,7 +20,7 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import Chip from "../../../components/Chip";
 import { VWLink } from "../../../components/Link";
 import AddNewRiskForm from "../../../components/AddNewRiskForm";
-import { RISK_APPROVAL_STATUS } from "../../../components/AddNewRiskForm/projectRiskValue";
+import { mitigationInitialState } from "../../../components/AddNewRiskForm/hooks/useMitigationSection";
 import StandardModal from "../../../components/Modals/StandardModal";
 import useUsers from "../../../../application/hooks/useUsers";
 import { useCan } from "../../../../application/hooks/useCan";
@@ -531,17 +531,9 @@ export function SuggestedRisksSection({
           initialMitigationValues={
             selectedSuggestedMitigation
               ? {
-                  mitigationStatus: 1,
+                  // Only the suggested plan text; nothing else is pre-chosen.
+                  ...mitigationInitialState,
                   mitigationPlan: selectedSuggestedMitigation.mitigationPlan || "",
-                  currentRiskLevel: 0,
-                  implementationStrategy: "",
-                  deadline: "",
-                  doc: "",
-                  likelihood: selectedSuggestedRisk?.likelihood || 0,
-                  riskSeverity: selectedSuggestedRisk?.riskSeverity || 0,
-                  approver: 0,
-                  approvalStatus: RISK_APPROVAL_STATUS.NotRequired,
-                  dateOfAssessment: "",
                 }
               : undefined
           }

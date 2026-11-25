@@ -1,6 +1,10 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { getAllEntities, getEntityById } from "../repository/entity.repository";
 import { getEffectiveRiskLevel, riskLevelBucket } from "../utils/riskLevel";
+import {
+  buildVendorRiskDashboardMetrics,
+  type VendorRiskDashboardMetrics,
+} from "../utils/vendorRiskRows";
 import type { ProgressStep } from "../../presentation/components/StepProgressDialog";
 import { storageService, type DashboardMetricsCache } from "../../infrastructure/storage";
 
@@ -136,23 +140,8 @@ export interface EvidenceMetrics {
   }>;
 }
 
-export interface VendorRiskMetrics {
-  total: number;
-  distribution: {
-    veryHigh: number;
-    high: number;
-    medium: number;
-    low: number;
-    veryLow: number;
-  };
-  recent: Array<{
-    id: number;
-    title: string;
-    severity: "high" | "medium" | "low";
-    created_at: string;
-    updated_at?: string;
-    vendor_name: string;
-  }>;
+/** Distinct vendor risks; `recent` is newest first, `severity` null when not assessed. */
+export interface VendorRiskMetrics extends VendorRiskDashboardMetrics {
   statusDistribution?: Array<{ name: string; value: number; color: string }>;
 }
 
@@ -491,39 +480,8 @@ export const useDashboardMetrics = () => {
       const risksData = response.data || [];
       const risksArray = Array.isArray(risksData) ? risksData : [];
 
-      // Calculate distribution based on risk_level
-      const distribution = { veryHigh: 0, high: 0, medium: 0, low: 0, veryLow: 0 };
-
-      risksArray.forEach((risk: any) => {
-        const riskLevel = (risk.risk_level || "").toLowerCase().replace(" risk", "").trim();
-
-        if (riskLevel === "very high" || riskLevel === "veryhigh") {
-          distribution.veryHigh++;
-        } else if (riskLevel === "high") {
-          distribution.high++;
-        } else if (riskLevel === "medium" || riskLevel === "moderate") {
-          distribution.medium++;
-        } else if (riskLevel === "low") {
-          distribution.low++;
-        } else if (riskLevel === "very low" || riskLevel === "verylow") {
-          distribution.veryLow++;
-        } else {
-          // Default to medium if unknown
-          distribution.medium++;
-        }
-      });
-
-      const vendorRiskMetrics = {
-        total: risksArray.length,
-        distribution,
-        recent: risksArray.slice(0, 5).map((risk: any, index: number) => ({
-          id: risk.id || index + 1,
-          title: risk.risk_name || risk.title || "Vendor Risk",
-          severity: risk.risk_level?.toLowerCase().replace(" risk", "") || "medium",
-          created_at: risk.review_date || risk.created_at || risk.createdAt,
-          vendor_name: risk.vendor_name || "Unknown Vendor",
-        })),
-      };
+      // One row per (risk, use case) arrives; each risk counts once.
+      const vendorRiskMetrics = buildVendorRiskDashboardMetrics(risksArray);
 
       setVendorRiskMetrics(vendorRiskMetrics);
       setCachedValue("vendorRiskMetrics", vendorRiskMetrics);
@@ -640,9 +598,13 @@ export const useDashboardMetrics = () => {
 
       // Handle the API response structure
       const incidentsData = response.data || response.incidents || response;
-      const incidentsArray = Array.isArray(incidentsData) ? incidentsData : [];
+      // Archived incidents are left out, as on the incidents page's default
+      // view, so the dashboard's counts match it.
+      const incidentsArray = (Array.isArray(incidentsData) ? incidentsData : []).filter(
+        (incident: any) => !incident?.archived,
+      );
 
-      // Count open incidents from ALL incidents
+      // Count open incidents
       const openCount = incidentsArray.filter((incident: any) => incident.status === "Open").length;
 
       const metrics = {

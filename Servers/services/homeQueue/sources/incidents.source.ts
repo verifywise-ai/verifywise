@@ -3,6 +3,7 @@ import { sequelize } from "../../../database/db";
 import { AIIncidentManagementStatus } from "../../../domain.layer/enums/ai-incident-management.enum";
 import { toIso } from "./dateOnly";
 import type { HomeQueueItem, HomeQueueSource } from "../../../domain.layer/interfaces/i.homeQueue";
+import { incidentPagePath } from "../../../utils/incidentLinks.utils";
 
 /**
  * Incidents assigned to me that are not Closed. Archived incidents are hidden
@@ -26,11 +27,15 @@ interface IncidentRow {
   created_at: Date | string | null;
 }
 
-/** Opens the incident's view modal on the incidents page (`incidentId` param, the row id). */
+/**
+ * Opens the incident's view modal on the incidents page (`incidentId` param, the row id).
+ * Only for roles that can act on an incident (edit it or record its approval):
+ * an Auditor assigned an incident could open it but do nothing with it.
+ */
 export const incidentsSource: HomeQueueSource = {
   id: "incidents",
   part: "automate",
-  isVisible: () => true,
+  isVisible: (ctx) => ctx.can("incident.edit") || ctx.can("incident.approve"),
   async load(ctx) {
     const rows = await sequelize.query<IncidentRow>(INCIDENTS_SQL, {
       replacements: {
@@ -49,7 +54,7 @@ export const incidentsSource: HomeQueueSource = {
       entityId: i.id,
       // The list names an incident by its code ("INC-1"), then its project.
       name: i.incident_id || i.ai_project || "",
-      url: `/ai-incident-managements?incidentId=${i.id}`,
+      url: incidentPagePath(i.id),
       dueDate: null,
       waitingSince: toIso(i.created_at),
       overdue: false,

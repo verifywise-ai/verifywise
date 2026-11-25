@@ -131,40 +131,10 @@ createRoot(document.getElementById("root")!).render(
 
 ### App.tsx
 
-```typescript
-// File: Clients/src/App.tsx
-
-import { ThemeProvider } from "@mui/material";
-import { theme } from "./presentation/themes/light";
-import { VerifyWiseContext } from "./application/contexts/VerifyWise.context";
-import { Routes, Route } from "react-router-dom";
-import { routes } from "./application/config/routes";
-
-function App() {
-  // State management
-  const [dashboardValues, setDashboardValues] = useState(initialDashboard);
-  const [currentProject, setCurrentProject] = useState(null);
-  // ... more state
-
-  return (
-    <ThemeProvider theme={theme}>
-      <VerifyWiseContext.Provider value={{
-        dashboardValues,
-        setDashboardValues,
-        currentProject,
-        setCurrentProject,
-        // ... more context values
-      }}>
-        <Routes>
-          {routes.map(route => (
-            <Route key={route.path} path={route.path} element={route.element} />
-          ))}
-        </Routes>
-      </VerifyWiseContext.Provider>
-    </ThemeProvider>
-  );
-}
-```
+`App.tsx` wraps the routes in the theme, the alert host and the app-wide providers. It holds no
+shared app state of its own: the old `VerifyWiseContext` was removed in November 2026 (#5526).
+Auth comes from `useAuth()` (Redux), users from `useUsers()` and projects from `useProjects()`
+(React Query), and the few UI flags it used to carry live in the Redux `ui` slice.
 
 ## Routing
 
@@ -333,36 +303,15 @@ export const queryClient = new QueryClient({
 });
 ```
 
-### Context API
+### Shared app state (replaces the old VerifyWiseContext)
 
-```typescript
-// File: Clients/src/application/contexts/VerifyWise.context.ts
-
-interface VerifyWiseContextType {
-  // Dashboard
-  dashboardValues: DashboardValues;
-  setDashboardValues: Dispatch<SetStateAction<DashboardValues>>;
-
-  // Projects
-  currentProject: Project | null;
-  setCurrentProject: Dispatch<SetStateAction<Project | null>>;
-  projects: Project[];
-  setProjects: Dispatch<SetStateAction<Project[]>>;
-
-  // Users
-  token: string;
-  userId: number;
-  users: User[];
-
-  // UI
-  componentVisible: ComponentVisible;
-  setComponentVisible: Dispatch<SetStateAction<ComponentVisible>>;
-}
-
-export const VerifyWiseContext = createContext<VerifyWiseContextType>(
-  {} as VerifyWiseContextType
-);
-```
+| State | Where it lives |
+|---|---|
+| Token, user id, role, organization | `useAuth()` (Redux `auth` slice, the only persisted slice) |
+| Users | `useUsers()` (React Query) |
+| Projects (read) | `useProjects().data` (React Query, `projectQueryKeys.list()`) |
+| Projects (write) | `useProjectsCache()`: `setProjectsCache(updater)` writes into the loaded list (nothing while it has not loaded) and invalidates it, so the server's full rows follow; `refreshProjects()` refetches it, newest answer wins |
+| Row picked for editing, tour visibility flags, profile photo refresh | Redux `ui` slice: `inputValues` / `setInputValues`, `componentsVisible` / `setComponentVisibility`, `photoRefreshCounter` / `bumpPhotoRefresh` (in memory only) |
 
 ## API Layer
 

@@ -20,6 +20,7 @@ import { translate, type SupportedLang } from "../utils/i18n.utils";
 import { getUserLanguage } from "../utils/userPreference.utils";
 import { deadlineNoticeKey } from "../utils/deadline.utils";
 import { formatReviewDate } from "../utils/policyReviewDate.utils";
+import { incidentPagePath } from "../utils/incidentLinks.utils";
 
 /**
  * Build a frontend-compatible URL for a given entity type and id.
@@ -101,6 +102,22 @@ const localizeNotification = async (
   };
 };
 
+/** Publish a stored notification to Redis for real-time (SSE) delivery. */
+export const publishInAppNotification = async (
+  organizationId: number,
+  stored: INotificationJSON,
+): Promise<void> => {
+  await redisClient.publish(
+    "in-app-notifications",
+    JSON.stringify({
+      organizationId,
+      userId: stored.user_id,
+      notification: stored,
+      timestamp: new Date().toISOString(),
+    }),
+  );
+};
+
 /**
  * Send a notification to a user via both in-app storage and real-time SSE
  * Optionally also sends an email notification. Keyed title, message and
@@ -122,15 +139,7 @@ export const sendInAppNotification = async (
     const storedNotification = await createNotificationQuery(notification, organizationId);
 
     // 2. Publish to Redis for real-time delivery
-    await redisClient.publish(
-      "in-app-notifications",
-      JSON.stringify({
-        organizationId,
-        userId: notification.user_id,
-        notification: storedNotification,
-        timestamp: new Date().toISOString(),
-      }),
-    );
+    await publishInAppNotification(organizationId, storedNotification);
 
     logger.info(
       `📤 In-app notification sent to user ${notification.user_id}: ${notification.title}`,
@@ -263,6 +272,7 @@ function getEntityTypeLabel(entityType: string): string {
     vendor: "Vendor",
     model: "Model",
     policy: "Policy",
+    incident: "Incident",
     nist_subcategory: "NIST AI RMF",
     iso42001_subclause: "ISO 42001 Clause",
     iso42001_annexcategory: "ISO 42001 Annex",
@@ -293,6 +303,8 @@ async function buildEntityUrlAsync(
       return `${baseUrl}/model-inventory?modelId=${entityId}`;
     case "policy":
       return `${baseUrl}/policies?policyId=${entityId}`;
+    case "incident":
+      return `${baseUrl}${incidentPagePath(entityId)}`;
 
     case "nist_subcategory": {
       // Get function type and category info for NIST - join with struct tables
@@ -1060,7 +1072,14 @@ export const notifyApprovalStepOverdueEscalation = async (
 };
 
 /**
- * Notify vendor review due
+ * Remind a vendor's reviewer (or assignee) that its review is due. Title,
+ * message and subject are keyed and reach the recipient in their language;
+ * the email body stays English.
+ *
+ * @param vendor.reviewDate - The review day formatted in English, for the email.
+ * @param vendor.reviewDay - The stored review date; the in-app message
+ *   formats it in the recipient's locale (its UTC day). Falls back to
+ *   reviewDate when absent or invalid.
  */
 export const notifyVendorReviewDue = async (
   organizationId: number,
@@ -1069,6 +1088,7 @@ export const notifyVendorReviewDue = async (
     id: number;
     name: string;
     reviewDate: string;
+    reviewDay?: Date | string | null;
     riskLevel: string;
     lastReviewDate?: string;
     projectCount: number;
@@ -1076,14 +1096,22 @@ export const notifyVendorReviewDue = async (
   baseUrl: string,
 ): Promise<void> => {
   const reviewer = await getUserById(reviewerId);
+  const lang = await getUserLanguage(reviewerId);
+  const day = vendor.reviewDay ? new Date(vendor.reviewDay) : null;
+  const localDate =
+    day && !Number.isNaN(day.getTime())
+      ? day.toLocaleDateString(DATE_LOCALES[lang], { dateStyle: "long", timeZone: "UTC" })
+      : vendor.reviewDate;
 
   await sendInAppNotification(
     organizationId,
     {
       user_id: reviewerId,
+      lang,
       type: NotificationType.VENDOR_REVIEW_DUE,
-      title: "Vendor review due",
-      message: `Vendor "${vendor.name}" review is due on ${vendor.reviewDate}`,
+      titleKey: "Vendor review due",
+      messageKey: 'The review of vendor "{name}" is due on {date}.',
+      messageVars: { name: vendor.name, date: localDate },
       entity_type: NotificationEntityType.VENDOR,
       entity_id: vendor.id,
       entity_name: vendor.name,
@@ -1092,7 +1120,8 @@ export const notifyVendorReviewDue = async (
     true,
     {
       template: EMAIL_TEMPLATES.VENDOR_REVIEW_DUE,
-      subject: `Vendor review due: ${vendor.name}`,
+      subjectKey: "Vendor review due: {name}",
+      subjectVars: { name: vendor.name },
       variables: {
         reviewer_name: reviewer ? `${reviewer.name}` : "Reviewer",
         vendor_name: vendor.name,
@@ -1104,6 +1133,98 @@ export const notifyVendorReviewDue = async (
       },
     },
   );
+};
+
+/** Marks the in-app rows of the critical incident escalation (metadata.workflow_action). */
+export const CRITICAL_INCIDENT_ESCALATION_ACTION = "incident_critical_escalation";
+
+/** An incident severity in `lang`; an unknown value is returned as stored. */
+export const incidentSeverityLabel = (lang: string | undefined, severity: string): string => {
+  switch (severity) {
+    case "Minor":
+      return translate(lang, "Minor");
+    case "Serious":
+      return translate(lang, "Serious");
+    case "Very serious":
+      return translate(lang, "Very serious");
+    default:
+      return severity;
+  }
+};
+
+/** What reaching one Admin about a critical incident consists of. */
+export interface CriticalIncidentEscalation {
+  /** The in-app row, already in the Admin's language. */
+  notification: ICreateNotification;
+  /** The email; `to` is null when the Admin has no address. */
+  email: {
+    to: string | null;
+    subject: string;
+    template: string;
+    variables: Record<string, string>;
+  };
+}
+
+/**
+ * Builds the notice that a critical incident needs a response, for one
+ * Admin: an in-app row (system type, linked to the incident) and an email.
+ * Title, message, subject and the severity label are in the Admin's
+ * language; the email body stays English. Nothing is stored or sent: the
+ * incident response workflow stores the row as its claim and delivers it
+ * after commit (see notifyAdminsOfCriticalIncident). The row's metadata names
+ * the run and the incident.
+ */
+export const buildCriticalIncidentEscalation = async (
+  adminId: number,
+  incident: {
+    id: number;
+    reference: string;
+    useCase: string;
+    severity: string;
+    type: string;
+    ownerName?: string | null;
+  },
+  workflowRunId: number,
+  baseUrl: string,
+): Promise<CriticalIncidentEscalation> => {
+  const lang = await getUserLanguage(adminId);
+  const admin = await getUserById(adminId);
+  const actionUrl = incidentPagePath(incident.id);
+  return {
+    notification: {
+      user_id: adminId,
+      type: NotificationType.SYSTEM,
+      title: translate(lang, "Critical incident needs a response"),
+      message: translate(lang, 'Incident {reference} in "{useCase}" was rated {severity}.', {
+        reference: incident.reference,
+        useCase: incident.useCase,
+        severity: incidentSeverityLabel(lang, incident.severity),
+      }),
+      entity_name: incident.reference,
+      action_url: actionUrl,
+      metadata: {
+        workflow_action: CRITICAL_INCIDENT_ESCALATION_ACTION,
+        workflow_run_id: workflowRunId,
+        incident_id: incident.id,
+      },
+    },
+    email: {
+      to: admin?.email || null,
+      subject: translate(lang, "Critical incident: {reference}", {
+        reference: incident.reference,
+      }),
+      template: EMAIL_TEMPLATES.INCIDENT_CRITICAL_ESCALATION,
+      variables: {
+        admin_name: admin?.name ? `${admin.name}` : "Admin",
+        incident_reference: incident.reference,
+        use_case: incident.useCase,
+        severity: incident.severity,
+        incident_type: incident.type,
+        owner_name: incident.ownerName || "No owner",
+        incident_url: `${baseUrl}${actionUrl}`,
+      },
+    },
+  };
 };
 
 /**
@@ -1501,6 +1622,62 @@ export const notifyRiskOfVendorCandidates = async (
 };
 
 /**
+ * Tell a vendor's assignee that an automatic research run stored `count` risk findings for the
+ * vendor. In-app only. The link opens the findings of the vendor on the Research findings tab of
+ * the Vendors page, not the vendor modal that buildEntityUrl(VENDOR) opens. Returns false when
+ * nothing was sent: the vendor has no assignee, or this run was announced already.
+ */
+export const notifyAssigneeOfVendorResearch = async (
+  organizationId: number,
+  vendor: { id: number; name: string; assignee: number | null },
+  runId: number,
+  count: number,
+): Promise<boolean> => {
+  if (vendor.assignee == null) return false;
+  const lang = await getUserLanguage(vendor.assignee);
+  try {
+    await sendInAppNotification(
+      organizationId,
+      {
+        user_id: vendor.assignee,
+        type: NotificationType.VENDOR_RESEARCH_FINDINGS,
+        title: translate(lang, "Vendor research findings"),
+        message:
+          count === 1
+            ? translate(
+                lang,
+                '{count} potential risk found for "{vendorName}". Review it in Vendors > Research findings.',
+                { count, vendorName: vendor.name },
+              )
+            : translate(
+                lang,
+                '{count} potential risks found for "{vendorName}". Review them in Vendors > Research findings.',
+                { count, vendorName: vendor.name },
+              ),
+        entity_type: NotificationEntityType.VENDOR,
+        entity_id: vendor.id,
+        entity_name: vendor.name,
+        action_url: `/vendors/research-findings?findingsVendorId=${vendor.id}`,
+        // The sent-record key is run_id, which the unique index reads.
+        metadata: { run_id: runId, vendor_id: vendor.id, count },
+      },
+      false,
+    );
+    return true;
+  } catch (error) {
+    // The run was announced already, possibly by a concurrent attempt: a suppressed duplicate,
+    // not an error. Matched by name so another 23505 still throws.
+    const pg =
+      (error as { parent?: { code?: string; constraint?: string } })?.parent ??
+      (error as { original?: { code?: string; constraint?: string } })?.original;
+    if (pg?.code === "23505" && pg?.constraint === "notifications_vendor_research_findings_uniq") {
+      return false;
+    }
+    throw error;
+  }
+};
+
+/**
  * Notify a file uploader that their file is inside the 7-day pre-expiry
  * window. Called by the daily fileExpirySweep for each row it matches; the
  * sweep writes no state back, so a re-run on the same day sends again —
@@ -1855,6 +2032,7 @@ const ENTITY_TYPE_DISPLAY_LABELS: Record<string, string> = {
   vendor: "Vendor",
   vendor_risk: "Vendor Risk",
   project_risk: "Use Case Risk",
+  model_risk: "Model risk",
   project: "Use Case",
   model_inventory: "Model",
   iso42001_subclause: "ISO 42001 Subclause",
@@ -1944,6 +2122,7 @@ function getNotificationEntityType(entityType: string): NotificationEntityType {
       return NotificationEntityType.MODEL;
     case "project_risk":
     case "vendor_risk":
+    case "model_risk":
       return NotificationEntityType.RISK;
     default:
       return NotificationEntityType.PROJECT;
@@ -1963,6 +2142,10 @@ export interface AssignmentEntityContext {
 
 /**
  * Build HTML for entity context to include in email
+ *
+ * The values are text that someone else wrote (a framework or project name, the description of a
+ * risk that a model wrote after reading a web page), so each one is escaped: it shows as typed and
+ * cannot add a tag, a link or an image to the email. The markup around the values is ours.
  */
 function buildEntityContextHtml(context?: AssignmentEntityContext): string {
   if (!context) return "";
@@ -2092,6 +2275,13 @@ export const notifyUserAssigned = async (
       {
         template: EMAIL_TEMPLATES.ASSIGNMENT_NOTIFICATION,
         subject: `You've been assigned as ${assignment.roleType}: ${assignment.entityName}`,
+        // compileMjmlToHtml escapes every value whose key does not end in Html or _html, so the
+        // three names (text that a person, or a model that read a web page, wrote) are passed as
+        // written and show as typed; escaping them here too would show "&amp;" for "&". The subject
+        // and the in-app message above are plain text and keep what was written. The rest comes
+        // from constants (role, entity type, role description, date) or is a link built from ids
+        // that sits in an href (entity_url). entity_context_html is the one raw-HTML slot: markup
+        // built above from escaped values.
         variables: {
           recipient_name: assignee.name || "User",
           assigner_name: assignerName,

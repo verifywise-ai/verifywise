@@ -1,29 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { convertToCamelCaseRiskKey, stringToArray } from "../stringUtil";
+import { stringToArray } from "../stringUtil";
 
 describe("stringUtil", () => {
-  describe("convertToCamelCaseRiskKey", () => {
-    it("converts multi-word risk level to camelCase", () => {
-      expect(convertToCamelCaseRiskKey("High Risk")).toBe("highRisk");
-    });
-
-    it("converts single word to lowercase", () => {
-      expect(convertToCamelCaseRiskKey("Medium")).toBe("medium");
-    });
-
-    it("handles already lowercase single word", () => {
-      expect(convertToCamelCaseRiskKey("low")).toBe("low");
-    });
-
-    it("handles multiple words with various casing", () => {
-      expect(convertToCamelCaseRiskKey("VERY HIGH RISK")).toBe("veryHighRisk");
-    });
-
-    it("handles empty string", () => {
-      expect(convertToCamelCaseRiskKey("")).toBe("");
-    });
-  });
-
   describe("stringToArray", () => {
     it("returns empty array for null", () => {
       expect(stringToArray(null as unknown as string)).toEqual([]);

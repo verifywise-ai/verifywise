@@ -1,0 +1,13 @@
+<%# OSFI E-23 cover and table of contents. Content comes from e23 (services/reporting/e23/formalView.ts). %>
+<%- e23Partial('cover', { coverInstitution: e23.institution, cover: e23.cover }) %>
+
+    <div class="toc">
+      <h2 class="toc-title">Table of contents</h2>
+      <ul class="toc-list">
+        <% e23.toc.forEach(function(heading, i) { %>
+        <li class="toc-item">
+          <span><span class="toc-item-number"><%= i + 1 %>.</span> <%= heading %></span>
+        </li>
+        <% }); %>
+      </ul>
+    </div>

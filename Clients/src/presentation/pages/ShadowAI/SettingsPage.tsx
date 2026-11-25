@@ -837,7 +837,7 @@ function SyslogConfigSection() {
                             variant="outlined"
                             disabled={regenerating}
                             testId={`syslog-key-action-${c.id}`}
-                            sx={{ height: 30, fontSize: 13 }}
+                            sx={{ fontSize: 13 }}
                             onClick={() =>
                               c.key_prefix ? setRegenTarget(c) : handleGenerateKey(c)
                             }

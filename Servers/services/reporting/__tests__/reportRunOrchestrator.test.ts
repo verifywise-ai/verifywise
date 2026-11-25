@@ -69,6 +69,34 @@ describe("runScheduledReport", () => {
     );
     expect(outcome).toEqual({ runId: 77, status: "success" });
   });
+  it("collection failures -> partial_success with the gaps in error_message", async () => {
+    generateReport.mockResolvedValue({
+      success: true,
+      content: Buffer.from("x"),
+      filename: "r.pdf",
+      mimeType: "application/pdf",
+      collectionFailures: ["SOC 2 for Chatbot", "GDPR"],
+    });
+    deliverReport.mockResolvedValue({
+      storage: { status: "success", fileId: 5 },
+      emailLink: { status: "skipped" },
+      attachment: { status: "skipped" },
+      fileId: 5,
+    });
+    const outcome = await runScheduledReport(sched as any, {
+      triggeredBy: "scheduler",
+      scheduledFor: new Date(),
+    });
+    expect(updateRunStatusQuery).toHaveBeenCalledWith(
+      77,
+      sched.organization_id,
+      expect.objectContaining({
+        status: "partial_success",
+        error_message: "Report generated with gaps: SOC 2 for Chatbot; GDPR could not be read.",
+      }),
+    );
+    expect(outcome).toEqual({ runId: 77, status: "partial_success" });
+  });
   // report_runs has no project column: config_snapshot.project_id is the only
   // record of a run's project for a run-now report, and listRunsQuery reads it
   // to keep a project's report off a non-member's list.
@@ -313,5 +341,171 @@ describe("runScheduledReport", () => {
         audit_metadata: expect.objectContaining({ facts: snapshot }),
       }),
     );
+  });
+
+  describe("report parameters", () => {
+    const e23Config = {
+      kind: "osfi_e23",
+      fields: [
+        { key: "periodStart", label: "Period start", type: "date", required: true },
+        { key: "periodEnd", label: "Period end", type: "date", required: true },
+        { key: "institutionName", label: "Institution name", type: "text", required: true },
+      ],
+    };
+    beforeEach(() => {
+      generateReport.mockResolvedValue({
+        success: true,
+        content: Buffer.from("x"),
+        filename: "r.pdf",
+        mimeType: "application/pdf",
+      });
+      deliverReport.mockResolvedValue({
+        storage: { status: "success", fileId: 5 },
+        emailLink: { status: "skipped" },
+        attachment: { status: "skipped" },
+        fileId: 5,
+      });
+    });
+
+    it("merges the rolling period into a scheduled run's parameters and snapshot", async () => {
+      await runScheduledReport(
+        {
+          ...sched,
+          parameters_config: e23Config,
+          report_parameters: { institutionName: "Northern Bank" },
+          schedule_config: { frequency: "quarterly", anchorMonth: 2, hour: 9, minute: 0 },
+        } as any,
+        { triggeredBy: "scheduler", scheduledFor: new Date("2026-11-01T09:00:00Z") },
+      );
+
+      const expected = {
+        institutionName: "Northern Bank",
+        periodStart: "2026-08-01",
+        periodEnd: "2026-10-31",
+      };
+      expect(createRunQuery.mock.calls[0][0].config_snapshot.report_parameters).toEqual(expected);
+      const request = generateReport.mock.calls[0][0];
+      expect(request.reportParameters).toEqual(expected);
+      expect(request.reportKind).toBe("osfi_e23");
+    });
+
+    it("derives the rolling period from the run's date in the schedule's timezone", async () => {
+      // 2027-01-01 09:00 in Auckland is 2026-12-31 20:00 UTC.
+      await runScheduledReport(
+        {
+          ...sched,
+          parameters_config: e23Config,
+          report_parameters: { institutionName: "Northern Bank" },
+          schedule_config: {
+            frequency: "quarterly",
+            anchorMonth: 1,
+            hour: 9,
+            minute: 0,
+            timezone: "Pacific/Auckland",
+          },
+        } as any,
+        { triggeredBy: "scheduler", scheduledFor: new Date("2026-12-31T20:00:00Z") },
+      );
+
+      expect(createRunQuery.mock.calls[0][0].config_snapshot.report_parameters).toMatchObject({
+        periodStart: "2026-10-01",
+        periodEnd: "2026-12-31",
+      });
+    });
+
+    it("merges the rolling period on a schedule's run-now too", async () => {
+      await runScheduledReport(
+        {
+          ...sched,
+          parameters_config: e23Config,
+          report_parameters: { institutionName: "Northern Bank" },
+          schedule_config: { frequency: "monthly", hour: 9, minute: 0 },
+        } as any,
+        { triggeredBy: "manual", userId: 9 },
+      );
+
+      const params = createRunQuery.mock.calls[0][0].config_snapshot.report_parameters;
+      expect(params.periodStart).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      expect(params.periodEnd).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
+
+    it("keeps the dates the user sent on a template run-now", async () => {
+      const userParams = {
+        institutionName: "Northern Bank",
+        periodStart: "2026-01-01",
+        periodEnd: "2026-03-31",
+      };
+      await runScheduledReport(
+        { ...sched, id: null, parameters_config: e23Config, report_parameters: userParams } as any,
+        { triggeredBy: "manual", userId: 9 },
+      );
+
+      expect(createRunQuery.mock.calls[0][0].config_snapshot.report_parameters).toEqual(userParams);
+    });
+
+    it("snapshots empty parameters for a general report", async () => {
+      await runScheduledReport(sched as any, {
+        triggeredBy: "scheduler",
+        scheduledFor: new Date(),
+      });
+      expect(createRunQuery.mock.calls[0][0].config_snapshot.report_parameters).toEqual({});
+    });
+  });
+  describe("E-23 glance storage", () => {
+    const glance = { rulesFired: 2, generatedAt: "2026-10-01T00:00:00.000Z" };
+    const delivered = {
+      storage: { status: "success", fileId: 5 },
+      emailLink: { status: "skipped" },
+      attachment: { status: "skipped" },
+      fileId: 5,
+    };
+    const generated = {
+      success: true,
+      content: Buffer.from("x"),
+      filename: "r.pdf",
+      mimeType: "application/pdf",
+      e23Glance: glance,
+    };
+
+    it("merges the glance into config_snapshot on success", async () => {
+      generateReport.mockResolvedValue(generated);
+      deliverReport.mockResolvedValue(delivered);
+      await runScheduledReport(sched as any, { triggeredBy: "manual" });
+      expect(updateRunStatusQuery).toHaveBeenCalledWith(
+        77,
+        sched.organization_id,
+        expect.objectContaining({
+          status: "success",
+          configSnapshotPatch: { e23_glance: glance },
+        }),
+      );
+    });
+
+    it("stores it on partial_success too", async () => {
+      generateReport.mockResolvedValue({ ...generated, collectionFailures: ["MRM"] });
+      deliverReport.mockResolvedValue(delivered);
+      await runScheduledReport(sched as any, { triggeredBy: "manual" });
+      expect(updateRunStatusQuery).toHaveBeenCalledWith(
+        77,
+        sched.organization_id,
+        expect.objectContaining({
+          status: "partial_success",
+          configSnapshotPatch: { e23_glance: glance },
+        }),
+      );
+    });
+
+    it("does not store it on a failed run", async () => {
+      generateReport.mockResolvedValue({ ...generated, success: false, error: "x" });
+      await runScheduledReport(sched as any, { triggeredBy: "manual" });
+      expect(updateRunStatusQuery.mock.calls[0][2].configSnapshotPatch).toBeUndefined();
+    });
+
+    it("sends no patch for a run without a glance", async () => {
+      generateReport.mockResolvedValue({ ...generated, e23Glance: undefined });
+      deliverReport.mockResolvedValue(delivered);
+      await runScheduledReport(sched as any, { triggeredBy: "manual" });
+      expect(updateRunStatusQuery.mock.calls[0][2]).not.toHaveProperty("configSnapshotPatch");
+    });
   });
 });

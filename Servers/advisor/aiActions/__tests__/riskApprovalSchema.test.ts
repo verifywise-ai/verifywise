@@ -1,6 +1,7 @@
 import { AgentCreateRiskSchema } from "../createRisk/schema";
 import { AgentUpdateRiskSchema } from "../updateRisk/schema";
 import { createRiskToolDefinition } from "../createRisk/definition";
+import { renderCreateRiskPreview } from "../createRisk/preview";
 import { updateRiskToolDefinition } from "../updateRisk/definition";
 import { RISK_APPROVAL_STATUSES } from "../../../domain.layer/enums/risk-approval-status.enum";
 
@@ -16,6 +17,46 @@ const baseCreate = {
   implementation_strategy: "s",
   deadline: "2027-01-01",
 };
+
+describe("advisor risk mitigation fields", () => {
+  const mitigationFields = [
+    "mitigation_status",
+    "mitigation_plan",
+    "current_risk_level",
+    "implementation_strategy",
+    "deadline",
+  ];
+
+  it("creates a risk with only the risk fields, no mitigation", () => {
+    const withoutMitigation = Object.fromEntries(
+      Object.entries(baseCreate).filter(([key]) => !mitigationFields.includes(key)),
+    );
+    expect(AgentCreateRiskSchema.safeParse(withoutMitigation).success).toBe(true);
+  });
+
+  it("still checks a mitigation value that is sent", () => {
+    expect(
+      AgentCreateRiskSchema.safeParse({ ...baseCreate, mitigation_status: "Soon" }).success,
+    ).toBe(false);
+    expect(AgentCreateRiskSchema.safeParse({ ...baseCreate, deadline: "later" }).success).toBe(
+      false,
+    );
+    expect(
+      AgentCreateRiskSchema.safeParse({ ...baseCreate, mitigation_plan: "x".repeat(1025) }).success,
+    ).toBe(false);
+  });
+
+  it("previews a risk without mitigation fields without 'undefined'", () => {
+    const preview = renderCreateRiskPreview({ risk_name: "R" } as never);
+    expect(preview).toBe('Create a risk "R"');
+    expect(renderCreateRiskPreview({ ...baseCreate } as never)).toContain("deadline 2027-01-01");
+  });
+
+  it("does not offer the mitigation fields to the LLM as required", () => {
+    const required: string[] = (createRiskToolDefinition as any).function.parameters.required;
+    for (const field of mitigationFields) expect(required).not.toContain(field);
+  });
+});
 
 describe("advisor risk approval fields", () => {
   it("creates a risk with no approver, approval status or assessment date", () => {

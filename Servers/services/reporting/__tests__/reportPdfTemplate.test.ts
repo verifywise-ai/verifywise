@@ -14,6 +14,7 @@ import {
   SectionNotice,
 } from "../../../domain.layer/interfaces/i.reportGeneration";
 import { ANALYSIS_LABELS } from "../analyzers/mapToSummaries";
+import { archivedIncidentsNote, NOTICE_TEXT } from "../noticeText";
 
 const TEMPLATE_PATH = path.join(__dirname, "../../../templates/reports/report-pdf.ejs");
 const template = fs.readFileSync(TEMPLATE_PATH, "utf-8");
@@ -26,6 +27,7 @@ const SECTION_KEYS: Array<keyof ReportData["sections"]> = [
   "assessment",
   "clausesAndAnnexes",
   "nistSubcategories",
+  "frameworkRequirements",
   "vendors",
   "models",
   "trainingRegistry",
@@ -41,6 +43,7 @@ function render(
   // Left undefined by default so every pre-existing test also proves the
   // template survives a caller that predates sectionNotices.
   sectionNotices?: SectionNotice[],
+  extra: Record<string, unknown> = {},
 ): string {
   const data = {
     metadata: {
@@ -70,7 +73,9 @@ function render(
     sectionNotices: sectionNotices as SectionNotice[],
     // The renderer supplies these; the template must not declare its own copy.
     analysisLabels: ANALYSIS_LABELS,
+    noticeText: NOTICE_TEXT,
     include: () => "",
+    ...extra,
   } satisfies Omit<ReportData, "aiSummaries"> & {
     aiSummaries?: AISummaries;
     analysisLabels: Record<string, string>;
@@ -101,7 +106,7 @@ const FULL: AISummaries = {
 describe("report-pdf.ejs template", () => {
   it("recommendedActions renders without executiveSummary (its own top-level guard)", () => {
     const html = render({ sectionSummaries: {}, recommendedActions: FULL.recommendedActions });
-    expect(html).not.toContain("Executive Summary");
+    expect(html).not.toContain("Executive summary");
     expect(html).toContain("Recommended actions");
     expect(html).toContain("Close the DPIA gap");
     expect(html).toContain("Compliance Lead");
@@ -111,7 +116,7 @@ describe("report-pdf.ejs template", () => {
 
   it("complianceGap renders narrative, caveat and gap rows", () => {
     const html = render({ sectionSummaries: {}, complianceGap: FULL.complianceGap });
-    expect(html).toContain("Compliance Gap Analysis");
+    expect(html).toContain("Compliance gap analysis");
     expect(html).toContain("Two controls lack evidence.");
     expect(html).toContain("Scope note");
     expect(html).toContain("Readiness scores were unavailable");
@@ -153,7 +158,7 @@ describe("report-pdf.ejs template", () => {
       {
         summaries: { sectionSummaries: {}, complianceGap: FULL.complianceGap },
         toc: "Compliance gap analysis",
-        body: "Compliance Gap Analysis",
+        body: "Compliance gap analysis",
       },
       {
         summaries: { sectionSummaries: {}, vendorRisk: FULL.vendorRisk },
@@ -183,7 +188,7 @@ describe("report-pdf.ejs template", () => {
     const body = html.slice(html.indexOf("</ul>"));
     // "RISK ANALYSIS GROUP" is an HTML comment outside the sections guard, so
     // it always prints — a stable anchor even when every section is falsy.
-    expect(body.indexOf("Compliance Gap Analysis")).toBeLessThan(
+    expect(body.indexOf("Compliance gap analysis")).toBeLessThan(
       body.indexOf("Third-party risk analysis"),
     );
     expect(body.indexOf("Third-party risk analysis")).toBeLessThan(
@@ -195,7 +200,6 @@ describe("report-pdf.ejs template", () => {
     const html = render({ sectionSummaries: {} });
     for (const s of [
       "Recommended actions",
-      "Compliance Gap Analysis",
       "Compliance gap analysis",
       "Third-party risk analysis",
       "Prioritised gaps",
@@ -278,7 +282,7 @@ describe("report-pdf.ejs template", () => {
     expect(body).not.toContain("avoid-break");
     // The blocks themselves must still render.
     expect(body).toContain("Recommended actions");
-    expect(body).toContain("Compliance Gap Analysis");
+    expect(body).toContain("Compliance gap analysis");
     expect(body).toContain("Third-party risk analysis");
   });
 
@@ -626,6 +630,43 @@ describe("section notices", () => {
     expect(html).toContain("brand_new_reason");
   });
 
+  describe("collection_failed", () => {
+    const failed: SectionNotice = {
+      sectionKey: "frameworkRequirements",
+      reason: "collection_failed",
+      detail: "SOC 2 for <b>Chatbot</b>",
+    };
+
+    it("renders its own subsection with the pairing and what to do", () => {
+      const html = render(undefined, {}, [failed]);
+
+      expect(html).toContain("Sections that could not be completed");
+      expect(html).toContain("Part of these sections could not be read");
+      expect(html).toContain("Framework requirements");
+      expect(html).toContain("could not be read.");
+      expect(html).toContain("What to do: generate the report again.");
+      expect(html).not.toContain("Sections with no data");
+    });
+
+    it("escapes the detail", () => {
+      const html = render(undefined, {}, [failed]);
+
+      expect(html).toContain("SOC 2 for &lt;b&gt;Chatbot&lt;/b&gt;");
+      expect(html).not.toContain("<b>Chatbot</b>");
+    });
+
+    it("keeps no_data notices under Sections with no data only", () => {
+      const html = render(undefined, {}, [failed, { sectionKey: "vendors", reason: "no_data" }]);
+
+      expect(html.indexOf("Sections that could not be completed")).toBeLessThan(
+        html.indexOf("Sections with no data"),
+      );
+      const noDataPart = html.slice(html.indexOf("Sections with no data"));
+      expect(noDataPart).toContain("Vendors");
+      expect(noDataPart).not.toContain("Framework requirements");
+    });
+  });
+
   it("renders nothing when there are no notices", () => {
     const html = render(undefined, {}, []);
 
@@ -636,5 +677,148 @@ describe("section notices", () => {
     const html = render();
 
     expect(html).not.toContain("section-notice");
+  });
+
+  describe("framework requirements", () => {
+    const rollup = {
+      total: 2,
+      done: 1,
+      unassigned: 0,
+      noEvidence: 0,
+      overdue: 0,
+      statusBreakdown: {},
+    };
+    const base = {
+      implId: 1,
+      level: 2,
+      title: "Model inventory",
+      orderNo: 1,
+      status: "Implemented",
+      owner: "Jane <b>Doe</b>",
+      reviewer: null,
+      approver: null,
+      dueDate: "2026-12-01",
+      isDone: true,
+      isOverdue: false,
+      evidenceCount: 3,
+      evidenceFiles: ["a.pdf", "b.docx"],
+      riskCount: 0,
+      children: [
+        {
+          ...{},
+          implId: 2,
+          level: 3,
+          title: "Child item",
+          orderNo: 1,
+          status: "Not started",
+          owner: null,
+          reviewer: null,
+          approver: null,
+          dueDate: null,
+          isDone: false,
+          isOverdue: false,
+          evidenceCount: 0,
+          evidenceFiles: [],
+          riskCount: 0,
+        },
+      ],
+    };
+    const frameworkRequirements = {
+      frameworks: [
+        {
+          frameworkId: 26,
+          frameworkName: "OSFI E-23",
+          rollup,
+          groups: [
+            {
+              title: "Governance",
+              orderNo: 1,
+              useCase: "Credit scoring",
+              rollup,
+              requirements: [base],
+            },
+          ],
+        },
+      ],
+    };
+
+    it("renders framework requirements block and TOC entry", () => {
+      const html = render(undefined, { frameworkRequirements });
+      expect(html).toContain("Framework requirements");
+      expect(html).toContain("OSFI E-23");
+      expect(html).toContain("1 of 2 requirements implemented or audited");
+      expect(html).toContain("Credit scoring · Governance");
+      expect(html).toContain("Model inventory");
+      expect(html).toContain("Child item");
+      expect(html).toContain("2026-12-01");
+      expect(html).toContain("Evidence: a.pdf, b.docx, and 1 more");
+      expect(html).toContain("chip-success");
+      // user text is escaped
+      expect(html).not.toContain("<b>Doe</b>");
+      expect(html).toContain("Jane &lt;b&gt;Doe&lt;/b&gt;");
+    });
+
+    it("include frameworkRequirements in the compliance group guard", () => {
+      const html = render(undefined, { frameworkRequirements });
+      expect(html).toContain("Compliance & governance");
+    });
+
+    it("keeps the due date on one line and the group heading with its table", () => {
+      const html = render(undefined, { frameworkRequirements });
+      expect(html).toContain('<td style="white-space: nowrap;">2026-12-01</td>');
+      expect(html).toMatch(/<h5 style="[^"]*break-after: avoid/);
+    });
+
+    it("keeps a short chart on one page but lets a long one break", () => {
+      const withGroups = (n: number) => ({
+        frameworkRequirements: {
+          frameworks: [
+            {
+              ...frameworkRequirements.frameworks[0],
+              groups: Array.from({ length: n }, (_, i) => ({
+                ...frameworkRequirements.frameworks[0].groups[0],
+                title: `Group ${i}`,
+              })),
+            },
+          ],
+        },
+      });
+      const extra = { frameworkRequirementCharts: ["<svg></svg>"] };
+      expect(render(undefined, withGroups(3), undefined, extra)).toContain(
+        'class="fr-chart avoid-break"',
+      );
+      expect(render(undefined, withGroups(20), undefined, extra)).toContain('class="fr-chart"');
+    });
+
+    it("embeds the chart svg supplied for the framework", () => {
+      const html = render(undefined, { frameworkRequirements }, undefined, {
+        frameworkRequirementCharts: ["<svg data-test-chart></svg>"],
+      });
+      expect(html).toContain("<svg data-test-chart></svg>");
+    });
+  });
+});
+
+describe("report-pdf.ejs: incident management", () => {
+  const incidents = (archivedIncidents?: number) => ({
+    incidentManagement: {
+      totalIncidents: 1,
+      archivedIncidents,
+      incidents: [
+        { id: 1, incidentId: "INC-1", type: "Malfunction", severity: "Minor", status: "Open" },
+      ],
+    },
+  });
+
+  it("notes the archived incidents the report leaves out", () => {
+    const html = render(undefined, incidents(2), undefined, { archivedIncidentsNote });
+    expect(html).toContain('<p class="subsection-note">2 archived incidents are not included.</p>');
+  });
+
+  it("has no note when nothing is archived, or for data without the count", () => {
+    expect(render(undefined, incidents(0), undefined, { archivedIncidentsNote })).not.toContain(
+      "subsection-note",
+    );
+    expect(render(undefined, incidents(undefined))).not.toContain("subsection-note");
   });
 });

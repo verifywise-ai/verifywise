@@ -72,8 +72,13 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-browsers-${{ runner.os }}-${{ hashFiles('Clients/package-lock.json', 'Clients/package.json') }}
+          key: playwright-browsers-${{ runner.os }}-${{ hashFiles('Clients/package-lock.json', 'Clients/package.json', 'Servers/package-lock.json') }}
 
       - name: Install Playwright browsers
         working-directory: Clients
         run: npx playwright install chromium
+
+      # Same as e2e-tests.yml: the backend renders report PDFs with its own playwright package.
+      - name: Install the backend Playwright browser
+        working-directory: Servers
+        run: npx --no-install playwright install chromium-headless-shell

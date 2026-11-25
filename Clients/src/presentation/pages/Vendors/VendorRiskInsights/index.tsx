@@ -1,8 +1,11 @@
 import { useCallback, useState } from "react";
-import { Stack } from "@mui/material";
+import { Stack, Typography } from "@mui/material";
+import TabContext from "@mui/lab/TabContext";
 import type { VendorRisk } from "../../../../domain/types/VendorRisk";
 import type { HeatMapCellRef } from "../../../types/interfaces/i.risk";
-import InsightSection from "./InsightSection";
+import TabBar from "../../../components/TabBar";
+import CustomizableSkeleton from "../../../components/Skeletons";
+import { textStyles } from "../../../themes/typography";
 import HeatMapSection from "./HeatMapSection";
 import BlastRadiusSection from "./BlastRadiusSection";
 import DuplicatesSection from "./DuplicatesSection";
@@ -10,90 +13,112 @@ import CoverageSection from "./CoverageSection";
 
 type SectionKey = "heatMap" | "blastRadius" | "duplicates" | "coverage";
 
-const STORAGE_KEY = "vendor-risk-insights-open";
+const SECTIONS: {
+  key: SectionKey;
+  label: string;
+  icon: "Grid3x3" | "Radar" | "Copy" | "ShieldCheck";
+  description: string;
+}[] = [
+  {
+    key: "heatMap",
+    label: "Heat map",
+    icon: "Grid3x3",
+    description:
+      "Vendor risks by likelihood and severity. Select a cell to see its risks in the Risks tab.",
+  },
+  {
+    key: "blastRadius",
+    label: "Blast radius",
+    icon: "Radar",
+    description: "How many project risks and use cases inherit from the risks of each vendor.",
+  },
+  {
+    key: "duplicates",
+    label: "Duplicate vendor risks",
+    icon: "Copy",
+    description: "Risks of the same vendor that look like one risk entered twice.",
+  },
+  {
+    key: "coverage",
+    label: "Framework coverage",
+    icon: "ShieldCheck",
+    description: "Which vendor risks are not mapped to a framework yet.",
+  },
+];
 
-/** Which sections this viewer left open. Per-browser convenience only. */
-function readOpen(): Set<SectionKey> {
+const STORAGE_KEY = "vendor-risk-insights";
+
+/** The report the tab was left on. Per-browser convenience only. */
+function readTab(): SectionKey {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return new Set(raw ? (JSON.parse(raw) as SectionKey[]) : []);
+    if (!raw) return "heatMap";
+    const parsed = JSON.parse(raw) as { tab?: unknown };
+    return SECTIONS.find((s) => s.key === parsed.tab)?.key ?? "heatMap";
   } catch {
-    return new Set();
+    return "heatMap";
   }
 }
 
-function writeOpen(open: Set<SectionKey>) {
+function writeTab(tab: SectionKey) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([...open]));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ tab }));
   } catch {
-    // Private mode or blocked storage: the sections just start closed next time.
+    // Private mode or blocked storage: the tab just starts on the heat map next time.
   }
 }
 
 interface VendorRiskInsightsProps {
   risks: VendorRisk[];
+  /** Whether the risks are still being read. Only the heat map waits for them. */
+  loading?: boolean;
   selectedCell: HeatMapCellRef | null;
   onSelectCell: (cell: HeatMapCellRef | null) => void;
   onOpenRisk: (vendorRiskId: number) => void;
 }
 
 /**
- * The analysis above the vendor risks table. Each section is collapsed until
- * opened, and the duplicate and coverage scans only run once their section is
- * first opened.
+ * The content of the Insights tab: one report at a time, chosen by a tab per report. Only the
+ * report on screen is mounted, so the duplicate and coverage scans run once their report is first
+ * shown.
  */
 export default function VendorRiskInsights({
   risks,
+  loading = false,
   selectedCell,
   onSelectCell,
   onOpenRisk,
 }: VendorRiskInsightsProps) {
-  const [open, setOpen] = useState<Set<SectionKey>>(readOpen);
+  const [tab, setTab] = useState<SectionKey>(readTab);
 
-  const toggle = useCallback((key: SectionKey, expanded: boolean) => {
-    setOpen((current) => {
-      const next = new Set(current);
-      if (expanded) next.add(key);
-      else next.delete(key);
-      writeOpen(next);
-      return next;
-    });
+  const select = useCallback((next: SectionKey) => {
+    setTab(next);
+    writeTab(next);
   }, []);
 
+  const active = SECTIONS.find((section) => section.key === tab) ?? SECTIONS[0];
+
   return (
-    <Stack spacing={4}>
-      <InsightSection
-        title="Heat map"
-        description="Vendor risks by likelihood and severity. Select a cell to filter the table."
-        expanded={open.has("heatMap")}
-        onToggle={(expanded) => toggle("heatMap", expanded)}
-      >
-        <HeatMapSection risks={risks} selectedCell={selectedCell} onSelectCell={onSelectCell} />
-      </InsightSection>
-      <InsightSection
-        title="Blast radius"
-        description="How many project risks and use cases inherit from the risks of each vendor."
-        expanded={open.has("blastRadius")}
-        onToggle={(expanded) => toggle("blastRadius", expanded)}
-      >
-        <BlastRadiusSection />
-      </InsightSection>
-      <InsightSection
-        title="Duplicate vendor risks"
-        description="Risks of the same vendor that look like one risk entered twice."
-        expanded={open.has("duplicates")}
-        onToggle={(expanded) => toggle("duplicates", expanded)}
-      >
-        <DuplicatesSection onOpenRisk={onOpenRisk} />
-      </InsightSection>
-      <InsightSection
-        title="Framework coverage"
-        description="Which vendor risks are not mapped to a framework yet."
-        expanded={open.has("coverage")}
-        onToggle={(expanded) => toggle("coverage", expanded)}
-      >
-        <CoverageSection onOpenRisk={onOpenRisk} />
-      </InsightSection>
+    <Stack>
+      <TabContext value={tab}>
+        <TabBar
+          tabs={SECTIONS.map(({ key, label, icon }) => ({ label, value: key, icon }))}
+          activeTab={tab}
+          onChange={(_event, next) => select(next as SectionKey)}
+        />
+      </TabContext>
+      <Typography sx={{ ...textStyles.body, color: "text.tertiary", mt: "12px", mb: "16px" }}>
+        {active.description}
+      </Typography>
+      {tab === "heatMap" &&
+        (loading ? (
+          <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+        ) : (
+          <HeatMapSection risks={risks} selectedCell={selectedCell} onSelectCell={onSelectCell} />
+        ))}
+      {tab === "blastRadius" && <BlastRadiusSection />}
+      {tab === "duplicates" && <DuplicatesSection onOpenRisk={onOpenRisk} />}
+      {tab === "coverage" && <CoverageSection onOpenRisk={onOpenRisk} />}
     </Stack>
   );
 }

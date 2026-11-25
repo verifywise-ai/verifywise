@@ -7,6 +7,10 @@ const mockTransaction = {
   afterCommit: jest.fn(),
 };
 
+// Holds both incident keys (an Admin); incidentManagement.approval.ctrl.test.ts covers the rest.
+jest.mock("../../utils/rolePermissions.utils", () => ({
+  requestHasPermission: jest.fn(async () => true),
+}));
 jest.mock("../../database/db", () => ({
   sequelize: { transaction: jest.fn(async () => mockTransaction), query: jest.fn() },
 }));
@@ -33,7 +37,7 @@ jest.mock("../../utils/changeHistory.base.utils", () => ({
 jest.mock("../../services/workflows/triggers", () => ({ triggerIncidentResponse: jest.fn() }));
 jest.mock("../../utils/logger/fileLogger", () => ({
   __esModule: true,
-  default: { debug: jest.fn(), error: jest.fn(), info: jest.fn() },
+  default: { debug: jest.fn(), error: jest.fn(), info: jest.fn(), warn: jest.fn() },
   logStructured: jest.fn(),
 }));
 jest.mock("../../utils/i18n.utils", () => ({
@@ -96,6 +100,7 @@ describe("updateIncidentById — reopening a closed incident", () => {
       status: "Investigating",
       approval_status: "Pending",
       approved_by: null,
+      approved_by_id: null,
       approval_date: null,
       approval_notes: null,
     });
@@ -111,7 +116,9 @@ describe("updateIncidentById — reopening a closed incident", () => {
     expect(mockTransaction.commit).toHaveBeenCalled();
   });
 
-  it("keeps the approver the caller set in the same update", async () => {
+  // approved_by is the server's to set, so sending one is not an approval
+  // decision: the reopen still drops the stale sign-off.
+  it("ignores an approver the caller sends with a reopen", async () => {
     const res = mockRes();
     await updateIncidentById(
       mockReq({ status: "Open", approval_status: "Approved", approved_by: "Sam Lee" }),
@@ -119,7 +126,22 @@ describe("updateIncidentById — reopening a closed incident", () => {
     );
 
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(mockUpdate.mock.calls[0][1]).toEqual({ status: "Open", approved_by: "Sam Lee" });
+    expect(mockUpdate.mock.calls[0][1]).toEqual({
+      status: "Open",
+      approval_status: "Pending",
+      approved_by: null,
+      approved_by_id: null,
+      approval_date: null,
+      approval_notes: null,
+    });
+  });
+
+  it("keeps the approval when the caller changes the notes in the same update", async () => {
+    const res = mockRes();
+    await updateIncidentById(mockReq({ status: "Open", approval_notes: "Still holds" }), res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(mockUpdate.mock.calls[0][1]).toEqual({ status: "Open", approval_notes: "Still holds" });
   });
 
   it("returns 409 and writes nothing when the incident changed since the drawer loaded it", async () => {

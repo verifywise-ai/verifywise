@@ -12,6 +12,9 @@ import {
   updateLifecycleSettings,
   updateUseCaseDepartment,
 } from "../repository/useCaseLifecycle.repository";
+import { resubmitUseCaseApproval, updateProject } from "../repository/project.repository";
+import { projectQueryKeys } from "./useProjects";
+import { useCaseApprovalWorkflowKeys } from "./useUseCaseApprovalWorkflows";
 import type { ConfirmationIntervalDays } from "../../domain/enums/lifecycleStage.enum";
 
 /** React Query keys for the use case lifecycle (#5187). */
@@ -107,8 +110,36 @@ export function useUseCaseLifecycleActions(projectId: number) {
     mutationFn: (department: string | null) => updateUseCaseDepartment(projectId, department),
     onSuccess,
   });
+  // A workflow change or a resubmission can move the stage, and the Use cases
+  // tabs count stages from the list.
+  const onApprovalChanged = async () => {
+    await Promise.all([
+      onSuccess(),
+      queryClient.invalidateQueries({ queryKey: projectQueryKeys.all }),
+      queryClient.invalidateQueries({
+        queryKey: useCaseApprovalWorkflowKeys.detail(projectId),
+      }),
+    ]);
+  };
+  // Attach, replace (null clears). The server opens, withdraws or replaces
+  // the approval request; a planned use case moves to In review.
+  const setApprovalWorkflow = useMutation({
+    mutationFn: (workflowId: number | null) =>
+      // The dialog shows the server's reason inline.
+      updateProject({
+        id: projectId,
+        body: { approval_workflow_id: workflowId },
+        suppressGlobalErrorToast: true,
+      }),
+    onSuccess: onApprovalChanged,
+  });
+  // A rejected use case, sent for approval again under the same workflow.
+  const resubmitApproval = useMutation({
+    mutationFn: () => resubmitUseCaseApproval({ id: projectId }),
+    onSuccess: onApprovalChanged,
+  });
 
-  return { goLive, retire, confirm, setDepartment };
+  return { goLive, retire, confirm, setDepartment, setApprovalWorkflow, resubmitApproval };
 }
 
 export function useUpdateLifecycleSettings() {

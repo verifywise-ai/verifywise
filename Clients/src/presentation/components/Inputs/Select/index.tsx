@@ -29,6 +29,7 @@ import {
   useTheme,
 } from "@mui/material";
 import "./index.css";
+import { SELECT_MIN_WIDTH } from "./constants";
 import { ChevronDown } from "lucide-react";
 import { SelectProps } from "../../../types/widget.types";
 import { getSelectStyles } from "../../../utils/inputStyles";
@@ -119,6 +120,7 @@ function Select({
       <Stack direction="row" alignItems="center" spacing={1} sx={{ minWidth: 0 }}>
         {selectedItem?.icon && <selectedItem.icon color={selectedItem.color} size={16} />}
         <span
+          data-vw-no-translate={selectedItem?.noTranslate ? "true" : undefined}
           style={{
             display: "block",
             overflow: "hidden",
@@ -158,7 +160,11 @@ function Select({
         >
           {label}
           {isRequired && (
-            <Typography component="span" ml={theme.spacing(1)} color={theme.palette.error.text}>
+            <Typography
+              component="span"
+              ml={theme.spacing(1)}
+              color={theme.palette.status.error.text}
+            >
               *
             </Typography>
           )}
@@ -246,7 +252,7 @@ function Select({
         }}
         sx={{
           fontSize: 13,
-          minWidth: "125px",
+          minWidth: SELECT_MIN_WIDTH,
           width: "100%",
           backgroundColor: isFilterApplied
             ? theme.palette.background.fill
@@ -266,6 +272,7 @@ function Select({
               surname?: string;
               icon?: React.ComponentType<{ color?: string; size?: number }>;
               color?: string;
+              noTranslate?: boolean;
               disabled?: boolean;
             },
             index: number,
@@ -284,7 +291,9 @@ function Select({
               >
                 <Stack direction="row" alignItems="center" spacing={1}>
                   {item.icon && <item.icon color={item.color} size={16} />}
-                  <span>{`${item.name} ${item.surname ? item.surname : ""}`}</span>
+                  <span data-vw-no-translate={item.noTranslate ? "true" : undefined}>
+                    {`${item.name} ${item.surname ? item.surname : ""}`}
+                  </span>
                 </Stack>
                 {item.email && (
                   <span style={{ fontSize: 11, color: theme.palette.text.disabled }}>

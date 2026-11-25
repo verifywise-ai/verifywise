@@ -1,3 +1,4 @@
+import { formatIncidentDay } from "../validations/incidentManagementValidation.utils";
 // Build replacement dict for incident
 export function buildIncidentReplacements(incident: any): Record<string, any> {
   return {
@@ -6,10 +7,10 @@ export function buildIncidentReplacements(incident: any): Record<string, any> {
     "incident.severity": incident.severity || "",
     "incident.status": incident.status || "",
     "incident.occurred_date": incident.occurred_date
-      ? new Date(incident.occurred_date).toLocaleDateString("en-US", { dateStyle: "long" })
+      ? formatIncidentDay(incident.occurred_date, "en-US", { dateStyle: "long" })
       : "",
     "incident.date_detected": incident.date_detected
-      ? new Date(incident.date_detected).toLocaleDateString("en-US", { dateStyle: "long" })
+      ? formatIncidentDay(incident.date_detected, "en-US", { dateStyle: "long" })
       : "",
     "incident.reporter": incident.reporter || "",
     "incident.categories_of_harm": Array.isArray(incident.categories_of_harm)
@@ -24,7 +25,7 @@ export function buildIncidentReplacements(incident: any): Record<string, any> {
     "incident.approval_status": incident.approval_status || "",
     "incident.approved_by": incident.approved_by || "",
     "incident.approval_date": incident.approval_date
-      ? new Date(incident.approval_date).toLocaleDateString("en-US", { dateStyle: "long" })
+      ? formatIncidentDay(incident.approval_date, "en-US", { dateStyle: "long" })
       : "",
     "incident.approval_notes": incident.approval_notes || "",
     "incident.interim_report": incident.interim_report ? "Yes" : "No",
@@ -40,22 +41,22 @@ export function buildIncidentUpdateReplacements(
   newIncident: any,
 ): Record<string, any> {
   const occurredDate = newIncident.occurred_date
-    ? new Date(newIncident.occurred_date).toLocaleDateString("en-US", { dateStyle: "long" })
+    ? formatIncidentDay(newIncident.occurred_date, "en-US", { dateStyle: "long" })
     : "";
   const oldOccurredDate = oldIncident.occurred_date
-    ? new Date(oldIncident.occurred_date).toLocaleDateString("en-US", { dateStyle: "long" })
+    ? formatIncidentDay(oldIncident.occurred_date, "en-US", { dateStyle: "long" })
     : "";
   const dateDetected = newIncident.date_detected
-    ? new Date(newIncident.date_detected).toLocaleDateString("en-US", { dateStyle: "long" })
+    ? formatIncidentDay(newIncident.date_detected, "en-US", { dateStyle: "long" })
     : "";
   const oldDateDetected = oldIncident.date_detected
-    ? new Date(oldIncident.date_detected).toLocaleDateString("en-US", { dateStyle: "long" })
+    ? formatIncidentDay(oldIncident.date_detected, "en-US", { dateStyle: "long" })
     : "";
   const approvalDate = newIncident.approval_date
-    ? new Date(newIncident.approval_date).toLocaleDateString("en-US", { dateStyle: "long" })
+    ? formatIncidentDay(newIncident.approval_date, "en-US", { dateStyle: "long" })
     : "";
   const oldApprovalDate = oldIncident.approval_date
-    ? new Date(oldIncident.approval_date).toLocaleDateString("en-US", { dateStyle: "long" })
+    ? formatIncidentDay(oldIncident.approval_date, "en-US", { dateStyle: "long" })
     : "";
   const categoriesOfHarm = Array.isArray(newIncident.categories_of_harm)
     ? newIncident.categories_of_harm.join(", ")

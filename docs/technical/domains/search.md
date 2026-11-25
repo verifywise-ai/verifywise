@@ -74,7 +74,7 @@ interface SearchResult {
 | file_manager | files | filename | `/file-manager?fileId={id}` |
 | policy_manager | policy_manager | title, content_html | `/policies?policyId={id}` |
 | training_registar | trainingregistar | training_name, provider | `/training?trainingId={id}` |
-| incident_management | ai_incident_managements | ai_project, reporter, description | `/ai-incident-managements?incidentId={id}` |
+| incident_management | ai_incident_managements | incident_id (the visible "INC-12"), ai_project, reporter, description, immediate_mitigations; archived incidents excluded | `/ai-incident-managements?incidentId={id}` |
 | deepeval_projects | deepeval_projects | name, description | `/evals/{id}` |
 | ai_trust_center_resources | ai_trust_center_resources | name, description | `/ai-trust-center/resources?resourceId={id}` |
 | ai_trust_center_subprocessors | ai_trust_center_subprocessor | name, purpose | `/ai-trust-center/subprocessors?subprocessorId={id}` |
@@ -105,6 +105,18 @@ WHERE id IN (
 
 Applies to: `vendors`, `vendor_risks`
 
+The query is a plain `SELECT *` on one table (no joins). Until 2026-11 it was
+`SELECT DISTINCT *`, which Postgres refuses on a table with a `json` column, so
+incidents (`categories_of_harm`) were never found; the error was logged and the
+entity skipped.
+
+### Fixed Conditions
+
+An entity can set `alwaysWhere`, a fixed SQL condition on its own columns
+(never user input) that every result must meet. `incident_management` uses
+`archived IS NOT TRUE`, so archived incidents are not found, as on the
+incidents page's default view.
+
 ### Organization Filtering
 
 Some entities filtered by `organization_id`:
@@ -114,7 +126,7 @@ Some entities filtered by `organization_id`:
 ## Query Implementation
 
 ```sql
-SELECT DISTINCT * FROM {tableName}
+SELECT * FROM {tableName}
 WHERE organization_id = :organizationId
 AND (
   column1::text ILIKE :pattern

@@ -79,14 +79,13 @@ const EditLayoutModal = ({
     >
       <Stack gap="8px">
         {saveFailed && (
-          <Alert variant="error" body="Could not save your layout. Try again." isToast={false} />
+          <Alert variant="error" body="Could not save your layout. Try again." inline />
         )}
         <Stack direction="row" justifyContent="flex-end">
           <CustomizableButton
             text="Reset to default"
             variant="outlined"
             onClick={() => setDraft(defaults)}
-            sx={{ height: "30px" }}
           />
         </Stack>
         <Box role="list">

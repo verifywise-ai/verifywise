@@ -1,0 +1,564 @@
+/**
+ * Which search a run used, in the two places that say it. Claude's own search needs no credit, so
+ * it is named with what the run did, behind "How it was researched". The GDELT Project's terms ask
+ * for a credit with a link, so the project is credited under the summary, on screen without a
+ * click. Nothing is said for a run from before the engine was recorded, and the words are in
+ * German, French and Spanish through the real translator and dictionary.
+ *
+ * The other lines of the run are tested with the whole section (VendorResearchFindings.test.tsx
+ * and PlainLayout.test.tsx).
+ */
+
+import { describe, it, expect, vi, beforeEach, afterAll } from "vitest";
+import { screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { renderWithProviders } from "../../../../../test/renderWithProviders";
+import { LANGS, resetAudit, setLanguage, tr } from "../../../../../test/i18nHelpers";
+import { translations } from "../../../../../i18n/translations";
+import { FOUR_OUTCOMES, coverage, listCopy, run } from "./fixtures";
+
+vi.mock(
+  "../../../../../application/repository/vendorResearch.repository",
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import("../../../../../application/repository/vendorResearch.repository")
+    >()),
+    getLatestVendorResearch: vi.fn(),
+    startVendorResearch: vi.fn(),
+  }),
+);
+
+import * as repository from "../../../../../application/repository/vendorResearch.repository";
+import { useLatestVendorResearch } from "../../../../../application/hooks/useVendorResearch";
+import ResearchCredits from "../ResearchCredits";
+import RunSummary from "../RunSummary";
+
+const mocks = { latest: vi.mocked(repository.getLatestVendorResearch) };
+
+const CLAUDE_LINE = "Searched with Claude web search";
+const BRAVE_LINE = "Searched with Brave Search";
+const GDELT_LINE = "News searched with the GDELT Project (last 3 months)";
+const GDELT_NAME = "GDELT Project";
+const GDELT_URL = "https://www.gdeltproject.org/";
+const SEARCHES_LINE = "Searches: 6, pages read: 4";
+const DETAILS = "How it was researched";
+
+/** A finished run that searched, so that the line of what it did is there for the engine to follow. */
+const searched = (overrides: Parameters<typeof run>[0] = {}) =>
+  run({ category_summary: FOUR_OUTCOMES, searches_used: 6, pages_read: 4, ...overrides });
+
+const onNotify = vi.fn();
+
+/** The summary and the credits as the section mounts them: on one read of the vendor's latest run. */
+function SummaryAndCredits() {
+  const latest = useLatestVendorResearch(7);
+  return (
+    <>
+      <RunSummary
+        latest={latest}
+        vendorId={7}
+        vendorName="Acme Cloud"
+        canStart
+        notConfigured={false}
+        onNotify={onNotify}
+      />
+      <ResearchCredits run={latest.data} />
+    </>
+  );
+}
+
+const renderSummary = () => renderWithProviders(<SummaryAndCredits />);
+
+/** Opens what the run found and checked; the name of the button is in the language of the page. */
+const openDetails = async (name = DETAILS) =>
+  userEvent.click(await screen.findByRole("button", { name }));
+
+/** The paragraph that holds the credit: the link, and the words around it. */
+const creditLine = async () => {
+  const link = await screen.findByRole("link", { name: GDELT_NAME });
+  return link.closest("p") as HTMLElement;
+};
+
+const follows = (a: HTMLElement, b: HTMLElement) =>
+  Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+describe("the lines that say which search a run used", () => {
+  it("names the web search of Claude with what the run did, once the details are open", async () => {
+    mocks.latest.mockResolvedValue(searched({ search_engine: "anthropic" }));
+    renderSummary();
+
+    await screen.findByRole("button", { name: DETAILS });
+    expect(screen.queryByText(CLAUDE_LINE)).not.toBeInTheDocument();
+    await openDetails();
+
+    expect(follows(screen.getByText(SEARCHES_LINE), screen.getByText(CLAUDE_LINE))).toBe(true);
+    // Claude's search needs no credit of the kind GDELT asks for.
+    expect(screen.queryByRole("link", { name: GDELT_NAME })).not.toBeInTheDocument();
+  });
+
+  it("names Brave Search with what the run did, once the details are open, and credits no GDELT", async () => {
+    mocks.latest.mockResolvedValue(searched({ search_engine: "brave" }));
+    renderSummary();
+
+    await screen.findByRole("button", { name: DETAILS });
+    expect(screen.queryByText(BRAVE_LINE)).not.toBeInTheDocument();
+    await openDetails();
+
+    expect(follows(screen.getByText(SEARCHES_LINE), screen.getByText(BRAVE_LINE))).toBe(true);
+    expect(screen.queryByText(CLAUDE_LINE)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: GDELT_NAME })).not.toBeInTheDocument();
+  });
+
+  it("names Brave Search for a run that counted no searches, like Claude's search", async () => {
+    mocks.latest.mockResolvedValue(
+      run({
+        category_summary: FOUR_OUTCOMES,
+        searches_used: 0,
+        pages_read: 0,
+        search_engine: "brave",
+      }),
+    );
+    renderSummary();
+    await openDetails();
+
+    expect(screen.getByText(BRAVE_LINE)).toBeInTheDocument();
+    expect(screen.queryByText(/^Searches: /)).not.toBeInTheDocument();
+  });
+
+  it("credits the GDELT Project with a link, under the summary and without a click", async () => {
+    mocks.latest.mockResolvedValue(searched({ search_engine: "gdelt" }));
+    renderSummary();
+
+    const line = await creditLine();
+
+    // The words are one sentence on the screen, with the name of the project inside it.
+    expect(line.textContent).toBe(GDELT_LINE);
+    // The credit is under the day of the run, and none of the lines behind the button.
+    expect(follows(screen.getByText(/^Last researched: /), line)).toBe(true);
+    expect(screen.getByRole("button", { name: DETAILS })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText(SEARCHES_LINE)).not.toBeInTheDocument();
+
+    // The link is the credit: it goes to the project's own site, and opens beside this page.
+    const link = within(line).getByRole("link", { name: GDELT_NAME });
+    expect(link).toHaveAttribute("href", GDELT_URL);
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link.getAttribute("rel")).toContain("noopener");
+    expect(link.getAttribute("rel")).toContain("noreferrer");
+  });
+
+  it("credits the GDELT Project once, whether the details are open or not", async () => {
+    mocks.latest.mockResolvedValue(searched({ search_engine: "gdelt" }));
+    renderSummary();
+    await creditLine();
+
+    await openDetails();
+
+    expect(screen.getByText(SEARCHES_LINE)).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: GDELT_NAME })).toHaveLength(1);
+    expect(screen.getAllByText(/GDELT Project/)).toHaveLength(1);
+    expect(screen.queryByText(CLAUDE_LINE)).not.toBeInTheDocument();
+  });
+
+  it("credits it for a run that failed after it searched as well", async () => {
+    mocks.latest.mockResolvedValue(
+      run({
+        status: "failed",
+        error: "The run stopped because the web could not be reached",
+        searches_used: 3,
+        pages_read: 0,
+        search_engine: "gdelt",
+      }),
+    );
+    renderSummary();
+
+    expect((await creditLine()).textContent).toBe(GDELT_LINE);
+    await openDetails();
+    expect(screen.getByText("Searches: 3, pages read: 0")).toBeInTheDocument();
+  });
+
+  // A run from before the column, one that searched nothing, and a response cached before the
+  // field existed: none of them has an engine to name, and none of them shows a line for it.
+  it.each([
+    ["null", { search_engine: null }],
+    ["missing", {}],
+  ])("says nothing of the search of a run whose engine is %s", async (_name, fields) => {
+    mocks.latest.mockResolvedValue(searched(fields));
+    renderSummary();
+    await openDetails();
+
+    expect(screen.getByText(SEARCHES_LINE)).toBeInTheDocument();
+    expect(screen.queryByText(/Searched with/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/News searched with/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: GDELT_NAME })).not.toBeInTheDocument();
+  });
+
+  it("says nothing for an engine it has no words for, and shows the rest of the run", async () => {
+    // OpenAI's search is in the table's list, for a later engine; no run uses it yet. Bing is the
+    // feed that was removed, and could only come from a table that was written by hand.
+    for (const engine of ["openai", "bing"]) {
+      mocks.latest.mockResolvedValue(searched({ search_engine: engine as unknown as "anthropic" }));
+      const { unmount } = renderSummary();
+      await openDetails();
+
+      expect(screen.getByText(SEARCHES_LINE)).toBeInTheDocument();
+      expect(screen.queryByText(/Searched with|News searched with/)).not.toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: GDELT_NAME })).not.toBeInTheDocument();
+      expect(screen.getByText(/^Last researched: /)).toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it("says nothing of the search while the run is going", async () => {
+    mocks.latest.mockResolvedValue(
+      run({ status: "running", searches_used: 2, pages_read: 1, search_engine: "gdelt" }),
+    );
+    renderSummary();
+
+    expect(await screen.findByText("Researching…")).toBeInTheDocument();
+    expect(screen.queryByText(/Searched with|News searched with/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: GDELT_NAME })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: DETAILS })).not.toBeInTheDocument();
+  });
+});
+
+// A category whose verified risks the cap of the run cut is stored with the outcome over_cap and
+// the server's note NOTES.overCap. Its line must not say that nothing was found above the note that
+// says more was found than a run keeps; and the line is read from the outcome, never the note.
+describe("a category whose risks the cap of the run cut", () => {
+  const CAPPED_LINE = "AI-specific risks: risks found, left for the next run";
+  const CAPPED_NOTE = "More risks were found than one run keeps.";
+  const capped = () =>
+    searched({
+      category_summary: [
+        {
+          category: "ai_specific",
+          outcome: "over_cap",
+          note: "More risks were found than one run keeps",
+        },
+        {
+          category: "certifications",
+          outcome: "nothing_found",
+          note: "No risks found in the sources reviewed",
+        },
+      ],
+    });
+
+  afterAll(async () => {
+    await setLanguage("en");
+  });
+
+  it("says the risks were found and left for the next run, with the note under it", async () => {
+    mocks.latest.mockResolvedValue(capped());
+    renderSummary();
+
+    await openDetails();
+
+    const line = await screen.findByText(CAPPED_LINE);
+    expect(screen.queryByText("AI-specific risks: nothing found")).not.toBeInTheDocument();
+    expect(follows(line, screen.getByText(CAPPED_NOTE))).toBe(true);
+    // The neighbour, where nothing was found, still says so.
+    expect(screen.getByText("Certifications: nothing found")).toBeInTheDocument();
+  });
+
+  // RV6C-1: the same words on a category in which nothing was found, as the model may write them
+  // (or as a run stored before the cap had its own outcome kept them), do not change its line.
+  it("says nothing was found when only the note has the cap's words", async () => {
+    mocks.latest.mockResolvedValue(
+      searched({
+        category_summary: [
+          {
+            category: "ai_specific",
+            outcome: "nothing_found",
+            note: "More risks were found than one run keeps",
+          },
+        ],
+      }),
+    );
+    renderSummary();
+
+    await openDetails();
+
+    const line = await screen.findByText("AI-specific risks: nothing found");
+    expect(screen.queryByText(CAPPED_LINE)).not.toBeInTheDocument();
+    expect(follows(line, screen.getByText(CAPPED_NOTE))).toBe(true);
+  });
+
+  it.each(LANGS)("says it in %s", async (lang) => {
+    resetAudit();
+    await setLanguage(lang);
+    mocks.latest.mockResolvedValue(capped());
+    renderSummary();
+
+    await openDetails(tr(lang, DETAILS));
+
+    const outcome = translations[lang]["risks found, left for the next run"];
+    expect(outcome, `${lang}: the words of the outcome`).toEqual(expect.any(String));
+    expect(outcome).not.toBe("risks found, left for the next run");
+    const line = tr(lang, "{category}: {outcome}")
+      .replace("{category}", tr(lang, "AI-specific risks"))
+      .replace("{outcome}", outcome);
+    expect(await screen.findByText(line)).toBeInTheDocument();
+    expect(screen.getByText(tr(lang, CAPPED_NOTE))).toBeInTheDocument();
+    expect(screen.queryByText(CAPPED_LINE)).not.toBeInTheDocument();
+  });
+});
+
+// Run 1 of 2026-11-23: the news engine never answered. A category checked on the vendor's own
+// pages only says so, and the run says without a click that its results may be incomplete.
+describe("a run whose news search was not available", () => {
+  const GAP = "News search was not available, so results may be incomplete.";
+  const OWN_PAGES_NOTE =
+    "News search was not available, so this was checked only on the vendor's own pages.";
+  const newsDown = () =>
+    searched({
+      category_summary: [
+        {
+          category: "security_incidents",
+          outcome: "search_failed",
+          note: "The search was not available",
+        },
+        {
+          category: "availability",
+          outcome: "nothing_found",
+          note: "News search was not available; checked on the vendor's own pages only",
+        },
+        {
+          category: "certifications",
+          outcome: "nothing_found",
+          note: "No risks found in the sources reviewed",
+        },
+      ],
+    });
+
+  afterAll(async () => {
+    await setLanguage("en");
+  });
+
+  it("warns on screen, and says under the category that only the vendor's pages were checked", async () => {
+    mocks.latest.mockResolvedValue(newsDown());
+    renderSummary();
+
+    expect(await screen.findByText(GAP)).toBeInTheDocument();
+    await openDetails();
+    const line = await screen.findByText("Availability: nothing found");
+    expect(follows(line, screen.getByText(OWN_PAGES_NOTE))).toBe(true);
+    // A fixed sentence, not the model's words.
+    expect(screen.queryByText("AI note (unverified)")).not.toBeInTheDocument();
+  });
+
+  it("does not warn when the search of a site category alone failed", async () => {
+    mocks.latest.mockResolvedValue(
+      searched({
+        category_summary: [
+          {
+            category: "certifications",
+            outcome: "search_failed",
+            note: "The search was not available",
+          },
+          {
+            category: "security_incidents",
+            outcome: "nothing_found",
+            note: "No risks found in the sources reviewed",
+          },
+        ],
+      }),
+    );
+    renderSummary();
+
+    await screen.findByRole("button", { name: DETAILS });
+    expect(screen.queryByText(GAP)).not.toBeInTheDocument();
+  });
+
+  it.each(LANGS)("says it in %s", async (lang) => {
+    resetAudit();
+    await setLanguage(lang);
+    mocks.latest.mockResolvedValue(newsDown());
+    renderSummary();
+
+    expect(await screen.findByText(tr(lang, GAP))).toBeInTheDocument();
+    expect(translations[lang][GAP]).not.toBe(GAP);
+    await openDetails(tr(lang, DETAILS));
+    expect(await screen.findByText(tr(lang, OWN_PAGES_NOTE))).toBeInTheDocument();
+    expect(translations[lang][OWN_PAGES_NOTE]).not.toBe(OWN_PAGES_NOTE);
+  });
+});
+
+// The lists that held no record are named only for a reader who asks, behind a link whose words
+// are in the language of the page.
+describe("the lists that held no record", () => {
+  const SHOW = "Show all lists";
+  const HIDE = "Hide the lists";
+
+  afterAll(async () => {
+    await setLanguage("en");
+  });
+
+  it.each(LANGS)("opens and closes them with words in %s", async (lang) => {
+    resetAudit();
+    await setLanguage(lang);
+    mocks.latest.mockResolvedValue(searched({ coverage: coverage() }));
+    renderSummary();
+
+    await openDetails(tr(lang, DETAILS));
+
+    for (const words of [SHOW, HIDE]) {
+      expect(translations[lang][words], `${lang}: ${words}`).toEqual(expect.any(String));
+      expect(translations[lang][words]).not.toBe(words);
+    }
+    await userEvent.click(await screen.findByText(tr(lang, SHOW)));
+    expect(await screen.findByText(tr(lang, HIDE))).toBeInTheDocument();
+    expect(screen.queryByText(SHOW)).not.toBeInTheDocument();
+    expect(screen.queryByText(HIDE)).not.toBeInTheDocument();
+  });
+});
+
+describe("a listing in the vendor's favour (the FedRAMP Marketplace)", () => {
+  /** The run of 2026-11-23 for a vendor the Marketplace lists by name: FedRAMP Authorized, High. */
+  const listed = (status: "fedramp_authorized" | "fedramp_in_process" = "fedramp_authorized") =>
+    searched({
+      category_summary: FOUR_OUTCOMES,
+      coverage: coverage({
+        sources: [
+          listCopy("kev"),
+          listCopy("fedramp", {
+            outcome: "found",
+            weak: 1,
+            last_success_at: "2026-11-23T15:18:18.788Z",
+            attestations: [
+              {
+                status,
+                impact: "High",
+                since: "2024-09-09",
+                count: 1,
+                strength: "weak",
+                as_of: "2026-11-23",
+              },
+            ],
+          }),
+        ],
+        lookups: [],
+      }),
+    });
+
+  afterAll(async () => {
+    await setLanguage("en");
+  });
+
+  it("shows it under Certifications, which says no risks were found, never as a risk", async () => {
+    mocks.latest.mockResolvedValue(listed());
+    renderSummary();
+    await openDetails();
+
+    const category = await screen.findByText("Certifications: no risks found");
+    const line = screen.getByText(
+      "Listed in the FedRAMP Marketplace: FedRAMP Authorized since 9 Sept 2024, impact level High. Matched by name only: this may be another company. Data as of 23 Nov 2026.",
+    );
+    expect(follows(category, line)).toBe(true);
+    expect(category.closest("li")).toContainElement(line);
+    expect(screen.queryByText("Certifications: nothing found")).not.toBeInTheDocument();
+    // The checked line names the list among those that held a record.
+    expect(
+      screen.getByText(
+        "Checked 2 public lists and registers. 1 had a record: FedRAMP Marketplace.",
+      ),
+    ).toBeInTheDocument();
+    // No warning on screen: a listing is no gap.
+    expect(screen.queryByText(/could not be checked/)).not.toBeInTheDocument();
+  });
+
+  it("says In Process for a provider the record lists as in process, never authorised", async () => {
+    mocks.latest.mockResolvedValue(listed("fedramp_in_process"));
+    renderSummary();
+    await openDetails();
+
+    expect(
+      await screen.findByText(/^Listed in the FedRAMP Marketplace: FedRAMP In Process since/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/FedRAMP Authorized/)).not.toBeInTheDocument();
+  });
+
+  it.each(LANGS)("is worded in %s", async (lang) => {
+    resetAudit();
+    await setLanguage(lang);
+    mocks.latest.mockResolvedValue(listed());
+    renderSummary();
+    await openDetails(tr(lang, DETAILS));
+
+    expect(
+      await screen.findByText(
+        new RegExp(
+          `^${tr(
+            lang,
+            "Listed in the FedRAMP Marketplace: {status} since {date}, impact level {impact}.",
+            {
+              status: "FedRAMP Authorized",
+              date: "§",
+              impact: "High",
+            },
+          )
+            .split("§")[0]
+            .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
+        ),
+      ),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("the lines of the engine in German, French and Spanish", () => {
+  afterAll(async () => {
+    await setLanguage("en");
+  });
+
+  it.each(LANGS)(
+    "translates the credit in %s, with the name still a link to the project",
+    async (lang) => {
+      resetAudit();
+      await setLanguage(lang);
+      mocks.latest.mockResolvedValue(searched({ search_engine: "gdelt" }));
+      renderSummary();
+
+      const line = await creditLine();
+
+      expect(line.textContent).toBe(tr(lang, GDELT_LINE));
+      expect(line.textContent).not.toBe(GDELT_LINE);
+      const link = within(line).getByRole("link", { name: GDELT_NAME });
+      expect(link).toHaveAttribute("href", GDELT_URL);
+      expect(link).toHaveAttribute("target", "_blank");
+      // The name stays the project's own; the words around it are the language's.
+      expect(link.textContent).toBe(GDELT_NAME);
+    },
+  );
+
+  it.each(LANGS)("says Claude's search in %s, behind the button of that language", async (lang) => {
+    resetAudit();
+    await setLanguage(lang);
+    mocks.latest.mockResolvedValue(searched({ search_engine: "anthropic" }));
+    renderSummary();
+
+    await openDetails(tr(lang, DETAILS));
+
+    expect(await screen.findByText(tr(lang, CLAUDE_LINE))).toBeInTheDocument();
+    expect(screen.queryByText(CLAUDE_LINE)).not.toBeInTheDocument();
+  });
+});
+
+describe("the dictionary", () => {
+  // The credit is built from the translation of the sentence, so a translation has to keep what
+  // the screen finds in it: the name of the project, once, to put the link on.
+  it.each(LANGS)("has the words of the engine lines in %s", (lang) => {
+    for (const key of [CLAUDE_LINE, BRAVE_LINE, GDELT_LINE]) {
+      const text = translations[lang][key];
+      expect(text, `${lang}: ${key}`).toEqual(expect.any(String));
+      expect(text.trim().length).toBeGreaterThan(0);
+      expect(text, `${lang}: ${key} is still English`).not.toBe(key);
+    }
+    const sentence = translations[lang][GDELT_LINE];
+    expect(sentence.split(GDELT_NAME)).toHaveLength(2);
+    expect(translations[lang][CLAUDE_LINE]).toContain("Claude");
+    expect(translations[lang][BRAVE_LINE]).toContain("Brave Search");
+  });
+});

@@ -53,8 +53,10 @@ const renderInsights = (props: Partial<Parameters<typeof VendorRiskInsights>[0]>
   return handlers;
 };
 
-const open = async (title: string) =>
-  userEvent.click(screen.getByRole("button", { name: new RegExp(`^${title}`) }));
+/** Selects one report's tab. */
+const open = async (title: string) => {
+  await userEvent.click(screen.getByRole("tab", { name: new RegExp(title) }));
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -97,26 +99,33 @@ describe("vendorLevelRank", () => {
 });
 
 describe("VendorRiskInsights", () => {
-  it("starts with every section closed and fetches no report", () => {
+  it("shows a tab per report at once, with no panel to open", () => {
     renderInsights();
 
-    for (const title of [
+    expect(screen.queryByRole("button", { name: /^Insights/ })).toBeNull();
+    expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
       "Heat map",
       "Blast radius",
       "Duplicate vendor risks",
       "Framework coverage",
-    ]) {
-      expect(screen.getByRole("button", { name: new RegExp(`^${title}`) })).toHaveAttribute(
-        "aria-expanded",
-        "false",
-      );
-    }
+    ]);
+  });
+
+  it("starts on the heat map and runs no other report", () => {
+    renderInsights();
+
+    expect(screen.getByRole("tab", { name: /Heat map/ })).toHaveAttribute("aria-selected", "true");
+    expect(
+      screen.getByText(
+        "Vendor risks by likelihood and severity. Select a cell to see its risks in the Risks tab.",
+      ),
+    ).toBeInTheDocument();
     expect(mockGetVendorExposure).not.toHaveBeenCalled();
     expect(mockGetVendorDuplicates).not.toHaveBeenCalled();
     expect(mockGetVendorCoverage).not.toHaveBeenCalled();
   });
 
-  it("runs a scan only once its section is opened", async () => {
+  it("runs a scan only once its tab is shown", async () => {
     renderInsights();
 
     await open("Duplicate vendor risks");
@@ -124,9 +133,20 @@ describe("VendorRiskInsights", () => {
     expect(await screen.findByText("Customer data leak")).toBeInTheDocument();
     expect(mockGetVendorDuplicates).toHaveBeenCalledTimes(1);
     expect(mockGetVendorCoverage).not.toHaveBeenCalled();
+    expect(mockGetVendorExposure).not.toHaveBeenCalled();
   });
 
-  it("remembers which sections were left open", async () => {
+  it("shows the description of the report on screen", async () => {
+    renderInsights();
+
+    await open("Framework coverage");
+
+    expect(
+      screen.getByText("Which vendor risks are not mapped to a framework yet."),
+    ).toBeInTheDocument();
+  });
+
+  it("remembers the tab it was left on", async () => {
     const { unmount } = renderWithProviders(
       <VendorRiskInsights
         risks={[]}
@@ -140,25 +160,157 @@ describe("VendorRiskInsights", () => {
 
     renderInsights();
 
-    expect(screen.getByRole("button", { name: /^Framework coverage/ })).toHaveAttribute(
-      "aria-expanded",
+    expect(screen.getByRole("tab", { name: /Framework coverage/ })).toHaveAttribute(
+      "aria-selected",
       "true",
-    );
-    expect(screen.getByRole("button", { name: /^Heat map/ })).toHaveAttribute(
-      "aria-expanded",
-      "false",
     );
   });
 
-  it("starts closed when the remembered state is unreadable", () => {
-    localStorage.setItem("vendor-risk-insights-open", "{not json");
+  it("stores the tab alone", async () => {
+    renderInsights();
+
+    await open("Blast radius");
+
+    expect(JSON.parse(localStorage.getItem("vendor-risk-insights") ?? "null")).toEqual({
+      tab: "blastRadius",
+    });
+  });
+
+  it("still reads the value the panel stored before it had no open state", () => {
+    localStorage.setItem("vendor-risk-insights", JSON.stringify({ open: true, tab: "coverage" }));
 
     renderInsights();
 
-    expect(screen.getByRole("button", { name: /^Heat map/ })).toHaveAttribute(
-      "aria-expanded",
-      "false",
+    expect(screen.getByRole("tab", { name: /Framework coverage/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
     );
+  });
+
+  it("starts on the heat map when the remembered state is unreadable", () => {
+    localStorage.setItem("vendor-risk-insights", "{not json");
+
+    renderInsights();
+
+    expect(screen.getByRole("tab", { name: /Heat map/ })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("starts on the heat map when the remembered tab is not a report", () => {
+    localStorage.setItem("vendor-risk-insights", JSON.stringify({ tab: "gone" }));
+
+    renderInsights();
+
+    expect(screen.getByRole("tab", { name: /Heat map/ })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("leaves the heat map filter notice to the page that owns the table", () => {
+    renderInsights({ selectedCell: { likelihood: 3, severity: 4 } });
+
+    expect(
+      screen.queryByText("The table shows only the risks in the selected heat map cell."),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Show all risks")).not.toBeInTheDocument();
+  });
+});
+
+describe("the icons of the reports", () => {
+  it("shows an icon on the tab of every report", () => {
+    renderInsights();
+
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs).toHaveLength(4);
+    // The icons are looked up by name in the icon map of the tab bar; a name that is not in the
+    // map shows no icon, and nothing else says so.
+    for (const tab of tabs) {
+      expect(tab.querySelector("svg"), tab.textContent ?? "").not.toBeNull();
+    }
+  });
+});
+
+// The risks are read by the page. Only the heat map is made of them: the reports beside it read
+// their own, so they are not kept waiting.
+describe("while the risks are being read", () => {
+  const cells = () => screen.queryAllByRole("button", { name: /likelihood.*severity/ });
+  const skeleton = () => document.querySelector(".MuiSkeleton-root");
+
+  it("puts a skeleton in place of the heat map", () => {
+    renderInsights({ risks: [vendorRisk({ risk_id: 1 })], loading: true });
+
+    expect(skeleton()).not.toBeNull();
+    expect(cells()).toHaveLength(0);
+    // The tabs and the description of the heat map are there.
+    expect(screen.getAllByRole("tab")).toHaveLength(4);
+    expect(screen.getByRole("tab", { name: /Heat map/ })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("shows the heat map, and no skeleton, once the risks are read", () => {
+    renderInsights({ risks: [vendorRisk({ risk_id: 1 })], loading: false });
+
+    expect(skeleton()).toBeNull();
+    expect(cells().length).toBeGreaterThan(0);
+  });
+
+  it("shows the heat map when nothing says the risks are being read", () => {
+    renderInsights({ risks: [vendorRisk({ risk_id: 1 })] });
+
+    expect(skeleton()).toBeNull();
+    expect(cells().length).toBeGreaterThan(0);
+  });
+
+  it("swaps the skeleton for the heat map when the risks arrive, on the same tab", () => {
+    const handlers = { onSelectCell: vi.fn(), onOpenRisk: vi.fn() };
+    const risks = [vendorRisk({ risk_id: 1 })];
+    const view = renderWithProviders(
+      <VendorRiskInsights risks={[]} loading selectedCell={null} {...handlers} />,
+    );
+    expect(skeleton()).not.toBeNull();
+
+    view.rerender(
+      <VendorRiskInsights risks={risks} loading={false} selectedCell={null} {...handlers} />,
+    );
+
+    expect(skeleton()).toBeNull();
+    expect(cells().length).toBeGreaterThan(0);
+    expect(screen.getByRole("tab", { name: /Heat map/ })).toHaveAttribute("aria-selected", "true");
+  });
+
+  it("does not hold the other reports back", async () => {
+    renderInsights({ loading: true });
+
+    await open("Duplicate vendor risks");
+
+    expect(await screen.findByText("Customer data leak")).toBeInTheDocument();
+    expect(mockGetVendorDuplicates).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not hold the blast radius or the coverage back either", async () => {
+    renderInsights({ loading: true });
+
+    await open("Blast radius");
+    expect(await screen.findByText("Vendors with linked project risks")).toBeInTheDocument();
+
+    await open("Framework coverage");
+    expect(
+      await screen.findByText("Which vendor risks are not mapped to a framework yet."),
+    ).toBeInTheDocument();
+    expect(mockGetVendorCoverage).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the report it was on when the risks load again", async () => {
+    const handlers = { onSelectCell: vi.fn(), onOpenRisk: vi.fn() };
+    const view = renderWithProviders(
+      <VendorRiskInsights risks={[]} selectedCell={null} {...handlers} />,
+    );
+    await open("Duplicate vendor risks");
+    expect(await screen.findByText("Customer data leak")).toBeInTheDocument();
+
+    view.rerender(<VendorRiskInsights risks={[]} loading selectedCell={null} {...handlers} />);
+
+    expect(screen.getByRole("tab", { name: /Duplicate vendor risks/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByText("Customer data leak")).toBeInTheDocument();
   });
 });
 
@@ -206,9 +358,9 @@ describe("blast radius section", () => {
     await open("Blast radius");
 
     const tile = (label: string) => screen.getByText(label).nextElementSibling?.textContent;
-    expect(await screen.findByText("Vendors with reach")).toBeInTheDocument();
-    expect(tile("Vendors with reach")).toBe("1");
-    expect(tile("Vendor risks with no children")).toBe("2");
+    expect(await screen.findByText("Vendors with linked project risks")).toBeInTheDocument();
+    expect(tile("Vendors with linked project risks")).toBe("1");
+    expect(tile("Vendor risks not linked yet")).toBe("2");
 
     const rows = screen.getAllByRole("row").slice(1);
     expect(within(rows[0]).getByText("Acme Cloud")).toBeInTheDocument();
@@ -258,6 +410,9 @@ describe("blast radius section", () => {
     expect(
       await screen.findByText(/No project risk inherits from a vendor risk yet/),
     ).toBeInTheDocument();
+    // With nothing linked or suggested, the tiles and the table would only repeat zeros.
+    expect(screen.queryByText("Vendors with linked project risks")).not.toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
   it("says so when there are no vendor risks", async () => {

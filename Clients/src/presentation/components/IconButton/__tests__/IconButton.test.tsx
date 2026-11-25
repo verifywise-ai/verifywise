@@ -1,13 +1,13 @@
 import { vi } from "vitest";
 
 vi.mock("../../Dialogs/ConfirmationModal", () => ({
-  default: ({ isOpen, onCancel, onProceed, cancelText, proceedText }: any) =>
+  default: ({ isOpen, onCancel, onProceed, cancelText, proceedText, proceedButtonColor }: any) =>
     isOpen ? (
       <div data-testid="confirmation-modal">
         <button data-testid="cancel-btn" onClick={onCancel}>
           {cancelText}
         </button>
-        <button data-testid="proceed-btn" onClick={onProceed}>
+        <button data-testid="proceed-btn" data-color={proceedButtonColor} onClick={onProceed}>
           {proceedText}
         </button>
       </div>
@@ -263,6 +263,26 @@ describe("IconButton", () => {
     expect(onView).toHaveBeenCalledTimes(1);
   });
 
+  it("offers only View on an incident when canEdit is false", async () => {
+    await renderWithMenuOpen({ onView: vi.fn(), type: "incident", canEdit: false });
+    // Roles without incident.edit open incidents read-only.
+    const items = within(screen.getByRole("menu"))
+      .getAllByRole("menuitem")
+      .map((item) => item.textContent);
+    expect(items).toEqual(["View"]);
+  });
+
+  it("offers View and Record approval to an approver without incident.edit", async () => {
+    const onApprove = vi.fn();
+    await renderWithMenuOpen({ onView: vi.fn(), onApprove, type: "incident", canEdit: false });
+    const items = within(screen.getByRole("menu"))
+      .getAllByRole("menuitem")
+      .map((item) => item.textContent);
+    expect(items).toEqual(["View", "Record approval"]);
+    await userEvent.click(screen.getByText("Record approval"));
+    expect(onApprove).toHaveBeenCalledTimes(1);
+  });
+
   it("calls onDownload when Download item clicked", async () => {
     const onDownload = vi.fn().mockResolvedValue(undefined);
     await renderWithMenuOpen({ onDownload, type: "evidence" });
@@ -324,6 +344,21 @@ describe("IconButton", () => {
     expect(screen.getByText("Delete permanently")).toBeInTheDocument();
   });
 
+  it.each([
+    ["task", "Archive task"],
+    ["incident", "Archive incident"],
+    ["Incident", "Archive incident"],
+  ])(
+    "confirms archiving a %s as a reversible warning, not a delete",
+    async (type, archiveLabel) => {
+      await renderWithMenuOpen({ type, warningTitle: "Archive?", warningMessage: "Sure?" });
+      await userEvent.click(screen.getByText(archiveLabel));
+      const proceed = screen.getByTestId("proceed-btn");
+      expect(proceed).toHaveAttribute("data-color", "warning");
+      expect(proceed).toHaveTextContent(archiveLabel);
+    },
+  );
+
   it("renders archived task with Restore and Delete items", async () => {
     await renderWithMenuOpen({
       type: "task",
@@ -344,6 +379,22 @@ describe("IconButton", () => {
     });
     await userEvent.click(screen.getByText("Restore task"));
     expect(onRestore).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers View and Restore risk for a deleted risk, without Edit or Delete", async () => {
+    const onRestore = vi.fn();
+    const onView = vi.fn();
+    await renderWithMenuOpen({ type: "Risk", isArchived: true, onRestore, onView });
+    expect(screen.queryByText("Edit")).not.toBeInTheDocument();
+    expect(screen.queryByText("Remove")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByText("Restore risk"));
+    expect(onRestore).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers only View for a deleted risk when it can't be restored", async () => {
+    await renderWithMenuOpen({ type: "Risk", isArchived: true, onView: vi.fn() });
+    expect(screen.getByText("View")).toBeInTheDocument();
+    expect(screen.queryByText("Restore risk")).not.toBeInTheDocument();
   });
 
   it("opens confirmation modal for task archive when warning provided", async () => {

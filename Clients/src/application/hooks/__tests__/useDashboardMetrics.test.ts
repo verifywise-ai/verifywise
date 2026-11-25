@@ -309,9 +309,57 @@ describe("useDashboardMetrics", () => {
     expect(result.current.vendorRiskMetrics!.total).toBe(6);
     expect(result.current.vendorRiskMetrics!.distribution.veryHigh).toBe(1);
     expect(result.current.vendorRiskMetrics!.distribution.high).toBe(1);
-    expect(result.current.vendorRiskMetrics!.distribution.medium).toBe(2);
+    // An unknown level is in the total but not counted as medium.
+    expect(result.current.vendorRiskMetrics!.distribution.medium).toBe(1);
     expect(result.current.vendorRiskMetrics!.distribution.low).toBe(1);
     expect(result.current.vendorRiskMetrics!.distribution.veryLow).toBe(1);
+  });
+
+  it("counts a vendor risk once and lists recent ones by real id, newest first", async () => {
+    mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+      if (routeUrl === "/vendorRisks/all") {
+        return {
+          data: [
+            {
+              risk_id: 41,
+              risk_description: "Old risk",
+              risk_level: "Low risk",
+              created_at: "2026-01-01T00:00:00Z",
+              project_id: 1,
+            },
+            {
+              risk_id: 41,
+              risk_description: "Old risk",
+              risk_level: "Low risk",
+              created_at: "2026-01-01T00:00:00Z",
+              project_id: 2,
+            },
+            {
+              risk_id: 42,
+              risk_description: "New risk",
+              risk_level: "High risk",
+              created_at: "2026-10-01T00:00:00Z",
+              project_id: 1,
+            },
+          ],
+        };
+      }
+      return { data: [] };
+    });
+
+    const { result } = renderHook(() => useDashboardMetrics());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    const metrics = result.current.vendorRiskMetrics!;
+    expect(metrics.total).toBe(2);
+    expect(metrics.distribution.low).toBe(1);
+    expect(metrics.recent.map((risk) => [risk.id, risk.title])).toEqual([
+      [42, "New risk"],
+      [41, "Old risk"],
+    ]);
   });
 
   it("should fetch policy metrics and status distribution", async () => {
@@ -383,6 +431,35 @@ describe("useDashboardMetrics", () => {
     expect(result.current.incidentStatusMetrics!.distribution.closed).toBe(1);
     expect(result.current.incidentStatusMetrics!.distribution.suspended).toBe(1);
     expect(result.current.incidentStatusMetrics!.distribution.emergencyAction).toBe(1);
+  });
+
+  it("leaves archived incidents out of the incident counts", async () => {
+    mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+      if (routeUrl === "/ai-incident-managements") {
+        return {
+          data: [
+            { id: 1, status: "Open", archived: false },
+            { id: 2, status: "Open", archived: true },
+            { id: 3, status: "Closed", archived: true },
+            { id: 4, status: "Closed" },
+          ],
+        };
+      }
+      return { data: [] };
+    });
+
+    const { result } = renderHook(() => useDashboardMetrics());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.incidentMetrics!.total).toBe(2);
+    expect(result.current.incidentMetrics!.openCount).toBe(1);
+    expect(result.current.incidentMetrics!.recent.map((i: { id: number }) => i.id)).toEqual([1, 4]);
+    expect(result.current.incidentStatusMetrics!.total).toBe(2);
+    expect(result.current.incidentStatusMetrics!.distribution.open).toBe(1);
+    expect(result.current.incidentStatusMetrics!.distribution.closed).toBe(1);
   });
 
   it("should fetch model risk metrics with distribution", async () => {

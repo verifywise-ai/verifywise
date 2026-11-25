@@ -4,6 +4,7 @@ import { Stack, Box, useTheme } from "@mui/material";
 import Field from "../../Inputs/Field";
 import DatePicker from "../../Inputs/Datepicker";
 import SelectComponent from "../../Inputs/Select";
+import { SELECT_MIN_WIDTH } from "../../Inputs/Select/constants";
 import StandardModal from "../StandardModal";
 import TabBar from "../../TabBar";
 import { TabContext } from "@mui/lab";
@@ -27,6 +28,13 @@ import type { TabItem } from "../../TabBar";
 import { logEngine } from "../../../../application/tools/log.engine";
 import { useCanCheck } from "../../../../application/hooks/useCan";
 import ReadOnlyFieldset from "../../ReadOnlyFieldset";
+import {
+  computeModelRiskLevel,
+  MODEL_RISK_LIKELIHOOD_OPTIONS,
+  MODEL_RISK_SEVERITY_OPTIONS,
+  modelRiskSaveBody,
+  picksModelRiskLevel,
+} from "../../../tools/modelRiskLevel";
 
 interface NewModelRiskProps {
   isOpen: boolean;
@@ -43,10 +51,12 @@ interface NewModelRiskProps {
 const initialState: IModelRiskFormData = {
   risk_name: "",
   risk_category: ModelRiskCategory.PERFORMANCE,
-  risk_level: ModelRiskLevel.MEDIUM,
+  likelihood: "",
+  severity: "",
   status: ModelRiskStatus.OPEN,
   owner: "",
-  target_date: new Date().toISOString().split("T")[0],
+  // Optional: a new risk has no review date until someone sets one.
+  target_date: "",
   description: "",
   mitigation_plan: "",
   impact: "",
@@ -106,23 +116,22 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
 
   const validators = useMemo(
     () => ({
+      // A new risk needs both: the server sets its level from them. An older
+      // risk without them keeps a hand-picked level until both are set.
+      likelihood: (v: unknown) => (!isEdit && !v ? "Likelihood is required." : ""),
+      severity: (v: unknown) => (!isEdit && !v ? "Severity is required." : ""),
       risk_name: (v: unknown) => {
         const r = checkStringValidation("Risk name", v as string, 1, 256);
         return r.accepted ? "" : r.message;
       },
       risk_category: (v: unknown) => (!v ? "Risk category is required." : ""),
-      risk_level: (v: unknown) => (!v ? "Risk level is required." : ""),
       status: (v: unknown) => (!v ? "Status is required." : ""),
       owner: (v: unknown) => {
         const r = checkStringValidation("Owner", v as string, 1);
         return r.accepted ? "" : r.message;
       },
-      target_date: (v: unknown) => {
-        const r = checkStringValidation("Next review date", v as string, 1);
-        return r.accepted ? "" : r.message;
-      },
     }),
-    [],
+    [isEdit],
   );
 
   const { errors, validateAll, clearFieldError, resetErrors } =
@@ -234,13 +243,13 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
 
   const handleDateChange = useCallback(
     (newDate: Dayjs | null) => {
-      if (newDate?.isValid()) {
-        setValues((prev) => ({
-          ...prev,
-          target_date: newDate ? newDate.format("YYYY-MM-DD") : "",
-        }));
-        clearFieldError("target_date");
+      if (newDate === null) {
+        // Cleared: the review date is optional.
+        setValues((prev) => ({ ...prev, target_date: "" }));
+      } else if (newDate.isValid()) {
+        setValues((prev) => ({ ...prev, target_date: newDate.format("YYYY-MM-DD") }));
       }
+      clearFieldError("target_date");
     },
     [clearFieldError],
   );
@@ -255,14 +264,21 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
     onClose: handleClose,
   });
 
+  const computedLevel = computeModelRiskLevel(values.likelihood, values.severity);
+  // An older risk with no likelihood or severity keeps its hand-picked level.
+  const picksLevel = picksModelRiskLevel(values, isEdit);
+
   const handleSaveModelRisk = async () => {
     if (customFieldsGate.blocked) return;
     if (!validateAll(values)) return;
+    if (picksLevel && !values.risk_level) return;
+    // The server computes the level when both are set; send no picked one.
+    const payload = modelRiskSaveBody(values, isEdit);
     setIsSubmitting(true);
     try {
       let result: { id?: number } | void;
       try {
-        result = onSuccess ? await onSuccess(values) : undefined;
+        result = onSuccess ? await onSuccess(payload) : undefined;
       } catch {
         // Parent shows its own error toast; keep the modal open so the user
         // can correct the form and retry. Skip flush/close.
@@ -305,7 +321,7 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
 
   const formContent = (
     <Stack spacing={6}>
-      {/* First Row: Risk Name, Category, Risk Level */}
+      {/* First row: name, category, status */}
       <Stack direction="row" spacing={6}>
         <Box sx={{ flex: 1 }}>
           <Field
@@ -335,23 +351,6 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
         </Box>
         <Box sx={{ flex: 1 }}>
           <SelectComponent
-            id="riskLevel"
-            label="Risk level"
-            value={values.risk_level}
-            error={errors.risk_level}
-            isRequired
-            sx={{ width: "100%" }}
-            items={riskLevelOptions}
-            onChange={handleOnSelectChange("risk_level")}
-            placeholder="Select risk level"
-          />
-        </Box>
-      </Stack>
-
-      {/* Second Row: Status, Owner, Target Date */}
-      <Stack direction="row" spacing={6}>
-        <Box sx={{ flex: 1 }}>
-          <SelectComponent
             id="status"
             label="Status"
             value={values.status}
@@ -363,6 +362,73 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
             placeholder="Select status"
           />
         </Box>
+      </Stack>
+
+      {/* Second row: likelihood and severity set the level */}
+      <Stack direction="row" spacing={6}>
+        <Box sx={{ flex: 1 }}>
+          <SelectComponent
+            id="likelihood"
+            label="Likelihood"
+            value={values.likelihood ?? ""}
+            error={errors.likelihood}
+            isRequired={!isEdit}
+            sx={{ width: "100%" }}
+            items={MODEL_RISK_LIKELIHOOD_OPTIONS}
+            onChange={handleOnSelectChange("likelihood")}
+            placeholder="Select likelihood"
+          />
+        </Box>
+        <Box sx={{ flex: 1 }}>
+          <SelectComponent
+            id="severity"
+            label="Severity"
+            value={values.severity ?? ""}
+            error={errors.severity}
+            isRequired={!isEdit}
+            sx={{ width: "100%" }}
+            items={MODEL_RISK_SEVERITY_OPTIONS}
+            onChange={handleOnSelectChange("severity")}
+            placeholder="Select severity"
+          />
+        </Box>
+        <Box sx={{ flex: 1 }}>
+          {picksLevel ? (
+            <SelectComponent
+              id="riskLevel"
+              label="Risk level"
+              value={values.risk_level ?? ""}
+              error={!values.risk_level ? "Set likelihood and severity, or pick a level." : ""}
+              isRequired
+              sx={{ width: "100%" }}
+              items={riskLevelOptions}
+              onChange={handleOnSelectChange("risk_level")}
+              placeholder="Select risk level"
+            />
+          ) : (
+            <Field
+              id="riskLevel"
+              label="Risk level"
+              width="100%"
+              value={computedLevel ?? ""}
+              disabled
+              sx={fieldStyle}
+              placeholder="Set by likelihood and severity"
+            />
+          )}
+        </Box>
+      </Stack>
+
+      {/* Third row: owner, review date, model. Each column may shrink to a
+          select's minimum, so a long model name is cut instead of widening the
+          row; a modal too narrow for three wraps the row instead of overlapping. */}
+      <Stack
+        direction="row"
+        spacing={6}
+        useFlexGap
+        flexWrap="wrap"
+        sx={{ "rowGap": "16px", "& > *": { minWidth: SELECT_MIN_WIDTH } }}
+      >
         <Box sx={{ flex: 1 }}>
           <SelectComponent
             id="owner"
@@ -380,20 +446,17 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
         <Box sx={{ flex: 1 }}>
           <DatePicker
             label="Next review date"
-            date={values.target_date ? dayjs(values.target_date) : dayjs(new Date())}
+            date={values.target_date ? dayjs(values.target_date) : null}
             handleDateChange={handleDateChange}
+            // Optional, so it can be cleared.
+            isClearable
             sx={{
               width: "100%",
               backgroundColor: theme.palette.background.main,
             }}
-            isRequired
             error={errors.target_date}
           />
         </Box>
-      </Stack>
-
-      {/* Third Row: Model (Optional) */}
-      <Stack direction="row" spacing={6}>
         <Box sx={{ flex: 1 }}>
           <SelectComponent
             id="modelId"
@@ -406,8 +469,6 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
             disabled={isLoadingModels}
           />
         </Box>
-        <Box sx={{ flex: 1 }} />
-        <Box sx={{ flex: 1 }} />
       </Stack>
 
       {/* Description Section */}

@@ -4,23 +4,19 @@
  * Following VerifyWise clean architecture patterns
  */
 
+import { archivedIncidentsNote, NOTICE_TEXT } from "./noticeText";
 import {
   Document,
   Packer,
   Paragraph,
   TextRun,
   Table,
-  TableRow,
-  TableCell,
-  WidthType,
   AlignmentType,
   HeadingLevel,
   PageBreak,
   BorderStyle,
   Footer,
   PageNumber,
-  ShadingType,
-  VerticalAlign,
   convertInchesToTwip,
 } from "docx";
 import {
@@ -29,25 +25,28 @@ import {
   AISummaries,
 } from "../../domain.layer/interfaces/i.reportGeneration";
 import { ANALYSIS_LABELS } from "./analyzers/mapToSummaries";
-
-// Color constants matching VerifyWise theme
-const COLORS = {
-  primary: "13715B",
-  secondary: "1C2130",
-  textPrimary: "1C2130",
-  textSecondary: "667085",
-  textTertiary: "98A2B3",
-  border: "E4E7EC",
-  backgroundAlt: "F9FAFB",
-  success: "027A48",
-  warning: "B54708",
-  error: "B42318",
-  info: "026AA2",
-  // AI analysis styling
-  aiBg: "F0FAF7",
-  aiWarning: "DC6803",
-  aiWarningBg: "FFFCF5",
-};
+import {
+  COLORS,
+  TableCellInput,
+  createAIAnalysisBox,
+  createBullet,
+  createEmptyState,
+  createNote,
+  createSectionHeader,
+  createSubsectionHeader,
+  createTable,
+  createTableSpacing,
+  createTocEntry,
+} from "./docxPrimitives";
+import {
+  createE23Closing,
+  createE23Cover,
+  createE23DraftHeader,
+  createE23Sections,
+  createE23Toc,
+} from "./docxE23";
+import { buildE23FormalView, evidenceLine } from "./e23/formalView";
+import { E23_NOTICE_LABELS } from "./e23/e23Text";
 
 /**
  * Copy for the "sections with no data" block. Duplicated in report-pdf.ejs
@@ -62,6 +61,7 @@ const NOTICE_LABELS: Record<string, string> = {
   assessment: "Assessment tracker",
   clausesAndAnnexes: "Clauses and annexes",
   nistSubcategories: "NIST subcategories",
+  frameworkRequirements: "Framework requirements",
   models: "AI models",
   vendors: "Vendors",
   trainingRegistry: "Training registry",
@@ -304,7 +304,8 @@ function createTableOfContents(reportData: ReportData): Paragraph[] {
     sections.compliance ||
     sections.assessment ||
     sections.clausesAndAnnexes ||
-    sections.nistSubcategories
+    sections.nistSubcategories ||
+    sections.frameworkRequirements
   ) {
     paragraphs.push(createTocEntry(`${sectionNum++}. Compliance & governance`));
   }
@@ -330,264 +331,6 @@ function createTableOfContents(reportData: ReportData): Paragraph[] {
   return paragraphs;
 }
 
-function createTocEntry(text: string): Paragraph {
-  return new Paragraph({
-    spacing: { before: 160, after: 160 },
-    border: {
-      bottom: {
-        style: BorderStyle.DOTTED,
-        size: 1,
-        color: COLORS.border,
-      },
-    },
-    children: [
-      new TextRun({
-        text,
-        size: 24, // 12pt
-        color: COLORS.textPrimary,
-      }),
-    ],
-  });
-}
-
-/**
- * Create a group header (matches PDF group-header style - uppercase with left border)
- */
-function createSectionHeader(title: string): Paragraph {
-  return new Paragraph({
-    heading: HeadingLevel.HEADING_2,
-    spacing: { before: 400, after: 300 },
-    shading: {
-      fill: COLORS.backgroundAlt,
-      type: ShadingType.CLEAR,
-    },
-    border: {
-      left: {
-        color: COLORS.primary,
-        size: 24,
-        style: BorderStyle.SINGLE,
-        space: 8,
-      },
-    },
-    children: [
-      new TextRun({
-        text: title.toUpperCase(),
-        bold: true,
-        size: 36, // 18pt
-        color: COLORS.textPrimary,
-      }),
-    ],
-  });
-}
-
-/**
- * Create a subsection header (matches PDF subsection-title style - with border-bottom)
- */
-function createSubsectionHeader(title: string): Paragraph {
-  return new Paragraph({
-    heading: HeadingLevel.HEADING_3,
-    spacing: { before: 300, after: 200 },
-    border: {
-      bottom: {
-        color: COLORS.border,
-        size: 6,
-        style: BorderStyle.SINGLE,
-        space: 4,
-      },
-    },
-    children: [
-      new TextRun({
-        text: title,
-        bold: true,
-        size: 32, // 16pt
-        color: COLORS.textPrimary,
-      }),
-    ],
-  });
-}
-
-/**
- * Create a standard table with headers and borders
- */
-function createTable(headers: string[], rows: string[][]): Table {
-  const borderStyle = {
-    style: BorderStyle.SINGLE,
-    size: 1,
-    color: COLORS.border,
-  };
-
-  const headerCells = headers.map(
-    (header) =>
-      new TableCell({
-        shading: {
-          fill: COLORS.backgroundAlt,
-          type: ShadingType.CLEAR,
-        },
-        borders: {
-          top: borderStyle,
-          bottom: borderStyle,
-          left: borderStyle,
-          right: borderStyle,
-        },
-        children: [
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: header,
-                bold: true,
-                size: 20,
-                color: COLORS.textPrimary,
-              }),
-            ],
-          }),
-        ],
-        verticalAlign: VerticalAlign.CENTER,
-      }),
-  );
-
-  const dataRows = rows.map(
-    (row, rowIndex) =>
-      new TableRow({
-        children: row.map(
-          (cell) =>
-            new TableCell({
-              shading:
-                rowIndex % 2 === 1
-                  ? {
-                      fill: COLORS.backgroundAlt,
-                      type: ShadingType.CLEAR,
-                    }
-                  : undefined,
-              borders: {
-                top: borderStyle,
-                bottom: borderStyle,
-                left: borderStyle,
-                right: borderStyle,
-              },
-              children: [
-                new Paragraph({
-                  children: [
-                    new TextRun({
-                      text: cell || "-",
-                      size: 20,
-                      color: COLORS.textPrimary,
-                    }),
-                  ],
-                }),
-              ],
-              verticalAlign: VerticalAlign.CENTER,
-            }),
-        ),
-      }),
-  );
-
-  return new Table({
-    width: {
-      size: 100,
-      type: WidthType.PERCENTAGE,
-    },
-    rows: [
-      new TableRow({
-        children: headerCells,
-        tableHeader: true,
-      }),
-      ...dataRows,
-    ],
-  });
-}
-
-/**
- * Create spacing paragraph after tables
- */
-function createTableSpacing(): Paragraph {
-  return new Paragraph({
-    spacing: { after: 200 },
-    children: [],
-  });
-}
-
-/**
- * Create empty state message
- */
-function createEmptyState(message: string): Paragraph {
-  return new Paragraph({
-    alignment: AlignmentType.CENTER,
-    spacing: { before: 200, after: 200 },
-    shading: {
-      fill: COLORS.backgroundAlt,
-      type: ShadingType.CLEAR,
-    },
-    children: [
-      new TextRun({
-        text: message,
-        size: 22,
-        color: COLORS.textSecondary,
-        italics: true,
-      }),
-    ],
-  });
-}
-
-/**
- * Create an AI analysis box (green left border, light green background)
- */
-function createAIAnalysisBox(
-  content: string,
-  label: string = "AI Analysis",
-  borderColor: string = COLORS.primary,
-  bgColor: string = COLORS.aiBg,
-): Paragraph[] {
-  return [
-    new Paragraph({
-      spacing: { before: 200, after: 40 },
-      border: {
-        left: {
-          color: borderColor,
-          size: 24,
-          style: BorderStyle.SINGLE,
-          space: 8,
-        },
-      },
-      shading: {
-        fill: bgColor,
-        type: ShadingType.CLEAR,
-      },
-      children: [
-        new TextRun({
-          text: label.toUpperCase(),
-          bold: true,
-          size: 18,
-          color: borderColor,
-        }),
-      ],
-    }),
-    new Paragraph({
-      spacing: { after: 200 },
-      border: {
-        left: {
-          color: borderColor,
-          size: 24,
-          style: BorderStyle.SINGLE,
-          space: 8,
-        },
-      },
-      shading: {
-        fill: bgColor,
-        type: ShadingType.CLEAR,
-      },
-      children: content.split("\n").map(
-        (line, i) =>
-          new TextRun({
-            text: line,
-            size: 20,
-            color: COLORS.textPrimary,
-            ...(i > 0 && { break: 1 }),
-          }),
-      ),
-    }),
-  ];
-}
-
 /**
  * Create the Executive Summary section from AI summaries
  */
@@ -598,7 +341,7 @@ function createExecutiveSummarySection(aiSummaries: AISummaries): (Paragraph | T
     return [];
   }
 
-  elements.push(createSectionHeader("Executive Summary"));
+  elements.push(createSectionHeader("Executive summary"));
   elements.push(...createAIAnalysisBox(aiSummaries.executiveSummary, "AI-Generated Analysis"));
 
   // Key Findings. Prefer the structured list; the flat strings remain the
@@ -661,20 +404,7 @@ function createExecutiveSummarySection(aiSummaries: AISummaries): (Paragraph | T
   } else if (aiSummaries.keyFindings && aiSummaries.keyFindings.length > 0) {
     elements.push(createSubsectionHeader("Key Findings"));
     aiSummaries.keyFindings.forEach((finding) => {
-      elements.push(
-        new Paragraph({
-          spacing: { before: 60, after: 60 },
-          indent: { left: convertInchesToTwip(0.3) },
-          bullet: { level: 0 },
-          children: [
-            new TextRun({
-              text: finding,
-              size: 20,
-              color: COLORS.textPrimary,
-            }),
-          ],
-        }),
-      );
+      elements.push(createBullet(finding));
     });
   }
 
@@ -682,20 +412,7 @@ function createExecutiveSummarySection(aiSummaries: AISummaries): (Paragraph | T
   if (aiSummaries.recommendations && aiSummaries.recommendations.length > 0) {
     elements.push(createSubsectionHeader("Recommendations"));
     aiSummaries.recommendations.forEach((rec) => {
-      elements.push(
-        new Paragraph({
-          spacing: { before: 60, after: 60 },
-          indent: { left: convertInchesToTwip(0.3) },
-          bullet: { level: 0 },
-          children: [
-            new TextRun({
-              text: rec,
-              size: 20,
-              color: COLORS.textPrimary,
-            }),
-          ],
-        }),
-      );
+      elements.push(createBullet(rec));
     });
   }
 
@@ -716,7 +433,7 @@ function createRecommendedActionsSection(reportData: ReportData): (Paragraph | T
     return [];
   }
 
-  elements.push(createSectionHeader("Recommended Actions"));
+  elements.push(createSectionHeader("Recommended actions"));
   recommendedActions.forEach((a) => {
     elements.push(
       new Paragraph({
@@ -765,7 +482,7 @@ function createComplianceGapSection(reportData: ReportData): (Paragraph | Table)
   if (!gap) return [];
 
   const elements: (Paragraph | Table)[] = [];
-  elements.push(createSectionHeader("Compliance Gap Analysis"));
+  elements.push(createSectionHeader("Compliance gap analysis"));
   elements.push(...createAIAnalysisBox(gap.narrative, "AI-Generated Analysis"));
 
   if (gap.scores_caveat) {
@@ -829,23 +546,14 @@ function createVendorRiskSection(reportData: ReportData): (Paragraph | Table)[] 
   if (!vendorRisk) return [];
 
   const elements: (Paragraph | Table)[] = [];
-  elements.push(createSectionHeader("Third-Party Risk Analysis"));
+  elements.push(createSectionHeader("Third-party risk analysis"));
   elements.push(...createAIAnalysisBox(vendorRisk.narrative, "AI-Generated Analysis"));
   (vendorRisk.concerns ?? []).forEach((c) => {
     elements.push(
-      new Paragraph({
-        spacing: { before: 60, after: 60 },
-        indent: { left: convertInchesToTwip(0.3) },
-        bullet: { level: 0 },
-        children: [
-          new TextRun({ text: `${c.vendor}: `, bold: true, size: 20, color: COLORS.textPrimary }),
-          new TextRun({
-            text: `${c.concern} (${c.severity}${c.basis ? `, Basis: ${c.basis}` : ""})`,
-            size: 20,
-            color: COLORS.textPrimary,
-          }),
-        ],
-      }),
+      createBullet(
+        `${c.concern} (${c.severity}${c.basis ? `, Basis: ${c.basis}` : ""})`,
+        `${c.vendor}: `,
+      ),
     );
   });
 
@@ -871,22 +579,7 @@ function createAbstentionsSection(reportData: ReportData): (Paragraph | Table)[]
   const elements: (Paragraph | Table)[] = [];
   elements.push(createSubsectionHeader("Analyses not produced"));
   Object.entries(abstentions).forEach(([key, reason]) => {
-    elements.push(
-      new Paragraph({
-        spacing: { before: 60, after: 60 },
-        indent: { left: convertInchesToTwip(0.3) },
-        bullet: { level: 0 },
-        children: [
-          new TextRun({
-            text: `${ANALYSIS_LABELS[key] ?? key}: `,
-            bold: true,
-            size: 20,
-            color: COLORS.textPrimary,
-          }),
-          new TextRun({ text: reason, size: 20, color: COLORS.textPrimary }),
-        ],
-      }),
-    );
+    elements.push(createBullet(reason, `${ANALYSIS_LABELS[key] ?? key}: `));
   });
 
   elements.push(new Paragraph({ children: [new PageBreak()] }));
@@ -904,7 +597,7 @@ function createRiskAnalysisSection(reportData: ReportData): (Paragraph | Table)[
     return [];
   }
 
-  elements.push(createSectionHeader("Risk Analysis"));
+  elements.push(createSectionHeader("Risk analysis"));
 
   // Project/Use Case Risks
   if (sections.projectRisks) {
@@ -1035,20 +728,27 @@ function createRiskAnalysisSection(reportData: ReportData): (Paragraph | Table)[
 /**
  * Create Compliance & Governance section
  */
-function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] {
-  const { sections } = reportData;
+function createComplianceSection(
+  reportData: ReportData,
+  // An E-23 report shows the requirements in its own completeness section.
+  opts: { withFrameworkRequirements: boolean } = { withFrameworkRequirements: true },
+): (Paragraph | Table)[] {
+  const sections = opts.withFrameworkRequirements
+    ? reportData.sections
+    : { ...reportData.sections, frameworkRequirements: undefined };
   const elements: (Paragraph | Table)[] = [];
 
   if (
     !sections.compliance &&
     !sections.assessment &&
     !sections.clausesAndAnnexes &&
-    !sections.nistSubcategories
+    !sections.nistSubcategories &&
+    !sections.frameworkRequirements
   ) {
     return [];
   }
 
-  elements.push(createSectionHeader("Compliance & Governance"));
+  elements.push(createSectionHeader("Compliance & governance"));
 
   // Controls (EU AI Act)
   if (sections.compliance) {
@@ -1278,6 +978,77 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
     });
   }
 
+  // Framework requirements (bundled frameworks)
+  if (sections.frameworkRequirements) {
+    elements.push(createSubsectionHeader("Framework requirements"));
+
+    if (reportData.aiSummaries?.sectionSummaries?.["frameworkRequirements"]) {
+      elements.push(
+        ...createAIAnalysisBox(reportData.aiSummaries.sectionSummaries["frameworkRequirements"]),
+      );
+    }
+
+    sections.frameworkRequirements.frameworks.forEach((fw) => {
+      elements.push(
+        new Paragraph({
+          spacing: { before: 200, after: 100 },
+          children: [
+            new TextRun({ text: fw.frameworkName, bold: true, size: 24, color: COLORS.primary }),
+          ],
+        }),
+      );
+      elements.push(
+        new Paragraph({
+          spacing: { after: 100 },
+          children: [
+            new TextRun({
+              text: `${fw.rollup.done} of ${fw.rollup.total} requirements implemented or audited`,
+              size: 20,
+              color: COLORS.textSecondary,
+            }),
+          ],
+        }),
+      );
+
+      fw.groups.forEach((group) => {
+        elements.push(
+          new Paragraph({
+            spacing: { before: 120, after: 80 },
+            children: [
+              new TextRun({
+                text: `${group.useCase ? `${group.useCase} · ` : ""}${group.title}`,
+                bold: true,
+                size: 22,
+                color: COLORS.textSecondary,
+              }),
+            ],
+          }),
+        );
+
+        if (group.requirements.length > 0) {
+          const headers = ["Requirement", "Status", "Owner", "Due date", "Evidence"];
+          const rows: TableCellInput[][] = [];
+          group.requirements.forEach((req) => {
+            [req, ...(req.children ?? [])].forEach((r) => {
+              rows.push([
+                {
+                  main: `${r.level === 3 ? "    " : ""}${r.title}`,
+                  secondary: evidenceLine(r),
+                },
+                r.status,
+                r.owner || "—",
+                r.dueDate || "—",
+                String(r.evidenceCount),
+              ]);
+            });
+          });
+          elements.push(createTable(headers, rows));
+          elements.push(createTableSpacing());
+        }
+      });
+    });
+  }
+
   // Add page break
   elements.push(new Paragraph({ children: [new PageBreak()] }));
 
@@ -1429,6 +1200,10 @@ function createOrganizationSection(reportData: ReportData): (Paragraph | Table)[
     } else {
       elements.push(createEmptyState("No incidents have been reported."));
     }
+    const archived = sections.incidentManagement.archivedIncidents ?? 0;
+    if (archived > 0) {
+      elements.push(createNote(archivedIncidentsNote(archived)));
+    }
   }
 
   return elements;
@@ -1449,43 +1224,50 @@ function createSectionNoticesSection(reportData: ReportData): (Paragraph | Table
   if (notices.length === 0) return [];
 
   const elements: (Paragraph | Table)[] = [];
-  elements.push(createSubsectionHeader("Sections with no data"));
-  elements.push(
+  const failed = notices.filter((n) => n.reason === "collection_failed");
+  const empty = notices.filter((n) => n.reason !== "collection_failed");
+
+  const intro = (text: string) =>
     new Paragraph({
       spacing: { after: 120 },
-      children: [
-        new TextRun({
-          text:
-            "These sections were requested but produced nothing. They are listed so an " +
-            "empty report is never mistaken for a clean one.",
-          size: 20,
-          color: COLORS.textSecondary,
-        }),
-      ],
-    }),
-  );
+      children: [new TextRun({ text, size: 20, color: COLORS.textSecondary })],
+    });
+  const bullet = (label: string, text: string) => createBullet(` — ${text}`, label);
 
-  for (const notice of notices) {
+  if (failed.length > 0) {
+    elements.push(createSubsectionHeader(NOTICE_TEXT.failedTitle));
+    elements.push(intro(NOTICE_TEXT.failedIntro));
+    for (const notice of failed) {
+      elements.push(
+        bullet(
+          NOTICE_LABELS[notice.sectionKey] ??
+            E23_NOTICE_LABELS[notice.sectionKey] ??
+            notice.sectionKey,
+          `${notice.detail ? `${notice.detail}: ` : ""}${NOTICE_TEXT.failedSuffix}`,
+        ),
+      );
+    }
+    elements.push(intro(NOTICE_TEXT.failedGuidance));
+  }
+
+  if (empty.length > 0) {
+    elements.push(createSubsectionHeader("Sections with no data"));
     elements.push(
-      new Paragraph({
-        spacing: { before: 60, after: 60 },
-        indent: { left: convertInchesToTwip(0.3) },
-        bullet: { level: 0 },
-        children: [
-          new TextRun({
-            text: NOTICE_LABELS[notice.sectionKey] ?? notice.sectionKey,
-            bold: true,
-            size: 20,
-            color: COLORS.textPrimary,
-          }),
-          new TextRun({
-            text: ` — ${NOTICE_REASONS[notice.reason] ?? notice.reason}`,
-            size: 20,
-            color: COLORS.textPrimary,
-          }),
-        ],
-      }),
+      intro(
+        "These sections were requested but produced nothing. They are listed so an " +
+          "empty report is never mistaken for a clean one.",
+      ),
     );
+    for (const notice of empty) {
+      elements.push(
+        bullet(
+          NOTICE_LABELS[notice.sectionKey] ??
+            E23_NOTICE_LABELS[notice.sectionKey] ??
+            notice.sectionKey,
+          NOTICE_REASONS[notice.reason] ?? notice.reason,
+        ),
+      );
+    }
   }
 
   return elements;
@@ -1494,7 +1276,7 @@ function createSectionNoticesSection(reportData: ReportData): (Paragraph | Table
 /**
  * Create footer for all pages
  */
-function createFooter(reportData: ReportData): Footer {
+function createFooter(reportData: ReportData, title?: string): Footer {
   const { metadata, branding } = reportData;
   const formattedDate = metadata.generatedAt.toLocaleDateString("en-US", {
     year: "numeric",
@@ -1516,7 +1298,7 @@ function createFooter(reportData: ReportData): Footer {
         },
         children: [
           new TextRun({
-            text: `${branding.organizationName} | ${metadata.frameworkName} Report | Generated: ${formattedDate} | Page `,
+            text: `${title ?? `${branding.organizationName} | ${metadata.frameworkName} Report`} | Generated: ${formattedDate} | Page `,
             size: 18,
             color: COLORS.textTertiary,
           }),
@@ -1539,15 +1321,37 @@ export async function generateDOCX(reportData: ReportData): Promise<ReportGenera
     // Build document sections
     const coverPage = createCoverPage(reportData);
     const toc = createTableOfContents(reportData);
-    const aiExecutiveSummary = reportData.aiSummaries
-      ? createExecutiveSummarySection(reportData.aiSummaries)
-      : [];
+    const e23 = buildE23FormalView(reportData);
+    // An E-23 report prints its view's summaries, which leave out the
+    // recommendations that belong to the internal fix-it list.
+    const aiSummaries = e23 ? e23.aiSummaries : reportData.aiSummaries;
+    const aiExecutiveSummary = aiSummaries ? createExecutiveSummarySection(aiSummaries) : [];
     const riskSection = createRiskAnalysisSection(reportData);
-    const complianceSection = createComplianceSection(reportData);
+    const complianceSection = createComplianceSection(reportData, {
+      withFrameworkRequirements: !e23,
+    });
     const organizationSection = createOrganizationSection(reportData);
 
+    // An OSFI E-23 report (spec 8.3 order). Recommended actions go to its
+    // internal fix-it list, and the abstentions follow the notices.
+    const e23Children = e23 && [
+      ...createE23Cover(e23),
+      ...createE23Toc(e23),
+      ...createE23Sections(e23.intro),
+      ...aiExecutiveSummary,
+      ...createE23Sections(e23.main),
+      ...createComplianceGapSection(reportData),
+      ...createVendorRiskSection(reportData),
+      ...riskSection,
+      ...complianceSection,
+      ...organizationSection,
+      ...(e23.appendix ? createE23Sections([e23.appendix]) : []),
+      ...createSectionNoticesSection(reportData),
+      ...createE23Closing(e23),
+    ];
+
     // Combine all sections
-    const allChildren = [
+    const allChildren = e23Children || [
       ...coverPage,
       ...toc,
       ...aiExecutiveSummary,
@@ -1585,8 +1389,9 @@ export async function generateDOCX(reportData: ReportData): Promise<ReportGenera
               },
             },
           },
+          ...(e23?.watermark && { headers: { default: createE23DraftHeader(e23.watermark) } }),
           footers: {
-            default: createFooter(reportData),
+            default: createFooter(reportData, e23?.footerTitle),
           },
           children: allChildren,
         },

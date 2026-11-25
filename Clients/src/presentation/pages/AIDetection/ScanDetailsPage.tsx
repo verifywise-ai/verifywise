@@ -137,13 +137,14 @@ export default function ScanDetailsPage() {
         onRecalculate={handleRecalculateRiskScore}
         isExporting={isExporting}
         onExport={handleExportAIBOM}
+        onViewGraph={() => setShowDepGraph(true)}
       />
 
       {/* Older scan: status changes are not kept for later scans */}
       {canEditStatus && isLatestScan === false && (
         <Alert
           variant="info"
-          isToast={false}
+          inline
           body={t(
             "This is not the repository's latest scan. Status changes here apply to this scan only and are not kept in later scans.",
           )}

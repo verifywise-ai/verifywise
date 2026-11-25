@@ -7,6 +7,7 @@ import {
   mockEmptyRisks,
   mockProjectRisks,
   mockFrameworkRisks,
+  createMockRisk,
 } from "../../mocks/mockRiskData";
 import { createMockTenant } from "../../mocks/mockTenant";
 import { IRisk } from "../../../domain.layer/interfaces/I.risk";
@@ -137,6 +138,19 @@ describe("Advisor Functions: fetchRisks", () => {
 
       expect(result.every((r: any) => r.mitigation_status === "In Progress")).toBe(true);
       expect(result.length).toBeGreaterThan(0);
+    });
+
+    it("finds a risk with no mitigation status under Not Started", async () => {
+      jest
+        .spyOn(riskUtils, "getAllRisksQuery")
+        .mockResolvedValue([
+          createMockRisk({ id: 501, mitigation_status: null as any }),
+          createMockRisk({ id: 502, mitigation_status: "In Progress" }),
+        ]);
+
+      const result = await fetchRisks({ mitigationStatus: "Not Started" }, mockTenant);
+
+      expect(result.map((r: any) => r.id)).toEqual([501]);
     });
 
     it("should filter by risk level", async () => {

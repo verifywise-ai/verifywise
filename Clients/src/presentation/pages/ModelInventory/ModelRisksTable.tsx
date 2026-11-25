@@ -269,8 +269,13 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
           bValue = getOwnerName(b.owner).toLowerCase();
           break;
         case "target_date":
-          aValue = a.target_date ? new Date(a.target_date).getTime() : 0;
-          bValue = b.target_date ? new Date(b.target_date).getTime() : 0;
+          // The date is optional: an undated risk goes last in both directions.
+          if (!a.target_date || !b.target_date) {
+            if (!a.target_date && !b.target_date) return 0;
+            return a.target_date ? -1 : 1;
+          }
+          aValue = new Date(a.target_date).getTime();
+          bValue = new Date(b.target_date).getTime();
           break;
         default:
           return 0;

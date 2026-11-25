@@ -67,6 +67,14 @@ export const vendorManagementContent: ArticleContent = {
       caption: 'The vendor registry lists all registered AI vendors with their risk scores and review status.',
     },
     {
+      type: 'paragraph',
+      text: 'The Vendors and Risks tabs each have their own search and filters, including a use case filter, so narrowing one tab leaves the other as it was. The Risks column counts each of a vendor\'s active risks once, whatever the Risks tab is filtered to.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Export downloads what the tab shows after search and filters. The vendor export includes each vendor\'s use cases and risk count; the risk export lists each risk once, with its use cases.',
+    },
+    {
       type: 'heading',
       id: 'adding-vendors',
       level: 2,
@@ -74,16 +82,35 @@ export const vendorManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'To register a new vendor, click "Add vendor" and fill in:',
+      text: 'To register a new vendor, click "Add new vendor" and fill in:',
     },
     {
       type: 'ordered-list',
       items: [
         { bold: 'Vendor name', text: 'The official company or product name' },
-        { bold: 'Vendor provides', text: 'Description of what the vendor supplies' },
-        { bold: 'Assignee', text: 'Person responsible for managing this vendor relationship' },
+        { bold: 'Use cases', text: 'The use cases this vendor serves. You can pick approved use cases' },
+        { bold: 'Other names (optional)', text: 'Other names the vendor is known by, separated by commas, for example "Facebook" for "Meta Platforms". A legal name written with a comma, such as "Acme Analytics, Inc.", counts as one name. The web research looks for sources that use them too' },
         { bold: 'Website', text: 'Vendor\'s official website URL' },
         { bold: 'Vendor contact person', text: 'Primary contact at the vendor' },
+        { bold: 'Assignee', text: 'Person responsible for managing this vendor relationship' },
+        { bold: 'What does the vendor provide?', text: 'Description of what the vendor supplies' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'All of these except other names are required. Review status, reviewer, review date, review result, the identifiers and the scorecard are optional.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Under **Identifiers** you can also give, each optional, the numbers that official lists use for companies. They let the research tie a record of such a list to your vendor by a number rather than by its name alone:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Country', text: 'The two-letter code of the country the vendor is registered in, such as DE or GB. The form shows the name of the country. The research takes the vendor\'s market from it: for Germany, Austria, France, Italy, Spain, the Netherlands, Portugal and Brazil it also searches the news in the language of the country, and for the United States, the United Kingdom, Ireland and Australia it searches in English and names the country\'s regulator in the news about fines, whatever the website\'s domain or the legal form say' },
+        { bold: 'Registration number', text: 'The number in the company register, as the register writes it. A sanctions entry that carries it and the vendor\'s name is your vendor' },
+        { bold: 'LEI', text: 'The Legal Entity Identifier, 20 letters and digits. The form checks its check digits. A sanctions entry that carries it is your vendor' },
+        { bold: 'SEC CIK', text: 'The number of a company that files with the US Securities and Exchange Commission, up to 10 digits. The research asks the SEC about this company rather than one found by the vendor\'s name' },
       ],
     },
     {
@@ -91,6 +118,10 @@ export const vendorManagementContent: ArticleContent = {
       src: '/images/user-guide/add-vendor.png',
       alt: 'Add new vendor modal with fields for vendor name, use cases, website, contact person, assignee, description, review status, reviewer, review date, and result',
       caption: 'Register new vendors with complete contact and review information.',
+    },
+    {
+      type: 'paragraph',
+      text: 'VerifyWise can also research a new vendor on the web for risks. To start research yourself, use the **Research risks** icon in the vendor\'s row. See [[Vendor risk assessment]](risk-management/vendor-risks) for how findings work.',
     },
     {
       type: 'heading',
@@ -135,9 +166,23 @@ export const vendorManagementContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Reviewer', text: 'The person conducting the assessment' },
-        { bold: 'Review date', text: 'When the review was performed' },
+        { bold: 'Review date', text: 'When the next review is due. It\'s optional: a new vendor starts without one, and you can clear it later' },
         { bold: 'Review result', text: 'Findings and conclusions from the review' },
       ],
+    },
+    {
+      type: 'heading',
+      id: 'review-reminders',
+      level: 3,
+      text: 'Review reminders',
+    },
+    {
+      type: 'paragraph',
+      text: 'A vendor shows on the reviewer\'s Home page (or the assignee\'s, when no reviewer is set) from 14 days before its review date. When you finish a review, mark it Reviewed and set the next review date in the same save. A vendor marked Reviewed leaves Home once its review date has passed; any other vendor stays there as overdue. A vendor with no review date doesn\'t show on Home and gets no reminders.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Emails and in-app reminders go out only if your organization has an active automation with the "Vendor review date approaching" trigger. It runs once a day at midnight UTC and sends on the day set by its "days before" setting. Several automations can use this trigger, and each one runs all of its actions. See Automations for how to set one up.',
     },
     {
       type: 'heading',
@@ -164,11 +209,11 @@ export const vendorManagementContent: ArticleContent = {
       items: [
         { bold: 'None', text: 'No sensitive data is shared' },
         { bold: 'Internal only', text: 'Internal business data only' },
-        { bold: 'PII', text: 'Personally identifiable information' },
-        { bold: 'Financial', text: 'Financial data or records' },
-        { bold: 'Health', text: 'Health-related information' },
-        { bold: 'Model weights', text: 'Proprietary model parameters' },
-        { bold: 'Other', text: 'Other sensitive data types' },
+        { bold: 'Personally identifiable information (PII)', text: 'Names, emails, identifiers and other personal data' },
+        { bold: 'Financial data', text: 'Financial data or records' },
+        { bold: 'Health data (e.g. HIPAA)', text: 'Health-related information' },
+        { bold: 'Model weights or AI assets', text: 'Proprietary model parameters' },
+        { bold: 'Other sensitive data', text: 'Other sensitive data types' },
       ],
     },
     {
@@ -236,7 +281,7 @@ export const vendorManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Based on the scorecard inputs, VerifyWise calculates an overall risk score for each vendor. Higher scores mean greater risk and more oversight needed.',
+      text: 'Based on the scorecard inputs, VerifyWise calculates an overall risk score from 0 to 100 for each vendor. Higher scores mean greater risk and more oversight needed. A vendor with no scorecard answers shows "Not assessed" instead of a score.',
     },
     {
       type: 'callout',
@@ -248,25 +293,57 @@ export const vendorManagementContent: ArticleContent = {
       type: 'heading',
       id: 'project-linking',
       level: 2,
-      text: 'Linking vendors to projects',
+      text: 'Linking vendors to use cases',
     },
     {
       type: 'paragraph',
-      text: 'Associate vendors with the projects that use their services. This lets you see:',
+      text: 'Link each vendor to the use cases that rely on its services. This lets you see:',
     },
     {
       type: 'bullet-list',
       items: [
-        { text: 'Which projects depend on which vendors' },
+        { text: 'Which use cases depend on which vendors' },
         { text: 'Impact assessment when vendor issues arise' },
         { text: 'Vendor concentration across your portfolio' },
       ],
     },
     {
+      type: 'paragraph',
+      text: 'You can link a vendor to approved use cases. If a linked use case is later pending approval or rejected, the link stays: the vendor form shows it with its status, for example "Fraud scoring (Pending approval)", and saving keeps it.',
+    },
+    {
       type: 'callout',
       variant: 'warning',
       title: 'Important',
-      text: 'When a vendor experiences an incident or regulatory action, review all linked projects to assess potential impact.',
+      text: 'When a vendor experiences an incident or regulatory action, review all of its use cases to assess potential impact.',
+    },
+    {
+      type: 'heading',
+      id: 'deleting',
+      level: 2,
+      text: 'Deleting vendors and vendor risks',
+    },
+    {
+      type: 'paragraph',
+      text: 'A deleted vendor risk is not gone. Pick "Deleted only" or "Active + deleted" in the status filter on the Risks tab to list deleted risks. Opening one shows it read-only. If you can edit vendors, choose Restore in its row menu or in the risk window to bring it back with its custom fields and frameworks.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Deleting a vendor is permanent. It removes the vendor and all of its risks, including deleted ones, along with their custom field values, notes, task links and share links. Pending approval requests for the vendor are withdrawn.',
+    },
+    {
+      type: 'paragraph',
+      text: 'A risk\'s Activity tab shows when it was deleted or restored, and by whom.',
+    },
+    {
+      type: 'heading',
+      id: 'ai-advisor',
+      level: 2,
+      text: 'Vendors and the AI advisor',
+    },
+    {
+      type: 'paragraph',
+      text: 'The AI advisor can add, edit, flag and delete vendors and vendor risks for you. It acts as you: it makes these changes only if your role can edit vendors, the same checks apply as on the Vendors page, and the Activity tab records the change under your name. A new vendor needs a name, what the vendor provides, a website and a contact person. It is assigned to you unless you name someone else, and it is linked only to use cases you can see. The advisor cannot restore a deleted vendor risk; do that from the Risks tab.',
     },
     {
       type: 'article-links',
@@ -277,6 +354,12 @@ export const vendorManagementContent: ArticleContent = {
           articleId: 'vendor-risks',
           title: 'Vendor risk assessment',
           description: 'Assess and track vendor-specific risks',
+        },
+        {
+          collectionId: 'risk-management',
+          articleId: 'vendor-risk-list',
+          title: 'Vendor risks list',
+          description: 'Find, filter, export and restore vendor risks',
         },
         {
           collectionId: 'ai-governance',

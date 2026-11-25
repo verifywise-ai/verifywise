@@ -7,15 +7,21 @@ import {
   getModelByProjectIdQuery,
   getModelByFrameworkIdQuery,
   getModelInventoryByIdQuery,
-  deleteModelInventoryByIdQuery,
   insertModelFrameworkLinks,
-  insertModelProjectLinks,
 } from "../../utils/modelInventory.utils";
+import {
+  deleteModelInventoryService,
+  linkModelToUseCaseService,
+  ModelInventoryInput,
+  updateModelInventoryService,
+} from "../../services/modelInventory.service";
+import { isRefusal, modelWriteContext, refusalFrom } from "./modelWriteScope";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
 import {
   assertModelInOrganization,
   resolveModelLinkTargets,
+  toPositiveId,
 } from "../../utils/modelReferences.utils";
 import logger from "../../utils/logger/fileLogger";
 
@@ -362,6 +368,62 @@ const getModelInventoryExecutiveSummary = async (
 
 // --- Write Tools (Human Confirmation Flow) ---
 
+/**
+ * The model's fields an agent_update_model call sets, as the console's model
+ * form names them. Provider and model name also rename provider_model, as
+ * this tool always did.
+ */
+function updateModelInput(
+  params: Record<string, unknown>,
+  current: { provider?: string; model?: string },
+): ModelInventoryInput {
+  const input: ModelInventoryInput = {};
+  if (params.name !== undefined) input.model = params.name as string;
+  if (params.model_type !== undefined) input.provider = params.model_type as string;
+  if (params.version !== undefined) input.version = params.version as string;
+  if (params.description !== undefined) input.capabilities = params.description as string;
+  if (params.capabilities !== undefined) input.capabilities = params.capabilities as string;
+  if (params.hosting_provider !== undefined) {
+    input.hosting_provider = params.hosting_provider as string;
+  }
+  if (params.status !== undefined) {
+    input.status = params.status as ModelInventoryStatus;
+    input.status_date = new Date();
+  }
+  if (params.name !== undefined || params.model_type !== undefined) {
+    input.provider_model = `${input.provider ?? current.provider} / ${input.model ?? current.model}`;
+  }
+  return input;
+}
+
+const modelNotFound = (modelId: unknown) => ({
+  success: false as const,
+  message: `Model #${modelId} not found`,
+});
+
+/**
+ * Update a model through the model service, as the acting user: the approval
+ * rule (a refusal is the tool's failure message), change history, the
+ * deployment step for a move to Approved and the approver notice. `input`
+ * reads the model the service locked, so a rename in between is never lost.
+ */
+async function updateModelAsActingUser(
+  params: Record<string, unknown>,
+  organizationId: number,
+  input: (current: { provider?: string; model?: string }) => ModelInventoryInput,
+) {
+  const ctx = await modelWriteContext(params, organizationId);
+  if (isRefusal(ctx)) return ctx;
+  const modelId = toPositiveId(params.model_id);
+  if (modelId === null) return modelNotFound(params.model_id);
+  try {
+    const saved = await updateModelInventoryService(modelId, input, ctx);
+    return saved ?? modelNotFound(modelId);
+  } catch (error) {
+    return refusalFrom(error);
+  }
+}
+
 const agentUpdateModel = createWriteToolFn({
   toolName: "agent_update_model",
   warningLevel: "warning",
@@ -370,95 +432,41 @@ const agentUpdateModel = createWriteToolFn({
     return `Update model #${params.model_id} — fields: ${fields.join(", ")}`;
   },
   executeFn: async (params, organizationId) => {
-    const modelId = params.model_id as number;
-    const setClauses: string[] = [];
-    const replacements: Record<string, unknown> = {
-      organization_id: organizationId,
-      model_id: modelId,
-    };
-
-    if (params.name !== undefined) {
-      setClauses.push("model = :model");
-      replacements.model = params.name;
+    const fields = [
+      "name",
+      "model_type",
+      "version",
+      "description",
+      "status",
+      "hosting_provider",
+      "capabilities",
+    ];
+    if (!fields.some((f) => params[f] !== undefined)) {
+      return { id: params.model_id, message: "No fields to update" };
     }
-    if (params.model_type !== undefined) {
-      setClauses.push("provider = :provider");
-      replacements.provider = params.model_type;
-    }
-    if (params.version !== undefined) {
-      setClauses.push("version = :version");
-      replacements.version = params.version;
-    }
-    if (params.description !== undefined) {
-      setClauses.push("capabilities = :capabilities");
-      replacements.capabilities = params.description;
-    }
-    if (params.status !== undefined) {
-      setClauses.push("status = :status, status_date = NOW()");
-      replacements.status = params.status;
-    }
-    if (params.hosting_provider !== undefined) {
-      setClauses.push("hosting_provider = :hosting_provider");
-      replacements.hosting_provider = params.hosting_provider;
-    }
-    if (params.capabilities !== undefined) {
-      setClauses.push("capabilities = :capabilities");
-      replacements.capabilities = params.capabilities;
-    }
-
-    if (setClauses.length === 0) {
-      return { id: modelId, message: "No fields to update" };
-    }
-
-    setClauses.push("updated_at = NOW()");
-    // Update provider_model if provider or model changed
-    if (params.name !== undefined || params.model_type !== undefined) {
-      setClauses.push(
-        "provider_model = COALESCE(:pm_provider, provider) || ' / ' || COALESCE(:pm_model, model)",
-      );
-      replacements.pm_provider = params.model_type !== undefined ? params.model_type : null;
-      replacements.pm_model = params.name !== undefined ? params.name : null;
-    }
-
-    await sequelize.query(
-      `UPDATE model_inventories SET ${setClauses.join(", ")} WHERE id = :model_id AND organization_id = :organization_id`,
-      { replacements },
+    const result = await updateModelAsActingUser(params, organizationId, (current) =>
+      updateModelInput(params, current),
     );
-    return { id: modelId, updated: true, message: "Model updated successfully" };
-  },
-});
-
-const agentUpdateModelLifecyclePhase = createWriteToolFn({
-  toolName: "agent_update_model_lifecycle_phase",
-  warningLevel: "warning",
-  descriptionFn: (params) =>
-    `Update model #${params.model_id} lifecycle phase to "${params.lifecycle_phase}"`,
-  executeFn: async (params, organizationId) => {
-    const modelId = params.model_id as number;
-    const phase = params.lifecycle_phase as string;
-    await sequelize.query(
-      `UPDATE model_inventories SET status = :status, status_date = NOW(), updated_at = NOW() WHERE id = :model_id AND organization_id = :organization_id`,
-      {
-        replacements: { status: phase, model_id: modelId, organization_id: organizationId },
-      },
-    );
-    return { id: modelId, status: phase, message: "Model lifecycle phase updated successfully" };
+    if (isRefusal(result)) return result;
+    return { id: params.model_id, updated: true, message: "Model updated successfully" };
   },
 });
 
 const agentRetireModel = createWriteToolFn({
   toolName: "agent_retire_model",
   warningLevel: "warning",
-  descriptionFn: (params) => `Retire model #${params.model_id} (set status to Blocked)`,
+  descriptionFn: (params) => `Retire model #${params.model_id} (set status to Retired)`,
   executeFn: async (params, organizationId) => {
-    const modelId = params.model_id as number;
-    await sequelize.query(
-      `UPDATE model_inventories SET status = 'Blocked', status_date = NOW(), updated_at = NOW() WHERE id = :model_id AND organization_id = :organization_id`,
-      {
-        replacements: { model_id: modelId, organization_id: organizationId },
-      },
-    );
-    return { id: modelId, status: "Blocked", message: "Model retired successfully" };
+    const result = await updateModelAsActingUser(params, organizationId, () => ({
+      status: ModelInventoryStatus.RETIRED,
+      status_date: new Date(),
+    }));
+    if (isRefusal(result)) return result;
+    return {
+      id: params.model_id,
+      status: ModelInventoryStatus.RETIRED,
+      message: "Model retired successfully",
+    };
   },
 });
 
@@ -467,16 +475,17 @@ const agentDeleteModel = createWriteToolFn({
   warningLevel: "danger",
   descriptionFn: (params) => `Permanently delete model #${params.model_id}`,
   executeFn: async (params, organizationId) => {
-    const modelId = params.model_id as number;
-    const transaction = await sequelize.transaction();
+    const ctx = await modelWriteContext(params, organizationId);
+    if (isRefusal(ctx)) return ctx;
+    const modelId = toPositiveId(params.model_id);
+    if (modelId === null) return modelNotFound(params.model_id);
     try {
-      await deleteModelInventoryByIdQuery(modelId, true, organizationId, transaction);
-      await transaction.commit();
-      return { id: modelId, deleted: true, message: "Model deleted successfully" };
+      // As the console's "Delete risks too": the risks are archived.
+      await deleteModelInventoryService(modelId, { deleteRisks: true }, ctx);
     } catch (error) {
-      await transaction.rollback();
-      throw error;
+      return refusalFrom(error);
     }
+    return { id: modelId, deleted: true, message: "Model deleted successfully" };
   },
 });
 
@@ -485,25 +494,24 @@ const agentLinkModelToProject = createWriteToolFn({
   warningLevel: "warning",
   descriptionFn: (params) => `Link model #${params.model_id} to project #${params.project_id}`,
   executeFn: async (params, organizationId) => {
-    const transaction = await sequelize.transaction();
+    // The console's rule (PATCH of a model's use cases): model.edit, checked
+    // here, and write access to the use case, checked by the service under
+    // the model's lock.
+    const ctx = await modelWriteContext(params, organizationId);
+    if (isRefusal(ctx)) return ctx;
+    const modelId = toPositiveId(params.model_id);
+    if (modelId === null) return modelNotFound(params.model_id);
     try {
-      // The model and the use case must both be this organization's, checked
-      // in the transaction that writes the link.
-      const modelId = await assertModelInOrganization(params.model_id, organizationId, transaction);
-      const {
-        projectIds: [projectId],
-      } = await resolveModelLinkTargets([params.project_id], [], organizationId, transaction);
-      // Skips a link that already exists, as the model form's write does.
-      await insertModelProjectLinks(modelId, [projectId], organizationId, transaction);
-      await transaction.commit();
+      const linked = await linkModelToUseCaseService(modelId, Number(params.project_id), ctx);
       return {
         model_id: modelId,
-        project_id: projectId,
-        message: "Model linked to project successfully",
+        project_id: Number(params.project_id),
+        message: linked
+          ? "Model linked to project successfully"
+          : "Model was already linked to this project",
       };
     } catch (error) {
-      await transaction.rollback();
-      throw error;
+      return refusalFrom(error);
     }
   },
 });
@@ -1033,7 +1041,6 @@ const availableModelInventoryTools: any = {
   get_model_inventory_analytics: getModelInventoryAnalytics,
   get_model_inventory_executive_summary: getModelInventoryExecutiveSummary,
   agent_update_model: agentUpdateModel,
-  agent_update_model_lifecycle_phase: agentUpdateModelLifecyclePhase,
   agent_retire_model: agentRetireModel,
   agent_delete_model: agentDeleteModel,
   agent_link_model_to_project: agentLinkModelToProject,

@@ -4,11 +4,38 @@ import { fireEvent, screen } from "@testing-library/react";
 import { renderWithProviders as render } from "../../../../test/renderWithProviders";
 
 const runNowMutate = vi.fn();
+const createMutate = vi.fn();
+// What GET /api/v1/report-templates/:id/last-parameters answered; null = no prior run.
+let lastParameters: any = null;
 
 vi.mock("../../../../application/hooks/useReporting", () => ({
-  useCreateScheduledReport: () => ({ mutate: vi.fn(), isPending: false }),
+  useCreateScheduledReport: () => ({ mutate: createMutate, isPending: false }),
   useRunTemplateNow: () => ({ mutate: runNowMutate, isPending: false }),
+  useLastReportParameters: () => ({ data: lastParameters, isLoading: false }),
+  useOrganizationName: () => ({ data: "Acme Bank", isLoading: false }),
 }));
+
+vi.mock("../../../../application/hooks/useAuth", () => ({
+  useAuth: () => ({ userToken: { name: "Pat", surname: "Lee" }, organizationId: 1 }),
+}));
+
+// The real picker is MUI's sectioned date field, which jsdom cannot type into.
+vi.mock("../../../components/Inputs/Datepicker", async () => {
+  const dayjs = (await import("dayjs")).default;
+  return {
+    default: ({ id, label, date, handleDateChange, error }: any) => (
+      <div>
+        <label htmlFor={id}>{label}</label>
+        <input
+          id={id}
+          value={date ? date.format("YYYY-MM-DD") : ""}
+          onChange={(e) => handleDateChange(e.target.value ? dayjs(e.target.value) : null)}
+        />
+        {error && <span>{error}</span>}
+      </div>
+    ),
+  };
+});
 
 vi.mock("../../../../application/hooks/useProjects", () => ({
   useProjects: () => ({ data: [{ id: 1, project_title: "Project A" }], isLoading: false }),
@@ -109,6 +136,33 @@ describe("ConfigureReportWizard", () => {
     ]) {
       expect(screen.getByLabelText(label)).toBeInTheDocument();
     }
+  });
+
+  it("offers the E-23 gap analysis only for an E-23 template, off by default", () => {
+    const { unmount } = render(
+      <ConfigureReportWizard template={TEMPLATE_FIXTURE} mode="schedule" onClose={() => {}} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    expect(screen.queryByLabelText("E-23 gap analysis")).not.toBeInTheDocument();
+    unmount();
+
+    render(
+      <ConfigureReportWizard
+        template={{
+          ...TEMPLATE_FIXTURE,
+          latestVersion: {
+            ...TEMPLATE_FIXTURE.latestVersion,
+            parameters_config: { kind: "osfi_e23", fields: [] },
+          },
+        }}
+        mode="schedule"
+        onClose={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    expect(screen.getByLabelText("E-23 gap analysis")).not.toBeChecked();
   });
 
   it("no longer renders raw camelCase keys as labels", () => {
@@ -271,6 +325,205 @@ describe("framework selection", () => {
     expect(runNowMutate).toHaveBeenCalledWith(
       expect.objectContaining({ body: expect.objectContaining({ frameworkIds: ["native:2"] }) }),
       expect.anything(),
+    );
+  });
+});
+
+// The E-23 template's declared fields (Servers e23Parameters.ts), as the
+// template endpoint returns them in latestVersion.parameters_config.
+const E23_FIELDS = [
+  { key: "periodStart", label: "Period start", type: "date", required: true },
+  { key: "periodEnd", label: "Period end", type: "date", required: true },
+  {
+    key: "institutionName",
+    label: "Institution name",
+    type: "text",
+    required: true,
+    maxLength: 200,
+  },
+  {
+    key: "accountableExecutiveName",
+    label: "Accountable executive name",
+    type: "text",
+    required: true,
+    maxLength: 200,
+  },
+  {
+    key: "preparedByName",
+    label: "Prepared by name",
+    type: "text",
+    required: true,
+    maxLength: 200,
+  },
+  {
+    key: "audience",
+    label: "Audience",
+    type: "select",
+    required: true,
+    options: [
+      { value: "osfi", label: "OSFI supervisory review" },
+      { value: "board", label: "Board of directors" },
+    ],
+  },
+  { key: "isFinal", label: "Final version", type: "boolean", required: false },
+];
+
+const E23_TEMPLATE = {
+  ...TEMPLATE_FIXTURE,
+  name: "OSFI E-23",
+  default_scope: "project",
+  latestVersion: {
+    ...TEMPLATE_FIXTURE.latestVersion,
+    parameters_config: { kind: "osfi_e23", fields: E23_FIELDS },
+  },
+};
+
+const next = () => fireEvent.click(screen.getByRole("button", { name: /next/i }));
+const isoDate = (offsetDays: number) =>
+  new Date(Date.now() + offsetDays * 86_400_000).toISOString().slice(0, 10);
+
+describe("report details step", () => {
+  beforeEach(() => {
+    runNowMutate.mockReset();
+    createMutate.mockReset();
+    lastParameters = {
+      parameters: { accountableExecutiveName: "Jane Doe" },
+      periodEnd: "2026-06-30",
+    };
+  });
+
+  it.each([["x"], [{ key: "a" }], [[null, "x", 3]]])(
+    "treats malformed fields (%j) as none instead of crashing",
+    (fields) => {
+      const template = {
+        ...TEMPLATE_FIXTURE,
+        latestVersion: { ...TEMPLATE_FIXTURE.latestVersion, parameters_config: { fields } },
+      };
+      render(<ConfigureReportWizard template={template} mode="run-now" onClose={vi.fn()} />);
+      expect(screen.queryByText("Report details")).not.toBeInTheDocument();
+      // Scope -> Sections -> AI insights -> Review, as for any template without fields.
+      next();
+      next();
+      next();
+      expect(screen.getByRole("button", { name: /run now/i })).toBeInTheDocument();
+    },
+  );
+
+  it("is absent for a template that declares no fields", () => {
+    render(<ConfigureReportWizard template={TEMPLATE_FIXTURE} mode="run-now" onClose={vi.fn()} />);
+    expect(screen.queryByText("Report details")).not.toBeInTheDocument();
+  });
+
+  it("follows Scope and is prefilled from the last run and the defaults", () => {
+    render(<ConfigureReportWizard template={E23_TEMPLATE} mode="run-now" onClose={vi.fn()} />);
+    expect(screen.getByText("Report details")).toBeInTheDocument();
+    next();
+    expect(screen.getByLabelText("Period start")).toHaveValue("2026-07-01");
+    expect(screen.getByLabelText("Period end")).toHaveValue(isoDate(0));
+    expect(screen.getByLabelText(/Institution name/)).toHaveValue("Acme Bank");
+    expect(screen.getByLabelText(/Accountable executive name/)).toHaveValue("Jane Doe");
+    expect(screen.getByLabelText(/Prepared by name/)).toHaveValue("Pat Lee");
+    expect(screen.getByText("OSFI supervisory review")).toBeInTheDocument();
+    expect(screen.getByLabelText("Final version")).not.toBeChecked();
+    expect(screen.getByRole("button", { name: /next/i })).toBeEnabled();
+  });
+
+  it("locks an E-23 report to organization scope", () => {
+    render(<ConfigureReportWizard template={E23_TEMPLATE} mode="run-now" onClose={vi.fn()} />);
+    expect(screen.queryByLabelText("Report level")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Project")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /next/i })).toBeEnabled();
+  });
+
+  it("blocks Next on a blank institution name and says why", () => {
+    render(<ConfigureReportWizard template={E23_TEMPLATE} mode="run-now" onClose={vi.fn()} />);
+    next();
+    fireEvent.change(screen.getByLabelText(/Institution name/), { target: { value: "  " } });
+    expect(screen.getByText("Institution name is required")).toBeInTheDocument();
+    next();
+    // Still on Report details.
+    expect(screen.getByLabelText(/Institution name/)).toBeInTheDocument();
+  });
+
+  it("shows a blank required field's message when Next is pressed, and stays on the step", () => {
+    // First run: no previous run, so the accountable executive has no default.
+    lastParameters = null;
+    render(<ConfigureReportWizard template={E23_TEMPLATE} mode="run-now" onClose={vi.fn()} />);
+    next();
+    expect(screen.getByLabelText(/Accountable executive name/)).toHaveValue("");
+    expect(screen.queryByText("Accountable executive name is required")).not.toBeInTheDocument();
+
+    next();
+
+    expect(screen.getByText("Accountable executive name is required")).toBeInTheDocument();
+    expect(screen.getByLabelText(/Accountable executive name/)).toBeInTheDocument();
+    expect(runNowMutate).not.toHaveBeenCalled();
+  });
+
+  it("rejects a period end in the future", () => {
+    render(<ConfigureReportWizard template={E23_TEMPLATE} mode="run-now" onClose={vi.fn()} />);
+    next();
+    fireEvent.change(screen.getByLabelText("Period end"), { target: { value: isoDate(2) } });
+    expect(screen.getByText("Period end cannot be in the future")).toBeInTheDocument();
+    next();
+    expect(screen.getByLabelText("Period end")).toBeInTheDocument();
+  });
+
+  it("sends organization scope and the answers on run now", () => {
+    render(<ConfigureReportWizard template={E23_TEMPLATE} mode="run-now" onClose={vi.fn()} />);
+    // Scope -> Report details -> Sections -> AI Insights -> Review
+    for (let i = 0; i < 4; i += 1) next();
+    fireEvent.click(screen.getByRole("button", { name: /run now/i }));
+    const body = runNowMutate.mock.calls[0][0].body;
+    expect(body.scope).toBe("organization");
+    expect(body.projectId).toBeNull();
+    expect(body.reportParameters).toEqual({
+      periodStart: "2026-07-01",
+      periodEnd: isoDate(0),
+      institutionName: "Acme Bank",
+      accountableExecutiveName: "Jane Doe",
+      preparedByName: "Pat Lee",
+      audience: "osfi",
+      isFinal: false,
+    });
+  });
+
+  it("hides the period in schedule mode and leaves it out of the schedule", () => {
+    render(<ConfigureReportWizard template={E23_TEMPLATE} mode="schedule" onClose={vi.fn()} />);
+    next();
+    expect(screen.queryByLabelText("Period start")).not.toBeInTheDocument();
+    expect(screen.getByText(/ending the day before each run/)).toBeInTheDocument();
+    // Report details -> Sections -> AI Insights -> Schedule -> Delivery -> Review
+    for (let i = 0; i < 5; i += 1) next();
+    fireEvent.click(screen.getByRole("button", { name: /create scheduled report/i }));
+    const body = createMutate.mock.calls[0][0];
+    expect(body.reportParameters).not.toHaveProperty("periodStart");
+    expect(body.reportParameters).not.toHaveProperty("periodEnd");
+    expect(body.reportParameters.institutionName).toBe("Acme Bank");
+  });
+});
+
+describe("quarterly schedules", () => {
+  beforeEach(() => createMutate.mockReset());
+
+  it("offers quarterly with a run-in month and sends anchorMonth", () => {
+    render(<ConfigureReportWizard template={TEMPLATE_FIXTURE} mode="schedule" onClose={vi.fn()} />);
+    // Scope -> Sections -> AI Insights -> Schedule
+    for (let i = 0; i < 3; i += 1) next();
+    expect(screen.queryByLabelText("Run in month")).not.toBeInTheDocument();
+
+    // The shared Select ties its label to MUI's native input, which MUI also
+    // listens to for changes (autofill), so this is the selection path.
+    fireEvent.change(screen.getByLabelText("Frequency"), { target: { value: "quarterly" } });
+    const expectedDefault = ((new Date().getMonth() + 1) % 12) + 1;
+    expect(screen.getByLabelText("Run in month")).toHaveValue(String(expectedDefault));
+
+    fireEvent.change(screen.getByLabelText("Run in month"), { target: { value: "11" } });
+    next(); // Delivery
+    next(); // Review
+    fireEvent.click(screen.getByRole("button", { name: /create scheduled report/i }));
+    expect(createMutate.mock.calls[0][0].scheduleConfig).toEqual(
+      expect.objectContaining({ frequency: "quarterly", anchorMonth: 11 }),
     );
   });
 });

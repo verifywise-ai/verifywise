@@ -24,12 +24,34 @@ import {
   archiveTemplateQuery,
   createTemplateVersionQuery,
   getVersionByIdQuery,
+  getOrganizationTemplateSlugsQuery,
+  freeCopyName,
 } from "../utils/reportTemplate.utils";
-import { REPORT_SECTION_CATALOG } from "../services/reporting/sectionCatalog";
+import { VERSION_CONFIG_COLUMNS } from "../utils/reportTemplateVersionColumns";
+import { REPORT_SECTION_CATALOG, kindViolations } from "../services/reporting/sectionCatalog";
 import { parseFrameworkSelection } from "../services/reporting/frameworkSelection";
 import { NotFoundException } from "../domain.layer/exceptions/custom.exception";
 import { runScheduledReport } from "../services/reporting/reportRunOrchestrator";
 import { assertReportScopeAllowed } from "../services/reporting/reportAuthorization";
+import {
+  parameterErrorMessages,
+  parametersConfigErrors,
+  sectionKeysOf,
+  validateRunInput,
+} from "../services/reporting/reportParameters";
+
+/**
+ * A template may declare no kind (a general report) or a known one, and its
+ * parameter fields must be well formed. An unknown kind would unlock nothing
+ * and refuse every kind-limited section; a malformed field list would fail
+ * every run and break the run wizard. Both are rejected at write time rather
+ * than at every run.
+ */
+function respondToInvalidParametersConfig(req: Request, res: Response): Response | null {
+  const errors = parametersConfigErrors(req.body?.parameters_config);
+  if (!errors.length) return null;
+  return res.status(400).json(STATUS_CODE[400]({ errors: parameterErrorMessages(errors, req.t) }));
+}
 
 export async function listTemplates(req: Request, res: Response): Promise<any> {
   try {
@@ -60,18 +82,15 @@ const FILE_NAME = "reportTemplate.ctrl.ts";
 
 // Config fields live on the version row, not the template row. Any of these in
 // a PATCH body means "append a new version"; see the append-only note in
-// reportTemplate.utils.ts.
-const VERSION_CONFIG_FIELDS = [
-  "sections_config",
-  "ai_blocks_config",
-  "format_config",
-  "branding_config",
-  "schedule_defaults",
-  "delivery_defaults",
-];
+// reportTemplate.utils.ts. The list is owned by the utils so the INSERT, this
+// check and duplicateTemplate's copy cannot drift apart.
+const VERSION_CONFIG_FIELDS = VERSION_CONFIG_COLUMNS;
 
+// A null config field means "keep the previous value" (createTemplateVersionQuery
+// inherits it), so it does not count as a change: a body of nulls only would
+// otherwise append a version identical to the last one.
 const hasVersionConfig = (body: any): boolean =>
-  VERSION_CONFIG_FIELDS.some((f) => body?.[f] !== undefined);
+  VERSION_CONFIG_FIELDS.some((f) => body?.[f] !== undefined && body?.[f] !== null);
 
 // Maps CustomException subclasses to their status, mirroring
 // customField.ctrl.ts. A Postgres unique violation (23505) becomes 409 —
@@ -99,6 +118,23 @@ const respondWithError = (req: Request, res: Response, error: unknown): Response
   return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
 };
 
+// Both INSERTs share one transaction. A template with no version is unusable —
+// the wizard reads latestVersion.sections_config and disables its submit button
+// without one — so a failure on the second write must not leave the first
+// committed as an undeletable-looking orphan in GET /templates. Shared by
+// create and duplicate, so a copy is written exactly the way a new template is.
+async function insertTemplateWithVersion(
+  body: any,
+  organizationId: number,
+  userId: number,
+): Promise<{ tpl: any; version: any }> {
+  return sequelize.transaction(async (t) => {
+    const tpl = await createTemplateQuery(body, organizationId, userId, t);
+    const version = await createTemplateVersionQuery(tpl.id, organizationId, body, userId, t);
+    return { tpl, version };
+  });
+}
+
 export async function createTemplate(req: Request, res: Response): Promise<any> {
   logProcessing({
     description: "createTemplate",
@@ -108,22 +144,14 @@ export async function createTemplate(req: Request, res: Response): Promise<any> 
     organizationId: req.organizationId!,
   });
   try {
-    // Both INSERTs share one transaction. A template with no version is
-    // unusable — the wizard reads latestVersion.sections_config and disables
-    // its submit button without one — so a failure on the second write must
-    // not leave the first committed as an undeletable-looking orphan in
-    // GET /templates.
-    const { tpl, version } = await sequelize.transaction(async (t) => {
-      const tpl = await createTemplateQuery(req.body, req.organizationId!, req.userId!, t);
-      const version = await createTemplateVersionQuery(
-        tpl.id,
-        req.organizationId!,
-        req.body,
-        req.userId!,
-        t,
-      );
-      return { tpl, version };
-    });
+    const configRejected = respondToInvalidParametersConfig(req, res);
+    if (configRejected) return configRejected;
+
+    const { tpl, version } = await insertTemplateWithVersion(
+      req.body,
+      req.organizationId!,
+      req.userId!,
+    );
     await logSuccess({
       eventType: "Create",
       description: `Created report template ${tpl.id}`,
@@ -145,6 +173,39 @@ export async function createTemplate(req: Request, res: Response): Promise<any> 
     });
     return respondWithError(req, res, error);
   }
+}
+
+/**
+ * A PATCH that changes the report kind but not the sections keeps the previous
+ * version's sections. When the new kind refuses one of them, every later run
+ * would fail, so the write is refused instead and the caller is asked to send
+ * sections that fit. The legacy route drops parameters_config, so this only
+ * applies to the v1 PATCH.
+ */
+async function respondToInheritedSectionsOutsideKind(
+  req: Request,
+  res: Response,
+  id: number,
+): Promise<Response | null> {
+  const body = req.body ?? {};
+  if (body.parameters_config == null || body.sections_config != null) return null;
+  // Only the caller's own custom templates are writable; anything else is left
+  // to the write below, which answers 404 rather than leaking a 400.
+  const tpl = await getTemplateByIdQuery(id, req.organizationId!);
+  if (!tpl || tpl.is_system_template || tpl.organization_id !== req.organizationId) return null;
+  const latest = await getLatestVersionQuery(id, req.organizationId!);
+  if (!latest) return null;
+  const refused = kindViolations(
+    sectionKeysOf(latest.sections_config),
+    body.parameters_config.kind,
+  );
+  if (!refused.length) return null;
+  const errors = refused.map((key) => ({
+    key,
+    message: "section {key} is only available in an OSFI E-23 report",
+    params: { key },
+  }));
+  return res.status(400).json(STATUS_CODE[400]({ errors: parameterErrorMessages(errors, req.t) }));
 }
 
 export async function updateTemplate(req: Request, res: Response): Promise<any> {
@@ -173,6 +234,10 @@ export async function updateTemplate(req: Request, res: Response): Promise<any> 
     if (!metadataChanged && !versionChanged) {
       return res.status(400).json(STATUS_CODE[400](req.t!("no updatable fields supplied")));
     }
+    const configRejected = respondToInvalidParametersConfig(req, res);
+    if (configRejected) return configRejected;
+    const kindRejected = await respondToInheritedSectionsOutsideKind(req, res, id);
+    if (kindRejected) return kindRejected;
 
     // A PATCH carrying both metadata and config is two writes; they share one
     // transaction so a failing version insert (e.g. the 23505 version race)
@@ -217,6 +282,107 @@ export async function updateTemplate(req: Request, res: Response): Promise<any> 
       eventType: "Update",
       description: "updateTemplate failed",
       functionName: "updateTemplate",
+      fileName: FILE_NAME,
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return respondWithError(req, res, error);
+  }
+}
+
+// A concurrent duplicate can take the chosen slug between the lookup and the
+// INSERT; that unique violation is retried with a fresh lookup, a few times.
+const DUPLICATE_ATTEMPTS = 3;
+
+const isSlugConflict = (error: unknown): boolean => {
+  const pgErr = (error as any)?.parent ?? (error as any)?.original;
+  return pgErr?.code === "23505" && pgErr?.constraint === "uq_report_templates_org_slug";
+};
+
+/**
+ * POST /v1/report-templates/:id/duplicate — copy a template the organization
+ * can see (a system template or one of its own) into the caller's
+ * organization, as a new custom template.
+ *
+ * The server picks the name: "<name> (copy)", or "(copy 2)", "(copy 3)", ...
+ * when an earlier copy, archived or not, holds that slug. The user never chose
+ * a name, so a duplicate-name 409 would be no use to them.
+ *
+ * The copy carries the latest version's whole config: sections, AI blocks,
+ * framework selection, report kind, format, branding and schedule/delivery
+ * defaults. framework_config is not optional: an empty one means every
+ * framework in scope, so dropping it would widen a framework-specific template
+ * under the original's name. parameters_config holds the kind (e.g. OSFI
+ * E-23); without it the copy would offer the kind's sections under a general
+ * template that refuses them.
+ *
+ * An archived source answers 404, as it is absent from the template list.
+ */
+export async function duplicateTemplate(req: Request, res: Response): Promise<any> {
+  const id = Number(req.params.id);
+  logProcessing({
+    description: `duplicateTemplate ${id}`,
+    functionName: "duplicateTemplate",
+    fileName: FILE_NAME,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+  try {
+    const source = await getTemplateByIdQuery(id, req.organizationId!);
+    if (!source || source.is_active === false) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
+    }
+    const latest = await getLatestVersionQuery(source.id, req.organizationId!);
+    const config = Object.fromEntries(
+      VERSION_CONFIG_FIELDS.map((f) => [f, latest?.[f] ?? undefined]),
+    );
+
+    let created: { tpl: any; version: any } | null = null;
+    for (let attempt = 1; !created; attempt++) {
+      const name = freeCopyName(
+        source.name,
+        await getOrganizationTemplateSlugsQuery(req.organizationId!),
+      );
+      if (!name) {
+        return res.status(409).json(STATUS_CODE[409](req.t!("too many copies of this template")));
+      }
+      try {
+        created = await insertTemplateWithVersion(
+          {
+            name,
+            description: source.description ?? null,
+            category: source.category,
+            // createTemplateQuery 400s unless default_scope is exactly
+            // "project" or "organization"; every stored template has one,
+            // the fallback is defensive.
+            default_scope: source.default_scope ?? "project",
+            supported_scopes: source.supported_scopes ?? undefined,
+            recommended_frequency: source.recommended_frequency ?? undefined,
+            ...config,
+          },
+          req.organizationId!,
+          req.userId!,
+        );
+      } catch (error) {
+        if (!isSlugConflict(error) || attempt >= DUPLICATE_ATTEMPTS) throw error;
+      }
+    }
+    const { tpl, version } = created;
+    await logSuccess({
+      eventType: "Create",
+      description: `Duplicated report template ${id} as ${tpl.id}`,
+      functionName: "duplicateTemplate",
+      fileName: FILE_NAME,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(201).json(STATUS_CODE[201]({ ...tpl, latestVersion: version }));
+  } catch (error) {
+    await logFailure({
+      eventType: "Create",
+      description: "duplicateTemplate failed",
+      functionName: "duplicateTemplate",
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
@@ -342,6 +508,24 @@ export async function runTemplateNow(req: Request, res: Response): Promise<any> 
       );
     }
 
+    // Sections limited to a report kind are refused outside it, and the
+    // parameters are checked against the version's declared fields. A run of
+    // a kind template that sends no parameters gets the required-field errors.
+    // Template run-now uses the period the user sent; only schedule runs
+    // derive it (see runScheduledReport).
+    const parametersConfig = version.parameters_config ?? {};
+    const checked = validateRunInput(
+      parametersConfig,
+      sectionKeysOf(req.body.sectionsConfig),
+      req.body.reportParameters,
+      { now: new Date(), requirePeriod: true, scope: isProjectScope ? "project" : "organization" },
+    );
+    if (checked.errors.length) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400]({ errors: parameterErrorMessages(checked.errors, req.t) }));
+    }
+
     // An omitted scope resolves to "organization" here, so this endpoint is the
     // widest report in the product reachable with the least input.
     const scopeErrors = await assertReportScopeAllowed({
@@ -371,6 +555,8 @@ export async function runTemplateNow(req: Request, res: Response): Promise<any> 
       project_framework_id: req.body.projectFrameworkId ?? null,
       sections_config: req.body.sectionsConfig ?? null,
       ai_blocks_config: req.body.aiBlocksConfig ?? null,
+      parameters_config: parametersConfig,
+      report_parameters: checked.value,
       format: req.body.format ?? "pdf",
       // Storage is what gives the run a file_id, and a run without one has
       // nothing to download. Run now puts a report in the list; it is not a
@@ -387,8 +573,8 @@ export async function runTemplateNow(req: Request, res: Response): Promise<any> 
     });
 
     // success and partial_success both produced a downloadable report —
-    // partial_success only means a delivery channel (e.g. email) failed, not
-    // that the run itself is an error. Only "failed" (no report was
+    // partial_success only means a delivery channel (e.g. email) failed or part
+    // of a section could not be read, not that the run itself is an error. Only "failed" (no report was
     // generated) is reported as an error, and even then the run id is
     // included so the caller can look up what happened.
     if (outcome.status === "failed") {

@@ -20,7 +20,6 @@ import type {
   IAiAppRowError,
 } from "../../../../domain/interfaces/i.aiAppBulk";
 import { mapWorksheetRows, MAX_BULK_ROWS } from "../bulkUtils";
-import { controlButtonSx } from "../style";
 import { CountSummary, RowIssuesTable } from "./AssessmentDisplay";
 
 interface WorksheetUploadModalProps {
@@ -147,7 +146,6 @@ export default function WorksheetUploadModal({
               onClick={() => inputRef.current?.click()}
               disabled={isReading || uploadMutation.isPending}
               testId="ai-app-worksheet-choose-file"
-              sx={controlButtonSx}
             />
             <input
               ref={inputRef}

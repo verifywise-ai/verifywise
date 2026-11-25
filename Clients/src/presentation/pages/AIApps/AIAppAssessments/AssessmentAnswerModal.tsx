@@ -10,7 +10,6 @@ import { useSaveAiAppAssessmentAnswers } from "../../../../application/hooks/use
 import { errorMessage } from "../../../../application/repository/aiAppBulk.repository";
 import type { IAiAppAssessment, IAiAppQuestion } from "../../../../domain/interfaces/i.aiAppBulk";
 import { RISK_SCORE_OPTIONS } from "../utils";
-import { controlSelectSx } from "../style";
 
 interface AssessmentAnswerModalProps {
   assessment: IAiAppAssessment;
@@ -112,7 +111,6 @@ export default function AssessmentAnswerModal({
               }
               items={[...RISK_SCORE_OPTIONS]}
               dataTestId={`ai-app-assessment-${question.key}`}
-              sx={controlSelectSx}
             />
           </Box>
         ))}

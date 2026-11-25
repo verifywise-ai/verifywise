@@ -36,6 +36,7 @@ import { TaskPriority, TaskStatus } from "../../domain.layer/enums/task-priority
 import { ModelInventoryModel } from "../../domain.layer/models/modelInventory/modelInventory.model";
 import { DatasetModel } from "../../domain.layer/models/dataset/dataset.model";
 import { SYSTEM_RISK_VIEWER } from "../../utils/riskVisibility.utils";
+import { toIncidentDateValue } from "../../utils/validations/incidentManagementValidation.utils";
 import { AiAppStatus, AiAppDiscoveredSource } from "../../domain.layer/enums/ai-app-status.enum";
 import {
   IncidentType,
@@ -363,7 +364,9 @@ export async function insertMockData(
           mitigation_plan:
             "Implement continuous monitoring of model performance metrics. Schedule quarterly model retraining with updated data. Establish drift detection alerts at 5% accuracy threshold.",
           impact: "Medium",
+          // Likely x Minor: Medium by the shared formula.
           likelihood: "Likely",
+          severity: "Minor",
           key_metrics: "Precision, Recall, F1-Score, Demographic Parity",
           current_values: "Precision: 0.82, Recall: 0.78, F1: 0.80",
           threshold: "F1-Score must remain above 0.75",
@@ -387,7 +390,9 @@ export async function insertMockData(
           mitigation_plan:
             "Remove name-based features from model input. Implement blind evaluation mode. Conduct third-party fairness audit and remediate findings.",
           impact: "High",
-          likelihood: "Confirmed",
+          // Almost Certain x Moderate: High by the shared formula.
+          likelihood: "Almost Certain",
+          severity: "Moderate",
           key_metrics: "Statistical Parity Difference, Equalized Odds",
           current_values: "SPD: 0.12 (threshold: 0.05)",
           threshold: "SPD must be below 0.05",
@@ -995,13 +1000,18 @@ export async function insertMockData(
         await sequelize.query(
           `INSERT INTO ai_incident_managements (
             organization_id, ai_project, type, severity, status,
-            occurred_date, date_detected, reporter, approval_status,
+            occurred_date, date_detected, reporter, reporter_id, approval_status,
             categories_of_harm, description, relationship_causality,
             immediate_mitigations, planned_corrective_actions,
             interim_report, archived, is_demo, created_at, updated_at
           ) VALUES (
             :organization_id, :ai_project, :type, :severity, :status,
-            :occurred_date, :date_detected, :reporter, :approval_status,
+            :occurred_date, :date_detected,
+            COALESCE(
+              (SELECT NULLIF(TRIM(CONCAT_WS(' ', name, surname)), '') FROM users WHERE id = :reporter_id),
+              :reporter
+            ),
+            :reporter_id, :approval_status,
             :categories_of_harm, :description, :relationship_causality,
             :immediate_mitigations, :planned_corrective_actions,
             false, false, true, NOW(), NOW()
@@ -1013,9 +1023,11 @@ export async function insertMockData(
               type: incident.type,
               severity: incident.severity,
               status: incident.status,
-              occurred_date: incident.occurred_date,
-              date_detected: incident.date_detected,
-              reporter: String(userId),
+              occurred_date: toIncidentDateValue(incident.occurred_date),
+              date_detected: toIncidentDateValue(incident.date_detected),
+              // The demo user reports them: their full name, else User #id.
+              reporter: `User #${userId}`,
+              reporter_id: userId,
               approval_status: AIIncidentManagementApprovalStatus.PENDING,
               categories_of_harm: JSON.stringify(incident.categories_of_harm),
               description: incident.description,

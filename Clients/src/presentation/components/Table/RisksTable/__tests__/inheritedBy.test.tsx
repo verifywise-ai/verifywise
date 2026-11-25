@@ -126,9 +126,9 @@ describe("vendor risks table, Inherited by column", () => {
         )
         .filter(Boolean);
 
-    await userEvent.click(screen.getByText("inherited by"));
+    await userEvent.click(screen.getByText("Inherited by"));
     const ascending = order();
-    await userEvent.click(screen.getByText("inherited by"));
+    await userEvent.click(screen.getByText("Inherited by"));
     const descending = order();
 
     // The two rows with no children tie, so only their place is fixed.
@@ -139,7 +139,7 @@ describe("vendor risks table, Inherited by column", () => {
   it("is hidden when the column is switched off", () => {
     renderTable({ visibleColumns: new Set(["risk_description", "vendor_name"]) });
 
-    expect(screen.queryByText("inherited by")).not.toBeInTheDocument();
+    expect(screen.queryByText("Inherited by")).not.toBeInTheDocument();
     expect(screen.queryByText("3 project risks")).not.toBeInTheDocument();
   });
 });

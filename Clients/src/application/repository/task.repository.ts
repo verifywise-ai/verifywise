@@ -1,5 +1,5 @@
 import { apiServices } from "../../infrastructure/api/networkServices";
-import { ITask } from "../../domain/interfaces/i.task";
+import { EntityLinkType, ITask } from "../../domain/interfaces/i.task";
 import { TaskPriority, TaskStatus } from "../../domain/enums/task.enum";
 
 /**
@@ -76,6 +76,23 @@ export async function getAllTasks({
   });
 
   return response.data;
+}
+
+/**
+ * The tasks linked to one entity (an incident, a vendor, ...) that the user
+ * can see, archived tasks left out (GET /api/v1/tasks/linked/:type/:id).
+ * Errors are shown by the caller, so the global error toast is skipped.
+ */
+export async function getTasksLinkedToEntity(
+  entityType: EntityLinkType,
+  entityId: number,
+  signal?: AbortSignal,
+): Promise<ITask[]> {
+  const response = await apiServices.get<{ message: string; data: ITask[] }>(
+    `/v1/tasks/linked/${encodeURIComponent(entityType)}/${entityId}`,
+    { signal, suppressGlobalErrorToast: true },
+  );
+  return Array.isArray(response.data?.data) ? response.data.data : [];
 }
 
 /**

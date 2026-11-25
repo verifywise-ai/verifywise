@@ -3,7 +3,8 @@ import { BreadcrumbItem } from "../../../domain/types/breadcrumbs.types";
 
 export interface PageHeaderExtendedProps {
   title: string;
-  description?: string;
+  /** Text, or an element when the description has to be more than one string. */
+  description?: ReactNode;
   helpArticlePath?: string;
   /** Banner rendered above the TipBox (e.g. deadline warnings). */
   warningBanner?: ReactNode;

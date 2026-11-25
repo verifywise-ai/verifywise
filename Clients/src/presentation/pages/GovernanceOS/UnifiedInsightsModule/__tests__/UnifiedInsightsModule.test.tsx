@@ -1,16 +1,13 @@
 import { screen } from "@testing-library/react";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 
-const mockContextValue: any = { projects: [], userId: 1, organizationId: 1 };
+// Auth identity now comes from the useAuth hook (Redux JWT), not the legacy context.
+vi.mock("../../../../../application/hooks/useAuth", () => ({
+  useAuth: () => ({ userId: 1, organizationId: 1 }),
+}));
 
-vi.mock("../../../../../application/contexts/VerifyWise.context", () => ({
-  VerifyWiseContext: {
-    get _currentValue() {
-      return mockContextValue;
-    },
-    Provider: ({ children }: any) => children,
-    Consumer: ({ children }: any) => children(mockContextValue),
-  },
+vi.mock("../../../../../application/hooks/useProjects", () => ({
+  useProjects: () => ({ data: [], isLoading: false }),
 }));
 
 vi.mock("../../../../../application/hooks/useGovernanceOs", () => ({

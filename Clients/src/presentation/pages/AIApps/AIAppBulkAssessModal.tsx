@@ -15,7 +15,6 @@ import { errorMessage } from "../../../application/repository/aiAppBulk.reposito
 import type { IAiAppBulkAssessResult } from "../../../domain/interfaces/i.aiAppBulk";
 import { CountSummary } from "./AIAppAssessments/AssessmentDisplay";
 import { MAX_BULK_ROWS } from "./bulkUtils";
-import { controlSelectSx } from "./style";
 
 interface AIAppBulkAssessModalProps {
   appIds: number[];
@@ -116,7 +115,6 @@ export default function AIAppBulkAssessModal({
               items={questionnaires.map((q) => ({ _id: q.id, name: q.name }))}
               disabled={isLoading}
               dataTestId="ai-apps-bulk-assess-questionnaire"
-              sx={controlSelectSx}
             />
             <Stack gap="4px">
               <Checkbox

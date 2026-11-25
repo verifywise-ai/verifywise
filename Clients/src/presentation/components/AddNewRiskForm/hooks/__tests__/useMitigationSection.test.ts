@@ -238,4 +238,69 @@ describe("useMitigationSection", () => {
   it("starts a new risk without an assessment date", () => {
     expect(mitigationInitialState.dateOfAssessment).toBe("");
   });
+
+  it("starts a new risk without a deadline, mitigation status or residual pair", () => {
+    expect(mitigationInitialState.deadline).toBe("");
+    expect(mitigationInitialState.mitigationStatus).toBe(0);
+    expect(mitigationInitialState.currentRiskLevel).toBe(0);
+    expect(mitigationInitialState.likelihood).toBe(0);
+    expect(mitigationInitialState.riskSeverity).toBe(0);
+  });
+
+  it("opens a risk saved without a residual pair with the pair empty", () => {
+    const { result } = renderHook(() => useMitigationSection());
+    const values = result.current.mapFromInputValues({
+      likelihood_mitigation: null,
+      risk_severity: null,
+    });
+    expect(values.likelihood).toBe(0);
+    expect(values.riskSeverity).toBe(0);
+  });
+
+  it("sends an untouched mitigation section as empty, with no status, level or deadline", () => {
+    const { result } = renderHook(() => useMitigationSection());
+
+    expect(result.current.buildBackendData(mitigationInitialState)).toMatchObject({
+      mitigation_status: null,
+      current_risk_level: null,
+      deadline: null,
+      mitigation_plan: "",
+      implementation_strategy: "",
+      likelihood_mitigation: null,
+      risk_severity: null,
+      risk_approval: null,
+      approval_status: "Not required",
+      date_of_assessment: null,
+    });
+  });
+
+  it("sends a cleared plan, strategy and deadline on an existing risk", () => {
+    const { result } = renderHook(() => useMitigationSection());
+    const stored = result.current.mapFromInputValues({
+      mitigation_status: "Not Started",
+      current_risk_level: "High",
+      mitigation_plan: "Plan",
+      implementation_strategy: "Strategy",
+      deadline: "2026-05-01T12:00:00.000Z",
+    });
+
+    const backendData = result.current.buildBackendData({
+      ...stored,
+      mitigationStatus: 0,
+      currentRiskLevel: 0,
+      mitigationPlan: "",
+      implementationStrategy: "",
+      deadline: "",
+    });
+
+    expect(stored.mitigationStatus).toBe(1);
+    expect(stored.currentRiskLevel).toBe(2);
+    expect(backendData).toMatchObject({
+      mitigation_status: null,
+      current_risk_level: null,
+      mitigation_plan: "",
+      implementation_strategy: "",
+      deadline: null,
+    });
+  });
 });

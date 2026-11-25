@@ -7,10 +7,8 @@ import {
 } from "../domain.layer/interfaces/i.notification";
 import { getAllUsersQuery } from "../utils/user.utils";
 import logger from "../utils/logger/fileLogger";
-
-// Admin role id (see JWT roles table). Org-wide proactive alerts are delivered
-// to the org's admins.
-const ADMIN_ROLE_ID = 1;
+// Org-wide proactive alerts are delivered to the org's admins.
+import { ADMIN_ROLE_ID } from "../constants/roles";
 
 /**
  * Resolve the concrete in-app recipients for a proactive notification. These

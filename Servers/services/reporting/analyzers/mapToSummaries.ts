@@ -3,7 +3,7 @@ import { OPERATIONAL_ABSTAIN_REASONS } from "./abstainReasons";
 import type { AnalyzedKey, AnalyzerResults } from "./runAnalyzers";
 
 /**
- * Display names for the seven analyzer keys, in ONE place. docxGenerator
+ * Display names for the eight analyzer keys, in ONE place. docxGenerator
  * imports this; pdfGenerator passes it into the EJS render data as
  * `analysisLabels`. Two hand-kept copies drift the first time a renderer gains
  * a block, and the mismatch is invisible until someone diffs a PDF against a
@@ -17,6 +17,7 @@ export const ANALYSIS_LABELS: Record<string, string> = {
   riskAnalysis: "Risk analysis",
   complianceGap: "Compliance gap analysis",
   vendorRisk: "Third-party risk analysis",
+  e23Gap: "E-23 gap analysis",
 };
 
 /**
@@ -115,6 +116,9 @@ export function mapAnalysesToSummaries(
 
   const vendor = take("vendorRisk");
   if (vendor) out.vendorRisk = vendor;
+
+  const e23Gap = take("e23Gap");
+  if (e23Gap) out.e23Gap = e23Gap;
 
   // Why a block is missing. Only reasons the analyzer actually stated — an
   // abstention with no reason has nothing to tell the reader, so it stays out.

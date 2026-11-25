@@ -48,6 +48,9 @@ import {
   riskFilterRowStyle,
   analyticsIconButtonStyle,
   addNewRiskButtonStyle,
+  riskActionsStyle,
+  riskToolbarStyle,
+  riskViewControlsStyle,
   riskPopoverStyle,
   riskPopoverContentStyle,
   riskMenuItemStyle,
@@ -62,6 +65,7 @@ import { getEffectiveRiskLevel } from "../../../application/utils/riskLevel";
 import { text } from "../../themes/palette";
 import { chartTheme } from "../../themes/chartTheme";
 import { riskCalendarDay, toLocalDateOnly } from "../../tools/isoDateToString";
+import { getMitigationStatus } from "../../../application/utils/mitigationStatus";
 
 /**
  * Set initial loading status for all CRUD process
@@ -356,7 +360,7 @@ const RiskManagement = () => {
         risk_owner: ownerName,
         severity: risk.severity || "-",
         likelihood: risk.likelihood || "-",
-        mitigation_status: risk.mitigation_status || "-",
+        mitigation_status: getMitigationStatus(risk),
         risk_level: getEffectiveRiskLevel(risk) || "-",
         deadline: toLocalDateOnly(riskCalendarDay(risk.deadline)) || "-",
       };
@@ -670,7 +674,7 @@ const RiskManagement = () => {
       loadingToast={isLoading.loading && <CustomizableToast title={isLoading.message} />}
     >
       <Stack className="risk-management-row" sx={riskMainStackStyle}>
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-end">
+        <Stack direction="row" sx={riskToolbarStyle}>
           <Box sx={riskFilterRowStyle}>
             <div data-joyride-id="risk-filters">
               <TableFilter
@@ -682,21 +686,23 @@ const RiskManagement = () => {
                 getFieldValue={getRiskFieldValue}
               />
             </div>
-            <ColumnSelector
-              columns={allColumns}
-              visibleColumns={visibleColumns}
-              onToggleColumn={toggleColumn}
-              onResetToDefaults={resetToDefaults}
-            />
-            <SearchBox
-              placeholder="Search risks..."
-              value={searchTerm}
-              onChange={setSearchTerm}
-              inputProps={{ "aria-label": "Search risks" }}
-              fullWidth={false}
-            />
+            <Box sx={riskViewControlsStyle}>
+              <ColumnSelector
+                columns={allColumns}
+                visibleColumns={visibleColumns}
+                onToggleColumn={toggleColumn}
+                onResetToDefaults={resetToDefaults}
+              />
+              <SearchBox
+                placeholder="Search risks..."
+                value={searchTerm}
+                onChange={setSearchTerm}
+                inputProps={{ "aria-label": "Search risks" }}
+                fullWidth={false}
+              />
+            </Box>
           </Box>
-          <Stack direction="row" gap="8px" alignItems="center">
+          <Stack direction="row" sx={riskActionsStyle}>
             <ExportMenu
               data={exportData}
               columns={exportColumns}

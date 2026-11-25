@@ -265,7 +265,7 @@ function FieldPreview({ field }: { field: FormField }) {
           <PreviewFieldLabel label={field.label} guidanceText={field.guidanceText} />
           <Box
             sx={{
-              minHeight: "30px",
+              minHeight: "34px",
               display: "flex",
               alignItems: "center",
               px: "12px",

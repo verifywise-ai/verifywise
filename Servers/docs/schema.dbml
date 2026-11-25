@@ -744,12 +744,14 @@ Table ai_incident_managements {
   type varchar [not null]
   severity varchar [not null]
   status varchar [not null]
-  occurred_date timestamp [not null]
-  date_detected timestamp [not null]
-  reporter varchar [not null]
+  occurred_date date [not null]
+  date_detected date [not null]
+  reporter varchar [not null, note: 'Name: the reporter_id user, or free text (Jira, older rows)']
+  reporter_id integer [ref: > users.id, note: 'ON DELETE SET NULL']
   approval_status varchar [not null]
   approved_by varchar
-  approval_date timestamp
+  approved_by_id integer [ref: > users.id, note: 'ON DELETE SET NULL; set by the server']
+  approval_date date
   approval_notes text
   categories_of_harm text[] [not null, default: '[]']
   affected_persons_groups text
@@ -989,6 +991,11 @@ Table vendors {
   past_issues varchar
   regulatory_exposure varchar
   risk_score integer
+  other_names text
+  country varchar
+  registration_number varchar
+  lei varchar
+  sec_cik varchar
 
   Note: 'Create a new vendor with comprehensive validation'
 }

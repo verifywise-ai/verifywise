@@ -28,6 +28,7 @@ function DatePicker({
   minDate,
   onAccept,
   isFieldReadOnly = false,
+  isClearable = false,
 }: DatePickerProps) {
   const theme = useTheme();
   const generatedId = React.useId();
@@ -111,7 +112,14 @@ function DatePicker({
           disabled={disabled}
           slotProps={{
             // Only when asked, so other pickers keep their own read-only behaviour.
-            ...(isFieldReadOnly ? { field: { readOnly: true } } : {}),
+            ...(isFieldReadOnly || isClearable
+              ? {
+                  field: {
+                    ...(isFieldReadOnly ? { readOnly: true } : {}),
+                    ...(isClearable ? { clearable: true } : {}),
+                  },
+                }
+              : {}),
             textField: {
               id: fieldId,
               onBlur,

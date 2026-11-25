@@ -8,10 +8,23 @@ import {
   getWeakestControlsQuery,
 } from "../../../utils/readiness.utils";
 import { getEvidenceGapsQuery } from "../../../utils/evidenceAi.utils";
-import { getPriorFactsSnapshotQuery } from "../../../utils/reportRunAnalysis.utils";
+import {
+  getPriorFactsSnapshotByTemplateQuery,
+  getPriorFactsSnapshotQuery,
+} from "../../../utils/reportRunAnalysis.utils";
+import { E23_KIND } from "../e23/e23Parameters";
 import logger from "../../../utils/logger/fileLogger";
 import type { AiBlocks } from "./runAnalyzers";
-import { FACTS_SCHEMA_VERSION, collectFacts, renderFacts, type FactsSnapshot } from "./facts";
+import { flattenFrameworkRequirements } from "./prompts";
+import { isBoardRun } from "./e23Gap";
+import {
+  FACTS_SCHEMA_VERSION,
+  FORMAL_FIX_IT_LABEL,
+  collectFacts,
+  formalFactsView,
+  renderFacts,
+  type FactsSnapshot,
+} from "./facts";
 
 /**
  * frameworks.id -> readiness framework_type.
@@ -36,7 +49,8 @@ const READINESS_FRAMEWORK_IDS: Record<string, number> = {
  *
  * complianceGap and vendorRisk stay off — they are the new, project-scoped
  * analyzers, and enabling them here would add unbudgeted spend to every manual
- * report. Phase 3 lets the wizard choose.
+ * report. Phase 3 lets the wizard choose. e23Gap stays off too: it belongs to
+ * the OSFI E-23 template, which always sends its own blocks.
  */
 const LEGACY_BLOCKS: AiBlocks = {
   sectionSummaries: true,
@@ -46,6 +60,7 @@ const LEGACY_BLOCKS: AiBlocks = {
   riskAnalysis: true,
   complianceGap: false,
   vendorRisk: false,
+  e23Gap: false,
 };
 
 const NO_BLOCKS: AiBlocks = {
@@ -56,6 +71,7 @@ const NO_BLOCKS: AiBlocks = {
   riskAnalysis: false,
   complianceGap: false,
   vendorRisk: false,
+  e23Gap: false,
 };
 
 export function resolveBlocks(request: ReportGenerationRequest): AiBlocks {
@@ -201,6 +217,16 @@ export function collectAllowedOwners(reportData: ReportData): string[] {
   harvest(sections.compliance?.controls, ["owner", "approver"]);
   harvest(sections.trainingRegistry?.records, ["owner"]);
   harvest(sections.policyManager?.policies, ["owner", "reviewer"]);
+  harvest(flattenFrameworkRequirements(sections.frameworkRequirements), [
+    "owner",
+    "reviewer",
+    "approver",
+  ]);
+  // An E-23 run's fix-it owners: requirement owners and models' owner roles.
+  // "Unassigned" is dropped by harvest like every other placeholder.
+  harvest(sections.e23FixItList?.items, ["owner"]);
+  // The collector's lookup-miss placeholder is not a person.
+  owners.delete("Unknown user");
 
   return Array.from(owners);
 }
@@ -213,13 +239,31 @@ export function collectAllowedOwners(reportData: ReportData): string[] {
  * the caller needs both. `prior` is that stored snapshot; with none supplied
  * the rendered block simply carries no change lines. The parameter exists from
  * the start so §10 is a one-argument change at the call site, not a rewrite.
+ *
+ * `formalFacts` is the block for the analyzers whose output prints in the
+ * formal report: on an E-23 run the fix-it list is reduced to its counts
+ * there (spec 8.5 vs 8.6), and the board version also loses the named MRM
+ * exceptions (spec 8.3). Otherwise it equals `facts`.
  */
 export function collectFactsInput(
   reportData: ReportData,
   prior?: FactsSnapshot | null,
-): { snapshot: FactsSnapshot; facts: string } {
+): { snapshot: FactsSnapshot; facts: string; formalFacts: string } {
   const snapshot = collectFacts(reportData);
-  return { snapshot, facts: renderFacts(snapshot, prior) };
+  // An E-23 run's facts read as words ("rules that fired: 0"), never as field
+  // names: the model copies what it sees, and a live run printed
+  // "validatedNothingOpen" in the formal report. Other reports are unchanged.
+  const humanNames = reportData?.metadata?.reportKind === E23_KIND;
+  const facts = renderFacts(snapshot, prior, { humanNames });
+  const board = isBoardRun(reportData);
+  const formalFacts =
+    snapshot.sections.e23FixItList || board
+      ? renderFacts(formalFactsView(snapshot, { board }), formalFactsView(prior, { board }), {
+          labels: { e23FixItList: FORMAL_FIX_IT_LABEL },
+          humanNames,
+        })
+      : facts;
+  return { snapshot, facts, formalFacts };
 }
 
 /**
@@ -250,17 +294,25 @@ function isFactsSnapshot(value: any): value is FactsSnapshot {
  * generateReport's catch would otherwise drop every analysis because a
  * comparison could not be made.
  *
- * A run with no schedule (a manual report) has no predecessor, so the query is
- * skipped entirely and the caller renders exactly what it renders today.
+ * A run with no schedule has no predecessor, so the query is skipped and the
+ * caller renders exactly what it renders today. The one exception is an OSFI
+ * E-23 report (spec 8.10): many customers run it by hand each quarter, so a
+ * run with no schedule compares against the organization's previous run of
+ * the same template, whatever triggered it. A scheduled E-23 run keeps
+ * comparing against its own schedule.
  */
 export async function collectPriorFacts(
   scheduledReportId: number | undefined,
   organizationId: number,
+  opts: { templateId?: number; kind?: string } = {},
 ): Promise<FactsSnapshot | null> {
-  if (!scheduledReportId) return null;
+  const byTemplate = !scheduledReportId && opts.kind === E23_KIND && !!opts.templateId;
+  if (!scheduledReportId && !byTemplate) return null;
 
   try {
-    const stored = await getPriorFactsSnapshotQuery(scheduledReportId, organizationId);
+    const stored = scheduledReportId
+      ? await getPriorFactsSnapshotQuery(scheduledReportId, organizationId)
+      : await getPriorFactsSnapshotByTemplateQuery(opts.templateId as number, organizationId);
     return isFactsSnapshot(stored) ? stored : null;
   } catch (error) {
     logger.warn("Report analyzers: prior facts lookup failed, degrading to no comparison", error);

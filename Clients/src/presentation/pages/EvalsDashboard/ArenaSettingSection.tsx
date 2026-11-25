@@ -73,11 +73,7 @@ export default function ArenaSettingSection() {
         )}
       </Box>
       {saveError && (
-        <Alert
-          variant="error"
-          body="Could not save the Arena setting. Try again."
-          isToast={false}
-        />
+        <Alert variant="error" body="Could not save the Arena setting. Try again." inline />
       )}
     </Box>
   );

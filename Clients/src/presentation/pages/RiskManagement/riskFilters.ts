@@ -10,6 +10,7 @@ import { Severity } from "../../../domain/enums/severity.enum";
 import { RiskLevelAutoCalculated } from "../../../domain/enums/riskLevelAutoCalculated.enum";
 import type { FilterCondition } from "../../components/Table/FilterBy";
 import { riskCalendarDay } from "../../tools/isoDateToString";
+import { getMitigationStatus } from "../../../application/utils/mitigationStatus";
 import {
   getEffectiveRiskLevel,
   riskLevelBucket,
@@ -89,7 +90,8 @@ export function getRiskFieldValue(
     case "risk_level":
       return getEffectiveRiskLevel(risk) || undefined;
     case "mitigation_status":
-      return risk.mitigation_status;
+      // No status counts as Not Started, as everywhere else.
+      return getMitigationStatus(risk);
     case "risk_owner":
       return risk.risk_owner?.toString();
     case "impact":

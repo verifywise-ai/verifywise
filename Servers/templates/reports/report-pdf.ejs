@@ -23,12 +23,20 @@ const riskChipClass = (level) => {
     .replace(/\s+/g, '-');
   return RISK_CHIP_LEVELS.test(key) ? 'chip-' + key : 'chip-default';
 };
+/*
+ * OSFI E-23 kind runs (metadata.reportKind "osfi_e23") get `e23`, their
+ * formal-report content from services/reporting/e23/formalView.ts, and
+ * `e23Partial` for the blocks in partials/e23. Every E-23 line below is a
+ * whitespace-slurping guard, so a general report renders byte for byte as it
+ * did before (pinned by reportPdfTemplate.e23.test.ts).
+ */
+const isE23 = typeof e23 !== 'undefined' && !!e23;
 %><!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= metadata.projectTitle %> - <%= metadata.frameworkName %> Report</title>
+  <title><% if (isE23) { %><%= e23.institution %> - <%= e23.cover.title %><% } else { %><%= metadata.projectTitle %> - <%= metadata.frameworkName %> Report<% } %></title>
   <style>
     <%- include('./styles/pdf.css') %>
 
@@ -37,12 +45,9 @@ const riskChipClass = (level) => {
       --color-primary: <%= branding.primaryColor || '{{colorBrandPrimary}}' %>;
     }
 
-    /* Group Header Styles */
+    /* Section headings: plain bold text, sentence case */
     .group-header {
-      background: var(--color-background-alt);
-      padding: 16px 24px;
-      margin: 32px 0 24px 0;
-      border-left: 4px solid var(--color-primary);
+      margin: 32px 0 16px 0;
     }
 
     .group-title {
@@ -50,8 +55,6 @@ const riskChipClass = (level) => {
       font-weight: 700;
       color: var(--color-text-primary);
       margin: 0;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
     }
 
     .subsection {
@@ -137,10 +140,19 @@ const riskChipClass = (level) => {
       margin-top: 3px;
     }
   </style>
+  <%_ if (isE23) { -%>
+  <style><%- include('./styles/e23.css') %></style>
+  <%_ } -%>
 </head>
 <body>
   <div class="report-container">
+    <%_ if (isE23 && e23.watermark) { -%>
+    <div class="e23-watermark"><%= e23.watermark %></div>
+    <%_ } -%>
 
+    <%_ if (isE23) { -%>
+    <%- e23Partial('front') %>
+    <%_ } else { -%>
     <!-- Cover Page -->
     <div class="cover-page">
       <% if (branding.organizationLogo) { %>
@@ -174,7 +186,7 @@ const riskChipClass = (level) => {
         <%
         // Determine which groups have content
         const hasRiskAnalysis = sections.projectRisks || sections.vendorRisks || sections.modelRisks;
-        const hasComplianceGovernance = sections.compliance || sections.assessment || sections.clausesAndAnnexes || sections.nistSubcategories;
+        const hasComplianceGovernance = sections.compliance || sections.assessment || sections.clausesAndAnnexes || sections.nistSubcategories || sections.frameworkRequirements;
         const hasOrganization = sections.vendors || sections.models || sections.trainingRegistry || sections.policyManager || sections.incidentManagement;
         let sectionNum = 1;
         %>
@@ -222,6 +234,10 @@ const riskChipClass = (level) => {
         <% } %>
       </ul>
     </div>
+    <%_ } -%>
+    <%_ if (isE23) { -%>
+    <%- e23Partial('sections', { e23Sections: e23.intro }) %>
+    <%_ } -%>
 
     <!-- ============================================ -->
     <!-- EXECUTIVE SUMMARY (AI-Generated) -->
@@ -229,7 +245,7 @@ const riskChipClass = (level) => {
     <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.executiveSummary) { %>
     <div class="ai-executive-summary">
       <div class="group-header">
-        <h2 class="group-title">Executive Summary</h2>
+        <h2 class="group-title">Executive summary</h2>
       </div>
       <div class="ai-analysis-box">
         <div class="ai-analysis-label">AI-Generated Analysis</div>
@@ -270,7 +286,7 @@ const riskChipClass = (level) => {
       </div>
       <% } %>
 
-      <% if (aiSummaries.recommendations && aiSummaries.recommendations.length > 0) { %>
+      <% if (!isE23 && aiSummaries.recommendations && aiSummaries.recommendations.length > 0) { %>
       <div class="subsection">
         <div class="subsection-header">
           <h3 class="subsection-title">Recommendations</h3>
@@ -285,7 +301,7 @@ const riskChipClass = (level) => {
     </div>
     <% } %>
 
-      <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.recommendedActions && aiSummaries.recommendedActions.length > 0) { %>
+      <% if (!isE23 && typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.recommendedActions && aiSummaries.recommendedActions.length > 0) { %>
       <div class="subsection">
         <div class="subsection-header">
           <h3 class="subsection-title">Recommended actions</h3>
@@ -315,13 +331,16 @@ const riskChipClass = (level) => {
       </div>
       <% } %>
 
+    <%_ if (isE23) { /* Recommended actions go to the internal fix-it list for this report. The e23Gap analysis is the last of e23.main. */ -%>
+    <%- e23Partial('sections', { e23Sections: e23.main }) %>
+    <%_ } -%>
     <!-- ============================================ -->
     <!-- COMPLIANCE GAP ANALYSIS (AI-Generated) -->
     <!-- ============================================ -->
     <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.complianceGap) { %>
     <div>
       <div class="group-header">
-        <h2 class="group-title">Compliance Gap Analysis</h2>
+        <h2 class="group-title">Compliance gap analysis</h2>
       </div>
       <div class="ai-analysis-box">
         <div class="ai-analysis-label">AI-Generated Analysis</div>
@@ -387,7 +406,7 @@ const riskChipClass = (level) => {
     <!-- ============================================ -->
     <!-- ANALYSES NOT PRODUCED (AI abstentions) -->
     <!-- ============================================ -->
-    <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.abstentions && Object.keys(aiSummaries.abstentions).length > 0) { %>
+    <% if (!isE23 && typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.abstentions && Object.keys(aiSummaries.abstentions).length > 0) { %>
     <div class="subsection">
       <div class="subsection-header">
         <h3 class="subsection-title">Analyses not produced</h3>
@@ -405,7 +424,7 @@ const riskChipClass = (level) => {
     <!-- ============================================ -->
     <% if (sections.projectRisks || sections.vendorRisks || sections.modelRisks) { %>
     <div class="group-header">
-      <h2 class="group-title">Risk Analysis</h2>
+      <h2 class="group-title">Risk analysis</h2>
     </div>
 
     <!-- Use Case Risks Subsection -->
@@ -595,9 +614,9 @@ const riskChipClass = (level) => {
     <!-- ============================================ -->
     <!-- COMPLIANCE & GOVERNANCE GROUP -->
     <!-- ============================================ -->
-    <% if (sections.compliance || sections.assessment || sections.clausesAndAnnexes || sections.nistSubcategories) { %>
+    <% if (sections.compliance || sections.assessment || sections.clausesAndAnnexes || sections.nistSubcategories || (sections.frameworkRequirements && !isE23)) { %>
     <div class="group-header">
-      <h2 class="group-title">Compliance & Governance</h2>
+      <h2 class="group-title">Compliance & governance</h2>
     </div>
 
     <!-- Controls Subsection (EU AI Act) -->
@@ -866,6 +885,78 @@ const riskChipClass = (level) => {
       <% }); %>
     </div>
     <% } %>
+
+    <!-- Framework requirements (bundled frameworks) Subsection -->
+    <% if (sections.frameworkRequirements && !isE23) { %>
+    <div class="subsection" id="framework-requirements">
+      <div class="subsection-header">
+        <h3 class="subsection-title">Framework requirements</h3>
+      </div>
+
+      <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.sectionSummaries && aiSummaries.sectionSummaries['frameworkRequirements']) { %>
+      <div class="ai-analysis-box">
+        <div class="ai-analysis-label">AI Analysis</div>
+        <div class="ai-analysis-content"><%= aiSummaries.sectionSummaries['frameworkRequirements'] %></div>
+      </div>
+      <% } %>
+
+      <%
+      const frChipClass = function(req) {
+        if (req.isDone) return 'chip-success';
+        if (req.status === 'Needs rework') return 'chip-error';
+        if (req.status === 'Not started') return 'chip-default';
+        return 'chip-warning';
+      };
+      const frEvidenceLine = function(req) {
+        if (!req.evidenceFiles || req.evidenceFiles.length === 0) return '';
+        const more = req.evidenceCount - req.evidenceFiles.length;
+        return 'Evidence: ' + req.evidenceFiles.join(', ') + (more > 0 ? ', and ' + more + ' more' : '');
+      };
+      %>
+
+      <% sections.frameworkRequirements.frameworks.forEach(function(fw, fwIdx) { %>
+      <h4 class="section-subtitle"><%= fw.frameworkName %></h4>
+      <p style="font-size: 11px; margin: 0 0 8px 0; color: var(--color-text-secondary);"><%= fw.rollup.done %> of <%= fw.rollup.total %> requirements implemented or audited</p>
+
+      <% if (typeof frameworkRequirementCharts !== 'undefined' && frameworkRequirementCharts && frameworkRequirementCharts[fwIdx]) { %>
+      <% const frChartBars = new Set(fw.groups.map(function(g) { return g.title; })).size; %>
+      <div class="fr-chart<%= frChartBars <= 8 ? ' avoid-break' : '' %>" style="margin-bottom: 12px;">
+        <%- frameworkRequirementCharts[fwIdx] %>
+      </div>
+      <% } %>
+
+      <% fw.groups.forEach(function(group) { %>
+      <h5 style="font-size: 12px; margin: 12px 0 8px 0; page-break-after: avoid; break-after: avoid; color: var(--color-text-secondary);"><% if (group.useCase) { %><%= group.useCase %> · <% } %><%= group.title %></h5>
+
+      <% if (group.requirements.length > 0) { %>
+      <table class="data-table" style="font-size: 10px;">
+        <thead>
+          <tr>
+            <th>Requirement</th>
+            <th>Status</th>
+            <th>Owner</th>
+            <th>Due date</th>
+            <th>Evidence</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% group.requirements.forEach(function(req) {
+            [req].concat(req.children || []).forEach(function(r) { %>
+          <tr>
+            <td<% if (r.level === 3) { %> style="padding-left: 24px;"<% } %>><%= r.title %><% if (frEvidenceLine(r)) { %><br><span style="font-size: 9px; color: var(--color-text-secondary);"><%= frEvidenceLine(r) %></span><% } %></td>
+            <td><span class="chip <%= frChipClass(r) %>"><%= r.status %></span></td>
+            <td><%= r.owner || '—' %></td>
+            <td style="white-space: nowrap;"><%= r.dueDate || '—' %></td>
+            <td><%= r.evidenceCount %></td>
+          </tr>
+          <% }); }); %>
+        </tbody>
+      </table>
+      <% } %>
+      <% }); %>
+      <% }); %>
+    </div>
+    <% } %>
     <% } %>
 
     <!-- ============================================ -->
@@ -1090,10 +1181,16 @@ const riskChipClass = (level) => {
         <p class="empty-state-text">No incidents have been reported.</p>
       </div>
       <% } %>
+      <% if (sections.incidentManagement.archivedIncidents > 0) { %>
+      <p class="subsection-note"><%= archivedIncidentsNote(sections.incidentManagement.archivedIncidents) %></p>
+      <% } %>
     </div>
     <% } %>
     <% } %>
 
+    <%_ if (isE23 && e23.appendix) { -%>
+    <%- e23Partial('sections', { e23Sections: [e23.appendix] }) %>
+    <%_ } -%>
     <!-- ============================================ -->
     <!-- SECTIONS WITH NO DATA (section notices) -->
     <!-- Deliberately outside every group guard: a report whose only content -->
@@ -1114,6 +1211,7 @@ const riskChipClass = (level) => {
         assessment: 'Assessment tracker',
         clausesAndAnnexes: 'Clauses and annexes',
         nistSubcategories: 'NIST subcategories',
+        frameworkRequirements: 'Framework requirements',
         models: 'AI models',
         vendors: 'Vendors',
         trainingRegistry: 'Training registry',
@@ -1126,6 +1224,28 @@ const riskChipClass = (level) => {
         unresolved_framework: 'The selected framework is a plugin framework, which reports do not yet cover.'
       };
     %>
+    <%
+      const failedNotices = sectionNotices.filter(function(n) { return n.reason === 'collection_failed'; });
+      const emptyNotices = sectionNotices.filter(function(n) { return n.reason !== 'collection_failed'; });
+    %>
+    <% if (failedNotices.length > 0) { %>
+    <div class="subsection">
+      <div class="subsection-header">
+        <h3 class="subsection-title"><%= noticeText.failedTitle %></h3>
+      </div>
+      <p class="section-notice-intro"><%= noticeText.failedIntro %></p>
+      <ul class="section-notice">
+        <% failedNotices.forEach(function(n) { %>
+        <li>
+          <strong><%= NOTICE_LABELS[n.sectionKey] || (typeof e23NoticeLabels !== 'undefined' && e23NoticeLabels[n.sectionKey]) || n.sectionKey %></strong>
+          &mdash; <%= n.detail ? n.detail + ': ' : '' %><%= noticeText.failedSuffix %>
+        </li>
+        <% }); %>
+      </ul>
+      <p class="section-notice-intro"><%= noticeText.failedGuidance %></p>
+    </div>
+    <% } %>
+    <% if (emptyNotices.length > 0) { %>
     <div class="subsection">
       <div class="subsection-header">
         <h3 class="subsection-title">Sections with no data</h3>
@@ -1135,19 +1255,23 @@ const riskChipClass = (level) => {
         report is never mistaken for a clean one.
       </p>
       <ul class="section-notice">
-        <% sectionNotices.forEach(function(n) { %>
+        <% emptyNotices.forEach(function(n) { %>
         <li>
-          <strong><%= NOTICE_LABELS[n.sectionKey] || n.sectionKey %></strong>
+          <strong><%= NOTICE_LABELS[n.sectionKey] || (typeof e23NoticeLabels !== 'undefined' && e23NoticeLabels[n.sectionKey]) || n.sectionKey %></strong>
           &mdash; <%= NOTICE_REASONS[n.reason] || n.reason %>
         </li>
         <% }); %>
       </ul>
     </div>
     <% } %>
+    <% } %>
+    <%_ if (isE23) { -%>
+    <%- e23Partial('closing') %>
+    <%_ } -%>
 
     <!-- Page Footer (rendered as part of content) -->
     <div class="page-footer">
-      <span><%= branding.organizationName %></span>
+      <span><%= isE23 ? e23.footerTitle : branding.organizationName %></span>
       <span><%= metadata.generatedAt.toLocaleDateString() %></span>
     </div>
 

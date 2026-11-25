@@ -1,5 +1,8 @@
 import {
+  calculateModelRiskLevel,
   calculateRiskLevel,
+  canonicalLikelihood,
+  canonicalSeverity,
   computeRiskLevelUpdates,
   getEffectiveRiskLevel,
   normalizeCurrentRiskLevel,
@@ -141,5 +144,65 @@ describe("computeRiskLevelUpdates", () => {
       risk_level_autocalculated: null,
     });
     expect(computeRiskLevelUpdates({ severity: "Weird" }, stored)).toEqual({});
+  });
+});
+
+describe("calculateModelRiskLevel (decision 10)", () => {
+  // The four stored model risk levels for every likelihood (rows) and
+  // severity (columns Negligible ... Catastrophic), worked out by hand from
+  // score = likelihood + 3 x severity: <= 8 Low, <= 12 Medium, <= 16 High,
+  // else Critical.
+  const EXPECTED: Record<string, string[]> = {
+    Rare: ["Low", "Low", "Medium", "High", "High"],
+    Unlikely: ["Low", "Low", "Medium", "High", "Critical"],
+    Possible: ["Low", "Medium", "Medium", "High", "Critical"],
+    Likely: ["Low", "Medium", "High", "High", "Critical"],
+    "Almost Certain": ["Low", "Medium", "High", "Critical", "Critical"],
+  };
+  const cases = LIKELIHOODS.flatMap((l) =>
+    SEVERITIES.map((s, i) => [l, s, EXPECTED[l][i]] as const),
+  );
+
+  it("covers all 25 combinations", () => {
+    expect(cases).toHaveLength(25);
+  });
+
+  it.each(cases)("%s x %s is %s", (likelihood, severity, level) => {
+    expect(calculateModelRiskLevel(likelihood, severity)).toBe(level);
+  });
+
+  it("maps No risk to Low and Very high risk to Critical", () => {
+    expect(calculateRiskLevel("Rare", "Negligible")).toBe("No risk");
+    expect(calculateModelRiskLevel("Rare", "Negligible")).toBe("Low");
+    expect(calculateRiskLevel("Almost Certain", "Catastrophic")).toBe("Very high risk");
+    expect(calculateModelRiskLevel("Almost Certain", "Catastrophic")).toBe("Critical");
+  });
+
+  it("is null when either input is missing or not a label", () => {
+    expect(calculateModelRiskLevel(null, "Minor")).toBeNull();
+    expect(calculateModelRiskLevel("Likely", undefined)).toBeNull();
+    expect(calculateModelRiskLevel("Often", "Minor")).toBeNull();
+  });
+
+  it("is null for the project risk severity Critical, as the validators refuse it", () => {
+    expect(calculateModelRiskLevel("Likely", "Critical")).toBeNull();
+  });
+
+  it("accepts a label in any case", () => {
+    expect(calculateModelRiskLevel("likely", "MAJOR")).toBe("High");
+  });
+});
+
+describe("canonicalLikelihood / canonicalSeverity", () => {
+  it("gives the label's spelling, ignoring case and spaces", () => {
+    expect(canonicalLikelihood("  almost certain ")).toBe("Almost Certain");
+    expect(canonicalSeverity("MAJOR")).toBe("Major");
+  });
+
+  it("is null for anything that is not a label", () => {
+    expect(canonicalLikelihood("Confirmed")).toBeNull();
+    expect(canonicalLikelihood(3)).toBeNull();
+    // "Critical" scores as Catastrophic for project risks but is not on the list.
+    expect(canonicalSeverity("Critical")).toBeNull();
   });
 });

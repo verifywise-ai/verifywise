@@ -16,7 +16,9 @@ import { logProcessing, logFailure } from "../utils/logger/logHelper";
 import {
   validateScheduledReportInput,
   validateTemplateVersionOwnership,
+  validateScheduledReportParameters,
 } from "../services/reporting/scheduledReportService";
+import { parameterErrorMessages } from "../services/reporting/reportParameters";
 import {
   createScheduledReportQuery,
   listScheduledReportsQuery,
@@ -29,6 +31,7 @@ import {
 import { runScheduledReport } from "../services/reporting/reportRunOrchestrator";
 import { parseFrameworkSelection } from "../services/reporting/frameworkSelection";
 import { assertReportScopeAllowed } from "../services/reporting/reportAuthorization";
+import type { ReportViewer } from "../utils/reportVisibility.utils";
 
 /**
  * An unparseable framework entry must not reach the column. An empty selection
@@ -52,8 +55,20 @@ export async function createScheduledReport(req: Request, res: Response): Promis
     organizationId: req.organizationId!,
   });
   try {
+    // Sections and parameter answers are checked against the template
+    // version: a kind's sections are refused outside it, and a schedule of a
+    // kind template must carry every required answer except the period,
+    // which each run derives.
+    const parameters = await validateScheduledReportParameters({
+      templateVersionId: req.body?.templateVersionId,
+      organizationId: req.organizationId!,
+      sectionsConfig: req.body?.sectionsConfig,
+      reportParameters: req.body?.reportParameters,
+      // The resolver derives a missing scope the same way.
+      scope: req.body?.scope ?? (req.body?.projectId ? "project" : "organization"),
+    });
     const errors = [
-      ...validateScheduledReportInput(req.body),
+      ...validateScheduledReportInput(req.body, req.t),
       ...frameworkSelectionErrors(req.body?.frameworkIds),
       // await is load-bearing: see validateTemplateVersionOwnership's note.
       ...(await validateTemplateVersionOwnership(
@@ -61,6 +76,7 @@ export async function createScheduledReport(req: Request, res: Response): Promis
         req.body?.templateVersionId,
         req.organizationId!,
       )),
+      ...parameterErrorMessages(parameters.errors, req.t),
     ];
     if (errors.length) return res.status(400).json(STATUS_CODE[400]({ errors }));
 
@@ -79,7 +95,11 @@ export async function createScheduledReport(req: Request, res: Response): Promis
       return res.status(403).json(STATUS_CODE[403]({ errors: scopeErrors }));
     }
 
-    const row = await createScheduledReportQuery(req.body, req.organizationId!, req.userId!);
+    const row = await createScheduledReportQuery(
+      { ...req.body, reportParameters: parameters.value },
+      req.organizationId!,
+      req.userId!,
+    );
     return res.status(201).json(STATUS_CODE[201](row));
   } catch (error) {
     await logFailure({
@@ -95,64 +115,142 @@ export async function createScheduledReport(req: Request, res: Response): Promis
   }
 }
 
+/**
+ * The viewer, from the authenticated request only. Missing identity becomes
+ * null, which matches no project owner or member, so such a caller sees
+ * organization-wide schedules only.
+ */
+function reportViewer(req: Request): ReportViewer {
+  return { userId: req.userId ?? null, role: req.role ?? null };
+}
+
 export async function listScheduledReports(req: Request, res: Response): Promise<any> {
   try {
-    const rows = await listScheduledReportsQuery(req.organizationId!);
+    const rows = await listScheduledReportsQuery(req.organizationId!, reportViewer(req));
     return res.status(200).json(STATUS_CODE[200](rows));
   } catch (error) {
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
 
-export async function pauseScheduledReport(req: Request, res: Response): Promise<any> {
+/**
+ * One schedule with its template version's parameters_config, so the edit
+ * dialog knows which report details the schedule declares. Read access matches
+ * listScheduledReports: a project schedule the caller may not read is a 404,
+ * like a missing one. The write paths answer the same way (readableSchedule),
+ * so no endpoint confirms that a schedule id exists.
+ */
+export async function getScheduledReport(req: Request, res: Response): Promise<any> {
+  logProcessing({
+    description: "getScheduledReport",
+    functionName: "getScheduledReport",
+    fileName: "scheduledReport.ctrl.ts",
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
   try {
-    await setActiveQuery(Number(req.params.id), req.organizationId!, false);
-    return res.status(200).json(STATUS_CODE[200]({ ok: true }));
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
+    }
+    const row = await getScheduledReportQuery(id, req.organizationId!, reportViewer(req));
+    if (!row) return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
+    return res.status(200).json(STATUS_CODE[200](row));
   } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: "getScheduledReport failed",
+      functionName: "getScheduledReport",
+      fileName: "scheduledReport.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
 
-export async function resumeScheduledReport(req: Request, res: Response): Promise<any> {
+/**
+ * The schedule a write acts on, as the caller sees it: null when it does not
+ * exist in the organization OR the caller may not read it (the same rule as
+ * GET, reportVisibility.utils). Every write treats both cases alike, so the
+ * write endpoints do not reveal which schedule ids exist: run-now and PATCH
+ * answer 404, pause, resume and delete a 200 no-op that writes nothing.
+ * A 403 is left only for a schedule the caller can already see.
+ */
+async function readableSchedule(req: Request): Promise<any> {
+  // A non-numeric id would reach SQL as NaN and fail; it is simply missing.
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return null;
+  return getScheduledReportQuery(id, req.organizationId!, reportViewer(req));
+}
+
+/**
+ * The scope gate for a schedule the caller can see: they must be allowed to
+ * produce a report of its scope (assertReportScopeAllowed), as create,
+ * update, resume and run-now require.
+ */
+function scopeErrorsForSchedule(req: Request, sched: any): Promise<string[]> {
+  return assertReportScopeAllowed({
+    role: req.role ?? null,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+    scope: sched.scope,
+    projectId: sched.project_id,
+  });
+}
+
+/**
+ * Pause, resume and delete: a 200 no-op for a schedule the caller cannot see
+ * (another organization's, a missing one, or one outside their projects —
+ * tenant-isolation expects the cross-tenant case to stay "ok"), a 403 for one
+ * they can see but may not change, and the write otherwise.
+ */
+async function writeVisibleSchedule(
+  action: string,
+  req: Request,
+  res: Response,
+  write: (id: number, organizationId: number) => Promise<void>,
+): Promise<any> {
   try {
-    // Resuming re-enables delivery, so it needs the same scope gate as
-    // create/patch/run-now — but only for a row that actually exists in the
-    // caller's organization. pause/resume/delete are deliberately a 200
-    // no-op for a cross-tenant id (the org-scoped WHERE in setActiveQuery
-    // matches nothing and the caller is still told "ok" — see
-    // tests/integration/tenant-isolation/scheduled-reports.isolation.test.ts,
-    // "makes a cross-tenant resume a no-op on a paused schedule"), so a
-    // 404/403 here must not fire for a row this organization_id can't see in
-    // the first place; it only guards a same-tenant caller who is not
-    // authorized for the row's scope.
-    const sched = await getScheduledReportQuery(Number(req.params.id), req.organizationId!);
+    const sched = await readableSchedule(req);
     if (sched) {
-      const scopeErrors = await assertReportScopeAllowed({
-        role: req.role ?? null,
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-        scope: sched.scope,
-        projectId: sched.project_id,
-      });
+      const scopeErrors = await scopeErrorsForSchedule(req, sched);
       if (scopeErrors.length) {
         return res.status(403).json(STATUS_CODE[403]({ errors: scopeErrors }));
       }
+      await write(sched.id, req.organizationId!);
     }
-
-    await setActiveQuery(Number(req.params.id), req.organizationId!, true);
     return res.status(200).json(STATUS_CODE[200]({ ok: true }));
   } catch (error) {
+    await logFailure({
+      eventType: "Update",
+      description: `${action} of scheduled report ${req.params.id} failed`,
+      functionName: action,
+      fileName: "scheduledReport.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
 
+export async function pauseScheduledReport(req: Request, res: Response): Promise<any> {
+  return writeVisibleSchedule("pauseScheduledReport", req, res, (id, org) =>
+    setActiveQuery(id, org, false),
+  );
+}
+
+// Resuming re-enables delivery, so it is gated like create, PATCH and run-now.
+export async function resumeScheduledReport(req: Request, res: Response): Promise<any> {
+  return writeVisibleSchedule("resumeScheduledReport", req, res, (id, org) =>
+    setActiveQuery(id, org, true),
+  );
+}
+
 export async function deleteScheduledReport(req: Request, res: Response): Promise<any> {
-  try {
-    await softDeleteQuery(Number(req.params.id), req.organizationId!);
-    return res.status(200).json(STATUS_CODE[200]({ ok: true }));
-  } catch (error) {
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
-  }
+  return writeVisibleSchedule("deleteScheduledReport", req, res, softDeleteQuery);
 }
 
 export async function updateScheduledReport(req: Request, res: Response): Promise<any> {
@@ -203,8 +301,10 @@ export async function updateScheduledReport(req: Request, res: Response): Promis
     // recipients — and canViewRunQuery already refuses that same non-member
     // on the read side. Skipping the fetch (and therefore the authz check)
     // whenever scope/projectId are absent left exactly that path ungated.
-    const existing = await getScheduledReportQuery(Number(req.params.id), req.organizationId!);
-    if (existing) {
+    // A schedule the caller cannot read is a 404, like a missing one.
+    const existing = await readableSchedule(req);
+    if (!existing) return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
+    {
       const effectiveScope = input.scope ?? existing.scope;
       const effectiveProjectId =
         input.projectId !== undefined ? input.projectId : existing.project_id;
@@ -228,6 +328,15 @@ export async function updateScheduledReport(req: Request, res: Response): Promis
         }
       }
 
+      // The caller must be allowed to produce the schedule's CURRENT scope
+      // too, not only the post-patch one: every member can see an
+      // organization-wide schedule, and without this an Editor could move it
+      // into a project of theirs and take over its delivery.
+      const currentErrors = await scopeErrorsForSchedule(req, existing);
+      if (currentErrors.length) {
+        return res.status(403).json(STATUS_CODE[403]({ errors: currentErrors }));
+      }
+
       // Authorization runs against the effective post-patch scope on EVERY
       // PATCH to an existing row, not only ones that touch scope/projectId.
       const authzErrors = await assertReportScopeAllowed({
@@ -240,17 +349,51 @@ export async function updateScheduledReport(req: Request, res: Response): Promis
       if (authzErrors.length) {
         return res.status(403).json(STATUS_CODE[403]({ errors: authzErrors }));
       }
+
+      // New sections, answers or scope are checked against the schedule's
+      // own template version, each against the stored value of the others
+      // when only one is patched. The validated answers replace the raw ones.
+      if (
+        input.reportParameters !== undefined ||
+        input.sectionsConfig !== undefined ||
+        input.scope !== undefined
+      ) {
+        const parameters = await validateScheduledReportParameters({
+          templateVersionId: existing.template_version_id,
+          organizationId: req.organizationId!,
+          sectionsConfig: input.sectionsConfig ?? existing.sections_config,
+          reportParameters: input.reportParameters ?? existing.report_parameters,
+          scope: effectiveScope,
+        });
+        if (parameters.errors.length) {
+          return res
+            .status(400)
+            .json(STATUS_CODE[400]({ errors: parameterErrorMessages(parameters.errors, req.t) }));
+        }
+        if (input.reportParameters !== undefined) input.reportParameters = parameters.value;
+      }
     }
 
-    // Re-validate the delivery block if it is being replaced, so a PATCH
-    // cannot smuggle in the malformed recipients that create rejects.
-    if (input.deliveryConfig !== undefined || input.sectionsConfig !== undefined) {
-      const errors = validateScheduledReportInput({
-        scope: input.scope ?? "organization",
-        projectId: input.projectId,
-        sectionsConfig: input.sectionsConfig ?? { sections: [{ reportSectionKey: "placeholder" }] },
-        deliveryConfig: input.deliveryConfig ?? { saveToStorage: true },
-      } as any);
+    // Re-validate the delivery and schedule blocks if they are being replaced,
+    // so a PATCH cannot smuggle in what create rejects (malformed recipients,
+    // a quarterly schedule with no anchor month).
+    if (
+      input.deliveryConfig !== undefined ||
+      input.sectionsConfig !== undefined ||
+      input.scheduleConfig !== undefined
+    ) {
+      const errors = validateScheduledReportInput(
+        {
+          scope: input.scope ?? "organization",
+          projectId: input.projectId,
+          sectionsConfig: input.sectionsConfig ?? {
+            sections: [{ reportSectionKey: "placeholder" }],
+          },
+          deliveryConfig: input.deliveryConfig ?? { saveToStorage: true },
+          scheduleConfig: input.scheduleConfig ?? { frequency: "daily" },
+        } as any,
+        req.t,
+      );
       if (errors.length) return res.status(400).json(STATUS_CODE[400]({ errors }));
     }
 
@@ -273,16 +416,11 @@ export async function updateScheduledReport(req: Request, res: Response): Promis
 
 export async function runScheduledReportNow(req: Request, res: Response): Promise<any> {
   try {
-    const sched = await getScheduledReportQuery(Number(req.params.id), req.organizationId!);
+    // A schedule the caller cannot read is a 404, like a missing one.
+    const sched = await readableSchedule(req);
     if (!sched) return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
 
-    const scopeErrors = await assertReportScopeAllowed({
-      role: req.role ?? null,
-      userId: req.userId!,
-      organizationId: req.organizationId!,
-      scope: sched.scope,
-      projectId: sched.project_id,
-    });
+    const scopeErrors = await scopeErrorsForSchedule(req, sched);
     if (scopeErrors.length) {
       return res.status(403).json(STATUS_CODE[403]({ errors: scopeErrors }));
     }
@@ -290,6 +428,15 @@ export async function runScheduledReportNow(req: Request, res: Response): Promis
     await runScheduledReport(sched, { triggeredBy: "manual", userId: req.userId! });
     return res.status(202).json(STATUS_CODE[202]({ queued: true }));
   } catch (error) {
+    await logFailure({
+      eventType: "Create",
+      description: `run-now of scheduled report ${req.params.id} failed`,
+      functionName: "runScheduledReportNow",
+      fileName: "scheduledReport.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }

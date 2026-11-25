@@ -2,7 +2,7 @@
 
 > **Scope:** VerifyWise Node/TypeScript backend (`Servers/`), plus the frontend isolation tests in `Clients/` (§6.4).  
 > **Policy owner:** Technical Lead / Security reviewer  
-> **Last updated:** 2026-09-13
+> **Last updated:** 2026-10-31
 
 ## 1. Purpose
 
@@ -34,15 +34,27 @@ The cross-tenant isolation test matrix covers these entities first:
 
 These tables are intentionally global and must **not** be added to the tenant-isolation registry:
 
-| Table                     | Reason                                                             |
-| ------------------------- | ------------------------------------------------------------------ |
-| `organizations`           | Tenant root.                                                       |
-| `roles`                   | Global role definitions.                                           |
-| `frameworks`              | Global framework catalog; tenant linkage is `projects_frameworks`. |
-| `*_struct_*`              | Framework structure tables (shared reference data).                |
-| `subscription_*`, `tiers` | Billing metadata.                                                  |
+| Table                     | Reason                                                                                                                                                                                                        |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `organizations`           | Tenant root.                                                                                                                                                                                                  |
+| `roles`                   | Global role definitions.                                                                                                                                                                                      |
+| `frameworks`              | Global framework catalog; tenant linkage is `projects_frameworks`.                                                                                                                                            |
+| `*_struct_*`              | Framework structure tables (shared reference data).                                                                                                                                                           |
+| `subscription_*`, `tiers` | Billing metadata.                                                                                                                                                                                             |
+| `vrdb_*`                  | The vendor risk database: public records copied from official lists or answered by the databases it reads through, and the state of each key it asked them by (`vrdb_sources`, `vrdb_records`, `vrdb_sync_runs`, `vrdb_lookups`: a CPE vendor token or a CIK, which name a company, never an organization). No tenant data; written only by the sync job and the run-time lookup, and shared by every organization on purpose: an answer one run stored serves the next run of any organization. |
 
 If you add a new shared table, document it in the `sharedTables` allow-list in `Servers/scripts/auditTenantIsolationCoverage.ts` with a justification comment.
+
+The tenant side of the vendor risk database is not shared: `vendor_vrdb_matches`, the records the vendors of an organization matched, carries `organization_id` and is in the isolation registry. `vendor-vrdb-matches.isolation.test.ts` checks that a vendor of organization B never gets a row of organization A from the shared copy, that deleting a vendor removes its rows, and that every query of the table in `Servers/utils/vrdb.utils.ts` filters on `organization_id`.
+
+#### Shared state outside the database
+
+Redis keys that hold tenant data carry the organization (`buildOrgCacheKey`, `org_<id>`). One family of keys is shared by all organizations on purpose:
+
+| Redis keys    | Reason                                                                                                                                                                                                                                              |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vr:web:v1:*` | The web research cache (`Servers/services/webResearch/webCache.ts`): public pages, `robots.txt` files and search answers, fetched with no credentials and one bot identity. A key is the hash of an address or a query and a value holds nothing about an organization. Never put tenant data in it. |
+| `vrdb:spacer:*` | The request windows of the NVD and the SEC (`Servers/services/vendorResearch/records/sharedSpacer.ts`), which every worker shares because the limits are per client: the start times of the latest requests, in milliseconds, and a counter. Nothing about an organization or a vendor. |
 
 ### 2.4 Deferred scoped tables (first pass)
 
@@ -115,6 +127,15 @@ if (!organizationId) {
   throw new Error(`organizationId missing in job ${job.id}`);
 }
 ```
+
+Two readers of the vendor research cross organizations on purpose, and only these two:
+
+- **The script** `Servers/scripts/vendorResearchUnknownHosts.ts`, run by a maintainer, reads the traces of the completed runs of every organization and prints only host names and two counts for each (runs, organizations), never an organization, a vendor or an address.
+- **The scheduled scan.** The hourly job `vendor_research_scan` (`scheduleVendorResearchScan` in `Servers/services/vendorResearch/queue.ts`) is scheduled with `data: {}`, so it carries no `organizationId`, and the rule above does not hold for it. It starts from `listScanOrganizationsQuery` (`Servers/utils/vendorResearch.utils.ts`), the one statement of that file with no `organization_id` filter: `SELECT organization_id, scan_interval_days FROM vendor_research_settings WHERE scan_interval_days IS NOT NULL`. What protects it: it returns only organization ids and an interval, never a vendor, a run or a key; after it `runVendorResearchScan` (`Servers/services/vendorResearch/scan.ts`) works on one organization at a time, and every statement it reaches (`countRunsSinceQuery`, `listDueVendorsQuery`, `startVendorResearch`) filters on that `organization_id`; each run it starts is an ordinary `vendor_research` job with its `organizationId`. The integration tests in `Servers/tests/integration/tenant-isolation/vendor-research-sources.isolation.test.ts` pin both: the scan lists each organization with its own interval, and the due vendors of one organization never include another's. `vendor_research_settings` carries the `tenant_isolation` policy (migration `20261111223040-rls-policies-vendor-research-tables.js`), so when the app connects as the non-owner role (RLS Phase 2, `rls-rollout.md`) this statement has to run through the owner or bypass role or a `SECURITY DEFINER` function, and the scan has to set `app.current_org` for each organization it then works on; otherwise the statement returns no row and the scan starts nothing.
+
+The status job `vrdb_relabel` (`Servers/services/vendorResearch/vrdb/relabel.ts`) carries a list id, not an organization: a change of status in a shared copy concerns the findings of every organization that cite the record. It is not a cross-organization reader either: `findFindingsToRelabelQuery` (`Servers/utils/vrdb.utils.ts`) lists the ids of the organizations, then reads the pending, labelled findings of one organization at a time that match a changed record, every statement on `vendor_vrdb_matches` and `vendor_risk_findings` filtered on `organization_id`, and writes each finding in its own organization: the `UPDATE` of `updateFindingCredibilityQuery` filters on `organization_id`, the finding's id, `status = 'pending'` and the basis it read, and sets only `credibility`, `credibility_basis` and `sources`. It notifies nobody and logs only the list and a count. The static check that every statement on `vendor_vrdb_matches` filters on `organization_id`, the status job's included, is in `Servers/tests/integration/tenant-isolation/vendor-vrdb-matches.isolation.test.ts`; the job's integration test (`Servers/tests/integration/vrdb.relabel.test.ts`) relabels the findings of two organizations in one job, each stored under its own `organization_id`, and leaves the findings a person decided and those that cite a record still on its list as they were.
+
+The backfill of the credibility label, `Servers/scripts/vendorResearchBackfillCredibility.ts`, run by a maintainer, walks every organization but is not a cross-organization reader: it lists the ids of the organizations, then reads and writes the findings, runs and vendors of one organization at a time, each statement filtered on `organization_id` (`Servers/utils/vendorResearchBackfill.utils.ts`; the static check and the writes across organizations are in `Servers/tests/integration/tenant-isolation/vendor-risk-findings-backfill.isolation.test.ts`).
 
 ### 4.4 Raw SQL
 

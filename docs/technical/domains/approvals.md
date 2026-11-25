@@ -319,7 +319,9 @@ POST /approval-workflows
 
 1. Current step → Rejected
 2. Request → Rejected
-3. Notification sent to requestor
+3. Notification sent to requestor. For a policy or a use case it links to that item, where the
+   requester can resubmit it; other entities link to the approval workflows page and name no
+   entity on the notification.
 
 **When Approval Occurs (requires_all_approvers = true):**
 
@@ -348,6 +350,7 @@ logged and never blocks the in-app notification.
 | Request created manually                  | Step 1 approvers                                 | `createApprovalRequest` (`approvalRequest.ctrl.ts`)                               |
 | Use case created with a workflow          | Step 1 approvers                                 | `notifyUseCaseApprovalRequested` (`services/projects/approvalRequest.service.ts`) |
 | Workflow attached to an existing use case | Step 1 approvers                                 | same helper, from `updateProjectById`                                             |
+| Rejected use case resubmitted             | Step 1 approvers                                 | same helper, from `resubmitUseCaseApproval`                                       |
 | Step completed, request advances          | Next step's approvers, plus the requester        | `approveRequest` (`approvalRequest.ctrl.ts`)                                      |
 | Request auto-approved on creation         | The requester only — there is nothing to approve | `notifyApprovalAutoApproved`                                                      |
 | Request rejected / fully approved         | The requester                                    | `rejectRequest` / `approveRequest`                                                |
@@ -379,7 +382,12 @@ workflow:
 While a use case's request is pending or rejected, only holders of `approvalWorkflow.admin` may
 clear or replace its workflow (403 for anyone else); the requester withdraws through the withdraw
 route. Clearing it never attaches the frameworks of a rejected use case, and a rejected use case
-cannot go live. Details: [Use cases](./use-cases.md#changing-the-approval-workflow).
+cannot go live. Anyone who may edit a rejected use case can send it for review again under the same
+workflow with `POST /api/v1/projects/:id/resubmit-approval`. A resubmission is never
+auto-approved, whatever the workflow's auto-approve level: a person rejected it, so a person
+reviews it again. Details:
+[Use cases](./use-cases.md#changing-the-approval-workflow) and
+[Resubmitting a rejected use case](./use-cases.md#resubmitting-a-rejected-use-case).
 
 ## Policy requests
 
@@ -520,6 +528,32 @@ ai_incident_managements
 | Editor   | -                | ✓               | ✓ (if assigned) | ✓ (if requestor) |
 | Reviewer | -                | ✓               | ✓ (if assigned) | ✓ (if requestor) |
 | Auditor  | -                | -               | -               | -                |
+
+## AI advisor approval rules
+
+Separate from the workflows above: every AI advisor write tool goes through
+the approval gateway (`Servers/advisor/approval/approvalGateway.ts`), which
+asks the rule engine (`ruleEngine.ts`) whether to run it at once, queue it for
+an Admin, or refuse it. Default rules are in `rules/defaultRules.ts`; an
+organization can add or override rules by name through
+`/api/ai-approval-rules`, which needs `aiConfirmation.admin` to create, update
+or delete (Admins by default). Listing and the dry run (`POST /test`) only need
+a login.
+
+- **Requester role.** The gateway looks up the requester's current role in the
+  organization and passes it as the `user_role` fact. A user whose role can't
+  be resolved is `Unknown`, which matches no role rule. If the lookup itself
+  fails, the write is refused rather than evaluated without a role. Until
+  2026-11 no role was passed and every requester was `Editor`, so role rules
+  never matched.
+- **`auditor-write-block`.** Refuses every advisor write by an Auditor except
+  `AUDITOR_WRITE_TOOLS`: tools that run without approval (info level), as the
+  requester, on the requester's own records. Today that is marking
+  notifications read. A tool that needs approval runs as the approving Admin,
+  so it can't act for the Auditor. The refusal shows the rule's reason.
+- **Limit.** The rule matches the built-in role name `Auditor`. A custom
+  read-only role is not covered by it and relies on each tool's own permission
+  check for the user who asked.
 
 ## Utility Functions
 

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Stack,
   Table,
@@ -21,15 +21,28 @@ import Field from "../../components/Inputs/Field";
 import Select from "../../components/Inputs/Select";
 import {
   useScheduledReports,
+  useScheduledReport,
   useRunNow,
   useSetActive,
   useUpdateScheduledReport,
   useDeleteScheduledReport,
+  useOrganizationName,
 } from "../../../application/hooks/useReporting";
+import { useAuth } from "../../../application/hooks/useAuth";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { showAlert } from "../../../infrastructure/api/customAxios";
-
-const FREQUENCIES = ["daily", "weekly", "monthly"];
+import { FREQUENCY_ITEMS, MONTH_ITEMS, withFrequency } from "./scheduleOptions";
+import ReportDetailsStep from "./ReportDetailsStep";
+import {
+  PERIOD_KEYS,
+  buildParameterPrefill,
+  declaredFields,
+  reportRequestErrorMessage,
+  todayIso,
+  toRequestParameters,
+  validateParameters,
+} from "./reportParameters";
+import type { ReportParameters } from "../../../domain/interfaces/i.reporting";
 
 const COLUMNS = ["Name", "Scope", "Next run", "Status", "Actions"];
 
@@ -37,23 +50,26 @@ const COLUMNS = ["Name", "Scope", "Next run", "Status", "Actions"];
 // would have the two tables disagree on the same word.
 const scopeLabel = (scope: string) => (scope === "project" ? "Project" : "Organization");
 
-const FREQUENCY_ITEMS = FREQUENCIES.map((f) => ({
-  _id: f,
-  name: f.charAt(0).toUpperCase() + f.slice(1),
-}));
-
 const FORMAT_ITEMS = [
   { _id: "pdf", name: "PDF" },
   { _id: "docx", name: "Word (DOCX)" },
 ];
 
-// The three fields worth editing in place. Scope, sections and AI blocks stay
-// in the create wizard — changing those is a different report, not an edit.
+// The fields worth editing in place: name, format and schedule here, plus the
+// report details (report_parameters) the schedule's template version declares,
+// kept apart in parameterEdits. Scope, sections and AI blocks stay in the
+// create wizard — changing those is a different report, not an edit.
 type Draft = {
   id: number;
   name: string;
   format: "pdf" | "docx";
-  schedule: { frequency: string; hour: number; minute: number; timezone: string };
+  schedule: {
+    frequency: string;
+    hour: number;
+    minute: number;
+    timezone: string;
+    anchorMonth?: number;
+  };
 };
 
 export default function ScheduledReportsTab() {
@@ -65,9 +81,76 @@ export default function ScheduledReportsTab() {
   const deleteReport = useDeleteScheduledReport();
   const [draft, setDraft] = useState<Draft | null>(null);
 
+  // Report details: the legacy list does not carry the version's declared
+  // fields, so the dialog loads the schedule itself. Edits win over the stored
+  // answers; errors show on edited fields, or on all of them after a Save
+  // attempt, as in the run wizard. data is only ever a successful load.
+  const detail = useScheduledReport(draft?.id);
+  const [parameterEdits, setParameterEdits] = useState<ReportParameters>({});
+  const [touched, setTouched] = useState<Set<string>>(() => new Set());
+  const [saveAttempted, setSaveAttempted] = useState(false);
+  const declared = detail.data?.parameters_config?.fields;
+  // Period fields are never stored on a schedule (each run derives them), so a
+  // version declaring only those has nothing to edit here.
+  const fields = useMemo(() => declaredFields(declared), [declared]);
+  const hasDetails = fields.some((f) => !PERIOD_KEYS.includes(f.key));
+  const today = todayIso();
+  const storedParameters = detail.data?.report_parameters;
+  // The same defaults as the run wizard, for answers the schedule lacks.
+  const { userToken } = useAuth();
+  const { data: organizationName = "" } = useOrganizationName(hasDetails);
+  const userFullName = [userToken?.name, userToken?.surname].filter(Boolean).join(" ");
+  const prefill = useMemo(
+    () =>
+      buildParameterPrefill(fields, {
+        last: { parameters: storedParameters ?? {}, periodEnd: null },
+        organizationName,
+        userFullName,
+        today,
+      }),
+    [fields, storedParameters, organizationName, userFullName, today],
+  );
+  const parameterValues = { ...prefill, ...parameterEdits };
+  // The details are sent, and so validated, only when the user changed what
+  // would be sent: a rename must not resubmit or be blocked by stored answers.
+  const requestParameters = toRequestParameters(fields, parameterValues, false);
+  const prefillParameters = toRequestParameters(fields, prefill, false);
+  const detailsChanged =
+    hasDetails &&
+    Object.keys(requestParameters).some((k) => requestParameters[k] !== prefillParameters[k]);
+  const parameterErrors = hasDetails
+    ? validateParameters(fields, parameterValues, { today, requirePeriod: false })
+    : {};
+  const shownParameterErrors = saveAttempted
+    ? parameterErrors
+    : Object.fromEntries(Object.entries(parameterErrors).filter(([key]) => touched.has(key)));
+  const setParameter = (key: string, value: string | boolean) => {
+    setParameterEdits((prev) => ({ ...prev, [key]: value }));
+    setTouched((prev) => new Set(prev).add(key));
+  };
+  // Until the first load ends it is unknown whether the schedule declares
+  // details. A background refetch keeps the loaded data, so it does not count.
+  // A failed load leaves the stored answers untouched (no reportParameters is
+  // sent), so Save stays available.
+  const detailsLoading = draft != null && detail.isPending;
+  const draftId = draft?.id;
+  const detailFailed = detail.isError && !detail.data && !detail.isFetching;
+  useEffect(() => {
+    if (draftId != null && detailFailed) {
+      showAlert({
+        variant: "error",
+        body: "Could not load the report details. Other changes can still be saved.",
+        isToast: true,
+      });
+    }
+  }, [draftId, detailFailed]);
+
   const onActionError = () => showAlert({ variant: "error", body: "Action failed", isToast: true });
 
-  const openEdit = (r: any) =>
+  const openEdit = (r: any) => {
+    setParameterEdits({});
+    setTouched(new Set());
+    setSaveAttempted(false);
     setDraft({
       id: r.id,
       name: r.name ?? "",
@@ -80,17 +163,40 @@ export default function ScheduledReportsTab() {
         ...(r.schedule_config ?? {}),
       },
     });
+  };
 
   const submitEdit = () => {
-    if (!draft) return;
+    if (!draft || detailsLoading) return;
+    if (detailsChanged && Object.keys(parameterErrors).length > 0) {
+      setSaveAttempted(true);
+      return;
+    }
     updateReport.mutate(
       {
         id: draft.id,
         // scheduleConfig always goes along: the backend recomputes next_run_at
         // only when it is present, and the hook's invalidate refreshes the row.
-        body: { name: draft.name, format: draft.format, scheduleConfig: draft.schedule },
+        // reportParameters only when the details were changed, which also
+        // means the version declares them (the server rejects answers a
+        // template does not ask for).
+        body: {
+          name: draft.name,
+          format: draft.format,
+          scheduleConfig: draft.schedule,
+          ...(detailsChanged ? { reportParameters: requestParameters } : {}),
+        },
       },
-      { onSuccess: () => setDraft(null), onError: onActionError },
+      {
+        onSuccess: () => setDraft(null),
+        // A 400 here names the problem (e.g. a day of month past 28 on a
+        // quarterly schedule), so show the server's words.
+        onError: (error) =>
+          showAlert({
+            variant: "error",
+            body: reportRequestErrorMessage(error, "Action failed"),
+            isToast: true,
+          }),
+      },
     );
   };
 
@@ -175,10 +281,15 @@ export default function ScheduledReportsTab() {
           isOpen
           onClose={() => setDraft(null)}
           title="Edit scheduled report"
-          description="Update the name, output format and delivery schedule."
+          description={
+            hasDetails
+              ? "Update the name, output format, delivery schedule and report details."
+              : "Update the name, output format and delivery schedule."
+          }
           onSubmit={submitEdit}
           submitButtonText="Save"
           isSubmitting={updateReport.isPending}
+          isSubmitDisabled={detailsLoading}
         >
           <Stack spacing={6}>
             <Field
@@ -203,11 +314,26 @@ export default function ScheduledReportsTab() {
               onChange={(e) =>
                 setDraft({
                   ...draft,
-                  schedule: { ...draft.schedule, frequency: String(e.target.value) },
+                  schedule: withFrequency(draft.schedule, String(e.target.value)),
                 })
               }
               getOptionValue={(item) => item._id}
             />
+            {draft.schedule.frequency === "quarterly" && (
+              <Select
+                id="scheduled-report-anchor-month"
+                label="Run in month"
+                value={String(draft.schedule.anchorMonth)}
+                items={MONTH_ITEMS}
+                onChange={(e) =>
+                  setDraft({
+                    ...draft,
+                    schedule: { ...draft.schedule, anchorMonth: Number(e.target.value) },
+                  })
+                }
+                getOptionValue={(item) => item._id}
+              />
+            )}
             <Stack direction="row" spacing={6}>
               <Field
                 id="scheduled-report-hour"
@@ -249,6 +375,16 @@ export default function ScheduledReportsTab() {
                 }
               />
             </Stack>
+            {hasDetails && (
+              <ReportDetailsStep
+                fields={fields}
+                values={parameterValues}
+                errors={shownParameterErrors}
+                onChange={setParameter}
+                mode="schedule"
+                frequency={draft.schedule.frequency}
+              />
+            )}
           </Stack>
         </StandardModal>
       )}

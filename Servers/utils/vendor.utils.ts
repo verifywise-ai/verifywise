@@ -5,17 +5,18 @@ import { VendorsProjectsModel } from "../domain.layer/models/vendorsProjects/ven
 import { QueryTypes, Transaction } from "sequelize";
 import { getUserProjects, updateProjectUpdatedByIdQuery } from "./project.utils";
 import { IVendor } from "../domain.layer/interfaces/i.vendor";
-import { enqueueAutomationAction } from "../services/automations/automationProducer";
-import { TenantAutomationActionModel } from "../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
 import {
   buildVendorReplacements,
   buildVendorUpdateReplacements,
 } from "./automation/vendor.automation.utils";
-import { replaceTemplateVariables } from "./automation/automation.utils";
-import {
-  deleteAllCustomFieldValuesForEntityQuery,
-  fetchCustomFieldsForEntities,
-} from "./customField.utils";
+import { runEventAutomations } from "./automation/automationActions.utils";
+import { fetchCustomFieldsForEntities } from "./customField.utils";
+import { withdrawApprovalRequestQuery } from "./approvalRequest.utils";
+import { ApprovalRequestStatus } from "../domain.layer/enums/approval-workflow.enum";
+import { recordEntityDeletion } from "./changeHistory.base.utils";
+import { findUserFieldOutsideOrganization } from "./user.utils";
+import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+import { calculateVendorRiskScore } from "./vendorScorecard.utils";
 
 export const getAllVendorsQuery = async (organizationId: number): Promise<IVendor[]> => {
   const vendors = await sequelize.query(
@@ -67,16 +68,26 @@ export const getAllVendorsQuery = async (organizationId: number): Promise<IVendo
   return vendorsWithDetails;
 };
 
+/**
+ * @param options.transaction read on this transaction. When the caller holds a transaction, pass
+ *   it: the query then runs on its connection instead of taking a second one from the pool.
+ * @param options.forUpdate lock the vendor row (SELECT ... FOR UPDATE) until
+ *   the transaction ends; requires options.transaction.
+ */
 export const getVendorByIdQuery = async (
   id: number,
   organizationId: number,
+  options: { transaction?: Transaction; forUpdate?: boolean } = {},
 ): Promise<IVendor | null> => {
+  const { transaction } = options;
+  const lock = options.forUpdate && transaction ? " FOR UPDATE" : "";
   const result = await sequelize.query(
-    `SELECT * FROM vendors WHERE organization_id = :organizationId AND id = :id`,
+    `SELECT * FROM vendors WHERE organization_id = :organizationId AND id = :id${lock}`,
     {
       replacements: { organizationId, id },
       mapToModel: true,
       model: VendorModel,
+      ...(transaction ? { transaction } : {}),
     },
   );
   if (!result.length) return null;
@@ -86,6 +97,7 @@ export const getVendorByIdQuery = async (
       replacements: { organizationId, vendor_id: id },
       mapToModel: true,
       model: VendorsProjectsModel,
+      ...(transaction ? { transaction } : {}),
     },
   );
   const vendor = result[0] as VendorModel;
@@ -151,12 +163,14 @@ export const addVendorProjects = async (
   // Selecting the project rows rather than inserting bare values does three
   // things: it tags the link with the project's is_demo (the way
   // projects_frameworks and projects_members are tagged), it keeps the link
-  // inside the organization, and it drops duplicate ids.
+  // inside the organization, and it drops duplicate ids. A link that is
+  // already there is left as it is.
   const vendors_projects = await sequelize.query(
     `INSERT INTO vendors_projects (organization_id, vendor_id, project_id, is_demo)
      SELECT :organizationId, :vendorId, p.id, p.is_demo
        FROM projects p
       WHERE p.organization_id = :organizationId AND p.id IN (:projects)
+     ON CONFLICT (vendor_id, project_id) DO NOTHING
      RETURNING *`,
     {
       replacements: { organizationId, vendorId, projects },
@@ -168,6 +182,69 @@ export const addVendorProjects = async (
   return vendors_projects;
 };
 
+/**
+ * Nullable vendor columns whose Postgres type (enum, integer, timestamp)
+ * rejects ''. The vendor drawer sends '' for a cleared select or date, so ''
+ * means "none" here, as NULL. review_result is VARCHAR and keeps ''.
+ */
+const VENDOR_EMPTY_MEANS_NULL: ReadonlySet<string> = new Set([
+  "review_status",
+  "reviewer",
+  "review_date",
+  "data_sensitivity",
+  "business_criticality",
+  "past_issues",
+  "regulatory_exposure",
+  "risk_score",
+]);
+
+/** The value to write to vendor column `column`: '' becomes NULL where the type needs it. */
+export const vendorColumnValue = (column: string, value: unknown): unknown =>
+  value === "" && VENDOR_EMPTY_MEANS_NULL.has(column) ? null : value;
+
+/**
+ * Tenant guard for a vendor's assignee and reviewer: a new or changed one must
+ * be a member of the organization, or the assignment email would send the
+ * vendor's name and description to another organization's user. Every vendor
+ * write (REST, Advisor, AI app import, demo seed) goes through
+ * createNewVendorQuery / updateVendorByIdQuery, which call this.
+ *
+ * @throws ValidationException naming the first offending field.
+ */
+export const assertVendorUsersInOrganization = async (
+  vendor: Partial<IVendor>,
+  organizationId: number,
+  transaction: Transaction,
+  stored?: Partial<IVendor> | null,
+): Promise<void> => {
+  const outside = await findUserFieldOutsideOrganization(
+    [
+      { field: "assignee", value: vendor.assignee, stored: stored ? stored.assignee : undefined },
+      { field: "reviewer", value: vendor.reviewer, stored: stored ? stored.reviewer : undefined },
+    ],
+    organizationId,
+    transaction,
+  );
+  if (!outside) return;
+  const invalid = outside.reason === "invalid";
+  if (outside.field === "assignee") {
+    throw new ValidationException(
+      invalid
+        ? "The vendor assignee is not a valid user id"
+        : "The vendor assignee must be a member of this organization",
+      "assignee",
+      outside.value,
+    );
+  }
+  throw new ValidationException(
+    invalid
+      ? "The vendor reviewer is not a valid user id"
+      : "The vendor reviewer must be a member of this organization",
+    "reviewer",
+    outside.value,
+  );
+};
+
 export const createNewVendorQuery = async (
   vendor: IVendor,
   organizationId: number,
@@ -176,6 +253,8 @@ export const createNewVendorQuery = async (
   /** Bulk loads turn this off: one automation per row is not what anyone configured. */
   options: { runAutomations: boolean } = { runAutomations: true },
 ): Promise<VendorModel> => {
+  await assertVendorUsersInOrganization(vendor, organizationId, transaction);
+
   // Build dynamic query for optional fields
   const fields = [
     "organization_id",
@@ -217,44 +296,68 @@ export const createNewVendorQuery = async (
   if (vendor.review_status !== undefined) {
     fields.push("review_status");
     values.push("review_status");
-    replacements.review_status = vendor.review_status;
+    replacements.review_status = vendorColumnValue("review_status", vendor.review_status);
   }
   if (vendor.reviewer !== undefined) {
     fields.push("reviewer");
     values.push("reviewer");
-    replacements.reviewer = vendor.reviewer;
+    replacements.reviewer = vendorColumnValue("reviewer", vendor.reviewer);
   }
   if (vendor.review_date !== undefined) {
     fields.push("review_date");
     values.push("review_date");
-    replacements.review_date = vendor.review_date;
+    replacements.review_date = vendorColumnValue("review_date", vendor.review_date);
   }
 
   // Add optional scorecard fields only if provided
   if (vendor.data_sensitivity !== undefined) {
     fields.push("data_sensitivity");
     values.push("data_sensitivity");
-    replacements.data_sensitivity = vendor.data_sensitivity;
+    replacements.data_sensitivity = vendorColumnValue("data_sensitivity", vendor.data_sensitivity);
   }
   if (vendor.business_criticality !== undefined) {
     fields.push("business_criticality");
     values.push("business_criticality");
-    replacements.business_criticality = vendor.business_criticality;
+    replacements.business_criticality = vendorColumnValue(
+      "business_criticality",
+      vendor.business_criticality,
+    );
   }
   if (vendor.past_issues !== undefined) {
     fields.push("past_issues");
     values.push("past_issues");
-    replacements.past_issues = vendor.past_issues;
+    replacements.past_issues = vendorColumnValue("past_issues", vendor.past_issues);
   }
   if (vendor.regulatory_exposure !== undefined) {
     fields.push("regulatory_exposure");
     values.push("regulatory_exposure");
-    replacements.regulatory_exposure = vendor.regulatory_exposure;
+    replacements.regulatory_exposure = vendorColumnValue(
+      "regulatory_exposure",
+      vendor.regulatory_exposure,
+    );
   }
-  if (vendor.risk_score !== undefined) {
-    fields.push("risk_score");
-    values.push("risk_score");
-    replacements.risk_score = vendor.risk_score;
+  // Computed from the scorecard answers; a sent risk_score is ignored.
+  fields.push("risk_score");
+  values.push("risk_score");
+  replacements.risk_score = calculateVendorRiskScore({
+    data_sensitivity: replacements.data_sensitivity,
+    business_criticality: replacements.business_criticality,
+    past_issues: replacements.past_issues,
+    regulatory_exposure: replacements.regulatory_exposure,
+  });
+  // The other names and the identifiers are optional
+  for (const field of [
+    "other_names",
+    "country",
+    "registration_number",
+    "lei",
+    "sec_cik",
+  ] as const) {
+    if (vendor[field] !== undefined) {
+      fields.push(field);
+      values.push(field);
+      replacements[field] = vendor[field];
+    }
   }
 
   const fieldsList = fields.join(", ");
@@ -286,47 +389,14 @@ export const createNewVendorQuery = async (
 
   if (!options.runAutomations) return createdVendor;
 
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat JOIN automations a ON a.organization_id = :organizationId AND a.trigger_id = pat.id JOIN automation_actions_data aa ON aa.organization_id = :organizationId AND a.id = aa.automation_id JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'vendor_added' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
-    if (automation["trigger_key"] === "vendor_added") {
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildVendorReplacements(createdVendor);
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // Enqueue with processed params
-      await enqueueAutomationAction(automation.action_key, {
-        ...processedParams,
-        organizationId,
-      });
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    }
-  }
+  // Every action of every active automation; one flagged legacy keeps only the
+  // event's first. After commit: a rolled-back write must not send the email.
+  await runEventAutomations(
+    organizationId,
+    "vendor_added",
+    () => buildVendorReplacements(createdVendor),
+    { transaction, logContext: `vendor_added, vendor ${vendorId}` },
+  );
   return createdVendor;
 };
 
@@ -346,8 +416,17 @@ export const updateVendorByIdQuery = async (
   },
   organizationId: number,
 ): Promise<IVendor> => {
+  // Read and lock the stored row on the caller's transaction: the "unchanged"
+  // comparison below must see what this UPDATE will overwrite, or a
+  // concurrent save could be overwritten with a non-member that is no
+  // longer the stored value. The risk score is computed from it too.
+  const oldVendor = await getVendorByIdQuery(id, organizationId, {
+    transaction,
+    forUpdate: true,
+  });
+
   const updateVendor: Partial<Record<keyof IVendor, any>> & { organizationId?: number } = {};
-  const setClause = [
+  const columns = [
     "vendor_name",
     "vendor_provides",
     "assignee",
@@ -361,44 +440,68 @@ export const updateVendorByIdQuery = async (
     "business_criticality",
     "past_issues",
     "regulatory_exposure",
-    "risk_score",
-  ]
-    .filter((f) => {
-      // For review and scorecard fields, allow undefined or null to be updated (to clear the field)
-      // For other required fields, only update if they have a value
-      const isReviewField = ["review_result", "review_status", "reviewer", "review_date"].includes(
-        f,
-      );
-      const isScorecardField = [
-        "data_sensitivity",
-        "business_criticality",
-        "past_issues",
-        "regulatory_exposure",
-        "risk_score",
-      ].includes(f);
-      const value = vendor[f as keyof IVendor];
+    "other_names",
+    "country",
+    "registration_number",
+    "lei",
+    "sec_cik",
+  ].filter((f) => {
+    // For review and scorecard fields, allow undefined or null to be updated (to clear the field)
+    // For other required fields, only update if they have a value
+    const isReviewField = ["review_result", "review_status", "reviewer", "review_date"].includes(f);
+    const isScorecardField = [
+      "data_sensitivity",
+      "business_criticality",
+      "past_issues",
+      "regulatory_exposure",
+      // Not scorecard answers, but a person clears them the same way: by sending them empty.
+      "other_names",
+      "country",
+      "registration_number",
+      "lei",
+      "sec_cik",
+    ].includes(f);
+    const value = vendor[f as keyof IVendor];
 
-      if (isReviewField || isScorecardField) {
-        // Review and scorecard fields: include if explicitly provided (even if null/empty)
-        if (value !== undefined) {
-          updateVendor[f as keyof IVendor] = value;
-          return true;
-        }
-      } else {
-        // Required fields: include only if they have a value
-        if (value !== undefined && value) {
-          updateVendor[f as keyof IVendor] = value;
-          return true;
-        }
+    if (isReviewField || isScorecardField) {
+      // Review and scorecard fields: include if explicitly provided (even if null/empty)
+      if (value !== undefined) {
+        updateVendor[f as keyof IVendor] = vendorColumnValue(f, value);
+        return true;
       }
-      return false;
-    })
-    .map((f) => `${f} = :${f}`)
-    .join(", ");
+    } else {
+      // Required fields: include only if they have a value
+      if (value !== undefined && value) {
+        updateVendor[f as keyof IVendor] = value;
+        return true;
+      }
+    }
+    return false;
+  });
 
-  const oldVendor = await getVendorByIdQuery(id, organizationId);
+  // The risk score follows the scorecard answers as they will be stored: the
+  // ones this request writes, else the stored ones. A sent risk_score is ignored.
+  if (oldVendor) {
+    const answer = (field: keyof IVendor) =>
+      field in updateVendor ? updateVendor[field] : oldVendor[field];
+    updateVendor.risk_score = calculateVendorRiskScore({
+      data_sensitivity: answer("data_sensitivity"),
+      business_criticality: answer("business_criticality"),
+      past_issues: answer("past_issues"),
+      regulatory_exposure: answer("regulatory_exposure"),
+    });
+    columns.push("risk_score");
+  }
+  const setClause = columns.map((f) => `${f} = :${f}`).join(", ");
+  // Only a new or changed person is checked: one who has since left the
+  // organization stays on the vendor and must not block every other edit.
+  await assertVendorUsersInOrganization(vendor, organizationId, transaction, oldVendor);
 
-  const query = `UPDATE vendors SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
+  // A request that changes only links names no column: read the row back
+  // instead of building an UPDATE with an empty SET.
+  const query = setClause
+    ? `UPDATE vendors SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`
+    : `SELECT * FROM vendors WHERE organization_id = :organizationId AND id = :id;`;
 
   updateVendor.organizationId = organizationId;
 
@@ -412,89 +515,97 @@ export const updateVendorByIdQuery = async (
     transaction,
   });
 
-  if (vendor.projects && vendor.projects.length > 0) {
-    // Delete old projects first
-    await deleteAuthorizedVendorProjectsQuery(
-      {
-        vendorId: id,
-        userId,
-        role,
-        transaction,
-      },
-      organizationId,
-    );
+  if (!result[0]) return result[0];
 
-    const vendors_projects = await addVendorProjects(
-      id,
-      vendor.projects,
+  // `projects` absent: links unchanged. `projects: []` unlinks every use
+  // case the user can see.
+  if (Array.isArray(vendor.projects)) {
+    await setVisibleVendorProjects(
+      { vendorId: id, projectIds: vendor.projects, userId, role, transaction },
       organizationId,
-      transaction,
     );
-    result[0]["projects"] = vendors_projects.map((p) => p.project_id);
-  } else {
-    const projects = await sequelize.query(
-      "SELECT project_id FROM vendors_projects WHERE organization_id = :organizationId AND vendor_id = :vendor_id",
-      {
-        replacements: { organizationId, vendor_id: id },
-        mapToModel: true,
-        model: VendorsProjectsModel,
-      },
-    );
-    result[0]["projects"] = projects.map((p) => p.project_id);
   }
+  const projects = await sequelize.query(
+    "SELECT project_id FROM vendors_projects WHERE organization_id = :organizationId AND vendor_id = :vendor_id",
+    {
+      replacements: { organizationId, vendor_id: id },
+      mapToModel: true,
+      model: VendorsProjectsModel,
+      transaction,
+    },
+  );
+  result[0]["projects"] = projects.map((p) => p.project_id);
   await updateProjectUpdatedByIdQuery(id, "vendors", organizationId, transaction);
   const updatedVendor = result[0];
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat JOIN automations a ON a.organization_id = :organizationId AND a.trigger_id = pat.id JOIN automation_actions_data aa ON aa.organization_id = :organizationId AND a.id = aa.automation_id JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'vendor_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
-    if (automation["trigger_key"] === "vendor_updated") {
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildVendorUpdateReplacements(oldVendor, updatedVendor);
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // Enqueue with processed params
-      await enqueueAutomationAction(automation.action_key, {
-        ...processedParams,
-        organizationId,
-      });
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    }
-  }
+  // Every action of every active automation; one flagged legacy keeps only the
+  // event's first. After commit: a rolled-back write must not send the email.
+  await runEventAutomations(
+    organizationId,
+    "vendor_updated",
+    () => buildVendorUpdateReplacements(oldVendor, updatedVendor),
+    { transaction, logContext: `vendor_updated, vendor ${id}` },
+  );
   return updatedVendor;
 };
 
+/** Rows that point at a vendor by type and id, with no foreign key to cascade. */
+const VENDOR_LEFTOVERS = [
+  `DELETE FROM custom_field_values WHERE organization_id = :organizationId AND entity_type = 'vendor' AND entity_id = :id`,
+  `DELETE FROM notes WHERE organization_id = :organizationId AND attached_to = 'VENDOR' AND attached_to_id = :idText`,
+  `DELETE FROM task_entity_links WHERE organization_id = :organizationId AND entity_type = 'vendor' AND entity_id = :id`,
+  `DELETE FROM share_links WHERE organization_id = :organizationId AND resource_type = 'vendor' AND resource_id = :id`,
+];
+
+/**
+ * Hard-deletes a vendor (decision 6 of the vendors audit) with everything
+ * that points at it: its risks and their custom field values, its own custom
+ * field values, notes, task links, share links and use case links. Pending
+ * approval requests for it are withdrawn. The vendor and each risk still
+ * active get a "deleted" history entry, as `deletedBy` or, without one (an
+ * Advisor tool), as the system. Returns false, touching nothing, when the
+ * organization has no such vendor.
+ */
 export const deleteVendorByIdQuery = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
+  deletedBy?: number,
 ): Promise<boolean> => {
-  await deleteVendorRisksForVendorQuery(id, organizationId, transaction);
-  await deleteAllCustomFieldValuesForEntityQuery("vendor", id, organizationId, transaction);
+  const [vendorRow] = await sequelize.query<{ id: number }>(
+    `SELECT id FROM vendors WHERE organization_id = :organizationId AND id = :id FOR UPDATE`,
+    { replacements: { organizationId, id }, type: QueryTypes.SELECT, transaction },
+  );
+  if (!vendorRow) return false;
+
+  await deleteVendorRisksForVendorQuery(id, organizationId, transaction, deletedBy);
+  for (const sql of VENDOR_LEFTOVERS) {
+    await sequelize.query(sql, {
+      replacements: { organizationId, id, idText: String(id) },
+      transaction,
+    });
+  }
+  const pendingApprovals = await sequelize.query<{ id: number }>(
+    `SELECT id FROM approval_requests
+      WHERE organization_id = :organizationId AND entity_type = 'vendor' AND entity_id = :id AND status = :pending`,
+    {
+      replacements: { organizationId, id, pending: ApprovalRequestStatus.PENDING },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  );
+  for (const request of pendingApprovals) {
+    await withdrawApprovalRequestQuery(request.id, organizationId, transaction, {
+      changedBy: deletedBy ?? null,
+    });
+  }
+  await recordEntityDeletion(
+    "vendor",
+    id,
+    deletedBy ?? null,
+    organizationId,
+    transaction,
+    deletedBy === undefined,
+  );
   await updateProjectUpdatedByIdQuery(id, "vendors", organizationId, transaction);
   await sequelize.query(
     `DELETE FROM vendors_projects WHERE organization_id = :organizationId AND vendor_id = :id`,
@@ -517,80 +628,73 @@ export const deleteVendorByIdQuery = async (
     },
   );
   const deletedVendor = result[0];
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat JOIN automations a ON a.organization_id = :organizationId AND a.trigger_id = pat.id JOIN automation_actions_data aa ON aa.organization_id = :organizationId AND a.id = aa.automation_id JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'vendor_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
-    if (automation["trigger_key"] === "vendor_deleted") {
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildVendorReplacements(deletedVendor);
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // Enqueue with processed params
-      await enqueueAutomationAction(automation.action_key, {
-        ...processedParams,
-        organizationId,
-      });
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    }
-  }
+  // Nothing deleted (unknown id): no "vendor deleted" email.
+  if (!deletedVendor) return false;
+  // Every action of every active automation; one flagged legacy keeps only the
+  // event's first. After commit: a rolled-back write must not send the email.
+  await runEventAutomations(
+    organizationId,
+    "vendor_deleted",
+    () => buildVendorReplacements(deletedVendor),
+    { transaction, logContext: `vendor_deleted, vendor ${id}` },
+  );
   return result.length > 0;
 };
 
-interface DeleteAuthorizedVendorProjectsParams {
+/** The ids of the use cases the user can see (all of the organization's for an Admin). */
+const visibleProjectIdSet = async (
+  viewer: { userId: number; role: string; transaction?: Transaction },
+  organizationId: number,
+): Promise<Set<number>> =>
+  new Set((await getUserProjects(viewer, organizationId)).map((p) => p.id!));
+
+/**
+ * The ids of `projectIds` the user can see, as numbers, without repeats. A
+ * new vendor is linked only to these, as an update would link it
+ * (setVisibleVendorProjects).
+ */
+export const visibleVendorProjectIds = async (
+  projectIds: unknown[],
+  viewer: { userId: number; role: string; transaction?: Transaction },
+  organizationId: number,
+): Promise<number[]> => {
+  const visible = await visibleProjectIdSet(viewer, organizationId);
+  return Array.from(new Set(projectIds.map(Number))).filter((id) => visible.has(id));
+};
+
+interface SetVisibleVendorProjectsParams {
   vendorId: number;
+  /** The use cases the vendor should be linked to, among those the user can see. */
+  projectIds: unknown[];
   userId: number;
   role: string;
-  transaction?: Transaction;
+  transaction: Transaction;
 }
 
-export const deleteAuthorizedVendorProjectsQuery = async (
-  { vendorId, userId, role, transaction }: DeleteAuthorizedVendorProjectsParams,
+/**
+ * Sets a vendor's links to the use cases the user can see, and leaves its
+ * links to every other use case as they are. A non-Admin doesn't see every
+ * use case, so the client's list can't speak for the others: an id the user
+ * can't see is neither added nor removed.
+ */
+export const setVisibleVendorProjects = async (
+  { vendorId, projectIds, userId, role, transaction }: SetVisibleVendorProjectsParams,
   organizationId: number,
-) => {
-  // 1. Get user-authorized project IDs
-  const userProjects = await getUserProjects({ userId, role, transaction }, organizationId);
-  const userProjectIds = userProjects
-    .map((p) => p.id)
-    .filter((value, index, self) => self.indexOf(value) === index);
+): Promise<void> => {
+  const visible = await visibleProjectIdSet({ userId, role, transaction }, organizationId);
+  if (visible.size === 0) return;
+  const wanted = Array.from(new Set(projectIds.map(Number))).filter((id) => visible.has(id));
 
-  // 2. Delete old links (only authorized ones)
-  if (userProjectIds.length > 0) {
-    await sequelize.query(
-      `
-      DELETE FROM vendors_projects
+  await sequelize.query(
+    `DELETE FROM vendors_projects
       WHERE organization_id = :organizationId
         AND vendor_id = :vendorId
-        AND project_id IN (:userProjectIds)
-      `,
-      {
-        replacements: { organizationId, vendorId, userProjectIds },
-        transaction,
-      },
-    );
-  }
+        AND project_id IN (:visible)
+        ${wanted.length > 0 ? "AND project_id NOT IN (:wanted)" : ""}`,
+    {
+      replacements: { organizationId, vendorId, visible: Array.from(visible), wanted },
+      transaction,
+    },
+  );
+  await addVendorProjects(vendorId, wanted, organizationId, transaction);
 };

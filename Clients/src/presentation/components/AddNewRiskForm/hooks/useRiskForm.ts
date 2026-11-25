@@ -1,5 +1,6 @@
-import { useState, useCallback, useRef, useContext, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router";
+import { useSelector } from "react-redux";
 import { Likelihood, Severity } from "../../RiskLevel/constants";
 import { RiskLikelihood, RiskSeverity } from "../../RiskLevel/riskValues";
 import { RiskFormValues, MitigationFormValues } from "../interface";
@@ -14,7 +15,7 @@ import { ApiResponse } from "../../../../domain/interfaces/i.response";
 import { createProjectRisk } from "../../../../application/repository/projectRisk.repository";
 import { useUpdateProjectRisk } from "../../../../application/hooks/useUpdateProjectRisk";
 import useUsers from "../../../../application/hooks/useUsers";
-import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
+import { selectInputValues } from "../../../../application/redux/ui/uiSlice";
 import { useCanCheck } from "../../../../application/hooks/useCan";
 import { RiskCalculator } from "../../../tools/riskCalculator";
 import { CustomFieldsSectionHandle } from "../../CustomFieldsSection";
@@ -168,7 +169,7 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
   const users = usersProp || hookData.users;
   const usersLoading = usersLoadingProp !== undefined ? usersLoadingProp : hookData.loading;
 
-  const { inputValues } = useContext(VerifyWiseContext);
+  const inputValues = useSelector(selectInputValues);
   const updateProjectRiskMutation = useUpdateProjectRisk();
 
   const isEditingDisabled = !can("risks.edit");
@@ -507,21 +508,21 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
       selectedRiskSeverity.name as RiskSeverity,
     );
 
+    // The residual pair is optional: without both there is no residual level,
+    // and the server stores none.
     const selectedMitigationLikelihood = likelihoodItems.find(
       (r) => r._id === mitigation.mitigationValues.likelihood,
     );
     const selectedMitigationSeverity = riskSeverityItems.find(
       (r) => r._id === mitigation.mitigationValues.riskSeverity,
     );
-    if (!selectedMitigationLikelihood || !selectedMitigationSeverity) {
-      console.error("Could not find selected likelihood or severity");
-      return;
-    }
-
-    const mitigation_risklevel = RiskCalculator.getRiskLevel(
-      selectedMitigationLikelihood.name as RiskLikelihood,
-      selectedMitigationSeverity.name as RiskSeverity,
-    );
+    const mitigation_risklevel =
+      selectedMitigationLikelihood && selectedMitigationSeverity
+        ? RiskCalculator.getRiskLevel(
+            selectedMitigationLikelihood.name as RiskLikelihood,
+            selectedMitigationSeverity.name as RiskSeverity,
+          )
+        : { level: "" };
 
     if (isValid) {
       onLoading(

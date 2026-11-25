@@ -68,10 +68,12 @@ interface CustomFieldsSectionProps {
    * enable its Save button when only custom field values changed.
    */
   onDirtyChange?: (dirty: boolean) => void;
+  /** Shows the values without letting them change (a read-only record). */
+  disabled?: boolean;
 }
 
 const CustomFieldsSection = forwardRef<CustomFieldsSectionHandle, CustomFieldsSectionProps>(
-  ({ entityType, entityId, onPendingChange, onDirtyChange }, ref) => {
+  ({ entityType, entityId, onPendingChange, onDirtyChange, disabled = false }, ref) => {
     const theme = useTheme();
     const queryClient = useQueryClient();
     const isCreateMode = entityId === null || entityId <= 0;
@@ -256,6 +258,7 @@ const CustomFieldsSection = forwardRef<CustomFieldsSectionHandle, CustomFieldsSe
             onStage={stageValue}
             onClear={clearValue}
             onReset={resetValue}
+            disabled={disabled}
           />
         ))}
       </Stack>
@@ -271,6 +274,7 @@ interface CustomFieldRowProps {
   onStage: (definitionId: number, value: unknown) => void;
   onClear: (definitionId: number) => void;
   onReset: (definitionId: number) => void;
+  disabled: boolean;
 }
 
 function normalize(value: unknown, type: ICustomFieldDefinition["field_type"]): unknown {
@@ -309,6 +313,7 @@ const CustomFieldRow: React.FC<CustomFieldRowProps> = ({
   onStage,
   onClear,
   onReset,
+  disabled,
 }) => {
   const theme = useTheme();
 
@@ -378,10 +383,10 @@ const CustomFieldRow: React.FC<CustomFieldRowProps> = ({
 
       <Stack direction="row" spacing={2} alignItems="center">
         <Box sx={{ flex: 1, minWidth: 0 }}>
-          {renderInput({ definition, draft, setDraft, disabled: false })}
+          {renderInput({ definition, draft, setDraft, disabled })}
         </Box>
 
-        {showClear && (
+        {showClear && !disabled && (
           <IconButton
             size="small"
             disableRipple

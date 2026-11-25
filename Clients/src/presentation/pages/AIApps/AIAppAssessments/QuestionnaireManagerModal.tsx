@@ -19,7 +19,7 @@ import {
 } from "../../../../application/hooks/useAiAppBulk";
 import { errorMessage } from "../../../../application/repository/aiAppBulk.repository";
 import type { IAiAppQuestionnaire } from "../../../../domain/interfaces/i.aiAppBulk";
-import { controlButtonSx, controlFieldSx, controlSelectSx } from "../style";
+import { SELECT_MIN_WIDTH } from "../../../components/Inputs/Select/constants";
 
 interface DraftQuestion {
   /** Stable while reordering; the server assigns the real key on save. */
@@ -187,7 +187,6 @@ export default function QuestionnaireManagerModal({ onClose }: { onClose: () => 
                 value={draft.name}
                 onChange={(e) => setDraft({ ...draft, name: e.target.value })}
                 dataTestId="ai-app-questionnaire-name"
-                sx={controlFieldSx}
               />
               <Field
                 id="ai-app-questionnaire-description"
@@ -196,7 +195,6 @@ export default function QuestionnaireManagerModal({ onClose }: { onClose: () => 
                 value={draft.description}
                 onChange={(e) => setDraft({ ...draft, description: e.target.value })}
                 dataTestId="ai-app-questionnaire-description"
-                sx={controlFieldSx}
               />
 
               {draft.questions.map((question, index) => (
@@ -255,7 +253,6 @@ export default function QuestionnaireManagerModal({ onClose }: { onClose: () => 
                             updateQuestion(question.draftId, { label: e.target.value })
                           }
                           dataTestId={`ai-app-question-label-${index}`}
-                          sx={controlFieldSx}
                         />
                       </Box>
                       <Select
@@ -267,7 +264,9 @@ export default function QuestionnaireManagerModal({ onClose }: { onClose: () => 
                         }
                         items={WEIGHT_OPTIONS}
                         dataTestId={`ai-app-question-weight-${index}`}
-                        sx={{ ...controlSelectSx, width: 100 }}
+                        // A column narrower than the select's minimum let it overflow
+                        // the card. Height is the house default, like the Label field.
+                        sx={{ width: SELECT_MIN_WIDTH, flexShrink: 0 }}
                       />
                     </Stack>
                     <Field
@@ -279,7 +278,6 @@ export default function QuestionnaireManagerModal({ onClose }: { onClose: () => 
                         updateQuestion(question.draftId, { description: e.target.value })
                       }
                       dataTestId={`ai-app-question-description-${index}`}
-                      sx={controlFieldSx}
                     />
                   </Stack>
                 </Box>
@@ -292,7 +290,6 @@ export default function QuestionnaireManagerModal({ onClose }: { onClose: () => 
                   startIcon={<Plus size={16} strokeWidth={1.5} />}
                   onClick={addQuestion}
                   testId="ai-app-question-add"
-                  sx={controlButtonSx}
                 />
               </Box>
             </>
@@ -305,7 +302,6 @@ export default function QuestionnaireManagerModal({ onClose }: { onClose: () => 
                   startIcon={<Plus size={16} strokeWidth={1.5} />}
                   onClick={startCreate}
                   testId="ai-app-questionnaire-new"
-                  sx={controlButtonSx}
                 />
               </Box>
               <Stack sx={{ border: `1px solid ${palette.border.dark}`, borderRadius: radiusPx.sm }}>

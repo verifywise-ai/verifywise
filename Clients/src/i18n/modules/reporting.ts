@@ -24,6 +24,8 @@ export const de: Record<string, string> = {
   "Project / Organization": "Projekt / Organisation",
   "AI analyses": "KI-Analysen",
   "Action failed": "Aktion fehlgeschlagen",
+  "Template duplicated": "Vorlage dupliziert",
+  "Failed to duplicate template": "Vorlage konnte nicht dupliziert werden",
   "Add a language-model key in Settings to enable AI insights.":
     "Fügen Sie in den Einstellungen einen Sprachmodell-Schlüssel hinzu, um KI-Einblicke zu aktivieren.",
   "All frameworks in scope": "Alle Rahmenwerke im Umfang",
@@ -43,6 +45,7 @@ export const de: Record<string, string> = {
     "Die zu duplizierende Vorlage konnte nicht geladen werden.",
   "Format:": "Format:",
   "Frameworks:": "Rahmenwerke:",
+  "Framework requirements": "Rahmenwerk-Anforderungen",
   "Hour": "Stunde",
   "Leave empty to include every framework in scope.":
     "Leer lassen, um alle Rahmenwerke im Umfang einzuschließen.",
@@ -68,6 +71,18 @@ export const de: Record<string, string> = {
     "Was dieser Bericht abdeckt und für wen er gedacht ist",
   "Word (DOCX)": "Word (DOCX)",
   "You haven&apos;t created any templates yet.": "Sie haben noch keine Vorlagen erstellt.",
+  "Want a report? We'll create one using the info from your Compliance, Assessment, and Vendor/Risk sections.":
+    "Möchten Sie einen Bericht? Wir erstellen einen anhand der Informationen aus Ihren Bereichen Compliance, Beurteilung und Anbieter/Risiko.",
+  "An OSFI E-23 report covers the whole organization.":
+    "Ein OSFI-E-23-Bericht deckt die gesamte Organisation ab.",
+  "Reporting period:": "Berichtszeitraum:",
+  "Run in month": "Ausführen im Monat",
+  "Unticked, every page is marked as a draft":
+    "Ohne Häkchen wird jede Seite als Entwurf gekennzeichnet",
+  "Could not load the report details. Other changes can still be saved.":
+    "Die Berichtsdetails konnten nicht geladen werden. Andere Änderungen können trotzdem gespeichert werden.",
+  "Update the name, output format, delivery schedule and report details.":
+    "Aktualisieren Sie Name, Ausgabeformat, Zustellungszeitplan und Berichtsdetails.",
 };
 
 export const fr: Record<string, string> = {
@@ -93,6 +108,8 @@ export const fr: Record<string, string> = {
   "Project / Organization": "Projet / Organisation",
   "AI analyses": "Analyses IA",
   "Action failed": "L'action a échoué",
+  "Template duplicated": "Modèle dupliqué",
+  "Failed to duplicate template": "Échec de la duplication du modèle",
   "Add a language-model key in Settings to enable AI insights.":
     "Ajoutez une clé de modèle de langage dans les Paramètres pour activer les analyses IA.",
   "All frameworks in scope": "Tous les référentiels de la portée",
@@ -111,6 +128,7 @@ export const fr: Record<string, string> = {
   "Failed to load the template to duplicate.": "Échec du chargement du modèle à dupliquer.",
   "Format:": "Format :",
   "Frameworks:": "Référentiels :",
+  "Framework requirements": "Exigences du référentiel",
   "Hour": "Heure",
   "Leave empty to include every framework in scope.":
     "Laissez vide pour inclure tous les référentiels de la portée.",
@@ -134,6 +152,18 @@ export const fr: Record<string, string> = {
   "What this report covers and who it is for": "Ce que couvre ce rapport et à qui il est destiné",
   "Word (DOCX)": "Word (DOCX)",
   "You haven&apos;t created any templates yet.": "Vous n'avez encore créé aucun modèle.",
+  "Want a report? We'll create one using the info from your Compliance, Assessment, and Vendor/Risk sections.":
+    "Vous voulez un rapport ? Nous en créerons un à partir des informations de vos sections Conformité, Évaluation et Fournisseurs/Risques.",
+  "An OSFI E-23 report covers the whole organization.":
+    "Un rapport OSFI E-23 couvre l'ensemble de l'organisation.",
+  "Reporting period:": "Période de déclaration :",
+  "Run in month": "Exécuter au mois de",
+  "Unticked, every page is marked as a draft":
+    "Non cochée, chaque page est marquée comme brouillon",
+  "Could not load the report details. Other changes can still be saved.":
+    "Impossible de charger les détails du rapport. Les autres modifications peuvent quand même être enregistrées.",
+  "Update the name, output format, delivery schedule and report details.":
+    "Modifiez le nom, le format de sortie, le calendrier de livraison et les détails du rapport.",
 };
 
 export const es: Record<string, string> = {
@@ -159,6 +189,8 @@ export const es: Record<string, string> = {
   "Project / Organization": "Proyecto / Organización",
   "AI analyses": "Análisis de IA",
   "Action failed": "La acción falló",
+  "Template duplicated": "Plantilla duplicada",
+  "Failed to duplicate template": "No se pudo duplicar la plantilla",
   "Add a language-model key in Settings to enable AI insights.":
     "Agregue una clave de modelo de lenguaje en Configuración para habilitar los análisis de IA.",
   "All frameworks in scope": "Todos los marcos del alcance",
@@ -178,6 +210,7 @@ export const es: Record<string, string> = {
     "No se pudo cargar la plantilla que se va a duplicar.",
   "Format:": "Formato:",
   "Frameworks:": "Marcos:",
+  "Framework requirements": "Requisitos del marco",
   "Hour": "Hora",
   "Leave empty to include every framework in scope.":
     "Déjelo vacío para incluir todos los marcos del alcance.",
@@ -201,4 +234,15 @@ export const es: Record<string, string> = {
   "What this report covers and who it is for": "Qué abarca este informe y a quién está dirigido",
   "Word (DOCX)": "Word (DOCX)",
   "You haven&apos;t created any templates yet.": "Aún no ha creado ninguna plantilla.",
+  "Want a report? We'll create one using the info from your Compliance, Assessment, and Vendor/Risk sections.":
+    "¿Desea un informe? Crearemos uno con la información de sus secciones de Cumplimiento, Evaluación y Proveedores/Riesgos.",
+  "An OSFI E-23 report covers the whole organization.":
+    "Un informe OSFI E-23 abarca toda la organización.",
+  "Reporting period:": "Periodo del informe:",
+  "Run in month": "Ejecutar en el mes",
+  "Unticked, every page is marked as a draft": "Sin marcar, cada página se marca como borrador",
+  "Could not load the report details. Other changes can still be saved.":
+    "No se pudieron cargar los detalles del informe. Los demás cambios se pueden guardar igualmente.",
+  "Update the name, output format, delivery schedule and report details.":
+    "Actualice el nombre, el formato de salida, la programación de entrega y los detalles del informe.",
 };

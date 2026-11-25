@@ -565,9 +565,9 @@ Table and column names are resolved from the structure by `frameworkId`. Invalid
 
 The **Notes** tab uses `notesAttachedTo = "<FRAMEWORK_TYPE>_<ENTITY_TYPE>"` (e.g. `SOC2_CONTROL`). Its values come from `NotesAttachedToEnum` in `Servers/domain.layer/models/notes/notes.model.ts`.
 
-### Reporting limitation
+### Reporting
 
-Generated reports cover only the four core frameworks. `Servers/services/reporting/dataCollector.ts` builds framework sections for ids 1–4 only. A bundled framework on a project adds no framework section to a report. See [Reporting](./reporting.md).
+Generated reports cover bundled frameworks (ids 5–28) through the `frameworkRequirements` section: per framework, requirement progress by group with owners, due dates and evidence. See [Reporting](./reporting.md#framework-requirements-section). Imported (Excel) frameworks are not covered.
 
 ### Known gaps
 

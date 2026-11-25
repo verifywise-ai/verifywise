@@ -28,7 +28,7 @@ This document catalogs the VerifyWise frontend: the app shell, route table, navi
 | `Clients/src/App.tsx` | Top-level component. Sets up global providers, theme, alert toasts, onboarding modal, command palette, smart prompt, user-guide sidebar, and renders `<Routes>{createRoutes(...)}</Routes>`. |
 
 Key `App.tsx` details:
-- **Global providers:** Redux `Provider` + `PersistGate`, `VerifyWiseContext`, `ExtensionsProvider`, `UserGuideSidebarProvider`, `SmartPromptProvider`, `AdvisorConversationProvider`, and five module-specific sidebar contexts (`Evals`, `AIDetection`, `ShadowAI`, `AIGateway`, `AITrustIndex`).
+- **Global providers:** Redux `Provider` + `PersistGate`, `ExtensionsProvider`, `UserGuideSidebarProvider`, `SmartPromptProvider`, `AdvisorConversationProvider`, and five module-specific sidebar contexts (`Evals`, `AIDetection`, `ShadowAI`, `AIGateway`, `AITrustIndex`).
 - **Theme:** `ConditionalThemeWrapper` applies the MUI `light` theme to all routes except `/aiTrustCentre/*` public pages.
 - **Sidebars hidden on:** auth routes (`/login`, `/admin-reg`, `/user-reg`, `/register`, `/forgot-password`, `/reset-password`, `/set-new-password`, `/reset-password-continue`) and public routes (`/use-case-form-intake`, `/intake/*`, `/shared/*`, `/aiTrustCentre/*`).
 - **Onboarding:** `SetupModal` is shown on `/` or `/start-here` when the org creator's onboarding is incomplete. It offers demo data or a blank start.
@@ -87,6 +87,8 @@ The table below lists every defined frontend route, the page component file that
 | `/reporting` | `pages/Reporting/index.tsx` | Assurance | Main sidebar → Reporting | Any authenticated | — |
 | `/vendors` | `pages/Vendors/index.tsx` | Governance | Main sidebar → Vendors | Any authenticated | — |
 | `/vendors/risks` | `pages/Vendors/index.tsx` | Governance | Vendors page → Risks tab | Any authenticated | — |
+| `/vendors/research-findings` | `pages/Vendors/index.tsx` | Governance | Vendors page → Research findings tab, or a vendor research notification | Any authenticated | — |
+| `/vendors/insights` | `pages/Vendors/index.tsx` | Governance | Vendors page → Insights tab | Any authenticated | — |
 | `/tasks` | `pages/Tasks/index.tsx` | Core | Main sidebar → Tasks | Any authenticated | — |
 | `/extensions` | `pages/Extensions/index.tsx` | Admin | Main sidebar → Management → Settings → Features (enable) or direct URL | Admin (manage features) | Extension-enabled flags |
 | `/extensions/:key/settings` | `pages/Extensions/Settings/index.tsx` | Admin | Extensions page → extension settings | Admin | Per-extension enabled |
@@ -686,12 +688,12 @@ For each page/screen the following subsections describe: routes, user-facing fea
 
 | Attribute | Value |
 |-----------|-------|
-| Routes | `/vendors`, `/vendors/risks` |
+| Routes | `/vendors`, `/vendors/risks`, `/vendors/research-findings`, `/vendors/insights` |
 | Component | `Clients/src/presentation/pages/Vendors/index.tsx` |
-| Tabs | Vendor list, Vendor risks. |
-| Features | Vendor table with status tile cards, search, filters (`FilterBy`), column visibility, export; create/edit vendor modal (`NewVendor`); vendor-risk table with create/edit modal (`NewRisk`); delete actions; project filter; scorecard column. |
-| Key components | `TableWithPlaceholder`, `RisksTable`, `NewVendor`, `NewRisk`, `StatusTileCards`, `FilterBy`, `ColumnSelector`, `ExportMenu`. |
-| Access | Main sidebar → Vendors; dashboard stat cards. |
+| Tabs | Vendors, Risks, Research findings (count of pending findings), Insights. Each tab is a route. |
+| Features | Vendor table with status tile cards, search, filters (`TableFilter`), column visibility, export; create/edit vendor modal (`NewVendor`); vendor-risk register with create/edit modal (`NewRisk`); AI-suggested research findings to preview, accept or dismiss; insights (heat map, blast radius, duplicate vendor risks, framework coverage); delete actions; project filter; scorecard column. |
+| Key components | `TableWithPlaceholder`, `RisksTable`, `VendorResearchFindings`, `VendorRiskInsights`, `NewVendor`, `NewRisk`, `StatusTileCards`, `TableFilter`, `ColumnSelector`, `ExportMenu`. |
+| Access | Main sidebar → Vendors; dashboard stat cards; vendor research notifications (link to `/vendors/research-findings`). |
 | e2e tests | `Clients/e2e/vendors.spec.ts` |
 | Unit tests | `Clients/src/presentation/pages/Vendors/**/*.test.tsx`, `Clients/src/presentation/components/Modals/NewVendor/__tests__/*.test.tsx` |
 | Backend domain | `/api/vendors`, `/api/vendorRisks`, `/api/projects`, `/api/users` |

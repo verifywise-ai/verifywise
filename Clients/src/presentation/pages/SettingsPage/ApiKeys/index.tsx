@@ -32,6 +32,7 @@ import { useCanCheck } from "../../../../application/hooks/useCan";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import { ApiTokenModel } from "../../../../domain/models/Common/apiToken/apiToken.model";
 import LLMKeys from "../LLMKeys";
+import SearchKey from "../SearchKey";
 import { getSelectStyles } from "../../../utils/inputStyles";
 import { brand, palette as vwPalette, radiusPx } from "../../../themes/palette";
 
@@ -53,7 +54,7 @@ const EXPIRY_OPTIONS = [
 
 interface ApiKeysProps {
   /**
-   * LLM keys are organization-scoped, so they are hidden when this screen is
+   * LLM keys and the search key are organization-scoped, so they are hidden when this screen is
    * mounted in the super admin console, where there is no organization.
    */
   showLlmKeys?: boolean;
@@ -740,6 +741,7 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
       )}
 
       {showLlmKeys && <LLMKeys />}
+      {showLlmKeys && <SearchKey />}
     </Stack>
   );
 };

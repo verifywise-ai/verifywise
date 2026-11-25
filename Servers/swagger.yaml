@@ -31,6 +31,31 @@ components:
         type: integer
         example: 42
   schemas:
+    LLMKeyVerificationError:
+      type: object
+      properties:
+        message:
+          type: string
+          example: 'Bad Request'
+        data:
+          type: object
+          properties:
+            message:
+              type: string
+              description: 'Translated, ready to show'
+            code:
+              type: string
+              enum:
+                - workspace_required
+                - invalid_key
+                - model_unavailable
+                - unreachable
+            reason:
+              type: string
+              enum:
+                - bad_characters
+                - cannot_list_models
+                - model_not_listed
     Error:
       type: object
       properties:
@@ -1702,16 +1727,13 @@ components:
               items:
                 type: object
     VendorRiskInput:
+      description: 'A vendor risk as sent on create (POST) and update (PATCH). The required fields apply to create; an update sends only the fields it changes. risk_level is computed by the server from likelihood and risk_severity, and a sent value is ignored.'
       type: object
       required:
         - vendor_id
         - risk_description
-        - impact_description
         - likelihood
         - risk_severity
-        - action_plan
-        - action_owner
-        - risk_level
       properties:
         vendor_id:
           type: integer
@@ -1744,10 +1766,16 @@ components:
           type: string
         action_owner:
           type: integer
-          description: 'User ID of the action owner.'
+          description: 'User ID of the action owner. Must be a member of the organization.'
         risk_level:
           type: string
-          description: 'Free-text risk level.'
+          readOnly: true
+          description: 'Ignored. The server computes the risk level from likelihood and risk_severity.'
+        frameworks:
+          type: array
+          items:
+            type: integer
+          description: 'Framework IDs to link. Replaces the existing links; omit or send null on update to leave them unchanged. An unknown framework ID is a 400.'
         is_demo:
           type: boolean
           default: false
@@ -1765,9 +1793,6 @@ components:
           type: string
         impact_description:
           type: string
-        impact:
-          type: string
-          nullable: true
         likelihood:
           type: string
           enum:
@@ -1798,6 +1823,17 @@ components:
         updated_at:
           type: string
           format: date-time
+        is_deleted:
+          type: boolean
+        deleted_at:
+          type: string
+          format: date-time
+          nullable: true
+        frameworks:
+          type: array
+          items:
+            type: integer
+          description: 'Linked framework IDs. Returned only by the single-risk read (GET by id), and only when the risk has links.'
     VendorRiskAllProjectsResponse:
       description: 'Extended vendor risk with joined vendor/project info.'
       type: object
@@ -1852,7 +1888,6 @@ components:
         - risk_category
         - risk_level
         - owner
-        - target_date
       properties:
         risk_name:
           type: string
@@ -1885,7 +1920,8 @@ components:
         target_date:
           type: string
           format: date
-          description: 'Next review / target date.'
+          nullable: true
+          description: 'Next review / target date. Optional: omit it, or send null or an empty string for none.'
         description:
           type: string
         mitigation_plan:
@@ -3659,12 +3695,23 @@ components:
           $ref: '#/components/schemas/IncidentStatus'
         occurred_date:
           type: string
-          format: date-time
+          format: date
+          description: 'Calendar day, YYYY-MM-DD.'
         date_detected:
           type: string
-          format: date-time
+          format: date
+          description: 'Calendar day, YYYY-MM-DD.'
         reporter:
           type: string
+          description: 'Reporter name: the reporter_id user''s full name when one is set, else free text (Jira imports, incidents created before reporter_id).'
+        reporter_id:
+          type: integer
+          nullable: true
+          description: 'The reporter (a user of the organization), or null.'
+        reporter_name:
+          type: string
+          nullable: true
+          description: 'The reporter_id user''s current full name, or null. Fall back to reporter.'
         categories_of_harm:
           type: array
           items:
@@ -3695,10 +3742,20 @@ components:
         approved_by:
           type: string
           nullable: true
+          description: 'Name of the user who recorded the approval decision (set by the server).'
+        approved_by_id:
+          type: integer
+          nullable: true
+          description: 'The user who recorded the approval decision (set by the server), or null.'
+        approved_by_name:
+          type: string
+          nullable: true
+          description: 'The approved_by_id user''s current full name, or null. Fall back to approved_by.'
         approval_date:
           type: string
-          format: date-time
+          format: date
           nullable: true
+          description: 'Day the approval decision was recorded (UTC), YYYY-MM-DD. Set by the server.'
         approval_notes:
           type: string
           nullable: true
@@ -3717,7 +3774,6 @@ components:
         - status
         - occurred_date
         - date_detected
-        - reporter
         - approval_status
         - categories_of_harm
         - description
@@ -3733,16 +3789,24 @@ components:
           $ref: '#/components/schemas/IncidentStatus'
         occurred_date:
           type: string
-          format: date-time
+          format: date
+          description: 'YYYY-MM-DD (an ISO date-time is accepted; its date part is used).'
         date_detected:
           type: string
-          format: date-time
+          format: date
+          description: 'YYYY-MM-DD (an ISO date-time is accepted; its date part is used).'
         reporter:
           type: string
+          description: 'Reporter name. Required on create unless reporter_id is sent; ignored when reporter_id is sent (the server writes that user''s full name).'
+        reporter_id:
+          type: integer
+          nullable: true
+          description: 'The reporter, a user of your organization (400 INVALID_REFERENCE otherwise).'
         approval_status:
           $ref: '#/components/schemas/IncidentApprovalStatus'
         approved_by:
           type: string
+          description: 'Ignored: set by the server.'
         categories_of_harm:
           oneOf:
             -
@@ -3775,7 +3839,8 @@ components:
           default: false
         approval_date:
           type: string
-          format: date-time
+          format: date
+          description: 'Ignored: set by the server.'
         approval_notes:
           type: string
     UpdateIncidentRequest:
@@ -3792,16 +3857,24 @@ components:
           $ref: '#/components/schemas/IncidentStatus'
         occurred_date:
           type: string
-          format: date-time
+          format: date
+          description: 'YYYY-MM-DD (an ISO date-time is accepted; its date part is used).'
         date_detected:
           type: string
-          format: date-time
+          format: date
+          description: 'YYYY-MM-DD (an ISO date-time is accepted; its date part is used).'
         reporter:
           type: string
+          description: 'Reporter name. Required on create unless reporter_id is sent; ignored when reporter_id is sent (the server writes that user''s full name).'
+        reporter_id:
+          type: integer
+          nullable: true
+          description: 'The reporter, a user of your organization (400 INVALID_REFERENCE otherwise).'
         approval_status:
           $ref: '#/components/schemas/IncidentApprovalStatus'
         approved_by:
           type: string
+          description: 'Ignored: set by the server.'
         categories_of_harm:
           oneOf:
             -
@@ -3831,7 +3904,8 @@ components:
           type: boolean
         approval_date:
           type: string
-          format: date-time
+          format: date
+          description: 'Ignored: set by the server.'
         approval_notes:
           type: string
     Framework:
@@ -6144,6 +6218,7 @@ components:
         - vendor
         - model
         - policy
+        - incident
         - nist_subcategory
         - iso42001_subclause
         - iso42001_annexcategory
@@ -8009,13 +8084,35 @@ tags:
   -
     name: 'v1: V1/Lifecycle Settings'
   -
+    name: 'v1: V1/Llm Keys'
+  -
+    name: 'v1: V1/Model Inventories'
+  -
+    name: 'v1: V1/Model Risks'
+  -
     name: 'v1: V1/Policy Templates'
   -
     name: 'v1: V1/Projects'
   -
+    name: 'v1: V1/Report Runs'
+  -
+    name: 'v1: V1/Report Templates'
+  -
+    name: 'v1: V1/Scheduled Reports'
+  -
+    name: 'v1: V1/Tasks'
+  -
     name: 'v1: V1/Training'
   -
     name: 'v1: V1/Use Case Lifecycle'
+  -
+    name: 'v1: V1/Vendor Risks'
+  -
+    name: 'v1: Vendor Research'
+  -
+    name: 'v1: Vendor Risk Findings'
+  -
+    name: 'v1: Vendors'
 paths:
   /webhooks/github:
     post:
@@ -8938,9 +9035,38 @@ paths:
   '/vendorRisks/by-frameworkid/{id}':
     get:
       summary: 'Get Vendor Risks By Framework Id'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        -
+          name: filter
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - active
+              - deleted
+              - all
+            default: active
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: array, items: {allOf: [{$ref: '#/components/schemas/VendorRiskResponse'}, {type: object, properties: {vendor_name: {type: string}}}]}}
+        '400':
+          description: 'Invalid framework ID or filter'
+        '401':
+          description: Unauthorized
         '500':
           description: 'Internal server error'
       tags:
@@ -9010,8 +9136,12 @@ paths:
                 properties:
                   message: {type: string}
                   data: {$ref: '#/components/schemas/VendorRiskResponse'}
+        '400':
+          description: 'Invalid vendor risk ID'
         '401':
           description: Unauthorized
+        '404':
+          description: 'No active vendor risk with this ID in the organization'
         '500':
           description: 'Internal server error'
     patch:
@@ -9045,8 +9175,14 @@ paths:
                 properties:
                   message: {type: string}
                   data: {$ref: '#/components/schemas/VendorRiskResponse'}
+        '400':
+          description: 'Invalid vendor risk ID, or a validation error (missing or invalid field, unknown framework ID, action owner who is not a member of the organization)'
         '401':
           description: Unauthorized
+        '403':
+          description: 'Forbidden: needs the vendor.edit permission'
+        '404':
+          description: 'No active vendor risk with this ID in the organization'
         '500':
           description: 'Internal server error'
     delete:
@@ -9073,9 +9209,15 @@ paths:
                 type: object
                 properties:
                   message: {type: string}
-                  data: {$ref: '#/components/schemas/VendorRiskResponse'}
+                  data: {type: boolean, example: true}
+        '400':
+          description: 'Invalid vendor risk ID'
         '401':
           description: Unauthorized
+        '403':
+          description: 'Forbidden: needs the vendor.edit permission'
+        '404':
+          description: 'No active vendor risk with this ID in the organization'
         '500':
           description: 'Internal server error'
   /vendorRisks:
@@ -9103,8 +9245,12 @@ paths:
                 properties:
                   message: {type: string}
                   data: {$ref: '#/components/schemas/VendorRiskResponse'}
+        '400':
+          description: 'Validation error (missing or invalid field, unknown framework ID, action owner who is not a member of the organization)'
         '401':
           description: Unauthorized
+        '403':
+          description: 'Forbidden: needs the vendor.edit permission'
         '500':
           description: 'Internal server error'
   /vendors:
@@ -9433,9 +9579,30 @@ paths:
   '/vendors/{id}/riskSuggestions':
     get:
       summary: 'Get Vendor Risk Suggestions'
+      description: 'Read-only. Derives vendor risks from the vendor''s questionnaire answers (data sensitivity, business criticality, past issues, regulatory exposure) and leaves out any the vendor already has a near-identical active risk for. Writes nothing.'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {vendor_id: {type: integer}, vendor_name: {type: string}, questionnaire_complete: {type: boolean}, existing_risk_count: {type: integer}, suggestions: {type: array, items: {type: object, properties: {archetype: {type: string, enum: [data_sensitivity, business_criticality, past_issues, regulatory_exposure]}, risk_description: {type: string}, impact_description: {type: string}, action_plan: {type: string}, likelihood: {type: string}, risk_severity: {type: string}, risk_level: {type: string}, reasons: {type: array, items: {type: string}}}}}, suppressed: {type: array, items: {type: object, properties: {archetype: {type: string}, matched_vendor_risk_id: {type: integer}}}}}}
+        '400':
+          description: 'Invalid vendor ID'
+        '401':
+          description: Unauthorized
+        '404':
+          description: 'No vendor with this ID in the organization'
         '500':
           description: 'Internal server error'
       tags:
@@ -13713,6 +13880,15 @@ paths:
                   data: {type: string, example: 'Model inventory deleted successfully'}
         '401':
           description: 'Missing or invalid JWT'
+        '403':
+          description: 'The model has a saved approver and the caller is neither that approver nor an Admin'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string, example: Forbidden}
+                  data: {type: string, example: 'Only the model''s approver or an Admin can change its approval.'}
         '404':
           description: 'Model inventory not found'
           content:
@@ -16495,7 +16671,7 @@ paths:
       security:
         -
           bearerAuth: []
-      description: 'Requires role: Admin or Editor'
+      description: "Frozen legacy contract: parameters_config is ignored (use POST /v1/report-templates).\n\nRequires role: Admin or Editor"
   '/reporting/templates/{id}':
     get:
       summary: 'Get Template'
@@ -16523,7 +16699,7 @@ paths:
       security:
         -
           bearerAuth: []
-      description: 'Requires role: Admin or Editor'
+      description: "Frozen legacy contract: parameters_config is ignored and the stored report kind is kept (use PATCH /v1/report-templates/{id}).\n\nRequires role: Admin or Editor"
     delete:
       summary: 'Archive Template'
       responses:
@@ -16552,10 +16728,11 @@ paths:
       security:
         -
           bearerAuth: []
-      description: 'Requires role: Admin or Editor'
+      description: "Frozen legacy contract: reportParameters is ignored, so running a template whose kind needs report parameters fails with 400 (use POST /v1/report-templates/{id}/run).\n\nRequires role: Admin or Editor"
   /reporting/scheduled-reports:
     get:
       summary: 'List Scheduled Reports'
+      description: 'Scheduled reports of the caller''s organization. Admins see all; other roles see organization-wide schedules and those of projects they own, are a member of or reach through a group.'
       responses:
         '200':
           description: Success
@@ -16572,6 +16749,8 @@ paths:
       responses:
         '200':
           description: Success
+        '400':
+          description: 'Validation error, or a quarterly schedule (only through /v1/scheduled-reports)'
         '500':
           description: 'Internal server error'
       tags:
@@ -16580,13 +16759,15 @@ paths:
       security:
         -
           bearerAuth: []
-      description: 'Requires role: Admin or Editor'
+      description: "Frozen legacy contract: reportParameters is ignored and a quarterly frequency is refused with 400 (use POST /v1/scheduled-reports).\n\nRequires role: Admin or Editor"
   '/reporting/scheduled-reports/{id}':
     patch:
       summary: 'Update Scheduled Report'
       responses:
         '200':
           description: Success
+        '400':
+          description: 'Validation error, or a quarterly schedule (only through /v1/scheduled-reports)'
         '500':
           description: 'Internal server error'
       tags:
@@ -16595,7 +16776,7 @@ paths:
       security:
         -
           bearerAuth: []
-      description: 'Requires role: Admin or Editor'
+      description: "Frozen legacy contract: reportParameters is ignored and a quarterly frequency is refused with 400 (use PATCH /v1/scheduled-reports/{id}).\n\nRequires role: Admin or Editor"
     delete:
       summary: 'Delete Scheduled Report'
       responses:
@@ -20303,6 +20484,7 @@ paths:
       tags:
         - Incidents
       summary: 'Create New Incident'
+      description: 'Needs incident.create. Required: ai_project, type, severity, occurred_date, date_detected, reporter (or reporter_id) and description (5 to 32,767 characters). status defaults to Open and approval_status to Pending when omitted. type, severity, status and approval_status must be one of their listed values; ai_project, reporter and model_system_version are at most 255 characters; dates are YYYY-MM-DD (or an ISO date-time), not later than today in UTC+14 (the furthest-ahead time zone, so today anywhere is accepted), and date_detected is on or after occurred_date. categories_of_harm is optional: a list (or a comma-separated string) of Health, Safety, Rights, Property, Environment. The reporter is required: a reporter_id (a user of your organization; the server writes their full name into reporter) or a non-empty reporter text. Dates are stored and returned as YYYY-MM-DD. approved_by, approved_by_id and approval_date are set by the server and ignored in the request. A caller without incident.approve always gets approval_status Pending with no approval_notes. A caller with incident.approve may send Approved or Rejected; the server then records the caller''s name as approved_by, their id as approved_by_id and today (UTC) as approval_date.'
       operationId: createNewIncident
       security:
         -
@@ -20312,11 +20494,63 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - ai_project
+                - type
+                - severity
+                - occurred_date
+                - date_detected
+                - description
+              properties:
+                ai_project:
+                  type: string
+                  maxLength: 255
+                type:
+                  type: string
+                  enum: [Malfunction, 'Unexpected behavior', 'Model drift', Misuse, 'Data corruption', 'Security breach', 'Performance degradation']
+                severity:
+                  type: string
+                  enum: [Minor, Serious, 'Very serious']
+                status:
+                  type: string
+                  enum: [Open, Investigating, Mitigated, Closed, Suspended, 'Emergency action']
+                  default: Open
+                approval_status:
+                  type: string
+                  enum: [Pending, Approved, Rejected, 'Not required']
+                  default: Pending
+                occurred_date:
+                  type: string
+                  format: date
+                date_detected:
+                  type: string
+                  format: date
+                reporter:
+                  type: string
+                  maxLength: 255
+                  description: 'Required unless reporter_id is sent.'
+                reporter_id:
+                  type: integer
+                  description: 'A user of your organization; the server writes their full name into reporter.'
+                model_system_version:
+                  type: string
+                  maxLength: 255
+                description:
+                  type: string
+                  minLength: 5
+                  maxLength: 32767
+                categories_of_harm:
+                  type: array
+                  items: {type: string, enum: [Health, Safety, Rights, Property, Environment]}
       responses:
         '201':
           description: 'Created successfully'
+        '400':
+          description: 'Validation failed: errors lists each field ({ field, message, code })'
         '401':
           description: Unauthorized
+        '403':
+          description: 'The role does not hold incident.create'
         '500':
           description: 'Internal server error'
   '/ai-incident-managements/{id}':
@@ -20338,14 +20572,19 @@ paths:
       responses:
         '200':
           description: Success
+        '400':
+          description: 'Invalid incident ID'
         '401':
           description: Unauthorized
+        '404':
+          description: 'Incident not found (missing or in another organization)'
         '500':
           description: 'Internal server error'
     patch:
       tags:
         - Incidents
       summary: 'Update Incident By Id'
+      description: 'Needs incident.edit or incident.approve, then per field: changing approval_status or approval_notes needs incident.approve, changing any other field (archived included) needs incident.edit. A field sent with its stored value is not a change. An archived incident takes only { "archived": false } (restore); any other change answers 409 ("Restore this incident before editing it.") and nothing is written. approved_by, approved_by_id and approval_date are set by the server and ignored in the request: when approval_status changes to Approved or Rejected, approved_by is the caller''s name, approved_by_id their id and approval_date today (UTC, YYYY-MM-DD); when it changes to Pending or Not required, all three are cleared. A changed reporter_id must be a user of your organization (400 INVALID_REFERENCE otherwise) and sets reporter to their full name; a changed reporter text without reporter_id clears reporter_id. Changed fields follow the create rules (enums, lengths, dates; harm categories an update adds must be listed values, stored ones outside the list may stay); a required field cannot be set to null or an empty string, and the dates the incident ends up with must keep date_detected on or after occurred_date. Fields left out are not changed.'
       operationId: updateIncidentById
       security:
         -
@@ -20365,14 +20604,23 @@ paths:
       responses:
         '200':
           description: Success
+        '400':
+          description: 'Validation failed'
         '401':
           description: Unauthorized
+        '403':
+          description: 'The role holds neither incident.edit nor incident.approve, or the request changes a field that needs the key it lacks ("Your role does not allow editing this incident''s details." / "Your role does not allow approving or rejecting incidents."). Nothing is written.'
+        '404':
+          description: 'Incident not found'
+        '409':
+          description: 'The incident changed since expected_updated_at, or the incident is archived and the request changes more than archived (code INCIDENT_ARCHIVED)'
         '500':
           description: 'Internal server error'
     delete:
       tags:
         - Incidents
       summary: 'Delete Incident By Id'
+      description: 'Permanently deletes the incident. A deletion entry is recorded in its change history, and the incident_deleted automation is sent after the delete commits.'
       operationId: deleteIncidentById
       security:
         -
@@ -20387,8 +20635,14 @@ paths:
       responses:
         '200':
           description: 'Deleted successfully'
+        '400':
+          description: 'The id is not a positive integer'
         '401':
           description: Unauthorized
+        '403':
+          description: 'The role does not hold incident.delete'
+        '404':
+          description: 'Incident not found in the organization. Nothing is deleted and no automation is sent.'
         '500':
           description: 'Internal server error'
   '/ai-incident-managements/{id}/archive':
@@ -20396,6 +20650,7 @@ paths:
       tags:
         - Incidents
       summary: 'Archive Incident By Id'
+      description: 'Archives the incident through the incident update path: the row is locked, the change is recorded in change history ("Archived") and the incident_updated automation is sent after commit. Archiving an archived incident changes nothing. The request body is ignored. To restore, send { "archived": false } to PATCH /ai-incident-managements/{id}.'
       operationId: archiveIncidentById
       security:
         -
@@ -20414,9 +20669,15 @@ paths:
               type: object
       responses:
         '200':
-          description: Success
+          description: 'The incident after the change'
+        '400':
+          description: 'The id is not a positive integer'
         '401':
           description: Unauthorized
+        '403':
+          description: 'The role does not hold incident.edit'
+        '404':
+          description: 'Incident not found in the organization'
         '500':
           description: 'Internal server error'
   '/ce-marking/{projectId}':
@@ -20462,11 +20723,20 @@ paths:
           application/json:
             schema:
               type: object
+              properties:
+                linkedIncidents:
+                  type: array
+                  description: 'Replaces the linked incidents. Each entry is a positive integer id (a number or a string of digits) of an incident in the caller''s organization; duplicates are ignored. totalIncidents is then set to the number of linked incidents.'
+                  items: {type: integer}
       responses:
         '200':
           description: Success
+        '400':
+          description: 'linkedIncidents is not a list of positive integer ids ("Linked incidents must be a list of incident ids."), or names an incident that does not exist in the organization ("Some linked incidents do not exist in your organization."). Nothing is written.'
         '401':
           description: Unauthorized
+        '404':
+          description: 'Use case or CE marking record not found'
         '500':
           description: 'Internal server error'
   /search:
@@ -21061,9 +21331,28 @@ paths:
           required: true
           schema:
             type: integer
+        -
+          name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 100
+        -
+          name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
       responses:
         '200':
           description: Success
+        '400':
+          description: 'Invalid incident ID, or limit not an integer from 1 to 100, or offset not a whole number of 0 or more'
         '401':
           description: Unauthorized
         '500':
@@ -24701,7 +24990,7 @@ paths:
       tags:
         - 'Intake Forms'
       summary: 'Accept All Suggested Risks'
-      description: 'Moves every suggested risk still in "suggested" to "accepted". Dismissed ones stay dismissed; ones without a mitigation plan are skipped. Returns { accepted, skipped }.'
+      description: 'Moves every suggested risk still in "suggested" to "accepted". Dismissed ones stay dismissed. The mitigation plan is optional, so none is skipped for lacking one; skipped stays in the response for compatibility. Returns { accepted, skipped }.'
       operationId: acceptAllSuggestedRisks
       security:
         -
@@ -24731,7 +25020,7 @@ paths:
       tags:
         - 'Intake Forms'
       summary: 'Update A Suggested Risk'
-      description: 'Edits, accepts, dismisses or restores one suggested risk on a pending submission. Accepting requires a mitigation plan.'
+      description: 'Edits, accepts, dismisses or restores one suggested risk on a pending submission. The mitigation plan is optional.'
       operationId: updateSuggestedRisk
       security:
         -
@@ -24790,7 +25079,7 @@ paths:
         '200':
           description: 'The updated suggestion'
         '400':
-          description: 'Invalid field, nothing to update, or accepting without a mitigation plan'
+          description: 'Invalid field, or nothing to update'
         '401':
           description: Unauthorized
         '403':
@@ -29247,6 +29536,913 @@ paths:
       tags:
         - 'v1: Risk import'
       operationId: bulkImportRisksStrict
+      security:
+        -
+          bearerAuth: []
+  /v1/model-inventories:
+    post:
+      summary: 'Create New Model Inventory'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Model Inventories'
+      operationId: v1_model_inventories_createNewModelInventory
+      security:
+        -
+          bearerAuth: []
+  '/v1/model-inventories/{id}':
+    patch:
+      summary: 'Update Model Inventory By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Model Inventories'
+      operationId: v1_model_inventories_updateModelInventoryById
+      security:
+        -
+          bearerAuth: []
+  /v1/model-risks:
+    post:
+      summary: 'Create New Model Risk'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Model Risks'
+      operationId: v1_model_risks_createNewModelRisk
+      security:
+        -
+          bearerAuth: []
+  '/v1/model-risks/{id}':
+    patch:
+      summary: 'Update Model Risk By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Model Risks'
+      operationId: v1_model_risks_updateModelRiskById
+      security:
+        -
+          bearerAuth: []
+  '/v1/vendor-risks/{id}':
+    get:
+      summary: 'Get Vendor Risk By Id Including Deleted'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Vendor Risks'
+      operationId: getVendorRiskByIdIncludingDeleted
+      security:
+        -
+          bearerAuth: []
+  '/v1/vendor-risks/{id}/restore':
+    patch:
+      summary: 'Restore Vendor Risk By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Vendor Risks'
+      operationId: restoreVendorRiskById
+      security:
+        -
+          bearerAuth: []
+  '/v1/report-templates/{id}/run':
+    post:
+      summary: 'Run Template Now'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Report Templates'
+      operationId: v1_report_templates_runTemplateNow
+      security:
+        -
+          bearerAuth: []
+  '/v1/report-templates/{id}/last-parameters':
+    get:
+      summary: 'Get Last Parameters'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Report Templates'
+      operationId: getLastParameters
+      security:
+        -
+          bearerAuth: []
+  /v1/scheduled-reports:
+    post:
+      summary: 'Create Scheduled Report'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Scheduled Reports'
+      operationId: v1_scheduled_reports_createScheduledReport
+      security:
+        -
+          bearerAuth: []
+  '/v1/scheduled-reports/{id}':
+    get:
+      summary: 'Get Scheduled Report'
+      description: 'One scheduled report of the caller''s organization, with its template version''s parameters_config. Admins read any schedule; other roles read organization-wide schedules and those of projects they own, are a member of or reach through a group, and get 404 for the rest.'
+      responses:
+        '200':
+          description: Success
+        '401':
+          description: Unauthorized
+        '404':
+          description: 'Scheduled report not found in this organization, or not readable by the caller'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Scheduled Reports'
+      operationId: getScheduledReport
+      security:
+        -
+          bearerAuth: []
+    patch:
+      summary: 'Update Scheduled Report'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Scheduled Reports'
+      operationId: v1_scheduled_reports_updateScheduledReport
+      security:
+        -
+          bearerAuth: []
+  '/v1/report-runs/{id}/download/fix-it-list':
+    get:
+      summary: 'Download Run Companion'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Report Runs'
+      operationId: downloadRunCompanion
+      security:
+        -
+          bearerAuth: []
+  /v1/report-templates:
+    post:
+      summary: 'Create Template'
+      description: "Creates a custom template in the caller's organization with its first version. Unlike the frozen POST /reporting/templates, it accepts parameters_config.\n"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - category
+                - default_scope
+              properties:
+                name:
+                  type: string
+                  maxLength: 255
+                description:
+                  type: string
+                  nullable: true
+                category:
+                  type: string
+                  example: compliance
+                default_scope:
+                  type: string
+                  enum: [project, organization]
+                supported_scopes:
+                  type: array
+                  items: {type: string, enum: [project, organization]}
+                recommended_frequency:
+                  type: string
+                  nullable: true
+                sections_config:
+                  type: object
+                ai_blocks_config:
+                  type: object
+                framework_config:
+                  type: object
+                  description: 'Empty means every framework in scope.'
+                parameters_config:
+                  type: object
+                  description: 'The report kind (e.g. osfi_e23) and its declared parameter fields. An unknown kind or a malformed field list is refused.'
+                  properties: {kind: {type: string, example: osfi_e23}, fields: {type: array, items: {type: object}}}
+      responses:
+        '201':
+          description: 'Created: the template with latestVersion'
+        '400':
+          description: 'Validation error (missing name or category, bad default_scope, invalid parameters_config)'
+        '401':
+          description: Unauthorized
+        '403':
+          description: 'The role lacks reportTemplate.edit'
+        '409':
+          description: 'A template with this name already exists'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Report Templates'
+      operationId: v1_report_templates_createTemplate
+      security:
+        -
+          bearerAuth: []
+  '/v1/report-templates/{id}':
+    patch:
+      summary: 'Update Template'
+      description: "Updates a custom template's metadata and, when any config field is sent, appends a new version. A config field the body leaves out (missing or null) keeps the previous version's value, so a partial edit never resets the rest; an explicit value, {} included, is stored as sent (an empty framework_config means every framework). A body whose config fields are all null has nothing to write (400), and a parameters_config change without sections_config is refused (400) when the new kind refuses one of the inherited sections. Unlike the frozen PATCH /reporting/templates/{id}, it accepts parameters_config. System templates and other organizations' templates answer 404.\n"
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 255
+                description:
+                  type: string
+                  nullable: true
+                category:
+                  type: string
+                  example: compliance
+                default_scope:
+                  type: string
+                  enum: [project, organization]
+                supported_scopes:
+                  type: array
+                  items: {type: string, enum: [project, organization]}
+                recommended_frequency:
+                  type: string
+                  nullable: true
+                sections_config:
+                  type: object
+                ai_blocks_config:
+                  type: object
+                framework_config:
+                  type: object
+                  description: 'Empty means every framework in scope.'
+                parameters_config:
+                  type: object
+                  description: 'The report kind (e.g. osfi_e23) and its declared parameter fields. An unknown kind or a malformed field list is refused.'
+                  properties: {kind: {type: string, example: osfi_e23}, fields: {type: array, items: {type: object}}}
+      responses:
+        '200':
+          description: 'Updated: the template with latestVersion (null when only metadata changed)'
+        '400':
+          description: 'No updatable fields supplied, or invalid parameters_config'
+        '401':
+          description: Unauthorized
+        '403':
+          description: 'The role lacks reportTemplate.edit'
+        '404':
+          description: 'Template not found in the organization, or a system template'
+        '409':
+          description: 'Duplicate name, or a concurrent edit (retry)'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Report Templates'
+      operationId: v1_report_templates_updateTemplate
+      security:
+        -
+          bearerAuth: []
+  '/v1/report-templates/{id}/duplicate':
+    post:
+      summary: 'Duplicate Template'
+      description: "Copies a system template or one of the organization's own into the caller's organization, named '<name> (copy)', or the next free '<name> (copy N)' (archived templates hold their slug too). The copy carries the metadata and the latest version's whole config. An archived source answers 404. No request body.\n"
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: 'Created: the copy with latestVersion'
+        '401':
+          description: Unauthorized
+        '403':
+          description: 'The role lacks reportTemplate.edit'
+        '404':
+          description: 'Template not found or not visible to the organization'
+        '409':
+          description: 'No free copy name: the first thousand are taken, or concurrent copies took the chosen name three times'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Report Templates'
+      operationId: duplicateTemplate
+      security:
+        -
+          bearerAuth: []
+  '/v1/vendors/{id}/research/latest':
+    get:
+      summary: 'Get Latest Vendor Research'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendors'
+      operationId: getLatestVendorResearch
+      security:
+        -
+          bearerAuth: []
+  '/v1/vendors/{id}/research/runs/{runId}/trace':
+    get:
+      summary: 'Get Vendor Research Run Trace'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendors'
+      operationId: getVendorResearchRunTrace
+      security:
+        -
+          bearerAuth: []
+  '/v1/vendors/{id}/research':
+    post:
+      summary: 'Start Vendor Research Run'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendors'
+      operationId: startVendorResearchRun
+      security:
+        -
+          bearerAuth: []
+  /v1/vendors:
+    post:
+      summary: 'Create Vendor V1'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendors'
+      operationId: createVendorV1
+      security:
+        -
+          bearerAuth: []
+  '/v1/vendors/{id}':
+    patch:
+      summary: 'Update Vendor By Id V1'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendors'
+      operationId: updateVendorByIdV1
+      security:
+        -
+          bearerAuth: []
+  /v1/vendor-research/config:
+    get:
+      summary: 'Get Research Config'
+      description: 'What the page needs to know to offer vendor research. Booleans only, never a key. autoRunAllowed is the deployment switch (VENDOR_RESEARCH_AUTO_RUN); autoRunEnabled is whether a new vendor of the organization is researched as soon as it is added, which needs both autoRunAllowed and the organization setting autoResearchOnCreate.'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {hasLlmKey: {type: boolean}, autoRunAllowed: {type: boolean}, autoRunEnabled: {type: boolean}}}
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Research'
+      operationId: getResearchConfig
+      security:
+        -
+          bearerAuth: []
+  /v1/vendor-research/decision-stats:
+    get:
+      summary: 'Get Decision Stats'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Research'
+      operationId: getDecisionStats
+      security:
+        -
+          bearerAuth: []
+  /v1/vendor-research/search-status:
+    get:
+      summary: 'Get Research Search Status'
+      description: 'Which search a research run gets from each LLM key of the organization (anthropic: Claude''s own web search; brave: Brave Search with the organization''s Brave key, for a key with no search of its own when one is stored; gdelt: the news of the GDELT Project), the search of the default key (the newest; null without a key), whether the organization has a Brave Search key (braveConfigured; never the key), and whether the organization''s latest finished runs of the last 30 days that say something about the news (up to 3) all got none. Names keys by id only. Admins only.'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {engines: {type: object, properties: {default: {type: string, nullable: true, enum: [anthropic, brave, gdelt, null]}, byKey: {type: object, additionalProperties: {type: string, enum: [anthropic, brave, gdelt]}}}}, recentRunsFoundNoNews: {type: boolean}, braveConfigured: {type: boolean}}}
+        '403':
+          description: Forbidden
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Research'
+      operationId: getResearchSearchStatus
+      security:
+        -
+          bearerAuth: []
+  /v1/vendor-research/settings:
+    get:
+      summary: 'Get Research Settings'
+      description: 'The LLM keys the vendor research uses, the scheduled scan interval and whether a new vendor is researched as soon as it is added. Admins only.'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {researchKeyId: {type: integer, nullable: true}, analysisKeyId: {type: integer, nullable: true}, scanIntervalDays: {type: integer, nullable: true, enum: [7, 14, 30, null]}, autoResearchOnCreate: {type: boolean, description: 'Research a new vendor as soon as it is added. True when the organization has not chosen.'}}}
+        '403':
+          description: Forbidden
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Research'
+      operationId: getResearchSettings
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Save Research Settings'
+      description: 'Stores the research settings of the organization. researchKeyId and analysisKeyId are required (an LLM key id or null for the default). scanIntervalDays and autoResearchOnCreate are optional: a body that leaves one out keeps the stored value.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - researchKeyId
+                - analysisKeyId
+              properties:
+                researchKeyId:
+                  type: integer
+                  nullable: true
+                analysisKeyId:
+                  type: integer
+                  nullable: true
+                scanIntervalDays:
+                  type: integer
+                  nullable: true
+                  enum: [7, 14, 30, null]
+                autoResearchOnCreate:
+                  type: boolean
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {researchKeyId: {type: integer, nullable: true}, analysisKeyId: {type: integer, nullable: true}, scanIntervalDays: {type: integer, nullable: true, enum: [7, 14, 30, null]}, autoResearchOnCreate: {type: boolean, description: 'Research a new vendor as soon as it is added. True when the organization has not chosen.'}}}
+        '400':
+          description: 'A key id, scanIntervalDays or autoResearchOnCreate is not valid'
+        '403':
+          description: Forbidden
+        '404':
+          description: 'LLM key not found'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Research'
+      operationId: saveResearchSettings
+      security:
+        -
+          bearerAuth: []
+  /v1/vendor-research/search-key:
+    get:
+      summary: 'Get Research Search Key'
+      description: 'Whether the organization stored a Brave Search API key for the vendor research, and its last four characters. The key itself is never returned. Admins only.'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {provider: {type: string, enum: [brave]}, configured: {type: boolean}, last4: {type: string, nullable: true, description: 'The last four characters of the stored key; null when none is stored. The key itself is never returned.'}}}
+        '403':
+          description: Forbidden
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Research'
+      operationId: getResearchSearchKey
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Save Research Search Key'
+      description: 'Stores the organization''s Brave Search API key, encrypted, after one test request to Brave. Spaces around the key are dropped. A key Brave refuses, or text that cannot be a key (10 to 200 printable characters, no spaces), is a 422 with code invalid_key. A check that could not be made is a 422 with code unreachable, unless skipCheck is true, which stores the key anyway. Admins only.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - key
+              properties:
+                key:
+                  type: string
+                  description: 'The Brave Search API key.'
+                skipCheck:
+                  type: boolean
+                  description: 'Store the key when Brave could not be reached to check it. A key Brave refuses is never stored.'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {configured: {type: boolean}, last4: {type: string, nullable: true, description: 'The last four characters of the stored key; null when none is stored. The key itself is never returned.'}}}
+        '400':
+          description: 'No key in the body'
+        '403':
+          description: Forbidden
+        '422':
+          description: 'The key was not stored: Brave refused it (invalid_key) or could not be reached to check it (unreachable)'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {message: {type: string}, code: {type: string, enum: [invalid_key, unreachable]}}}
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Research'
+      operationId: saveResearchSearchKey
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Research Search Key'
+      description: 'Removes the organization''s Brave Search API key; the vendor research goes back to its other searches. Admins only.'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {configured: {type: boolean}, last4: {type: string, nullable: true, description: 'The last four characters of the stored key; null when none is stored. The key itself is never returned.'}}}
+        '403':
+          description: Forbidden
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Research'
+      operationId: deleteResearchSearchKey
+      security:
+        -
+          bearerAuth: []
+  /v1/vendor-risk-findings:
+    get:
+      summary: 'List Vendor Risk Findings'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Risk Findings'
+      operationId: listVendorRiskFindings
+      security:
+        -
+          bearerAuth: []
+  '/v1/vendor-risk-findings/{id}/accept':
+    post:
+      summary: 'Accept Vendor Risk Finding'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Risk Findings'
+      operationId: acceptVendorRiskFinding
+      security:
+        -
+          bearerAuth: []
+  '/v1/vendor-risk-findings/{id}/dismiss':
+    post:
+      summary: 'Dismiss Vendor Risk Finding'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Risk Findings'
+      operationId: dismissVendorRiskFinding
+      security:
+        -
+          bearerAuth: []
+  /v1/llm-keys:
+    post:
+      summary: 'Create an LLM key, checked with its provider first'
+      description: 'Checks the key with its provider before saving: one free request (Anthropic GET /v1/models/{model}, OpenAI GET /v1/models, OpenRouter GET /api/v1/key, Custom GET {url}/models) sent with the key and its custom headers, 8 second timeout. A refusal is a 400 with data.code workspace_required, invalid_key or model_unavailable. When the provider cannot be reached (network error, timeout, 5xx, 429, or a Custom URL the outbound policy refuses) the answer is a 409 with data.code unreachable, unless the body sets skip_verification: true, which saves the key unchecked. A rejected key is never saved, even with skip_verification. data.reason, when present, names a more specific cause: bad_characters (400, the key has characters no key can have), cannot_list_models (409, a 401/403 saying the key lacks the permission to list models) or model_not_listed (409, a Custom endpoint whose /models list lacks the model; ids equal to model:latest or ending in /model count as listed). With no model the check uses the default model the Advisor uses. Anthropic keys not tied to a workspace need the anthropic-workspace-id custom header.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - key
+                - model
+              properties:
+                name:
+                  type: string
+                  enum: [Anthropic, OpenAI, OpenRouter, Custom]
+                key:
+                  type: string
+                model:
+                  type: string
+                url:
+                  type: string
+                  description: 'Required for Custom; ignored for the other providers.'
+                custom_headers:
+                  type: object
+                  nullable: true
+                  additionalProperties: {type: string}
+                  description: 'Sent with every request, for every provider (e.g. anthropic-workspace-id).'
+                skip_verification:
+                  type: boolean
+                  description: 'Save even when the provider could not be reached. Has no effect on a rejected key.'
+      responses:
+        '201':
+          description: 'Created; the key is not returned'
+        '400':
+          description: 'Invalid body, or the provider rejected the key: data is { message, code } with code workspace_required, invalid_key or model_unavailable'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLMKeyVerificationError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: 'Forbidden - requires the llmKeys.admin permission (Admin by default)'
+        '409':
+          description: 'The provider could not be reached to check the key: data is { message, code: unreachable }. Resend with skip_verification: true to save anyway.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLMKeyVerificationError'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Llm Keys'
+      operationId: createLLMKeyV1
+      security:
+        -
+          bearerAuth: []
+  '/v1/llm-keys/{id}':
+    patch:
+      summary: 'Update an LLM key, checked with its provider first'
+      description: 'Checks the key with its provider before saving when the body changes the provider, key, URL, model or headers (unsent fields keep their stored values). A change of provider or endpoint must send the key again (otherwise 400, before any provider call), and drops the stored custom headers unless the body sends custom_headers. A url without a name applies only to a Custom key: one free request (Anthropic GET /v1/models/{model}, OpenAI GET /v1/models, OpenRouter GET /api/v1/key, Custom GET {url}/models) sent with the key and its custom headers, 8 second timeout. A refusal is a 400 with data.code workspace_required, invalid_key or model_unavailable. When the provider cannot be reached (network error, timeout, 5xx, 429, or a Custom URL the outbound policy refuses) the answer is a 409 with data.code unreachable, unless the body sets skip_verification: true, which saves the key unchecked. A rejected key is never saved, even with skip_verification. data.reason, when present, names a more specific cause: bad_characters (400, the key has characters no key can have), cannot_list_models (409, a 401/403 saying the key lacks the permission to list models) or model_not_listed (409, a Custom endpoint whose /models list lacks the model; ids equal to model:latest or ending in /model count as listed). With no model the check uses the default model the Advisor uses. Anthropic keys not tied to a workspace need the anthropic-workspace-id custom header.'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  enum: [Anthropic, OpenAI, OpenRouter, Custom]
+                key:
+                  type: string
+                model:
+                  type: string
+                url:
+                  type: string
+                  description: 'Required for Custom; ignored for the other providers.'
+                custom_headers:
+                  type: object
+                  nullable: true
+                  additionalProperties: {type: string}
+                  description: 'Sent with every request, for every provider (e.g. anthropic-workspace-id).'
+                skip_verification:
+                  type: boolean
+                  description: 'Save even when the provider could not be reached. Has no effect on a rejected key.'
+      responses:
+        '200':
+          description: 'Updated; the key is not returned'
+        '400':
+          description: 'Invalid body, or the provider rejected the key: data is { message, code } with code workspace_required, invalid_key or model_unavailable'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLMKeyVerificationError'
+        '401':
+          description: Unauthorized
+        '403':
+          description: 'Forbidden - requires the llmKeys.admin permission (Admin by default)'
+        '404':
+          description: 'No LLM key with this id in the organization'
+        '409':
+          description: 'The provider could not be reached to check the key: data is { message, code: unreachable }. Resend with skip_verification: true to save anyway.'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LLMKeyVerificationError'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Llm Keys'
+      operationId: updateLLMKeyV1
+      security:
+        -
+          bearerAuth: []
+  '/v1/tasks/linked/{entityType}/{entityId}':
+    get:
+      summary: 'List the tasks linked to an entity'
+      description: 'The tasks linked to one entity (an incident, a vendor, ...) through task_entity_links that the user can see, with the visibility of GET /tasks. Archived tasks are left out. Not paginated.'
+      parameters:
+        -
+          name: entityType
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/EntityType'
+        -
+          name: entityId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: 'The linked tasks'
+        '400':
+          description: 'Invalid entity type or ID'
+        '401':
+          description: Unauthorized
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Tasks'
+      operationId: getTasksLinkedToEntity
+      security:
+        -
+          bearerAuth: []
+  '/v1/projects/{id}/approval-workflow':
+    get:
+      summary: 'Get a use case''s approval workflow'
+      description: 'The approval workflow attached to the use case (its id, title and whether it is still active; an archived workflow keeps its title; a stored workflow that cannot be found in the organization comes back with its id, a null title and workflow_is_active false) and the status of the latest approval request: pending, rejected, or null when there is none open or rejected (approved and withdrawn requests read as null). All workflow fields are null when no workflow is attached. Change the workflow with PATCH /api/v1/projects/{id} and approval_workflow_id. Anyone who may read the use case may read this.'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The use case id'
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {approval_workflow_id: {type: integer, nullable: true}, workflow_title: {type: string, nullable: true}, workflow_is_active: {type: boolean, nullable: true, description: 'False when the workflow has been archived or cannot be found in the organization'}, approval_status: {type: string, enum: [pending, rejected], nullable: true}}}
+        '400':
+          description: 'The id is not a positive integer'
+        '403':
+          description: 'No read access to the use case'
+        '404':
+          description: 'Use case not found in the organization'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: getUseCaseApprovalWorkflow
+      security:
+        -
+          bearerAuth: []
+  '/v1/projects/{id}/resubmit-approval':
+    post:
+      summary: 'Resubmit a rejected use case for approval'
+      description: 'Sends a use case whose latest approval request was rejected for approval again, under the approval workflow already attached to it. Opens a new pending request as attaching a workflow does: a planned use case moves to in review and the step 1 approvers are notified. It is never auto-approved, whatever the workflow''s auto-approve level: a person rejected the use case, so a person reviews it again. The use case row is locked for the duration, so two resubmits at once open one request; the second answers 409. Requires useCase.edit and write access to the use case; no approval workflow admin is needed, since the workflow does not change. To use another workflow, an approval workflow admin changes it with PATCH /api/v1/projects/{id}.'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The use case id'
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: 'Approval request opened'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {approval_request_id: {type: integer}, status: {type: string, enum: [pending], description: 'Always pending: a resubmission is never auto-approved'}, auto_approved: {type: boolean, description: 'Always false'}}}
+        '400':
+          description: 'The id is not a positive integer, no workflow is attached, or the attached workflow can no longer review a use case (archived, no steps, a step without approvers)'
+        '401':
+          description: Unauthorized
+        '403':
+          description: 'No useCase.edit permission, or no write access to the use case'
+        '404':
+          description: 'Use case not found in the organization'
+        '409':
+          description: 'The latest approval request is not rejected: it is still pending, or the use case was approved or never sent for approval'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: resubmitUseCaseApproval
       security:
         -
           bearerAuth: []

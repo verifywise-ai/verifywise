@@ -6,11 +6,12 @@
 import {
   AIIncidentManagementStatus,
   AIIncidentManagementApprovalStatus,
+  HarmCategory,
+  IncidentType,
+  Severity,
 } from "../../domain.layer/enums/ai-incident-management.enum";
 import {
   validateString,
-  validateEnum,
-  validateDate,
   validateForeignKey,
   validateSchema,
   ValidationResult,
@@ -38,52 +39,45 @@ export const INCIDENT_DESCRIPTION_TOO_SHORT_MESSAGE = `Description must be at le
 export const INCIDENT_DESCRIPTION_TOO_LONG_MESSAGE = `Description cannot exceed ${INCIDENT_DESCRIPTION_MAX_LENGTH.toLocaleString("en-US")} characters.`;
 
 /**
+ * Longest value of the VARCHAR(255) text columns a caller writes:
+ * ai_project, reporter and model_system_version. (type, severity, status and
+ * approval_status are checked against their enums instead.)
+ */
+export const INCIDENT_TEXT_COLUMN_MAX_LENGTH = 255;
+
+/**
  * Validation limits for incident management
  */
 export const INCIDENT_VALIDATION_LIMITS = {
   DESCRIPTION: { MIN: INCIDENT_DESCRIPTION_MIN_LENGTH, MAX: INCIDENT_DESCRIPTION_MAX_LENGTH },
-  RELATIONSHIP: { MIN: 3, MAX: 255 },
-  PROJECT: { MIN: 2, MAX: 255 },
-  REPORTER: { MIN: 2, MAX: 100 },
+  TEXT_COLUMN: { MAX: INCIDENT_TEXT_COLUMN_MAX_LENGTH },
 } as const;
 
-/**
- * Incident severity levels. Must match ai-incident-management.enum.ts and
- * the CHECK constraint ai_incident_managements_severity_check.
- */
-export const INCIDENT_SEVERITY_ENUM = ["Minor", "Serious", "Very serious"] as const;
+/** Incident types (IncidentType). The column has no CHECK constraint, so this list is the only gate. */
+export const INCIDENT_TYPE_ENUM: readonly string[] = Object.values(IncidentType);
 
 /**
- * Incident status values. Must match ai-incident-management.enum.ts and
- * the CHECK constraint ai_incident_managements_status_check.
+ * Incident severity levels (Severity). Must match the CHECK constraint
+ * ai_incident_managements_severity_check.
  */
-export const INCIDENT_STATUS_ENUM = [
-  "Open",
-  "Investigating",
-  "Mitigated",
-  "Closed",
-  "Suspended",
-  "Emergency action",
-] as const;
+export const INCIDENT_SEVERITY_ENUM: readonly string[] = Object.values(Severity);
 
 /**
- * Approval status values. Must match ai-incident-management.enum.ts and
- * the CHECK constraint ai_incident_managements_approval_status_check.
+ * Incident status values (AIIncidentManagementStatus). Must match the CHECK
+ * constraint ai_incident_managements_status_check.
  */
-export const APPROVAL_STATUS_ENUM = ["Pending", "Approved", "Rejected", "Not required"] as const;
+export const INCIDENT_STATUS_ENUM: readonly string[] = Object.values(AIIncidentManagementStatus);
 
 /**
- * Categories of harm per EU AI Act Article 73
+ * Approval status values (AIIncidentManagementApprovalStatus). Must match the
+ * CHECK constraint ai_incident_managements_approval_status_check.
  */
-export const INCIDENT_HARM_CATEGORIES_ENUM = [
-  "Health and Safety",
-  "Fundamental Rights Violation",
-  "Environmental Impact",
-  "Economic Loss",
-  "Privacy or Data Breach",
-  "Security Threat",
-  "Other",
-] as const;
+export const APPROVAL_STATUS_ENUM: readonly string[] = Object.values(
+  AIIncidentManagementApprovalStatus,
+);
+
+/** Categories of harm (HarmCategory): the values the incident page offers and stores. */
+export const INCIDENT_HARM_CATEGORIES_ENUM: readonly string[] = Object.values(HarmCategory);
 
 /**
  * Validates description
@@ -144,106 +138,233 @@ export const assertValidIncidentDescription = (value: unknown): void => {
 };
 
 /**
- * Validates categories of harm
+ * A field error with its translation key: controllers send
+ * translateError(req, error), which uses `i18nKey` / `i18nVars`; `message` is
+ * the English text.
  */
-export const validateCategoriesOfHarm = (value: any): ValidationResult => {
-  if (!Array.isArray(value) || value.length < 1) {
-    return {
-      isValid: false,
-      message: "At least one harm category is required",
-      code: "REQUIRED_FIELD",
-    };
+export interface IncidentFieldError extends ValidationError {
+  i18nKey: string;
+  i18nVars: Record<string, string | number>;
+}
+
+const REQUIRED_KEY = "{field} is required";
+const TEXT_KEY = "{field} must be text";
+const TOO_LONG_KEY = "{field} must be at most {max} characters";
+const ONE_OF_KEY = "{field} must be one of: {values}";
+const DATE_KEY = "{field} must be a valid date (YYYY-MM-DD)";
+const FUTURE_KEY = "{field} cannot be in the future";
+const BOOLEAN_KEY = "{field} must be true or false";
+const HARM_KEY = "{field} must be a list of these categories: {values}";
+const DATE_ORDER_KEY = "date_detected cannot be earlier than occurred_date";
+const USER_ID_KEY = "{field} must be a user id";
+
+const fillPlaceholders = (key: string, vars: Record<string, string | number>): string =>
+  key.replace(/\{(\w+)\}/g, (_, name) => (name in vars ? String(vars[name]) : `{${name}}`));
+
+const fieldError = (
+  field: string,
+  code: string,
+  i18nKey: string,
+  vars: Record<string, string | number> = {},
+): IncidentFieldError => {
+  const i18nVars = { field, ...vars };
+  return { field, code, message: fillPlaceholders(i18nKey, i18nVars), i18nKey, i18nVars };
+};
+
+/** undefined, null, or a string that is empty after trimming. */
+export const isBlankIncidentValue = (value: unknown): boolean =>
+  value === undefined || value === null || (typeof value === "string" && value.trim() === "");
+
+/** A text field: a string, non-blank when required, at most `max` characters. */
+const checkText = (
+  field: string,
+  value: unknown,
+  { required, max }: { required: boolean; max?: number },
+): IncidentFieldError | null => {
+  if (value === undefined || value === null || value === "") {
+    return required ? fieldError(field, "REQUIRED_FIELD", REQUIRED_KEY) : null;
   }
-
-  for (const category of value) {
-    if (!INCIDENT_HARM_CATEGORIES_ENUM.includes(category as any)) {
-      return {
-        isValid: false,
-        message: `Invalid harm category: "${category}". Must be one of: ${INCIDENT_HARM_CATEGORIES_ENUM.join(", ")}`,
-        code: "INVALID_HARM_CATEGORY",
-      };
-    }
+  if (typeof value !== "string") return fieldError(field, "INVALID_TYPE", TEXT_KEY);
+  if (required && value.trim() === "") return fieldError(field, "REQUIRED_FIELD", REQUIRED_KEY);
+  if (max !== undefined && value.length > max) {
+    return fieldError(field, "MAX_LENGTH", TOO_LONG_KEY, { max });
   }
+  return null;
+};
 
-  return { isValid: true };
+/** A required value from `allowed` (exact match). */
+const checkEnum = (
+  field: string,
+  value: unknown,
+  allowed: readonly string[],
+): IncidentFieldError | null => {
+  if (isBlankIncidentValue(value)) return fieldError(field, "REQUIRED_FIELD", REQUIRED_KEY);
+  if (typeof value !== "string" || !allowed.includes(value)) {
+    return fieldError(field, "INVALID_ENUM_VALUE", ONE_OF_KEY, { values: allowed.join(", ") });
+  }
+  return null;
 };
 
 /**
- * Validates relationship/causality
+ * The calendar date (YYYY-MM-DD) of a date value the caller sent, or null
+ * when it is not a real date. Accepts a Date or a string starting with
+ * YYYY-MM-DD (a date or an ISO date-time); "2026-02-30" is not a date.
  */
-export const validateRelationship = (value: any): ValidationResult => {
-  return validateString(value, "Relationship/Causality", {
-    required: true,
-    minLength: INCIDENT_VALIDATION_LIMITS.RELATIONSHIP.MIN,
-    maxLength: INCIDENT_VALIDATION_LIMITS.RELATIONSHIP.MAX,
-    trimWhitespace: true,
-  });
+const sentCalendarDate = (value: unknown): string | null => {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : incidentCalendarDate(value);
+  }
+  if (typeof value !== "string") return null;
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value.trim());
+  if (!match || Number.isNaN(new Date(value.trim()).getTime())) return null;
+  const [, y, m, d] = match.map(Number);
+  const probe = new Date(Date.UTC(y, m - 1, d));
+  return probe.getUTCFullYear() === y && probe.getUTCMonth() === m - 1 && probe.getUTCDate() === d
+    ? match[0]
+    : null;
+};
+
+/** Hours the furthest-ahead time zone (UTC+14) is ahead of UTC. */
+const FURTHEST_AHEAD_UTC_OFFSET_HOURS = 14;
+
+/**
+ * The latest calendar date an incident date may have: today in UTC+14, the
+ * furthest-ahead time zone. A date that is today anywhere in the world is
+ * accepted, and anything later is refused.
+ */
+export const latestIncidentDate = (now: Date = new Date()): string =>
+  new Date(now.getTime() + FURTHEST_AHEAD_UTC_OFFSET_HOURS * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+
+/** A required date that is a real calendar date and not in the future. */
+const checkDate = (field: string, value: unknown): IncidentFieldError | null => {
+  if (isBlankIncidentValue(value)) return fieldError(field, "REQUIRED_FIELD", REQUIRED_KEY);
+  const date = sentCalendarDate(value);
+  if (!date) return fieldError(field, "INVALID_DATE", DATE_KEY);
+  if (date > latestIncidentDate()) return fieldError(field, "FUTURE_DATE", FUTURE_KEY);
+  return null;
+};
+
+/** An optional user id: a positive integer, or empty for none. */
+const checkUserId = (field: string, value: unknown): IncidentFieldError | null =>
+  isBlankIncidentValue(value) || toIncidentUserId(value) !== null
+    ? null
+    : fieldError(field, "INVALID_TYPE", USER_ID_KEY);
+
+/** An optional boolean. */
+const checkBoolean = (field: string, value: unknown): IncidentFieldError | null =>
+  value === undefined || value === null || typeof value === "boolean"
+    ? null
+    : fieldError(field, "INVALID_TYPE", BOOLEAN_KEY);
+
+/**
+ * A list (possibly empty) of strings from INCIDENT_HARM_CATEGORIES_ENUM.
+ * Items in `kept` (the stored categories, on update) are also accepted, so a
+ * row holding an older value outside the list can still be edited; only the
+ * items an update adds must come from the list.
+ */
+const checkHarmCategories = (
+  value: unknown,
+  kept: readonly unknown[] = [],
+): IncidentFieldError | null =>
+  Array.isArray(value) &&
+  value.every(
+    (item) =>
+      (typeof item === "string" && INCIDENT_HARM_CATEGORIES_ENUM.includes(item)) ||
+      kept.some((stored) => JSON.stringify(stored) === JSON.stringify(item)),
+  )
+    ? null
+    : fieldError("categories_of_harm", "INVALID_HARM_CATEGORY", HARM_KEY, {
+        values: INCIDENT_HARM_CATEGORIES_ENUM.join(", "),
+      });
+
+/** The stored harm categories as a list (the JSON column may come back as a string). */
+const storedHarmCategories = (stored: unknown): unknown[] => {
+  const list = toHarmArray(stored);
+  return Array.isArray(list) ? list : [];
 };
 
 /**
- * Validates AI project/system field
+ * Harm categories as a create request may send them: a list, or the
+ * comma-separated string form ("Health, Safety"). Absent or empty is [].
+ * Anything else is returned unchanged, for checkHarmCategories to refuse.
  */
-export const validateAIProject = (value: any): ValidationResult => {
-  return validateString(value, "AI Project/System", {
-    required: true,
-    minLength: INCIDENT_VALIDATION_LIMITS.PROJECT.MIN,
-    maxLength: INCIDENT_VALIDATION_LIMITS.PROJECT.MAX,
-    trimWhitespace: true,
-  });
+export const parseCreateHarmCategories = (value: unknown): unknown => {
+  if (value === undefined || value === null || value === "") return [];
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter((item) => item !== "");
+  }
+  return value;
+};
+
+export const validateSeverity = (value: unknown): ValidationResult => {
+  const error = checkEnum("severity", value, INCIDENT_SEVERITY_ENUM);
+  return error ? { isValid: false, message: error.message, code: error.code } : { isValid: true };
+};
+
+export const validateStatus = (value: unknown): ValidationResult => {
+  const error = checkEnum("status", value, INCIDENT_STATUS_ENUM);
+  return error ? { isValid: false, message: error.message, code: error.code } : { isValid: true };
+};
+
+export const validateApprovalStatus = (value: unknown): ValidationResult => {
+  const error = checkEnum("approval_status", value, APPROVAL_STATUS_ENUM);
+  return error ? { isValid: false, message: error.message, code: error.code } : { isValid: true };
 };
 
 /**
- * Validates severity level
+ * The rule for each incident field a caller writes (description and the
+ * reference ids have their own). A rule gets the value as sent and returns a
+ * field error or null. Required fields refuse an empty value; optional ones
+ * accept it.
  */
-export const validateSeverity = (value: any): ValidationResult => {
-  return validateEnum(value, "Severity Level", INCIDENT_SEVERITY_ENUM, true);
+const FIELD_RULES: Record<string, (value: unknown) => IncidentFieldError | null> = {
+  ai_project: (v) =>
+    checkText("ai_project", v, { required: true, max: INCIDENT_TEXT_COLUMN_MAX_LENGTH }),
+  type: (v) => checkEnum("type", v, INCIDENT_TYPE_ENUM),
+  severity: (v) => checkEnum("severity", v, INCIDENT_SEVERITY_ENUM),
+  status: (v) => checkEnum("status", v, INCIDENT_STATUS_ENUM),
+  approval_status: (v) => checkEnum("approval_status", v, APPROVAL_STATUS_ENUM),
+  occurred_date: (v) => checkDate("occurred_date", v),
+  date_detected: (v) => checkDate("date_detected", v),
+  reporter: (v) =>
+    checkText("reporter", v, { required: true, max: INCIDENT_TEXT_COLUMN_MAX_LENGTH }),
+  reporter_id: (v) => checkUserId("reporter_id", v),
+  model_system_version: (v) =>
+    checkText("model_system_version", v, {
+      required: false,
+      max: INCIDENT_TEXT_COLUMN_MAX_LENGTH,
+    }),
+  affected_persons_groups: (v) => checkText("affected_persons_groups", v, { required: false }),
+  relationship_causality: (v) => checkText("relationship_causality", v, { required: false }),
+  immediate_mitigations: (v) => checkText("immediate_mitigations", v, { required: false }),
+  planned_corrective_actions: (v) =>
+    checkText("planned_corrective_actions", v, { required: false }),
+  approval_notes: (v) => checkText("approval_notes", v, { required: false }),
+  categories_of_harm: (v) => checkHarmCategories(v),
+  interim_report: (v) => checkBoolean("interim_report", v),
+  archived: (v) => checkBoolean("archived", v),
 };
 
 /**
- * Validates status
+ * Fields a new incident may leave out: the server fills them in
+ * (status Open, approval Pending).
  */
-export const validateStatus = (value: any): ValidationResult => {
-  return validateEnum(value, "Status", INCIDENT_STATUS_ENUM, true);
-};
+export const INCIDENT_CREATE_DEFAULTS = {
+  status: AIIncidentManagementStatus.OPEN,
+  approval_status: AIIncidentManagementApprovalStatus.PENDING,
+} as const;
 
-/**
- * Validates approval status
- */
-export const validateApprovalStatus = (value: any): ValidationResult => {
-  return validateEnum(value, "Approval Status", APPROVAL_STATUS_ENUM, true);
-};
-
-/**
- * Validates date occurred
- */
-export const validateDateOccurred = (value: any): ValidationResult => {
-  return validateDate(value, "Date Occurred", { required: true });
-};
-
-/**
- * Validates date detected
- */
-export const validateDateDetected = (value: any): ValidationResult => {
-  return validateDate(value, "Date Detected", { required: true });
-};
-
-/**
- * Validates reporter field
- */
-export const validateReporter = (value: any): ValidationResult => {
-  return validateString(value, "Reporter", {
-    required: true,
-    minLength: INCIDENT_VALIDATION_LIMITS.REPORTER.MIN,
-    maxLength: INCIDENT_VALIDATION_LIMITS.REPORTER.MAX,
-    trimWhitespace: true,
-  });
-};
-
-/**
- * Validates approver field (foreign key)
- */
-export const validateApprover = (value: any): ValidationResult => {
-  return validateForeignKey(value, "Approver", false);
+/** The date-order error when both dates are valid and detected is before occurred, else null. */
+const dateOrderError = (occurred: unknown, detected: unknown): IncidentFieldError | null => {
+  const occurredDate = sentCalendarDate(occurred);
+  const detectedDate = sentCalendarDate(detected);
+  if (!occurredDate || !detectedDate || detectedDate >= occurredDate) return null;
+  return fieldError("date_detected", "INVALID_DATE_ORDER", DATE_ORDER_KEY);
 };
 
 /**
@@ -275,20 +396,8 @@ export const validateProjectId = (value: any): ValidationResult =>
 export const validateAssigneeId = (value: any): ValidationResult =>
   validateOptionalIncidentReference(value, "Assignee ID");
 
-/**
- * Validation schema for creating an incident
- */
-export const createIncidentSchema = {
-  description: validateDescription,
-  model_inventory_id: validateModelInventoryId,
-  project_id: validateProjectId,
-  assignee_id: validateAssigneeId,
-};
-
-/**
- * Validation schema for updating an incident
- */
-export const updateIncidentSchema = {
+/** Reference ids: optional, positive integers when given. */
+const referenceSchema = {
   model_inventory_id: validateModelInventoryId,
   project_id: validateProjectId,
   assignee_id: validateAssigneeId,
@@ -299,38 +408,48 @@ export const validateIncidentIdParam = (id: any): ValidationResult => {
 };
 
 /**
- * Validates a complete incident for creation
+ * Field validation for a new incident: every field rule (FIELD_RULES) on the
+ * value sent, the description and reference ids, and detected on or after
+ * occurred. status and approval_status may be left out
+ * (INCIDENT_CREATE_DEFAULTS); harm categories may come as a list or the
+ * comma-separated string form.
  */
-export const validateCompleteIncident = (data: any): ValidationError[] => {
-  return validateSchema(data, createIncidentSchema);
-};
-
-/**
- * Validates a complete incident for update
- */
-export const validateUpdateIncident = (data: any): ValidationError[] => {
-  return validateSchema(data, updateIncidentSchema);
-};
-
-/**
- * Business rule validation for incident creation
- */
-export const validateIncidentCreationBusinessRules = (data: any): ValidationError[] => {
+export const validateCompleteIncidentCreation = (data: any): ValidationError[] => {
+  const body = data ?? {};
   const errors: ValidationError[] = [];
-
-  if (new Date(data.date_detected) < new Date(data.date_occurred)) {
+  const description = validateDescription(body.description);
+  if (!description.isValid) {
     errors.push({
-      field: "date_detected",
-      message: "Date detected cannot be earlier than date occurred",
-      code: "INVALID_DATE_ORDER",
+      field: "description",
+      message: description.message || "Invalid value",
+      code: description.code || "INVALID_VALUE",
     });
   }
-
+  // A reporter picked from the organization's users (reporter_id) stands in
+  // for the reporter text: the server writes the user's name there.
+  const hasReporterId = !isBlankIncidentValue(body.reporter_id);
+  for (const [field, rule] of Object.entries(FIELD_RULES)) {
+    let value = body[field];
+    if (field in INCIDENT_CREATE_DEFAULTS && isBlankIncidentValue(value)) continue;
+    if (field === "reporter" && hasReporterId) continue;
+    if (field === "categories_of_harm") value = parseCreateHarmCategories(value);
+    const error = rule(value);
+    if (error) errors.push(error);
+  }
+  errors.push(...validateSchema(body, referenceSchema));
+  const order = dateOrderError(body.occurred_date, body.date_detected);
+  if (order) errors.push(order);
   return errors;
 };
 
 /**
- * Business rule validation for incident updates
+ * Field validation for an update, against the stored row (`existingData`,
+ * the row the service has locked). Only fields the update changes are
+ * checked (isSameIncidentValue), so editing one field of an older row whose
+ * other values predate a rule still works. A changed required field cannot
+ * be blanked (null or ""). When either date changes, the dates the row would
+ * end up with (the update over the stored row) must keep detected on or
+ * after occurred. Without `existingData` every field sent is checked.
  */
 export const validateIncidentUpdateBusinessRules = (
   data: any,
@@ -339,12 +458,18 @@ export const validateIncidentUpdateBusinessRules = (
   // Any status can move to any other status, including Closed back to an
   // open status (reopening). See applyReopenApprovalReset for the approval
   // side effect of a reopen.
+  const update = data ?? {};
+  const stored = existingData ?? {};
   const errors: ValidationError[] = [];
+  const changes = (field: string): boolean =>
+    update[field] !== undefined &&
+    (existingData === undefined || !isSameIncidentValue(field, stored[field], update[field]));
+
   // The description is checked only when the update changes it (see
-  // isIncidentDescriptionChanged), against the row the service has locked.
-  // The write query applies the same rule as a backstop.
-  if (isIncidentDescriptionChanged(data?.description, existingData?.description)) {
-    const result = validateDescription(data.description);
+  // isIncidentDescriptionChanged). The write query applies the same rule as
+  // a backstop.
+  if (isIncidentDescriptionChanged(update.description, stored.description)) {
+    const result = validateDescription(update.description);
     if (!result.isValid) {
       errors.push({
         field: "description",
@@ -353,6 +478,32 @@ export const validateIncidentUpdateBusinessRules = (
       });
     }
   }
+  // The reporter the row ends up with. A reporter_id sent (changed or not)
+  // makes the server write that member's name into the reporter text, so the
+  // text sent does not count. Otherwise the text sent, or the stored one, must
+  // be present when the reporter changes: a new text, or the user cleared.
+  const derivesReporter = !isBlankIncidentValue(update.reporter_id);
+  const clearsReporterId = update.reporter_id !== undefined && !derivesReporter;
+  for (const [field, rule] of Object.entries(FIELD_RULES)) {
+    if (field === "reporter") {
+      if (derivesReporter || !(changes("reporter") || clearsReporterId)) continue;
+      const error = rule(update.reporter !== undefined ? update.reporter : stored.reporter);
+      if (error) errors.push(error);
+      continue;
+    }
+    if (!changes(field)) continue;
+    const error =
+      field === "categories_of_harm"
+        ? checkHarmCategories(update[field], storedHarmCategories(stored.categories_of_harm))
+        : rule(update[field]);
+    if (error) errors.push(error);
+  }
+  if (changes("occurred_date") || changes("date_detected")) {
+    const effective = (field: string) =>
+      update[field] !== undefined ? update[field] : stored[field];
+    const order = dateOrderError(effective("occurred_date"), effective("date_detected"));
+    if (order) errors.push(order);
+  }
   return errors;
 };
 
@@ -360,6 +511,7 @@ export const validateIncidentUpdateBusinessRules = (
 const APPROVAL_FIELDS = [
   "approval_status",
   "approved_by",
+  "approved_by_id",
   "approval_date",
   "approval_notes",
 ] as const;
@@ -371,11 +523,16 @@ export const INCIDENT_DATE_COLUMNS: ReadonlySet<string> = new Set([
   "approval_date",
 ]);
 
-/** Incident foreign-key columns (issue #4583). Compared as numbers. */
+/**
+ * Incident foreign-key columns (issue #4583, and the reporter / approver
+ * users). Compared as numbers; '' means none.
+ */
 export const INCIDENT_FK_COLUMNS: ReadonlySet<string> = new Set([
   "model_inventory_id",
   "project_id",
   "assignee_id",
+  "reporter_id",
+  "approved_by_id",
 ]);
 
 /** Incident boolean columns. null / undefined count as false. */
@@ -390,19 +547,16 @@ const isEmptyValue = (value: unknown): boolean =>
 const pad2 = (n: number): string => String(n).padStart(2, "0");
 
 /**
- * The calendar date (YYYY-MM-DD) of an incident date value, read as the
- * wall-clock date stored in the TIMESTAMP WITHOUT TIME ZONE column.
+ * The calendar date (YYYY-MM-DD) of an incident date value. The date columns
+ * are DATE, which Sequelize's parser returns as the "YYYY-MM-DD" string, on
+ * raw queries too.
  *
- * - A Date comes from pg, which parses this column type (oid 1114) as
- *   server-local time and the project installs no custom type parser, so its
- *   local components are the stored wall-clock time.
- * - A string starting with YYYY-MM-DD is that date: it is what Postgres
- *   stores for it, since this column type ignores any offset in the input.
- *
- * Both readings agree in any server time zone. (The API still serialises
- * these Dates with toISOString(), which shifts the date on a non-UTC server;
- * that is a separate, pre-existing issue. The edit drawer only sends fields
- * the user changed, so an untouched date is never compared.)
+ * - A string starting with YYYY-MM-DD is that date, whatever follows (an ISO
+ *   date-time's time and offset are ignored: the caller's day is the one
+ *   written).
+ * - A Date is an instant some server code built (the Advisor's "today", a
+ *   Jira issue's creation time): its UTC date, the date the database session
+ *   (UTC) has always stored for it.
  */
 export const incidentCalendarDate = (value: unknown): string | null => {
   if (isEmptyValue(value)) return null;
@@ -412,7 +566,81 @@ export const incidentCalendarDate = (value: unknown): string | null => {
   }
   const date = value instanceof Date ? value : new Date(value as string);
   if (Number.isNaN(date.getTime())) return String(value);
-  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+  return `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`;
+};
+
+/**
+ * The value to write to (or send out for) an incident DATE column:
+ * "YYYY-MM-DD", or null for none. Unparseable values pass through so the
+ * database refuses them rather than storing a guess (validation runs first).
+ */
+export const toIncidentDateValue = (value: unknown): string | null => {
+  if (isEmptyValue(value)) return null;
+  return incidentCalendarDate(value);
+};
+
+/**
+ * An incident day formatted for people (emails, reports): the day itself, in
+ * UTC, so it never becomes the day before on a server west of UTC. "" for no
+ * date; the value as given when it is not a date.
+ */
+export const formatIncidentDay = (
+  value: unknown,
+  locale?: string,
+  options: Intl.DateTimeFormatOptions = {},
+): string => {
+  const day = toIncidentDateValue(value);
+  if (!day) return "";
+  const date = new Date(`${day}T00:00:00Z`);
+  if (Number.isNaN(date.getTime())) return day;
+  return date.toLocaleDateString(locale, { ...options, timeZone: "UTC" });
+};
+
+/** Hours the furthest-behind time zone (UTC-12) is behind UTC. */
+const FURTHEST_BEHIND_UTC_OFFSET_HOURS = 12;
+
+/** The earliest date that is today somewhere: today in UTC-12. */
+export const earliestIncidentToday = (now: Date = new Date()): string =>
+  new Date(now.getTime() - FURTHEST_BEHIND_UTC_OFFSET_HOURS * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+
+/**
+ * The day the acting user records (an approval date, the Advisor's incident
+ * days), as "YYYY-MM-DD": the local date their browser sent (the
+ * X-Client-Date header, see getRequestClientDate) when it is a real date
+ * that is today somewhere on earth right now (today in UTC-12 to today in
+ * UTC+14), else today in UTC. So an approver in Toronto at 20:00 records
+ * their own day, not tomorrow, and no caller can backdate or postdate it.
+ */
+export const incidentToday = (clientDate?: unknown, now: Date = new Date()): string =>
+  acceptedClientDate(clientDate, now) ?? now.toISOString().slice(0, 10);
+
+/**
+ * A client date (see incidentToday) when it is a bare real date that is today
+ * somewhere on earth at `now`, else null.
+ */
+export const acceptedClientDate = (clientDate: unknown, now: Date = new Date()): string | null => {
+  const day = incidentCalendarDay(clientDate);
+  return day && day >= earliestIncidentToday(now) && day <= latestIncidentDate(now) ? day : null;
+};
+
+/** `value` when it is a bare real calendar date ("YYYY-MM-DD"), else null. */
+export const incidentCalendarDay = (value: unknown): string | null =>
+  typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) ? sentCalendarDate(value) : null;
+
+/**
+ * A user id sent for reporter_id: a positive integer (number or digits), or
+ * null when it is not one.
+ */
+export const toIncidentUserId = (value: unknown): number | null => {
+  const id =
+    typeof value === "number"
+      ? value
+      : typeof value === "string" && /^\d+$/.test(value.trim())
+        ? Number(value.trim())
+        : NaN;
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
 };
 
 const toHarmArray = (value: unknown): unknown => {
@@ -501,18 +729,64 @@ export const applyReopenApprovalReset = <T extends Record<string, any>>(
     ...update,
     approval_status: AIIncidentManagementApprovalStatus.PENDING,
     approved_by: null,
+    approved_by_id: null,
     approval_date: null,
     approval_notes: null,
   };
 };
 
 /**
- * Complete validation for incident creation
+ * Approval fields the server sets: who recorded the decision and when.
+ * Callers cannot send them; every write path drops them from the request.
  */
-export const validateCompleteIncidentCreation = (data: any): ValidationError[] => {
-  const validationErrors = validateCompleteIncident(data);
-  const businessErrors = validateIncidentCreationBusinessRules(data);
-  return [...validationErrors, ...businessErrors];
+export const SERVER_SET_APPROVAL_FIELDS = [
+  "approved_by",
+  "approved_by_id",
+  "approval_date",
+] as const;
+
+/** Approval fields a caller may change, with incident.approve. */
+export const CALLER_APPROVAL_FIELDS: ReadonlySet<string> = new Set([
+  "approval_status",
+  "approval_notes",
+]);
+
+/** Approval statuses that record a decision, so they name an approver and a date. */
+const DECISION_STATUSES: ReadonlySet<string> = new Set([
+  AIIncidentManagementApprovalStatus.APPROVED,
+  AIIncidentManagementApprovalStatus.REJECTED,
+]);
+
+/** `values` without the server-set approval fields (approved_by, approval_date). */
+export const withoutServerSetApprovalFields = <T extends Record<string, unknown>>(values: T): T => {
+  const copy: Record<string, unknown> = { ...values };
+  for (const field of SERVER_SET_APPROVAL_FIELDS) delete copy[field];
+  return copy as T;
+};
+
+/**
+ * What a write does to approved_by, approved_by_id and approval_date, given
+ * the stored approval status (undefined on create) and the one being written:
+ *
+ * - "stamp": the status changes to Approved or Rejected. The server records
+ *   the acting user as approver (name and id) and today (UTC) as the
+ *   approval date.
+ * - "clear": the status changes to Pending or Not required (or a new incident
+ *   starts without a decision). Both are cleared.
+ * - "keep": the status does not change (or is not written). Both stay as
+ *   stored, so editing approval notes does not re-sign the decision.
+ */
+export const approvalStampFor = (
+  storedStatus: unknown,
+  nextStatus: unknown,
+): "stamp" | "clear" | "keep" => {
+  if (nextStatus === undefined) return "keep";
+  if (
+    storedStatus !== undefined &&
+    isSameIncidentValue("approval_status", storedStatus, nextStatus)
+  )
+    return "keep";
+  return DECISION_STATUSES.has(String(nextStatus)) ? "stamp" : "clear";
 };
 
 /**
@@ -521,8 +795,7 @@ export const validateCompleteIncidentCreation = (data: any): ValidationError[] =
 export const validateCompleteIncidentUpdate = (
   data: any,
   existingData?: any,
-): ValidationError[] => {
-  const validationErrors = validateUpdateIncident(data);
-  const businessErrors = validateIncidentUpdateBusinessRules(data, existingData);
-  return [...validationErrors, ...businessErrors];
-};
+): ValidationError[] => [
+  ...validateSchema(data ?? {}, referenceSchema),
+  ...validateIncidentUpdateBusinessRules(data, existingData),
+];

@@ -9,7 +9,6 @@ import {
   RISK_APPROVAL_STATUS,
   riskSeverityItems,
 } from "../projectRiskValue";
-import { Likelihood, Severity } from "../../RiskLevel/constants";
 import { riskCalendarDay } from "../../../tools/isoDateToString";
 
 /** A stored risk date as the local midnight of its calendar day, or "" when unset. */
@@ -30,10 +29,13 @@ export const mitigationInitialState: MitigationFormValues = {
   mitigationPlan: "",
   currentRiskLevel: 0,
   implementationStrategy: "",
-  deadline: new Date().toISOString(),
+  // Every mitigation field is optional and starts empty (0 = none picked), so
+  // a new risk is saved without a deadline (and its reminders), a status or a
+  // residual level nobody chose.
+  deadline: "",
   doc: "",
-  likelihood: 1 as Likelihood,
-  riskSeverity: 1 as Severity,
+  likelihood: 0,
+  riskSeverity: 0,
   approver: 0,
   // A risk always has an approval status; it needs none until an approver is named.
   approvalStatus: RISK_APPROVAL_STATUS.NotRequired,
@@ -86,8 +88,8 @@ export function useMitigationSection(
         deadline: parseDateValue(inputValues.deadline),
         doc: (inputValues.mitigation_evidence_document as string) ?? "",
         likelihood:
-          likelihoodItems.find((item) => item.name === inputValues.likelihood_mitigation)?._id ?? 1,
-        riskSeverity: riskSeverityItems.find((item) => item.name === residualSeverity)?._id ?? 1,
+          likelihoodItems.find((item) => item.name === inputValues.likelihood_mitigation)?._id ?? 0,
+        riskSeverity: riskSeverityItems.find((item) => item.name === residualSeverity)?._id ?? 0,
         approver: (inputValues.risk_approval as number) ?? 0,
         // A value from before the four statuses (the server maps them) opens as Not required.
         approvalStatus:
@@ -115,11 +117,11 @@ export function useMitigationSection(
       implementation_strategy: values.implementationStrategy,
       mitigation_evidence_document: values.doc,
       likelihood_mitigation:
-        likelihoodItems.find((item) => item._id === values.likelihood)?.name || "",
+        likelihoodItems.find((item) => item._id === values.likelihood)?.name || null,
       risk_severity:
         riskSeverityItems.find((item) => item._id === values.riskSeverity)?.name === "Catastrophic"
           ? "Critical"
-          : riskSeverityItems.find((item) => item._id === values.riskSeverity)?.name || "",
+          : riskSeverityItems.find((item) => item._id === values.riskSeverity)?.name || null,
       risk_approval: values.approver || null,
       approval_status:
         approvalStatusItems.find((item) => item._id === values.approvalStatus)?.name ??

@@ -1,5 +1,5 @@
 export type ReportScope = "project" | "organization";
-export type ReportFrequency = "daily" | "weekly" | "monthly";
+export type ReportFrequency = "daily" | "weekly" | "monthly" | "quarterly";
 export type RunStatus = "queued" | "running" | "success" | "failed" | "partial_success";
 
 export interface TemplateSectionConfig {
@@ -20,6 +20,8 @@ export interface AiBlocksConfig {
   riskAnalysis?: boolean;
   complianceGap?: boolean;
   vendorRisk?: boolean;
+  /** The OSFI E-23 gap analysis; offered only for templates of kind osfi_e23. */
+  e23Gap?: boolean;
 }
 
 /** A template version's default target frameworks. Empty means all in scope. */
@@ -28,6 +30,26 @@ export interface FrameworkConfig {
   frameworkIds?: string[];
 }
 
+export type ReportParameterFieldType = "text" | "textarea" | "date" | "select" | "boolean";
+
+export interface ReportParameterField {
+  key: string;
+  label: string;
+  type: ReportParameterFieldType;
+  required: boolean;
+  maxLength?: number;
+  options?: { value: string; label: string }[];
+}
+
+/** A template version's parameter declaration, for report kinds that take inputs. */
+export interface ReportParametersConfig {
+  kind?: string;
+  fields?: ReportParameterField[];
+}
+
+/** Parameter values a run or schedule carries, keyed by ReportParameterField.key. */
+export type ReportParameters = Record<string, string | boolean>;
+
 export interface ScheduleConfig {
   frequency: ReportFrequency;
   hour: number;
@@ -35,6 +57,8 @@ export interface ScheduleConfig {
   timezone: string;
   dayOfWeek?: number;
   dayOfMonth?: number;
+  /** Quarterly schedules: the month (1-12) the first quarter run falls in. */
+  anchorMonth?: number;
 }
 
 export interface DeliveryConfig {
@@ -59,6 +83,8 @@ export interface ScheduledReportRecord {
   framework_id: number | null;
   /** Namespaced framework selection. NULL or [] means every framework in scope. */
   framework_ids: string[] | null;
+  /** Values for the template version's parameter fields. {} when it declares none. */
+  report_parameters: ReportParameters;
   project_framework_id: number | null;
   sections_config: { sections: TemplateSectionConfig[] };
   ai_blocks_config: AiBlocksConfig;

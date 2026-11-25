@@ -13,6 +13,8 @@ import {
 } from "@mui/material";
 import { Plus, Trash2, Play, Save } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
+import Alert from "../../../components/Alert";
+import StandardModal from "../../../components/Modals/StandardModal";
 import Select from "../../../components/Inputs/Select";
 import Field from "../../../components/Inputs/Field";
 import palette from "../../../themes/palette";
@@ -67,6 +69,10 @@ export default function TestDatasetPanel({
   const [isRunning, setIsRunning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  /** Why the last save or delete failed; cleared by the next attempt or another dataset. */
+  const [actionError, setActionError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -82,7 +88,7 @@ export default function TestDatasetPanel({
       );
       setDatasets(res?.data?.test_datasets || res?.data?.data || []);
     } catch {
-      /* silently handle */
+      setActionError("Could not load the datasets. Try again.");
     }
   }, [promptId]);
 
@@ -90,7 +96,16 @@ export default function TestDatasetPanel({
     loadDatasets();
   }, [loadDatasets]);
 
+  /** Stops a running "Run all", so its results don't land in another dataset's table. */
+  const stopRun = () => {
+    abortRef.current?.abort();
+    setIsRunning(false);
+    setProgress(0);
+  };
+
   const selectDataset = (id: string) => {
+    setActionError(null);
+    stopRun();
     if (id === "new") {
       setSelectedDatasetId("new");
       setDatasetName("New dataset");
@@ -135,6 +150,7 @@ export default function TestDatasetPanel({
 
   const handleSave = async () => {
     setIsSaving(true);
+    setActionError(null);
     try {
       if (selectedDatasetId === "new") {
         const res = await apiServices.post<Record<string, any>>(
@@ -148,6 +164,11 @@ export default function TestDatasetPanel({
         if (created) {
           setSelectedDatasetId(created.id);
           setDatasets((prev) => [created, ...prev]);
+        } else {
+          // Saved or not, the panel can't tell which dataset it is; reload rather than
+          // let a second Save create a copy.
+          setActionError("Could not save the dataset. Try again.");
+          await loadDatasets();
         }
       } else {
         await apiServices.patch(
@@ -164,7 +185,7 @@ export default function TestDatasetPanel({
         );
       }
     } catch {
-      /* silently handle */
+      setActionError("Could not save the dataset. Try again.");
     } finally {
       setIsSaving(false);
     }
@@ -183,6 +204,7 @@ export default function TestDatasetPanel({
         onDelta: () => {}, // no per-chunk UI update needed for table rows
         signal,
       });
+      if (signal.aborted) return;
 
       setResults((prev) => {
         const next = [...prev];
@@ -212,10 +234,12 @@ export default function TestDatasetPanel({
 
     let completed = 0;
     for (let i = 0; i < testCases.length; i += MAX_CONCURRENT) {
+      if (signal.aborted) return;
       const batch = testCases.slice(i, i + MAX_CONCURRENT);
       const promises = batch.map((tc, batchIdx) => {
         const globalIdx = i + batchIdx;
         return runSingle(tc, globalIdx, signal).then(() => {
+          if (signal.aborted) return;
           completed++;
           setProgress(Math.round((completed / testCases.length) * 100));
         });
@@ -223,24 +247,33 @@ export default function TestDatasetPanel({
       await Promise.all(promises);
     }
 
-    setIsRunning(false);
+    // A stopped run leaves the state to whoever stopped it (or to the run that replaced it).
+    if (!signal.aborted) setIsRunning(false);
   };
 
   const deleteDataset = async () => {
     if (selectedDatasetId === "new") return;
+    setIsDeleting(true);
+    setActionError(null);
     try {
       await apiServices.delete(
         `/ai-gateway/prompts/${promptId}/test-datasets/${selectedDatasetId}`,
       );
       setDatasets((prev) => prev.filter((d) => d.id !== selectedDatasetId));
+      stopRun();
       setSelectedDatasetId("new");
       setDatasetName("New dataset");
       setTestCases([{ variables: {}, expected_output: "" }]);
       setResults([]);
     } catch {
-      /* silently handle */
+      setActionError("Could not delete the dataset. Try again.");
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteOpen(false);
     }
   };
+
+  const savedName = datasets.find((d) => d.id === selectedDatasetId)?.name ?? datasetName;
 
   const datasetItems = [
     { _id: "new", name: "+ New dataset" },
@@ -274,25 +307,36 @@ export default function TestDatasetPanel({
             onClick={handleSave}
             isDisabled={isSaving}
             variant="outlined"
-            sx={{ height: 30, fontSize: 12 }}
+            sx={{ fontSize: 12 }}
           />
           <CustomizableButton
             text="Run all"
             icon={<Play size={13} strokeWidth={1.5} />}
             onClick={handleRunAll}
             isDisabled={isRunning || !selectedEndpoint || testCases.length === 0}
-            sx={{ height: 30, fontSize: 12 }}
+            sx={{ fontSize: 12 }}
           />
           {selectedDatasetId !== "new" && (
             <CustomizableButton
               text="Delete"
               icon={<Trash2 size={13} strokeWidth={1.5} />}
-              onClick={deleteDataset}
+              onClick={() => setIsDeleteOpen(true)}
               variant="text"
-              sx={{ height: 30, fontSize: 12, color: vwPalette.status.error.text }}
+              sx={{ fontSize: 12, color: vwPalette.status.error.text }}
             />
           )}
         </Box>
+        {actionError && (
+          <Box sx={{ mt: "8px" }}>
+            <Alert
+              variant="error"
+              body={actionError}
+              isToast
+              inline
+              onClick={() => setActionError(null)}
+            />
+          </Box>
+        )}
         {isRunning && (
           <Box sx={{ mt: "8px" }}>
             <LinearProgress
@@ -405,6 +449,26 @@ export default function TestDatasetPanel({
           </Typography>
         </Box>
       </Box>
+
+      <StandardModal
+        isOpen={isDeleteOpen}
+        onClose={() => {
+          // The request can't be called back; closing now would look like a cancel.
+          if (isDeleting) return;
+          setIsDeleteOpen(false);
+        }}
+        title="Delete dataset"
+        description="Delete this dataset and its test cases?"
+        onSubmit={deleteDataset}
+        submitButtonText="Delete"
+        submitButtonColor={vwPalette.status.error.text}
+        isSubmitting={isDeleting}
+      >
+        <Typography fontSize={13} fontWeight={600}>
+          {savedName}
+        </Typography>
+        <Typography fontSize={13}>This cannot be undone.</Typography>
+      </StandardModal>
     </Box>
   );
 }

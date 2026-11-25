@@ -46,8 +46,8 @@ vi.mock("../../../../application/hooks/useIsAdmin", () => ({
 }));
 // The screen gates on a permission key (#5314); same flag as useIsAdmin.
 vi.mock("../../../../application/hooks/useCan", () => ({
-  useCan: () => mockIsAdmin,
-  useCanCheck: () => () => mockIsAdmin,
+  useCan: (key: string) => (key === "riskLinks.admin" ? mockIsAdmin : true),
+  useCanCheck: () => (key: string) => (key === "riskLinks.admin" ? mockIsAdmin : true),
   usePermissionsSettled: () => true,
 }));
 

@@ -94,6 +94,34 @@ REDIS_URL=redis://redis.internal:6379/0
 
 ---
 
+## File storage
+
+File bytes are stored by a provider selected with `STORAGE_PROVIDER`. See the
+[File Storage Migration Guide](./FILE_STORAGE_MIGRATION.md) for behavior,
+switching, and backup guidance.
+
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `STORAGE_PROVIDER` | `local` (bytes in the `files.content` database column) or `s3` (S3-compatible object storage) | `local` | No |
+| `S3_BUCKET` | Target bucket | - | Yes, when `s3` |
+| `S3_ENDPOINT` | Custom S3-compatible endpoint (MinIO, Wasabi, R2). Omit for AWS S3 | - | No |
+| `S3_REGION` | Bucket/signing region | `us-east-1` | No |
+| `S3_ACCESS_KEY_ID` | Static access key; must be set together with `S3_SECRET_ACCESS_KEY`, or both unset to use the default AWS credential chain | - | No |
+| `S3_SECRET_ACCESS_KEY` | Static secret key (pair rule above) | - | No |
+| `S3_FORCE_PATH_STYLE` | `true`/`false`; most S3-compatible providers need path-style | `true` when `S3_ENDPOINT` set, else `false` | No |
+| `S3_KEY_PREFIX` | Key prefix for stored objects | `files/` | No |
+| `S3_SIGNED_URL_TTL_SECONDS` | Presigned URL lifetime (positive integer) | `900` | No |
+
+```bash
+STORAGE_PROVIDER=s3
+S3_BUCKET=verifywise-files
+S3_ENDPOINT=http://minio:9000
+S3_ACCESS_KEY_ID=minioadmin
+S3_SECRET_ACCESS_KEY=change-me
+```
+
+---
+
 ## Authentication
 
 ### JWT tokens
@@ -335,6 +363,39 @@ What happens when the key is missing or does not match:
 ```bash
 VITE_BRANDFETCH_API_KEY=bf_xxxxxxxxxx
 ```
+
+### Vendor research agent
+
+An agent researches a vendor on the open web and proposes risks for the vendor risk register. A person accepts or dismisses each one; nothing is added to the register on its own. The agent runs on the organization's own LLM key, which an Admin adds in the LLM Keys section of **Settings → API Keys**, and needs no other account or key. Without an LLM key, vendor research reports "not set up" and nothing runs. All seven variables are optional.
+
+The server needs outbound HTTPS only while a run researches a vendor: to the search of the run (`api.gdeltproject.org`, the GDELT news index, used for every research key except an Anthropic one, whose Claude web search goes through the LLM provider host that is already listed for the LLM keys), to `services.nvd.nist.gov`, `haveibeenpwned.com`, `www.sec.gov`, `data.sec.gov` and `api.gleif.org` (the public databases a run asks by the vendor's name or key, unless `VENDOR_RESEARCH_RECORDS` is `false`), to the status page of the vendor (the public websites `status.<domain>`, `<brand>.statuspage.io` and `<brand>status.com`, guessed from the vendor's domain and asked for `robots.txt` and `/history.atom`; also off with `VENDOR_RESEARCH_RECORDS=false`) and to public websites (the pages the agent reads: those on any host a search returns, and the vendor's own site). The NVD, the SEC and GLEIF are asked through the vendor risk database, which keeps each answer of the NVD for 6 hours, each answer of the SEC for 1 hour and each answer of GLEIF for 24 hours, for every organization; `data.sec.gov` and `www.sec.gov` are asked with a User-Agent that names the contact `tech@verifywise.ai`. The workers share the request limits of the NVD, the SEC and GLEIF through the application's Redis.
+
+**The official lists are not downloaded.** The vendor risk database holds copies of 31 public lists (the CISA catalog of known exploited vulnerabilities, the OFAC, UK, EU and Canadian sanctions lists, the US Consolidated Screening List, the critical records of the CVE Program, MITRE ATLAS, the NHTSA, FDA, FTC, CMA, MHRA and Colombian SIC lists, the California breach list, AI incident, hallucination and algorithm registers, and others; `Servers/data/vrdb/manifest.json` names them). Each release ships them as files in `Servers/data/vrdb/`, inside the image, and the worker loads them into the database when it starts: a list whose file did not change since the last start is not written again. The server makes no request for them, so they work the same on a host without internet access. They are as current as the release: each record says the day its list was taken ("As of …"), and a list older than 60 days is reported as out of date. Maintainers refresh the files before a release with `npm run vrdb:bundle` (see [Vendors](../technical/domains/vendors.md#vendor-risk-database)). Two more lists are built but stay off until a maintainer opens their gates in the code (`Servers/services/vendorResearch/vrdb/gates.ts`): the UN Security Council Consolidated List, which waits for the written permission of the UN, and the AI Incident Database, which waits for its operator's written confirmation or the product owner's written acceptance of a licence risk.
+
+Requests are made directly from the process that runs the job, in the backend container or in the worker container (see below): the page guard reads no proxy setting and resolves public host names itself, so a network whose only way out is a proxy is not supported. Without internet access, a run that finds no database record and whose calls the web never answers fails with "The run stopped because the web could not be reached"; a run that has database records, the bundled lists included, is analysed from them and completes. Every request names the bot (`VerifyWiseResearchBot`), and pages are read only as far as each site's `robots.txt` allows.
+
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `VENDOR_RESEARCH_AUTO_RUN` | Research a vendor automatically after it is created. Only `false` turns it off | `true` | No |
+| `VENDOR_RESEARCH_MANUAL_COOLDOWN_MINUTES` | Minutes before the same vendor can be researched again by hand. `0` means no wait | `10` | No |
+| `VENDOR_RESEARCH_DAILY_RUN_CAP` | Research runs one organization may start in a rolling 24 hours, automatic and manual together | `50` | No |
+| `VENDOR_RESEARCH_WORKER_CONCURRENCY` | Research runs one worker process carries out at the same time. Set it on the backend and on the worker, since both containers run a worker process | `5` | No |
+| `VENDOR_RESEARCH_HEADLESS` | Open a page that only a script can build in a headless Chromium so its text can be read. Only `true` turns it on. Set it on the backend and on the worker | `false` | No |
+| `VENDOR_RESEARCH_RECORDS` | Look the vendor up in public records: the vendor risk database (the 31 lists the release ships, loaded at start; nothing is downloaded) and, during a run, the National Vulnerability Database, Have I Been Pwned, the filings of the SEC, the LEI records of GLEIF and the incident history on its status page. Only `false` turns it off: the lists are then neither loaded nor looked up, and a run asks none of those databases. Set it on the worker and on the backend | `true` | No |
+| `VENDOR_RESEARCH_PDF_MAX_GROWTH_MB` | How much the worker process may grow, in MiB, while it reads one PDF; a read that takes it further is ended. A positive whole number; any other value is ignored, with one line in the log. Unset, it is 30% of the memory limit of the container (cgroup v2 `memory.max`, else cgroup v1), between 64 and 1,024 MiB, so 153 MiB in a 512Mi pod (the backend and the worker pods of the Kubernetes manifests and the Helm chart both have that limit), and 1,024 MiB with no limit. Keep it well below the free memory of the container: a worker process also runs every other queue, and in the backend container it shares the limit with the API. Set it on the backend and on the worker | 30% of the container limit | No |
+
+```bash
+VENDOR_RESEARCH_AUTO_RUN=true
+VENDOR_RESEARCH_MANUAL_COOLDOWN_MINUTES=10
+VENDOR_RESEARCH_DAILY_RUN_CAP=50
+VENDOR_RESEARCH_WORKER_CONCURRENCY=5
+VENDOR_RESEARCH_HEADLESS=false
+VENDOR_RESEARCH_RECORDS=true
+```
+
+The values above are the defaults; set them only to change a default. The API process of the backend reads the first three, and `VENDOR_RESEARCH_RECORDS` when it starts: it queues the load of the bundled lists while the records are on. A worker process reads `VENDOR_RESEARCH_WORKER_CONCURRENCY`, `VENDOR_RESEARCH_HEADLESS`, `VENDOR_RESEARCH_RECORDS` and `VENDOR_RESEARCH_PDF_MAX_GROWTH_MB` (at its first PDF), and `VENDOR_RESEARCH_DAILY_RUN_CAP` for the hourly scheduled scan, which starts runs, and none of the others; it carries out the load and the runs, and checks the switch again before the load. **Both containers run a worker.** The image's command (`Servers/start.sh`) starts `node dist/jobs/worker.js` in the background beside the API, so the backend container runs a worker process of its own, and so does the backend of the development stack (`npm run watch` starts the API and the worker). Every deployment from the image (`docker-compose.yml`, `docker-compose.prod.yml`, `kubernetes/`, the Helm chart) therefore has at least two worker processes, one in each backend replica (the Kubernetes manifests and the Helm chart run two) and one in the worker container. Any of them may take a research run, the hourly scan or the load of the lists. So set all seven variables to the same value on the backend and on the worker, and give both containers the outbound internet access above: a container that cannot reach the web fails the runs it happens to take. A value set only on the worker applies only to the jobs the worker container takes; `VENDOR_RESEARCH_RECORDS=false` set only on the backend queues no load, while a run the worker container takes still asks the public databases. The Kubernetes manifests, the Helm chart and the Ansible template do not set the vendor research variables, so all seven take their defaults unless you add them to the environment of both deployments there; `docker-compose.prod.yml` and the Ansible template hand the same `.env.prod` to both containers. Whether the backend container should stop starting a worker when a separate worker is deployed is an open decision; today it always starts one.
+
+**The headless browser.** Some sites send an almost empty page and build their text in the browser. By default the agent reports such a page as one that needs JavaScript and goes on. With `VENDOR_RESEARCH_HEADLESS=true` it opens the page in Chromium instead, with no network access of its own except what the guard answers (WebRTC is taken out of every page and every frame it makes, and Chromium is started with `--webrtc-ip-handling-policy=disable_non_proxied_udp` and with `--disable-site-isolation-trials`, so that a sandboxed frame does not escape that; Chromium also resolves no name, which is what stops TURN over TCP): every request the page makes is answered by the same guard as any other request of the agent (address policy, `robots.txt`, redirects, size and time limits) and is refused unless it is a `GET` for a script or for the data of a script. At most two pages are rendered at once in a process, each for at most 20 seconds, each read cut to 2 MiB of HTML inside the browser, with the JavaScript heap of a page capped at 256 MB, and the browser is closed after a minute without use. One browser serves the runs of every organization in a process, but each page gets a context of its own, closed when its render ends (in a probe on Chrome 157 a page did not share its renderer process with another render either). `--disable-site-isolation-trials` has a cost: in Chrome 157 a page can crash its own renderer with it. Such a render, like any page whose renderer crashes (its JavaScript heap past the cap too), ends at once with nothing, the page is reported as one that needs JavaScript, and the browser and the other renders go on. The memory that Chromium itself uses for a page (its nodes, its text, typed arrays) is not capped, so leave the worker and backend containers room above their usual use when you turn it on. The published image already contains Chromium (`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`, as for the PDF reports); on a host without it the first page logs one warning, and pages that need a script are reported as before. As root Chromium cannot keep its own sandbox, so a process that runs as root never starts it: pages that need a script are then reported as with headless off, and the log says why once. The published image runs as root, so the setting takes effect only where the backend and the worker run as an unprivileged user. See [Web research toolkit](../technical/infrastructure/web-research.md#rendering-a-page-that-a-script-builds). See [Vendors](../technical/domains/vendors.md#configuration) for details and [Web research toolkit](../technical/infrastructure/web-research.md) for the page guard and the search engines.
 
 ---
 

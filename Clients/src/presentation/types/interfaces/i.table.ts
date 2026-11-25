@@ -12,6 +12,7 @@ import { EventModel } from "../../../domain/models/Common/evenTracker/eventTrack
 import { CustomSelectOptionWithIcon } from "../../../domain/types/widget.types";
 import type { JiraIncidentLink } from "../../../application/repository/jiraIncidents.repository";
 import { FileColumn } from "../../../application/hooks/useFileColumnVisibility";
+import type { ResearchAlert } from "../../../application/utils/vendorResearchAlerts";
 import { ApprovalWorkflowModel } from "src/domain/models/Common/approvalWorkflow/approvalWorkflow.model";
 import { TrainingRegistarModel } from "src/domain/models/Common/trainingRegistar/trainingRegistar.model";
 import { AIIncidentManagementModel } from "src/domain/models/Common/incidentManagement/incidentManagement.model";
@@ -252,6 +253,10 @@ export interface IRiskTableProps {
   exposure?: Map<number, VendorRiskExposure>;
   /** Opens a vendor risk on its Linked risks tab; falls back to onEdit. */
   onOpenLinks?: (riskId: number) => void;
+  /** Restores a deleted vendor risk; deleted rows offer it when set. */
+  onRestore?: (riskId: number) => void;
+  /** Shown instead of the first-run empty state when a search or filter hides every risk. */
+  noMatchesMessage?: string;
 }
 
 export interface ITasksTableProps {
@@ -287,6 +292,13 @@ export interface ITableWithPlaceholderProps {
   hidePagination?: boolean;
   vendorRisks?: VendorRisk[];
   visibleColumns?: Set<string>;
+  /**
+   * Shows the page's alert for a message from a row action. The research action on each row
+   * is only shown when this is given, since it has nowhere to say what happened otherwise.
+   */
+  onNotify?: (alert: ResearchAlert) => void;
+  /** Shown instead of the first-run empty state when a search or filter hides every vendor. */
+  noMatchesMessage?: string;
 }
 
 export interface TrainingTableProps {
@@ -316,6 +328,28 @@ export interface IncidentTableProps {
   onEdit?: (id: string, mode: string) => void;
   onView?: (id: string, mode: string) => void;
   onArchive?: (id: string, mode: string) => void;
+  /** Restores an archived incident; offered on archived rows with incident.edit. */
+  onRestore?: (id: string) => void;
+  /** The page's archive view, for the empty state: "archived" lists only archived incidents. */
+  archiveView?: "active" | "all" | "archived";
+  /** Whether the organization has any archived incident (before filters and search). */
+  hasArchivedIncidents?: boolean;
+  /**
+   * A search, status card or filter is narrowing the list. An empty table
+   * then says nothing matches (with onClearFilters) instead of "no incidents
+   * reported yet".
+   */
+  isFiltered?: boolean;
+  /** Clears the search, status card and filters (not the archive view). */
+  onClearFilters?: () => void;
+  /** False hides edit, archive and restore in the row menu (no incident.edit). */
+  canEdit?: boolean;
+  /**
+   * The role may record approval (incident.approve). Without incident.edit the
+   * row menu then offers "Record approval", which opens the drawer with only
+   * the approval fields editable.
+   */
+  canApprove?: boolean;
   paginated?: boolean;
   archivedId?: string | null;
   visibleColumns?: Set<string>;

@@ -48,6 +48,36 @@ describe("useLLMKeys", () => {
     expect(result.current.keys.map((k) => k.name)).toEqual(["OpenAI"]);
   });
 
+  // `loading` settles at the first answer, a failure included, and a retry of a failed list is
+  // pending without an error: `unread` is what says there is no list that was read.
+  it("is unread after a failure and while it is read again, and read once a list arrives", async () => {
+    let answer!: (value: unknown) => void;
+    mockGetKeys
+      .mockRejectedValueOnce(new Error("Request failed"))
+      .mockReturnValueOnce(new Promise((resolve) => (answer = resolve)));
+    const { result } = renderKeys(newClient());
+    expect(result.current.unread).toBe(true);
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.unread).toBe(true);
+
+    act(() => void result.current.refetch());
+    await waitFor(() => expect(result.current.isError).toBe(false));
+    expect(result.current.loading).toBe(false);
+    expect(result.current.unread).toBe(true);
+
+    await act(async () => answer(keysResponse(["OpenAI"])));
+    await waitFor(() => expect(result.current.unread).toBe(false));
+    expect(result.current.keys.map((k) => k.name)).toEqual(["OpenAI"]);
+  });
+
+  it("is not unread without an organization: no list is asked for", () => {
+    mockOrganizationId = null;
+    const { result } = renderKeys(newClient());
+
+    expect(result.current.unread).toBe(false);
+  });
+
   it("is loading while the mount's refetch of a stale cached list runs", () => {
     const client = newClient();
     client.setQueryData(["llmKeys", 1], []);

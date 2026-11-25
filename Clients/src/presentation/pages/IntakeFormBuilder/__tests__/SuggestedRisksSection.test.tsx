@@ -151,20 +151,30 @@ describe("SuggestedRisksSection", () => {
     );
   });
 
-  it("can't accept a suggestion without a mitigation plan", () => {
+  // The mitigation plan is optional, as in the risk register.
+  it("accepts a suggestion without a mitigation plan", async () => {
+    vi.mocked(updateSuggestedRisk).mockResolvedValue({
+      data: item({ state: "accepted", mitigationPlan: "" }),
+    } as never);
     render(block([item({ mitigationPlan: "" })]));
-    expect(
-      screen.getByText("Add a mitigation plan before accepting this risk."),
-    ).toBeInTheDocument();
-    expect(screen.getByTestId("suggested-risk-a-accept")).toBeDisabled();
+    expect(screen.queryByText(/mitigation plan/i)).not.toBeInTheDocument();
+    expect(screen.getByTestId("suggested-risk-a-accept")).not.toBeDisabled();
+    expect(screen.getByTestId("suggested-risks-accept-all")).not.toBeDisabled();
+    fireEvent.click(screen.getByTestId("suggested-risk-a-accept"));
+    await waitFor(() =>
+      expect(updateSuggestedRisk).toHaveBeenCalledWith(11, "a", { state: "accepted" }),
+    );
   });
 
   it("accept all calls the endpoint and shows the items as the server stored them", async () => {
     vi.mocked(acceptAllSuggestedRisks).mockResolvedValue({
       data: {
-        accepted: 1,
-        skipped: 1,
-        items: [item({ state: "accepted" }), item({ id: "b", mitigationPlan: "" })],
+        accepted: 2,
+        skipped: 0,
+        items: [
+          item({ state: "accepted" }),
+          item({ id: "b", state: "accepted", mitigationPlan: "" }),
+        ],
       },
     });
     const onChange = vi.fn();
@@ -175,10 +185,7 @@ describe("SuggestedRisksSection", () => {
     const next = onChange.mock.calls[0][0](
       block([item(), item({ id: "b", mitigationPlan: "" })]),
     ) as SuggestedRisksBlock;
-    expect(next.items.map((i) => i.state)).toEqual(["accepted", "suggested"]);
-    expect(
-      await screen.findByText("not accepted: they need a mitigation plan first"),
-    ).toBeInTheDocument();
+    expect(next.items.map((i) => i.state)).toEqual(["accepted", "accepted"]);
   });
 
   it("a successful accept all leaves another risk's failed save showing", async () => {
@@ -218,6 +225,19 @@ describe("SuggestedRisksSection", () => {
     fireEvent.click(screen.getByTestId("suggested-risk-a-edit"));
     expect(screen.getByText("Model risk category")).toBeInTheDocument();
     expect(screen.getByText("Model risk level")).toBeInTheDocument();
+  });
+
+  // Decision 10: the level comes from likelihood and severity, not a picker.
+  it("shows the model risk level the formula gives and lets no one pick it", async () => {
+    render(block([item({ modelRiskCategory: "Bias & Fairness", modelRiskLevel: "Low" })]), {
+      isModel: true,
+    });
+    // Possible x Major is High, whatever level was stored.
+    expect(screen.getByText("High")).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("suggested-risk-a-edit"));
+    const level = document.getElementById("suggestion-a-model-level") as HTMLInputElement;
+    expect(level.value).toBe("High");
+    expect(level).toBeDisabled();
   });
 
   it("says how many lower-rated suggestions were dropped", () => {

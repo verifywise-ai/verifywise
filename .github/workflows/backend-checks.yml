@@ -172,7 +172,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [isolation-matrix, regression-suites, smoke-and-audit]
+        suite: [isolation-matrix, regression-suites, risk-links, vendor-research, smoke-and-audit]
         # (#4680) The isolation pack must be proven with the RLS runtime flag
         # both off (current default) and on (RLS_ENFORCEMENT_ENABLED=true), so
         # the flag can be flipped in production without losing the guarantee.
@@ -180,6 +180,10 @@ jobs:
         rls: [off, on]
         exclude:
           - suite: regression-suites
+            rls: on
+          - suite: risk-links
+            rls: on
+          - suite: vendor-research
             rls: on
           - suite: smoke-and-audit
             rls: on
@@ -214,6 +218,18 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      # Only the vendor research suites need a real Redis (vendorResearch.enqueue
+      # queues through BullMQ); every other suite mocks it in tests/integration/setup.ts.
+      # An empty image starts no service container.
+      redis:
+        image: ${{ matrix.suite == 'vendor-research' && 'redis:7' || '' }}
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -261,7 +277,32 @@ jobs:
       - name: Run database-backed regression suites
         if: matrix.suite == 'regression-suites'
         run: |
-          npm run test:integration -- --testPathPatterns='tests/integration/(login|projects|tasks|vendors|workflow-audit-log|user-deletion-fks|reporting-rls-policies|report-run-visibility|framework-gap-workflow|report-scope-membership|report-scope-authorization|workflow-approval-gate|audit-ledger-retention|file-manager|approval-workflows|rate-limiting/limiter-wiring|governance-os\.cross-tenant|home-queue-sources|useCaseBundledFrameworks)\.test\.ts'
+          npm run test:integration -- --testPathPatterns='tests/integration/(login|projects|tasks|vendors|workflow-audit-log|user-deletion-fks|reporting-rls-policies|report-run-visibility|framework-gap-workflow|report-scope-membership|report-scope-authorization|workflow-approval-gate|audit-ledger-retention|file-manager|approval-workflows|rate-limiting/limiter-wiring|governance-os\.cross-tenant|home-queue-sources|modelWriteRules|modelRiskFormula|modelRiskFormula\.migration|useCaseBundledFrameworks|advisorUseCaseWrites|framework-text-sync|nist-measure-subcategories|scheduled-report-visibility)\.test\.ts'
+
+      # The risk link suites (tests/integration/riskLinks.*.test.ts) used to run
+      # only locally, so when c1047bb7c narrowed recompute to derived related_to
+      # rows, two of them (recomputeEngine, vendorRelated) broke without any
+      # check going red. They get a job of their own: they take nearly twice as
+      # long as the regression suites above, and folded into that job they
+      # would make it the slowest one in this matrix. A prefix rather than a
+      # list of names, so a new riskLinks suite runs without editing this file;
+      # anchored to `tests/integration/` like the regex above, so
+      # tenant-isolation/riskLinks.isolation stays in the isolation matrix.
+      - name: Run risk link integration suites
+        if: matrix.suite == 'risk-links'
+        run: npm run test:integration -- --testPathPatterns='tests/integration/riskLinks\.'
+
+      # The vendor research and vendor risk database suites (vendorResearch.*,
+      # vrdb.*, vendor-research*, vendor-risk-findings.*, vendorRisks.*) ran in no
+      # job either. Prefixes rather than names, like the risk link step, so a new
+      # suite of these areas runs without editing this file; anchored to
+      # `tests/integration/` so their tenant-isolation/ files stay in the isolation
+      # matrix, and vendors.test.ts stays in the regression suites.
+      - name: Run vendor research integration suites
+        if: matrix.suite == 'vendor-research'
+        env:
+          REDIS_URL: redis://localhost:6379/0
+        run: npm run test:integration -- --testPathPatterns='tests/integration/(vendorResearch|vrdb|vendor-research|vendor-risk-findings|vendorRisks)[.-]'
 
       - name: Run deadline-summary smoke test
         if: matrix.suite == 'smoke-and-audit'

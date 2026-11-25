@@ -14,7 +14,7 @@
  */
 
 import TabContext from "@mui/lab/TabContext";
-import { Box, Stack, Typography, useTheme } from "@mui/material";
+import { Box, ButtonBase, Stack, Typography, alpha, useTheme } from "@mui/material";
 import Field from "../../Inputs/Field";
 import Select from "../../Inputs/Select";
 import DatePicker from "../../Inputs/Datepicker";
@@ -25,7 +25,22 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import dayjs, { Dayjs } from "dayjs";
+import { calendarDayAtNoonUtc } from "../../../../application/utils/calendarDay";
 import Alert from "../../Alert";
+import { checkOtherNames } from "../../../../application/validations/otherNamesValidation";
+import {
+  type IdentifierCheck,
+  checkCountry,
+  checkLei,
+  checkRegistrationNumber,
+  checkSecCik,
+} from "../../../../application/validations/vendorIdentifiersValidation";
+import { focusFormFieldById } from "../../../../application/utils/formValidationFocus";
+import {
+  VENDOR_MODAL_FIELD_IDS,
+  VENDOR_MODAL_FIELD_ORDER,
+  type VendorModalFormValues,
+} from "../../../constants/formValidationFieldMaps";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
 import { useProjects } from "../../../../application/hooks/useProjects";
 import useUsers from "../../../../application/hooks/useUsers";
@@ -53,9 +68,14 @@ import {
   getRiskScoreColor,
 } from "../../../../domain/utils/vendorScorecard.utils";
 import { radiusPx, palette as vwPalette } from "../../../themes/palette";
+import { translateKey } from "../../../../i18n/domTranslator";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
+import { LazyFallback } from "../../../../application/utils/lazyRoute";
 
-const initialState = {
+const initialState: VendorModalFormValues = {
   vendorName: "",
+  otherNames: "",
   website: "",
   projectIds: [] as number[],
   vendorProvides: "",
@@ -64,13 +84,28 @@ const initialState = {
   reviewer: null as number | null,
   reviewResult: "",
   assignee: null as number | null,
-  reviewDate: new Date().toISOString(),
+  // Optional: a new vendor has no review date until one is picked.
+  reviewDate: "",
   // Scorecard fields
   dataSensitivity: "",
   businessCriticality: "",
   pastIssues: "",
   regulatoryExposure: "",
+  // Identifiers
+  country: "",
+  registrationNumber: "",
+  lei: "",
+  secCik: "",
 };
+
+/** The validator of an identifier: the message of its check, empty when the value is accepted. */
+const identifierMessage =
+  (check: (text: string) => IdentifierCheck) =>
+  (value: unknown): string =>
+    check(typeof value === "string" ? value : "").message;
+
+/** The fields of the identifiers section, which is closed until opened. */
+const IDENTIFIER_FIELDS = ["country", "registrationNumber", "lei", "secCik"] as const;
 
 const REVIEW_STATUS_OPTIONS = [
   { _id: "notStarted", name: "Not started" },
@@ -107,10 +142,32 @@ const REGULATORY_EXPOSURE_OPTIONS = [
   { _id: RegulatoryExposure.HIPAA, name: "HIPAA (US)" },
   { _id: RegulatoryExposure.SOC2, name: "SOC 2" },
   { _id: RegulatoryExposure.ISO27001, name: "ISO 27001" },
-  { _id: RegulatoryExposure.EUAIAct, name: "EU AI act" },
-  { _id: RegulatoryExposure.CCPA, name: "CCPA (california)" },
+  { _id: RegulatoryExposure.EUAIAct, name: "EU AI Act" },
+  { _id: RegulatoryExposure.CCPA, name: "CCPA (California)" },
   { _id: RegulatoryExposure.Other, name: "Other" },
 ];
+
+type UseCaseApproval = "pending" | "rejected";
+
+/** A use case the vendor can be linked to; `approval` is set while it isn't approved. */
+type UseCaseOption = { _id: number; name: string; approval?: UseCaseApproval };
+
+const USE_CASE_APPROVAL_LABELS: Record<UseCaseApproval, string> = {
+  pending: "Pending approval",
+  rejected: "Rejected",
+};
+
+/** The approval state that keeps a use case out of useProjects' approvedProjects, if any. */
+const approvalOfUseCase = (project: any): UseCaseApproval | undefined => {
+  if (project?.has_pending_approval || project?.approval_status === "pending") return "pending";
+  if (project?.approval_status === "rejected") return "rejected";
+  return undefined;
+};
+
+const useCaseOptionLabel = (option: UseCaseOption) =>
+  option.approval
+    ? `${option.name} (${translateKey(USE_CASE_APPROVAL_LABELS[option.approval])})`
+    : option.name;
 
 const AddNewVendor: React.FC<AddNewVendorProps> = ({
   isOpen,
@@ -120,15 +177,20 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
   onChange = () => {},
 }) => {
   const theme = useTheme();
+  const { t, lang } = useTranslation();
   const [values, setValues] = useState(initialState);
   const validators = useMemo(
     () => ({
       vendorName: (v: unknown) => {
-        const r = checkStringValidation("Vendor Name", v as string, 1, 64);
+        const r = checkStringValidation("Vendor name", v as string, 1, 64);
         return r.accepted ? "" : r.message;
       },
       website: (v: unknown) => {
-        const r = checkStringValidation("Vendor Website", v as string, 1, 64);
+        const r = checkStringValidation("Vendor website", v as string, 1, 64);
+        return r.accepted ? "" : r.message;
+      },
+      otherNames: (v: unknown) => {
+        const r = checkOtherNames((v as string) ?? "");
         return r.accepted ? "" : r.message;
       },
       reviewResult: (v: unknown) => {
@@ -143,12 +205,12 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         return "";
       },
       vendorProvides: (v: unknown) => {
-        const r = checkStringValidation("Vendor Provides", v as string, 1, 256);
+        const r = checkStringValidation("Vendor provides", v as string, 1, 256);
         return r.accepted ? "" : r.message;
       },
       vendorContactPerson: (v: unknown) => {
         const r = checkStringValidation(
-          "Vendor Contact Person",
+          "Vendor contact person",
           v as string,
           1,
           64,
@@ -161,24 +223,32 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         return r.accepted ? "" : r.message;
       },
       assignee: (v: unknown) => (v === null ? "Please select an assignee from the dropdown" : ""),
+      country: identifierMessage(checkCountry),
+      registrationNumber: identifierMessage(checkRegistrationNumber),
+      lei: identifierMessage(checkLei),
+      secCik: identifierMessage(checkSecCik),
     }),
     [],
   );
-  const { errors, validateAll, clearFieldError, resetErrors } =
-    useFormValidation<typeof initialState>(validators);
+  const { errors, validateAll, clearFieldError, getFirstInvalidField, resetErrors } =
+    useFormValidation<VendorModalFormValues>(validators);
+  // The name of the country in the person's language, once its code is one the server takes.
+  const countryName = useMemo(() => {
+    const code = checkCountry(values.country).value;
+    return code === null ? undefined : new Intl.DisplayNames([lang], { type: "region" }).of(code);
+  }, [lang, values.country]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [projectsLoaded, setProjectsLoaded] = useState(false); // Track if projects are loaded
   const [alert, setAlert] = useState<{
     variant: "success" | "info" | "warning" | "error";
     title?: string;
     body: string;
   } | null>(null);
-  const [projectOptions, setProjectOptions] = useState<{ _id: number; name: string }[]>([]);
   const [isScorecardExpanded, setIsScorecardExpanded] = useState(false);
+  const [isIdentifiersExpanded, setIsIdentifiersExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
   const can = useCanCheck();
   const { users } = useUsers();
-  const { approvedProjects } = useProjects();
+  const { data: allProjects, approvedProjects, refetch: refetchProjects } = useProjects();
   const queryClient = useQueryClient();
 
   // TanStack Query hooks
@@ -199,14 +269,29 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
     name: `${user.name} ${user.surname}`,
   }));
 
-  const formattedProjects = useMemo(() => {
-    return Array.isArray(approvedProjects)
-      ? approvedProjects.map((project: any) => ({
-          _id: project.id,
-          name: project.project_title,
-        }))
-      : [];
-  }, [approvedProjects]);
+  // New links come from approved use cases only. A link the vendor already
+  // has to a pending or rejected use case stays selected, with its status, so
+  // saving sends it back instead of dropping it.
+  const projectOptions = useMemo<UseCaseOption[]>(() => {
+    const approved: UseCaseOption[] = (approvedProjects ?? []).map((project: any) => ({
+      _id: project.id,
+      name: project.project_title,
+    }));
+    const approvedIds = new Set(approved.map((option) => option._id));
+    const linkedNotApproved: UseCaseOption[] = (allProjects ?? [])
+      .filter(
+        (project: any) =>
+          values.projectIds.includes(project.id) &&
+          !approvedIds.has(project.id) &&
+          approvalOfUseCase(project),
+      )
+      .map((project: any) => ({
+        _id: project.id,
+        name: project.project_title,
+        approval: approvalOfUseCase(project),
+      }));
+    return [...approved, ...linkedNotApproved];
+  }, [approvedProjects, allProjects, values.projectIds]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -216,12 +301,11 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
     }
   }, [isOpen, resetErrors]);
 
+  // Use cases are approved, added and removed while the page stays open, so
+  // the list is fetched again each time the modal opens.
   useEffect(() => {
-    if (isOpen && !projectsLoaded) {
-      setProjectOptions(formattedProjects);
-      setProjectsLoaded(true);
-    }
-  }, [isOpen, projectsLoaded, formattedProjects]);
+    if (isOpen) void refetchProjects();
+  }, [isOpen, refetchProjects]);
 
   useEffect(() => {
     if (isOpen && !existingVendor) {
@@ -231,6 +315,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
       setValues((prevValues) => ({
         ...prevValues,
         vendorName: existingVendor.vendor_name,
+        otherNames: existingVendor.other_names ?? "",
         website: existingVendor.website,
         projectIds: existingVendor.projects || [],
         vendorProvides: existingVendor.vendor_provides,
@@ -238,7 +323,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         reviewStatus:
           REVIEW_STATUS_OPTIONS?.find((s) => s.name === existingVendor.review_status)?._id || "",
         reviewer: existingVendor.reviewer || null,
-        reviewResult: existingVendor.review_result,
+        reviewResult: existingVendor.review_result ?? "",
         assignee: existingVendor.assignee || null,
         reviewDate:
           existingVendor.review_date && dayjs(existingVendor.review_date).isValid()
@@ -248,7 +333,19 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         businessCriticality: existingVendor.business_criticality || "",
         pastIssues: existingVendor.past_issues || "",
         regulatoryExposure: existingVendor.regulatory_exposure || "",
+        country: existingVendor.country ?? "",
+        registrationNumber: existingVendor.registration_number ?? "",
+        lei: existingVendor.lei ?? "",
+        secCik: existingVendor.sec_cik ?? "",
       }));
+      if (
+        existingVendor.country ||
+        existingVendor.registration_number ||
+        existingVendor.lei ||
+        existingVendor.sec_cik
+      ) {
+        setIsIdentifiersExpanded(true);
+      }
       // Expand scorecard if any scorecard fields have values
       if (
         existingVendor.data_sensitivity ||
@@ -275,9 +372,20 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
     // bail here too in case the modal submits through some other path (Enter
     // key, programmatic trigger) while required custom fields are still empty.
     if (customFieldsGate.blocked) return;
-    if (validateAll(values)) {
+    if (validateAll(values, VENDOR_MODAL_FIELD_ORDER)) {
       handleOnSave();
+      return;
     }
+    // The first field to fix takes the focus, an identifier far down the form included: an
+    // identifier that failed its check is never left behind the closed section.
+    setActiveTab("details");
+    if (IDENTIFIER_FIELDS.some((field) => validators[field](values[field]) !== "")) {
+      setIsIdentifiersExpanded(true);
+    }
+    const firstInvalid = getFirstInvalidField();
+    const fieldIds: Partial<Record<keyof VendorModalFormValues, string>> = VENDOR_MODAL_FIELD_IDS;
+    const fieldId = firstInvalid ? fieldIds[firstInvalid] : undefined;
+    if (fieldId) focusFormFieldById(fieldId);
   };
 
   /**
@@ -285,11 +393,11 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
    * @param newDate - The new date value or null
    */
   const handleDateChange = (newDate: Dayjs | null) => {
-    if (newDate?.isValid()) {
-      setValues((prevValues) => ({
-        ...prevValues,
-        reviewDate: newDate && newDate.isValid() ? newDate.toISOString() : "",
-      }));
+    // Cleared: no review date. A half-typed date is ignored until it is valid.
+    if (newDate === null) {
+      setValues((prevValues) => ({ ...prevValues, reviewDate: "" }));
+    } else if (newDate.isValid()) {
+      setValues((prevValues) => ({ ...prevValues, reviewDate: newDate.toISOString() }));
     }
   };
 
@@ -334,14 +442,24 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
     const _vendorDetails = {
       projects: values.projectIds,
       vendor_name: values.vendorName,
+      // An empty text clears the names of a vendor that had some.
+      other_names: values.otherNames.trim(),
+      // Each identifier as the server stores it; an empty field sends null, which clears it.
+      country: checkCountry(values.country).value,
+      registration_number: checkRegistrationNumber(values.registrationNumber).value,
+      lei: checkLei(values.lei).value,
+      sec_cik: checkSecCik(values.secCik).value,
       assignee: values.assignee ?? undefined,
       vendor_provides: values.vendorProvides,
       website: formattedWebsite,
       vendor_contact_person: values.vendorContactPerson,
       review_result: values.reviewResult,
-      review_status: REVIEW_STATUS_OPTIONS?.find((s) => s._id === values.reviewStatus)?.name || "",
+      // No review status or date sends null, which stores none: the server takes no empty text.
+      review_status:
+        REVIEW_STATUS_OPTIONS?.find((s) => s._id === values.reviewStatus)?.name ?? null,
       reviewer: values.reviewer ?? undefined,
-      review_date: values.reviewDate,
+      // None picked sends null: the server stores NULL, and an update clears it.
+      review_date: calendarDayAtNoonUtc(values.reviewDate) || null,
       // Scorecard fields
       data_sensitivity: values.dataSensitivity || undefined,
       business_criticality: values.businessCriticality || undefined,
@@ -381,6 +499,9 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         }
 
         onSuccess();
+        // Saved: a second Save must not create the vendor again, so the form starts afresh. A save
+        // that fails keeps what was typed.
+        setValues(initialState);
         if (cfFlushFailed) {
           // The vendor is in the DB. Keep the modal open so the warning
           // rendered by CustomFieldsSection stays visible; user can dismiss.
@@ -410,13 +531,15 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
 
       setAlert({
         variant: "error",
-        body: `An error occurred: ${(error as Error).message || "Please try again."}`,
+        body: fill(t("An error occurred: {message}"), {
+          message: (error as Error).message || t("Please try again."),
+        }),
       });
 
       setTimeout(() => setAlert(null), 3000);
     } finally {
+      // A failed save keeps what the user typed; closing the modal resets it.
       setIsSubmitting(false);
-      setValues(initialState);
     }
   };
 
@@ -447,6 +570,8 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
           }
         }
         onSuccess();
+        // The vendor is saved, so the form starts afresh; a save that fails keeps what was typed.
+        setValues(initialState);
         if (cfFlushFailed) {
           // Keep modal open so the inline warning rendered by
           // CustomFieldsSection stays visible.
@@ -472,20 +597,23 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
       });
       setAlert({
         variant: "error",
-        body: `An error occurred: ${(error as Error).message || "Please try again."}`,
+        body: fill(t("An error occurred: {message}"), {
+          message: (error as Error).message || t("Please try again."),
+        }),
       });
 
       setTimeout(() => setAlert(null), 3000);
     } finally {
+      // A failed save keeps what the user typed; closing the modal resets it.
       setIsSubmitting(false);
-      setValues(initialState);
     }
   };
 
   const vendorDetailsPanel = (
-    <Stack spacing={6}>
-      <Stack direction={"row"} spacing={6}>
+    <Stack spacing="12px">
+      <Stack direction={"row"} spacing="12px">
         <Field // vendorName
+          id={VENDOR_MODAL_FIELD_IDS.vendorName}
           label="Vendor name"
           width={220}
           value={values?.vendorName}
@@ -503,23 +631,24 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
           placeholder="Select use cases"
           error={errors.projectIds}
           disabled={isEditingDisabled}
-          value={
-            projectOptions?.filter((project) => values.projectIds?.includes(project._id)) || []
-          }
-          options={projectOptions || []}
+          value={projectOptions.filter((project) => values.projectIds?.includes(project._id))}
+          options={projectOptions}
           noOptionsText={
-            values?.projectIds?.length === projectOptions?.length
+            projectOptions.every((project) => values.projectIds?.includes(project._id))
               ? "All use cases are selected"
               : "No options"
           }
-          onChange={(_event, newValue: { _id: number; name: string }[]) => {
-            handleOnChange(
-              "projectIds",
-              newValue.map((project) => project._id),
-            );
+          onChange={(_event, newValue: UseCaseOption[]) => {
+            // Links to use cases not in the list (not visible to this user,
+            // or not loaded yet) are not the user's to remove here.
+            const listed = new Set(projectOptions.map((project) => project._id));
+            handleOnChange("projectIds", [
+              ...values.projectIds.filter((id) => !listed.has(id)),
+              ...newValue.map((project) => project._id),
+            ]);
           }}
-          getOptionLabel={(project: { _id: number; name: string }) => project.name}
-          renderOption={(props, option: { _id: number; name: string }) => {
+          getOptionLabel={useCaseOptionLabel}
+          renderOption={(props, option: UseCaseOption) => {
             const { key, ...optionProps } = props;
             return (
               <Box key={`${option._id}-${key}`} component="li" {...optionProps}>
@@ -549,8 +678,21 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
           }}
         />
       </Stack>
-      <Stack direction={"row"} spacing={6}>
+      <Field // otherNames
+        id={VENDOR_MODAL_FIELD_IDS.otherNames}
+        label="Other names"
+        width={686}
+        isOptional
+        value={values.otherNames}
+        onChange={(e) => handleOnChange("otherNames", e.target.value)}
+        error={errors.otherNames}
+        disabled={isEditingDisabled}
+        placeholder="e.g. Facebook, Instagram"
+        helperText="Other names this vendor is known by, separated by commas. The research looks for them too."
+      />
+      <Stack direction={"row"} spacing="12px">
         <Field // website
+          id={VENDOR_MODAL_FIELD_IDS.website}
           label="Website"
           width={220}
           value={values.website}
@@ -561,6 +703,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
           placeholder="Enter vendor website"
         />
         <Field // vendorContactPerson
+          id={VENDOR_MODAL_FIELD_IDS.vendorContactPerson}
           label="Vendor contact person"
           width={220}
           value={values.vendorContactPerson}
@@ -575,7 +718,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
           label="Assignee"
           placeholder="Select person"
           isHidden={false}
-          id=""
+          id={VENDOR_MODAL_FIELD_IDS.assignee}
           onChange={(e) => handleOnChange("assignee", Number(e.target.value))}
           value={values.assignee !== null ? values.assignee : ""}
           sx={{
@@ -587,6 +730,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         />
       </Stack>
       <Field // vendorProvides
+        id={VENDOR_MODAL_FIELD_IDS.vendorProvides}
         label="What does the vendor provide?"
         width={686}
         type="description"
@@ -598,7 +742,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         placeholder="Describe the products or services this vendor delivers (e.g., cloud hosting, legal advisory, AI APIs)."
         rows={2}
       />
-      <Stack direction={"row"} spacing={6}>
+      <Stack direction={"row"} spacing="12px">
         <Select // reviewStatus
           items={REVIEW_STATUS_OPTIONS}
           label="Review status"
@@ -633,13 +777,15 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
             sx={{
               width: "100%",
             }}
-            date={values.reviewDate ? dayjs(values.reviewDate) : dayjs(new Date())}
+            date={values.reviewDate ? dayjs(values.reviewDate) : null}
             handleDateChange={handleDateChange}
+            isClearable
             disabled={isEditingDisabled}
           />
         </Stack>
       </Stack>
       <Field // reviewResult
+        id={VENDOR_MODAL_FIELD_IDS.reviewResult}
         label="Review result"
         width={686}
         type="description"
@@ -651,8 +797,102 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         rows={2}
       />
 
+      {/* Identifiers (spec Q1): optional, each checked as the server checks it */}
+      <Stack
+        role="group"
+        aria-labelledby="vendor-form-identifiers"
+        spacing="8px"
+        sx={{ width: 686 }}
+      >
+        <ButtonBase
+          aria-expanded={isIdentifiersExpanded}
+          aria-controls="vendor-form-identifiers-fields"
+          onClick={() => setIsIdentifiersExpanded((expanded) => !expanded)}
+          sx={{
+            "display": "flex",
+            "alignItems": "center",
+            "justifyContent": "space-between",
+            "padding": "12px 16px",
+            "border": `1px solid ${theme.palette.divider}`,
+            "borderRadius": radiusPx.sm,
+            "backgroundColor": theme.palette.grey[50],
+            "textAlign": "left",
+            "&:hover": { backgroundColor: theme.palette.grey[100] },
+          }}
+        >
+          <Stack spacing="2px">
+            <Typography id="vendor-form-identifiers" variant="subtitle1" sx={{ fontWeight: 600 }}>
+              Identifiers (optional)
+            </Typography>
+            <Typography variant="body2" sx={{ color: theme.palette.text.secondary }}>
+              Research uses them to find this exact company, such as its SEC filings and its LEI
+              record, instead of matching by name.
+            </Typography>
+          </Stack>
+          {isIdentifiersExpanded ? (
+            <ChevronUp size={16} style={{ color: theme.palette.text.tertiary, flexShrink: 0 }} />
+          ) : (
+            <ChevronDown size={16} style={{ color: theme.palette.text.tertiary, flexShrink: 0 }} />
+          )}
+        </ButtonBase>
+        {/* Always rendered, so that aria-controls names an element; `hidden` keeps the closed
+            fields out of the tab order and the accessibility tree. It sits on a Box, which sets no
+            display of its own that would override it. */}
+        <Box id="vendor-form-identifiers-fields" hidden={!isIdentifiersExpanded}>
+          <Stack spacing="8px">
+            <Stack direction={"row"} spacing="12px">
+              <Field // country
+                id={VENDOR_MODAL_FIELD_IDS.country}
+                label="Country"
+                width={220}
+                isOptional
+                value={values.country}
+                onChange={(e) => handleOnChange("country", e.target.value)}
+                error={errors.country}
+                disabled={isEditingDisabled}
+                placeholder="e.g. DE"
+                helperText={countryName}
+              />
+              <Field // registrationNumber
+                id={VENDOR_MODAL_FIELD_IDS.registrationNumber}
+                label="Registration number"
+                width={220}
+                isOptional
+                value={values.registrationNumber}
+                onChange={(e) => handleOnChange("registrationNumber", e.target.value)}
+                error={errors.registrationNumber}
+                disabled={isEditingDisabled}
+                placeholder="As the company register writes it"
+              />
+              <Field // lei
+                id={VENDOR_MODAL_FIELD_IDS.lei}
+                label="LEI"
+                width={220}
+                isOptional
+                value={values.lei}
+                onChange={(e) => handleOnChange("lei", e.target.value)}
+                error={errors.lei}
+                disabled={isEditingDisabled}
+                placeholder="20 letters and digits"
+              />
+            </Stack>
+            <Field // secCik
+              id={VENDOR_MODAL_FIELD_IDS.secCik}
+              label="SEC CIK"
+              width={220}
+              isOptional
+              value={values.secCik}
+              onChange={(e) => handleOnChange("secCik", e.target.value)}
+              error={errors.secCik}
+              disabled={isEditingDisabled}
+              placeholder="Up to 10 digits"
+            />
+          </Stack>
+        </Box>
+      </Stack>
+
       {/* Vendor Scorecard Section */}
-      <Stack spacing={2} sx={{ width: 686 }}>
+      <Stack spacing="4px" sx={{ width: 686 }}>
         <Box
           sx={{
             "display": "flex",
@@ -669,32 +909,31 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
           }}
           onClick={() => setIsScorecardExpanded(!isScorecardExpanded)}
         >
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2, flex: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: "4px", flex: 1 }}>
             <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
               Vendor scorecard (advanced)
             </Typography>
             <EnhancedTooltip
-              title="Vendor Risk Score Calculation"
+              title="Vendor risk score calculation"
               content={
                 <>
                   <Typography
                     variant="body2"
                     sx={{
-                      color: "rgba(255, 255, 255, 0.85)",
+                      color: alpha(vwPalette.text.inverse, 0.85),
                       fontSize: "13px",
                       lineHeight: 1.6,
-                      mb: 2,
+                      mb: "4px",
                     }}
                   >
                     The risk score is calculated using a weighted formula:
                   </Typography>
                   <Box
                     sx={{
-                      backgroundColor: "rgba(255, 255, 255, 0.05)",
+                      backgroundColor: alpha(vwPalette.text.inverse, 0.05),
                       borderRadius: radiusPx.sm,
                       padding: "12px",
-                      mb: 2,
-                      fontFamily: "monospace",
+                      mb: "4px",
                     }}
                   >
                     <Typography
@@ -704,17 +943,17 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
                         lineHeight: 1.8,
                       }}
                     >
-                      Risk Score = <br />
-                      &nbsp;&nbsp;(Data Sensitivity × 30%) +<br />
-                      &nbsp;&nbsp;(Business Criticality × 30%) +<br />
-                      &nbsp;&nbsp;(Past Issues × 20%) +<br />
-                      &nbsp;&nbsp;(Regulatory Exposure × 20%)
+                      Risk score = <br />
+                      &nbsp;&nbsp;(Data sensitivity × 30%) +<br />
+                      &nbsp;&nbsp;(Business criticality × 30%) +<br />
+                      &nbsp;&nbsp;(Past issues × 20%) +<br />
+                      &nbsp;&nbsp;(Regulatory exposure × 20%)
                     </Typography>
                   </Box>
                   <Typography
                     variant="body2"
                     sx={{
-                      color: "rgba(255, 255, 255, 0.7)",
+                      color: alpha(vwPalette.text.inverse, 0.7),
                       fontSize: "12px",
                       lineHeight: 1.5,
                     }}
@@ -734,7 +973,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
                   "cursor": "pointer",
                   "textDecoration": "underline",
                   "ml": "auto",
-                  "mr": 2,
+                  "mr": "4px",
                   "&:hover": {
                     color: theme.palette.primary.dark,
                   },
@@ -761,10 +1000,10 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
                     sx={{
                       display: "flex",
                       alignItems: "center",
-                      gap: 1,
+                      gap: "2px",
                       padding: "4px 8px",
                       borderRadius: radiusPx.sm,
-                      backgroundColor: `${riskColor}20`,
+                      backgroundColor: alpha(riskColor, 0.125),
                       border: `1px solid ${riskColor}`,
                       minWidth: "50px",
                     }}
@@ -795,8 +1034,8 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         </Box>
 
         {isScorecardExpanded && (
-          <Stack spacing={6}>
-            <Stack direction="row" spacing={6}>
+          <Stack spacing="12px">
+            <Stack direction="row" spacing="12px">
               <Box sx={{ flex: 1 }}>
                 <Select
                   items={DATA_SENSITIVITY_OPTIONS}
@@ -826,7 +1065,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
                 />
               </Box>
             </Stack>
-            <Stack direction="row" spacing={6}>
+            <Stack direction="row" spacing="12px">
               <Box sx={{ flex: 1 }}>
                 <Select
                   items={PAST_ISSUES_OPTIONS}
@@ -865,7 +1104,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
   return (
     <Stack>
       {alert && (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<LazyFallback />}>
           <Alert
             variant={alert.variant}
             title={alert.title}
@@ -901,7 +1140,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         maxWidth="734px"
       >
         <TabContext value={activeTab}>
-          <Box sx={{ marginBottom: 3 }}>
+          <Box sx={{ marginBottom: "6px" }}>
             <TabBar
               tabs={
                 existingVendor

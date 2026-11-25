@@ -25,7 +25,7 @@ const buildCreatePayload = (foreignOrgId: number) => ({
   date_detected: "2026-09-01",
   reporter: "Test Reporter",
   approval_status: "Pending",
-  categories_of_harm: ["Other"],
+  categories_of_harm: ["Safety"],
   description: "Isolation test incident",
   relationship_causality: "Test causality",
   organization_id: foreignOrgId,
@@ -69,7 +69,7 @@ describe("AI incidents tenant isolation", () => {
     const incidentId = await createTestIncident(owner.orgId, owner.userId);
 
     const getRes = await attacker.request.get(ROUTES.get(incidentId));
-    expect([204, 404]).toContain(getRes.status);
+    expect(getRes.status).toBe(404);
 
     const patchRes = await attacker.request
       .patch(ROUTES.update(incidentId))

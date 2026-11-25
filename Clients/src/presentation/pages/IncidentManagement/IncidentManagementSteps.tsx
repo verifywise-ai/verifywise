@@ -25,7 +25,7 @@ const IncidentManagementSteps: IPageTourStep[] = [
     target: '[data-joyride-id="incident-search"]',
     content: {
       header: "Search incidents",
-      body: "Quickly find specific incidents by searching titles or descriptions. Perfect for locating incidents in large lists.",
+      body: "Find an incident by its ID (for example INC-12), its use case or its reporter.",
       icon: <Search size={20} color={background.main} />,
     },
     placement: "bottom",

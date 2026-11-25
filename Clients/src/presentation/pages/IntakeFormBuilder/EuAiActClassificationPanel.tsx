@@ -135,7 +135,7 @@ export default function EuAiActClassificationPanel({
               variant="warning"
               body="Approving creates a use case classified as prohibited."
               isToast={false}
-              sx={{ position: "static" }}
+              inline
             />
           )}
         </Box>

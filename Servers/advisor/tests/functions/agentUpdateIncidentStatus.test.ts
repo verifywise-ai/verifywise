@@ -5,6 +5,10 @@ const mockTransaction = { commit: jest.fn(), rollback: jest.fn(), afterCommit: j
 jest.mock("../../../database/db", () => ({
   sequelize: { transaction: jest.fn(async () => mockTransaction), query: jest.fn() },
 }));
+// Permission held; agentIncidentPermissions.test.ts covers the refusals.
+jest.mock("../../../utils/userPermission.utils", () => ({
+  userHasPermission: jest.fn(async () => true),
+}));
 jest.mock("../../approval/approvalGateway", () => ({ submitForApproval: jest.fn() }));
 // Real diff (through the real shared service); the queries are stubbed.
 jest.mock("../../../utils/incidentManagement.utils", () => ({
@@ -69,6 +73,7 @@ describe("agent_update_incident_status — reopening", () => {
       status: "Investigating",
       approval_status: "Pending",
       approved_by: null,
+      approved_by_id: null,
       approval_date: null,
       approval_notes: null,
     });

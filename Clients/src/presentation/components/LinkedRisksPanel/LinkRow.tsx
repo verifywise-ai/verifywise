@@ -93,6 +93,12 @@ interface LinkRowProps {
   /** This row's dismiss-reason form is open. */
   dismissing: boolean;
   statusPending: boolean;
+  /**
+   * The caller may change a link's status (riskLinks.review, the key PATCH
+   * /riskLinks/:id authorizes on). Without it the row shows no Confirm,
+   * Dismiss, Remove link or Restore.
+   */
+  canReview: boolean;
   onAction: (link: RiskLink, next: RiskLinkStatus) => void;
   onSubmitDismissal: (dismissal?: { dismissReason: DismissReason; dismissNote?: string }) => void;
   onCancelDismissal: () => void;
@@ -101,6 +107,11 @@ interface LinkRowProps {
    * the warning is about the child, so a parent's panel never shows it.
    */
   onAcknowledge?: (link: RiskLink) => void;
+  /**
+   * The caller may clear the warning (riskLinks.edit, the key the acknowledge
+   * route authorizes on). Without it the warning shows with no Mark reviewed.
+   */
+  canAcknowledge?: boolean;
   acknowledgePending?: boolean;
 }
 
@@ -113,10 +124,12 @@ export default function LinkRow({
   link,
   dismissing,
   statusPending,
+  canReview,
   onAction,
   onSubmitDismissal,
   onCancelDismissal,
   onAcknowledge,
+  canAcknowledge = false,
   acknowledgePending = false,
 }: LinkRowProps) {
   const { t } = useTranslation();
@@ -181,15 +194,17 @@ export default function LinkRow({
             >
               <Chip size="small" variant="warning" label="Parent level changed" />
             </Box>
-            <CustomizableButton
-              size="small"
-              variant="text"
-              color="primary"
-              isDisabled={acknowledgePending}
-              onClick={() => onAcknowledge(link)}
-            >
-              Mark reviewed
-            </CustomizableButton>
+            {canAcknowledge && (
+              <CustomizableButton
+                size="small"
+                variant="text"
+                color="primary"
+                isDisabled={acknowledgePending}
+                onClick={() => onAcknowledge(link)}
+              >
+                Mark reviewed
+              </CustomizableButton>
+            )}
           </>
         )}
         {detailsFor(link, t) && (
@@ -213,7 +228,8 @@ export default function LinkRow({
           ambiguous to a test — the form owns the decision until
           it is submitted or cancelled.
         */}
-        {!dismissing &&
+        {canReview &&
+          !dismissing &&
           actionsFor(link).map(({ label, next }) => (
             <CustomizableButton
               key={label}
@@ -230,13 +246,15 @@ export default function LinkRow({
           ))}
       </Stack>
 
-      {dismissing && (
-        <DismissReasonForm
-          link={link}
-          pending={statusPending}
-          onSubmit={onSubmitDismissal}
-          onCancel={onCancelDismissal}
-        />
+      {canReview && dismissing && (
+        <Box sx={{ mt: "8px" }}>
+          <DismissReasonForm
+            link={link}
+            pending={statusPending}
+            onSubmit={onSubmitDismissal}
+            onCancel={onCancelDismissal}
+          />
+        </Box>
       )}
     </Box>
   );

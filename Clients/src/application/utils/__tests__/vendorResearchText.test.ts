@@ -1,0 +1,3486 @@
+import { describe, it, expect, vi } from "vitest";
+import { translations } from "../../../i18n/translations";
+import { LANGS, setLanguage } from "../../../test/i18nHelpers";
+import type {
+  CategoryOutcome,
+  CategorySummaryEntry,
+  CoverageAttestation,
+  CoverageSource,
+  CredibilityBasis,
+  CredibilityRule,
+  CredibilitySource,
+  RecordSourceId,
+  RecordStatus,
+  ResearchCategory,
+  RunCoverage,
+  RunProgress,
+  SourceCategory,
+  VrdbSourceId,
+} from "../../../domain/interfaces/i.vendorResearch";
+import * as vendorResearchText from "../vendorResearchText";
+import {
+  attestationLines,
+  categoryLabel,
+  coverageLines,
+  credibilityLabel,
+  credibilityRationale,
+  describeCategoryLine,
+  describeCategoryNote,
+  describeProgress,
+  describeRunError,
+  dismissReasonLabel,
+  earlierRatingNote,
+  formatResearchDate,
+  joinAttributions,
+  nameOnlyNote,
+  newsSearchUnavailable,
+  outcomeLabel,
+  recordStatusLabel,
+  sourceCategoryLabel,
+} from "../vendorResearchText";
+
+/** The closed set of run errors the server stores, and the sentence each one becomes. */
+const RUN_ERRORS: Array<[stored: string, sentence: string]> = [
+  ["Vendor not found", "The vendor was not found."],
+  ["No LLM key configured", "No LLM key is configured for your organization."],
+  ["Model call failed: HTTP 503", "The model call failed with HTTP status 503."],
+  ["Model call failed: timed out", "The model call timed out."],
+  [
+    "Model call failed: the answer did not match the expected format",
+    "The model answer did not match the expected format.",
+  ],
+  ["Model call failed: unexpected error", "The model call failed unexpectedly."],
+  ["Unexpected error", "The research run failed unexpectedly."],
+  ["Saving the findings failed", "The findings could not be saved."],
+  ["timed out", "The research run timed out."],
+  ["could not enqueue", "The research run could not be queued."],
+  [
+    "The run stopped because the web could not be reached",
+    "The web could not be reached from the server.",
+  ],
+  ["The model did not use the research actions", "The model did not carry out the research steps."],
+];
+
+/** Stored by the earlier search provider; no longer ours, so the screen no longer shows it. */
+const RETIRED_RUN_ERRORS = [
+  "Search provider not configured",
+  "The run stopped because all searches failed: ",
+  "The run stopped because all searches failed: search timed out",
+  "The run stopped because all searches failed: search timed out; The search failed",
+];
+
+/** The closed set of category notes by outcome, and the sentence each one becomes. */
+const FIXED_NOTES: Array<[outcome: CategoryOutcome, stored: string, sentence: string]> = [
+  [
+    "skipped",
+    "Vendor website is missing or not a valid domain",
+    "The vendor website is missing or is not a valid domain.",
+  ],
+  [
+    "skipped",
+    "Not researched: the time limit was reached",
+    "Not researched: the time limit was reached.",
+  ],
+  [
+    "skipped",
+    "Not researched: the research ended before this category was covered",
+    "Not researched: the research ended before this category was covered.",
+  ],
+  [
+    "nothing_found",
+    "No risks found in the sources reviewed",
+    "No risks were found in the sources reviewed.",
+  ],
+  [
+    "nothing_found",
+    "No new sources since the last run",
+    "No new sources were found since the last run.",
+  ],
+  [
+    "nothing_found",
+    "No risks found; 2 of 5 pages could not be read",
+    "No risks were found. 2 of 5 pages could not be read.",
+  ],
+  [
+    "nothing_found",
+    "No risks found; 2 of 5 searches were not available",
+    "No risks were found. 2 of 5 searches were not available.",
+  ],
+  [
+    "nothing_found",
+    "No risks found; 1 of 2 searches were not available and 2 of 5 pages could not be read",
+    "No risks were found. 1 of 2 searches were not available, and 2 of 5 pages could not be read.",
+  ],
+  [
+    "nothing_found",
+    "Possible risks were found but could not be verified or are already recorded",
+    "Possible risks were found but could not be verified, or are already recorded.",
+  ],
+  // The server's NOTES.overCap (Servers/services/vendorResearch/summary.ts), on its own outcome.
+  [
+    "over_cap",
+    "More risks were found than one run keeps",
+    "More risks were found than one run keeps.",
+  ],
+  // The same note on `nothing_found`: how a run stored before the cap had an outcome of its own
+  // kept a capped category. The sentence stays; the line says nothing was found.
+  [
+    "nothing_found",
+    "More risks were found than one run keeps",
+    "More risks were found than one run keeps.",
+  ],
+  ["findings", "1 potential risk found", "1 potential risk found"],
+  ["findings", "3 potential risks found", "3 potential risks found"],
+  ["search_failed", "The search was not available", "The search was not available."],
+  ["search_failed", "The pages could not be read", "The pages could not be read."],
+  // The server's NOTES.newsUnavailable: a news category checked on the vendor's own pages only.
+  [
+    "nothing_found",
+    "News search was not available; checked on the vendor's own pages only",
+    "News search was not available, so this was checked only on the vendor's own pages.",
+  ],
+  // NOTES.newsUnavailableWithRecords: the same, when a public database record is among the sources.
+  [
+    "nothing_found",
+    "News search was not available; checked on the vendor's own pages and public databases only",
+    "News search was not available, so this was checked only on the vendor's own pages and public databases.",
+  ],
+];
+
+/** Notes the earlier search provider stored: no longer ours, on any outcome. */
+const RETIRED_NOTES: Array<[outcome: CategoryOutcome, stored: string]> = [
+  ["nothing_found", "No risks found in the search results"],
+  ["search_failed", "search timed out"],
+  ["search_failed", "search request failed"],
+  ["search_failed", "search response could not be read"],
+  ["search_failed", "Tavily search failed with status 503"],
+  ["search_failed", "The search failed"],
+];
+
+const ALL_OUTCOMES: CategoryOutcome[] = [
+  "findings",
+  "nothing_found",
+  "over_cap",
+  "search_failed",
+  "skipped",
+];
+
+const entry = (
+  outcome: CategoryOutcome,
+  note: string,
+  category: ResearchCategory = "security_incidents",
+): CategorySummaryEntry => ({ category, outcome, note });
+
+describe("describeRunError", () => {
+  it.each(RUN_ERRORS)("turns %j into a sentence", (stored, sentence) => {
+    expect(describeRunError(stored)).toBe(sentence);
+  });
+
+  it.each(RETIRED_RUN_ERRORS)(
+    "gives the generic sentence for %j, which is no longer ours",
+    (stored) => {
+      expect(describeRunError(stored)).toBe("The research run failed.");
+    },
+  );
+
+  it("never shows an unknown stored string, whatever it says", () => {
+    for (const odd of [
+      "connect ECONNREFUSED 10.0.0.5:5432",
+      "Model call failed: HTTP abc",
+      "model call failed: timed out",
+      "Vendor not found. Extra detail",
+    ]) {
+      expect(describeRunError(odd)).toBe("The research run failed.");
+    }
+  });
+
+  it("falls back to the generic sentence for null, empty and odd input without throwing", () => {
+    for (const odd of [null, "", "   ", undefined, 7, {}, []]) {
+      expect(describeRunError(odd as never)).toBe("The research run failed.");
+    }
+  });
+
+  it("ignores the whitespace around a stored error", () => {
+    expect(describeRunError("  timed out ")).toBe("The research run timed out.");
+  });
+});
+
+describe("describeCategoryNote", () => {
+  it.each(FIXED_NOTES)(
+    "turns the %s note %j into a plain sentence",
+    (outcome, stored, sentence) => {
+      expect(describeCategoryNote(entry(outcome, stored))).toEqual({
+        kind: "fixed",
+        text: sentence,
+      });
+    },
+  );
+
+  it("counts potential risks with a small parser, singular and plural", () => {
+    expect(describeCategoryNote(entry("findings", "1 potential risk found"))).toEqual({
+      kind: "fixed",
+      text: "1 potential risk found",
+    });
+    expect(describeCategoryNote(entry("findings", "12 potential risks found"))).toEqual({
+      kind: "fixed",
+      text: "12 potential risks found",
+    });
+  });
+
+  it("does not turn a model's note into a system sentence because it repeats one", () => {
+    // On a category where nothing was found, the note may be the model's own. A model can write
+    // "3 potential risks found" or "search timed out" there; only the server's own phrases for
+    // this outcome are fixed sentences, so these come back flagged as the model's.
+    for (const phrase of ["3 potential risks found", "search timed out"]) {
+      expect(describeCategoryNote(entry("nothing_found", phrase))).toEqual({
+        kind: "model",
+        text: phrase,
+        label: "AI note (unverified)",
+      });
+    }
+  });
+
+  it("hides the phrase of one outcome on a category with another outcome", () => {
+    expect(
+      describeCategoryNote(entry("findings", "No risks found in the sources reviewed")),
+    ).toBeNull();
+    expect(describeCategoryNote(entry("skipped", "2 potential risks found"))).toBeNull();
+    expect(describeCategoryNote(entry("search_failed", "1 potential risk found"))).toBeNull();
+    expect(describeCategoryNote(entry("skipped", "The search was not available"))).toBeNull();
+    expect(
+      describeCategoryNote(entry("search_failed", "Not researched: the time limit was reached")),
+    ).toBeNull();
+  });
+
+  it("fills the counts of the page note into the sentence", () => {
+    expect(
+      describeCategoryNote(
+        entry("nothing_found", "No risks found; 1 of 1 pages could not be read"),
+      ),
+    ).toEqual({ kind: "fixed", text: "No risks were found. 1 of 1 pages could not be read." });
+    expect(
+      describeCategoryNote(
+        entry("nothing_found", "No risks found; 12 of 120 pages could not be read"),
+      ),
+    ).toEqual({ kind: "fixed", text: "No risks were found. 12 of 120 pages could not be read." });
+  });
+
+  it("maps the searches note of a nothing_found category", () => {
+    expect(
+      describeCategoryNote(
+        entry("nothing_found", "No risks found; 2 of 5 searches were not available"),
+      ),
+    ).toEqual({ kind: "fixed", text: "No risks were found. 2 of 5 searches were not available." });
+  });
+
+  it("maps the searches-and-pages note", () => {
+    expect(
+      describeCategoryNote(
+        entry(
+          "nothing_found",
+          "No risks found; 3 of 12 searches were not available and 7 of 40 pages could not be read",
+        ),
+      ),
+    ).toEqual({
+      kind: "fixed",
+      text: "No risks were found. 3 of 12 searches were not available, and 7 of 40 pages could not be read.",
+    });
+  });
+
+  it("rejects a searches note whose failed count is above its total", () => {
+    for (const odd of [
+      "No risks found; 6 of 5 searches were not available",
+      "No risks found; 1000 of 1200 searches were not available",
+      "No risks found; 6 of 5 searches were not available and 1 of 5 pages could not be read",
+      "No risks found; 1 of 5 searches were not available and 6 of 5 pages could not be read",
+    ]) {
+      expect(describeCategoryNote(entry("nothing_found", odd))).toEqual({
+        kind: "model",
+        text: odd,
+        label: "AI note (unverified)",
+      });
+    }
+  });
+
+  it("does not take the searches notes as fixed on another outcome", () => {
+    for (const note of [
+      "No risks found; 2 of 5 searches were not available",
+      "No risks found; 1 of 2 searches were not available and 2 of 5 pages could not be read",
+    ]) {
+      for (const other of ["search_failed", "findings", "skipped"] as const) {
+        expect(describeCategoryNote(entry(other, note))).toBeNull();
+      }
+    }
+  });
+
+  it("does not take a page note that the server cannot have written as its own", () => {
+    // More than three digits, more pages failed than were read, a sign, a gap, other words.
+    for (const odd of [
+      "No risks found; 1000 of 1200 pages could not be read",
+      "No risks found; 5 of 1000 pages could not be read",
+      "No risks found; 6 of 5 pages could not be read",
+      "No risks found; -1 of 5 pages could not be read",
+      "No risks found; 2 of 5 pages could not be read.",
+      "No risks found;  2 of 5 pages could not be read",
+      "No risks found; 2 of 5 pages could be read",
+      "Prefix. No risks found; 2 of 5 pages could not be read",
+    ]) {
+      // Where nothing was found it is the model's own text; on any other outcome it is hidden.
+      const trimmed = odd.trim();
+      expect(describeCategoryNote(entry("nothing_found", odd))).toEqual({
+        kind: "model",
+        text: trimmed,
+        label: "AI note (unverified)",
+      });
+      for (const other of ["findings", "search_failed", "skipped"] as const) {
+        expect(describeCategoryNote(entry(other, odd))).toBeNull();
+      }
+    }
+  });
+
+  it.each(RETIRED_NOTES)(
+    "no longer takes the %s note %j of the earlier search provider as ours",
+    (outcome, stored) => {
+      // The model's own text where nothing was found, hidden everywhere else.
+      expect(describeCategoryNote(entry(outcome, stored))).toEqual(
+        outcome === "nothing_found"
+          ? { kind: "model", text: stored, label: "AI note (unverified)" }
+          : null,
+      );
+    },
+  );
+
+  it.each(FIXED_NOTES)(
+    "takes the %s note %j as a fixed sentence for that outcome only",
+    (outcome, stored) => {
+      // The outcomes that the table itself gives this phrase (the cap's note has two) are left out.
+      const others = ALL_OUTCOMES.filter(
+        (candidate) =>
+          candidate !== outcome &&
+          !FIXED_NOTES.some(([owner, phrase]) => owner === candidate && phrase === stored),
+      );
+      // Only the cap's note has a second owner: `nothing_found`, for runs stored before `over_cap`.
+      expect(ALL_OUTCOMES.length - others.length).toBe(
+        stored === "More risks were found than one run keeps" ? 2 : 1,
+      );
+      for (const other of others) {
+        // Never a sentence of ours; the model's own where nothing was found, hidden elsewhere.
+        expect(describeCategoryNote(entry(other, stored))).toEqual(
+          other === "nothing_found"
+            ? { kind: "model", text: stored, label: "AI note (unverified)" }
+            : null,
+        );
+      }
+    },
+  );
+
+  it("keeps the text of a model-written note and marks it as unverified", () => {
+    expect(
+      describeCategoryNote(entry("nothing_found", "  Only marketing pages were indexed.  ")),
+    ).toEqual({
+      kind: "model",
+      text: "Only marketing pages were indexed.",
+      label: "AI note (unverified)",
+    });
+  });
+
+  it("does not touch the markup of a model-written note", () => {
+    const note = "<img src=x onerror=alert(1)> **bold**";
+    expect(describeCategoryNote(entry("nothing_found", note))).toMatchObject({
+      kind: "model",
+      text: note,
+    });
+  });
+
+  it("hides an unknown note on any outcome but nothing found", () => {
+    // The same note on a category where nothing was found is the model's own, and is shown.
+    expect(
+      describeCategoryNote(entry("nothing_found", "Something nobody planned for")),
+    ).not.toBeNull();
+    for (const outcome of ["findings", "search_failed", "skipped"] as const) {
+      expect(describeCategoryNote(entry(outcome, "Something nobody planned for"))).toBeNull();
+    }
+  });
+
+  it("shows nothing for an empty note, and never throws on odd input", () => {
+    expect(describeCategoryNote(entry("nothing_found", "A note"))).not.toBeNull();
+    expect(describeCategoryNote(entry("nothing_found", ""))).toBeNull();
+    expect(describeCategoryNote(entry("nothing_found", "   "))).toBeNull();
+    for (const odd of [null, undefined, {}, { outcome: "nothing_found" }, { note: 5 }]) {
+      expect(describeCategoryNote(odd as never)).toBeNull();
+    }
+    expect(describeCategoryNote({ outcome: "mystery", note: "text" } as never)).toBeNull();
+    for (const outcome of ["constructor", "__proto__", "toString"]) {
+      expect(describeCategoryNote({ outcome, note: "text" } as never)).toBeNull();
+    }
+  });
+});
+
+describe("newsSearchUnavailable", () => {
+  const NEWS_DOWN = "News search was not available; checked on the vendor's own pages only";
+  const entryOf = (
+    category: ResearchCategory,
+    outcome: CategoryOutcome,
+    note: string,
+  ): CategorySummaryEntry => ({ category, outcome, note });
+
+  it("is true for a news category whose search was not available, or that was checked on its own pages only", () => {
+    expect(
+      newsSearchUnavailable([
+        entryOf("legal_regulatory", "search_failed", "The search was not available"),
+      ]),
+    ).toBe(true);
+    expect(newsSearchUnavailable([entryOf("availability", "nothing_found", NEWS_DOWN)])).toBe(true);
+    expect(
+      newsSearchUnavailable([
+        entryOf(
+          "availability",
+          "nothing_found",
+          "News search was not available; checked on the vendor's own pages and public databases only",
+        ),
+      ]),
+    ).toBe(true);
+  });
+
+  it("is false for a site category, for other notes, for the phrase on another outcome, and for no entries", () => {
+    expect(
+      newsSearchUnavailable([
+        entryOf("certifications", "search_failed", "The search was not available"),
+        entryOf("security_incidents", "search_failed", "The pages could not be read"),
+        entryOf("security_incidents", "nothing_found", "The search was not available"),
+        entryOf("security_incidents", "skipped", NEWS_DOWN),
+      ]),
+    ).toBe(false);
+    expect(newsSearchUnavailable([])).toBe(false);
+    expect(newsSearchUnavailable(null)).toBe(false);
+  });
+});
+
+describe("labels and the per-category line", () => {
+  it("builds the line from the category and the outcome, never from a note the model wrote", () => {
+    expect(describeCategoryLine(entry("nothing_found", "Anything the model wrote"))).toBe(
+      "Security incidents: nothing found",
+    );
+    expect(
+      describeCategoryLine(entry("findings", "2 potential risks found", "certifications")),
+    ).toBe("Certifications: risks found");
+    expect(describeCategoryLine(entry("search_failed", "x", "legal_regulatory"))).toBe(
+      "Legal and regulatory: could not be researched",
+    );
+    expect(describeCategoryLine(entry("skipped", "x", "ai_specific"))).toBe(
+      "AI-specific risks: skipped",
+    );
+    expect(describeCategoryLine(entry("nothing_found", "x", "availability"))).toBe(
+      "Availability: nothing found",
+    );
+    expect(describeCategoryLine(entry("findings", "x", "financial_health"))).toBe(
+      "Financial health: risks found",
+    );
+  });
+
+  it("labels the six categories, the four outcomes and the dismissal reasons", () => {
+    expect(categoryLabel("security_incidents")).toBe("Security incidents");
+    expect(categoryLabel("certifications")).toBe("Certifications");
+    expect(categoryLabel("legal_regulatory")).toBe("Legal and regulatory");
+    expect(categoryLabel("ai_specific")).toBe("AI-specific risks");
+    expect(categoryLabel("availability")).toBe("Availability");
+    expect(categoryLabel("financial_health")).toBe("Financial health");
+    expect(outcomeLabel("findings")).toBe("risks found");
+    expect(outcomeLabel("nothing_found")).toBe("nothing found");
+    expect(outcomeLabel("search_failed")).toBe("could not be researched");
+    expect(outcomeLabel("skipped")).toBe("skipped");
+    expect(dismissReasonLabel("not_applicable")).toBe("Not applicable to this vendor");
+    expect(dismissReasonLabel("already_covered")).toBe("Already covered by an existing risk");
+    expect(dismissReasonLabel("inaccurate")).toBe("Inaccurate or not supported by the sources");
+    expect(dismissReasonLabel("accepted_risk")).toBe("Accepted risk");
+    expect(dismissReasonLabel("other")).toBe("Other");
+  });
+
+  it("has no label for a confidence: a finding has a credibility label only", () => {
+    expect(vendorResearchText).not.toHaveProperty("confidenceLabel");
+  });
+
+  it("does not render a value it does not know", () => {
+    expect(categoryLabel("supply_chain" as never)).toBe("Other");
+    expect(outcomeLabel("mystery" as never)).toBe("unknown");
+    expect(dismissReasonLabel("mystery" as never)).toBe("Other");
+    expect(describeCategoryLine(null as never)).toBe("Other: unknown");
+  });
+
+  // The server's NOTES.overCap: the risks of the category held up, and the cap of the run cut them,
+  // to be raised by the next run. The server gives that category the outcome `over_cap`, and the
+  // line is read from the outcome alone (RV6C-1): on `nothing_found` the note may be the model's.
+  describe("a category whose risks the cap of the run cut", () => {
+    const OVER_CAP = "More risks were found than one run keeps";
+
+    it("says the risks were found and left for the next run, from the outcome", () => {
+      expect(describeCategoryLine(entry("over_cap", OVER_CAP, "ai_specific"))).toBe(
+        "AI-specific risks: risks found, left for the next run",
+      );
+      expect(describeCategoryLine({ category: "availability", outcome: "over_cap" })).toBe(
+        "Availability: risks found, left for the next run",
+      );
+      expect(outcomeLabel("over_cap")).toBe("risks found, left for the next run");
+    });
+
+    it("keeps the sentence of the note under that line", () => {
+      expect(describeCategoryNote(entry("over_cap", OVER_CAP))).toEqual({
+        kind: "fixed",
+        text: "More risks were found than one run keeps.",
+      });
+    });
+
+    it("shows no other note under that line, whatever it says", () => {
+      for (const other of [
+        "No risks found in the sources reviewed",
+        "1 potential risk found",
+        "A note the model wrote",
+        `${OVER_CAP}.`,
+      ]) {
+        expect(describeCategoryNote(entry("over_cap", other))).toBeNull();
+      }
+    });
+
+    // RV6C-1: the model can write the very words of the cap's note for a category in which nothing
+    // was found, and a run stored before the cap had an outcome of its own kept a capped category
+    // the same way. Neither turns the line into a claim that risks were found.
+    it("never reads the line from the note: the cap's words on nothing_found say nothing was found", () => {
+      for (const note of [OVER_CAP, `  ${OVER_CAP}  `, `${OVER_CAP}.`, OVER_CAP.toLowerCase()]) {
+        expect(describeCategoryLine(entry("nothing_found", note))).toBe(
+          "Security incidents: nothing found",
+        );
+      }
+      expect(describeCategoryLine(entry("findings", OVER_CAP))).toBe(
+        "Security incidents: risks found",
+      );
+      expect(describeCategoryLine(entry("skipped", OVER_CAP))).toBe("Security incidents: skipped");
+      expect(describeCategoryLine(entry("search_failed", OVER_CAP))).toBe(
+        "Security incidents: could not be researched",
+      );
+    });
+
+    it("still shows the cap's sentence under the line of a run stored the old way", () => {
+      expect(describeCategoryNote(entry("nothing_found", OVER_CAP))).toEqual({
+        kind: "fixed",
+        text: "More risks were found than one run keeps.",
+      });
+    });
+
+    it("still reads a stored entry without a note, or with an odd one", () => {
+      expect(describeCategoryLine({ category: "availability", outcome: "nothing_found" })).toBe(
+        "Availability: nothing found",
+      );
+      expect(
+        describeCategoryLine({
+          category: "availability",
+          outcome: "nothing_found",
+          note: 7 as never,
+        }),
+      ).toBe("Availability: nothing found");
+    });
+  });
+});
+
+describe("describeProgress", () => {
+  const progress = (overrides: Partial<RunProgress> = {}): RunProgress => ({
+    phase: "researching",
+    steps: 3,
+    action: "search",
+    category: "security_incidents",
+    searchesUsed: 2,
+    pagesRead: 1,
+    categories: ["security_incidents", "certifications"],
+    updatedAt: "2026-10-10T09:00:20.000Z",
+    ...overrides,
+  });
+
+  it("says what the latest turn is doing, with its category", () => {
+    expect(describeProgress(progress()).doing).toBe("Searching the web: Security incidents");
+    expect(describeProgress(progress({ action: "read", category: "certifications" })).doing).toBe(
+      "Reading a page: Certifications",
+    );
+  });
+
+  it("leaves the category out of the line for a turn that had none", () => {
+    expect(describeProgress(progress({ category: null })).doing).toBe("Searching the web");
+    expect(describeProgress(progress({ action: "read", category: null })).doing).toBe(
+      "Reading a page",
+    );
+  });
+
+  it("says the research is starting before the first turn", () => {
+    expect(
+      describeProgress(
+        progress({
+          steps: 0,
+          action: null,
+          category: null,
+          searchesUsed: 0,
+          pagesRead: 0,
+          categories: [],
+        }),
+      ),
+    ).toEqual({ doing: "Starting the research", covered: null, counts: null });
+  });
+
+  it("says the findings are being analysed once the research is over", () => {
+    expect(describeProgress(progress({ phase: "analysing", action: null })).doing).toBe(
+      "Analysing what was found",
+    );
+  });
+
+  it("says nothing of the step for a turn that did nothing on the web", () => {
+    expect(describeProgress(progress({ action: null, category: null })).doing).toBeNull();
+  });
+
+  it("lists the categories worked on so far, by their labels", () => {
+    expect(describeProgress(progress()).covered).toBe(
+      "Researched so far: Security incidents, Certifications",
+    );
+    expect(describeProgress(progress({ categories: [] })).covered).toBeNull();
+  });
+
+  it("counts the searches and the pages, and says nothing while there are none", () => {
+    expect(describeProgress(progress()).counts).toBe("Searches: 2, pages read: 1");
+    expect(describeProgress(progress({ searchesUsed: 0, pagesRead: 0 })).counts).toBeNull();
+    expect(describeProgress(progress({ searchesUsed: 0, pagesRead: 4 })).counts).toBe(
+      "Searches: 0, pages read: 4",
+    );
+  });
+
+  it("has nothing to say about a run without progress", () => {
+    for (const none of [null, undefined]) {
+      expect(describeProgress(none)).toEqual({ doing: null, covered: null, counts: null });
+    }
+  });
+
+  it("does not render a value it does not know", () => {
+    const odd = progress({
+      phase: "mystery" as never,
+      action: "mystery" as never,
+      category: "supply_chain" as never,
+      categories: ["supply_chain", "certifications", 7] as never,
+      searchesUsed: "many" as never,
+      pagesRead: Number.NaN,
+    });
+
+    expect(describeProgress(odd)).toEqual({
+      doing: null,
+      covered: "Researched so far: Certifications",
+      counts: null,
+    });
+  });
+
+  it("looks up the dictionary with the same keys whatever the data, so that a translation can be checked", () => {
+    const keys = new Set<string>();
+    const t = (key: string) => {
+      keys.add(key);
+      return key;
+    };
+    describeProgress(progress(), t);
+    describeProgress(progress({ action: "read" }), t);
+    describeProgress(progress({ category: null }), t);
+    describeProgress(progress({ action: "read", category: null }), t);
+    describeProgress(progress({ steps: 0, action: null }), t);
+    describeProgress(progress({ phase: "analysing" }), t);
+
+    expect([...keys].sort()).toEqual(
+      [
+        "Analysing what was found",
+        "Certifications",
+        "Reading a page",
+        "Reading a page: {category}",
+        "Researched so far: {categories}",
+        "Searches: {searches}, pages read: {pages}",
+        "Searching the web",
+        "Searching the web: {category}",
+        "Security incidents",
+        "Starting the research",
+      ].sort(),
+    );
+    for (const lang of LANGS) {
+      expect([...keys].filter((key) => translations[lang][key] === undefined)).toEqual([]);
+    }
+  });
+});
+
+describe("formatResearchDate", () => {
+  it("writes the day, the short month and the year in the language of the screen", () => {
+    expect(formatResearchDate("2026-03-12", "en")).toBe("12 Mar 2026");
+    expect(formatResearchDate("2026-03-12T23:59:59.000Z", "en")).toBe("12 Mar 2026");
+    expect(formatResearchDate("2026-03-12", "de")).toBe("12. März 2026");
+    expect(formatResearchDate("2026-03-12", "fr")).toBe("12 mars 2026");
+    expect(formatResearchDate("2026-03-12", "es")).toBe("12 mar 2026");
+  });
+
+  it("falls back to English for a language it does not know", () => {
+    expect(formatResearchDate("2026-03-12", "xx")).toBe("12 Mar 2026");
+  });
+
+  it("gives null for no date, and for one that does not parse", () => {
+    expect(formatResearchDate("2026-03-12", "en")).toBe("12 Mar 2026");
+    for (const odd of [null, undefined, "", "not a date", 20260312 as never]) {
+      expect(formatResearchDate(odd, "en")).toBeNull();
+    }
+  });
+});
+
+// ── Credibility ──────────────────────────────────────────────────────────────
+
+/** The translator of the English screen: every key is its own text. */
+const english = (key: string) => key;
+
+/** A cited source as the credibility rule saw it: by default a page of a host nobody reviewed. */
+const cited = (overrides: Partial<CredibilitySource> = {}): CredibilitySource => ({
+  url: "https://forum.example/thread/1",
+  category: "unverified",
+  publisher: "forum.example",
+  entry: null,
+  reviewed: false,
+  reading: "read",
+  ...overrides,
+});
+
+/** The record of a public database, matched strongly, from a copy of 7 Oct 2026. */
+const recordOf = (
+  source: RecordSourceId,
+  record: Partial<NonNullable<CredibilitySource["record"]>> = {},
+): CredibilitySource =>
+  cited({
+    url: `https://records.example/${source}/1`,
+    category: "official",
+    publisher: source,
+    reviewed: true,
+    record: {
+      source,
+      match: "strong",
+      status: "active",
+      source_record_id: "CVE-2026-28001",
+      as_of: "2026-10-07",
+      ...record,
+    },
+  });
+
+/** A page of a trusted publisher; `name` is the publisher's name as the registry gives it. */
+const press = (entry: string, name: string | undefined, url: string): CredibilitySource =>
+  cited({
+    url,
+    category: "trusted_press",
+    publisher: entry,
+    entry,
+    reviewed: true,
+    ...(name === undefined ? {} : { publisher_name: name }),
+  });
+
+const basisOf = (
+  rule: CredibilityRule,
+  sources: CredibilitySource[],
+  nameOnly = false,
+): CredibilityBasis => ({ rule, registry_version: "2026-10-29.1", name_only: nameOnly, sources });
+
+/**
+ * The 23 lists of the vendor risk database added on 2026-11-10, in the order of the id unions: the
+ * name the screen gives the list when it is the operator of a record (the server's `name`, vrdb/
+ * sources.ts), the name of the list as "the {list} entry" says it (the server's `listName`), and
+ * whether its records never raise a risk (a register or status list: context for another risk, never
+ * what supports a label).
+ */
+const NEW_LISTS = [
+  {
+    id: "canada_sema",
+    name: "Consolidated Canadian Autonomous Sanctions List",
+    list: "Consolidated Canadian Autonomous Sanctions List",
+    context: false,
+  },
+  {
+    id: "california_breaches",
+    name: "California Attorney General data breach list",
+    list: "California Attorney General data breach list",
+    context: false,
+  },
+  {
+    id: "uk_ofsi",
+    name: "UK OFSI financial sanctions enforcement notices",
+    list: "UK OFSI financial sanctions enforcement notices",
+    context: false,
+  },
+  {
+    id: "charlotin",
+    name: "AI Hallucination Cases database",
+    list: "AI Hallucination Cases database",
+    context: false,
+  },
+  {
+    id: "ftc_penalties",
+    name: "FTC civil penalty cases",
+    list: "FTC civil penalty case list",
+    context: false,
+  },
+  {
+    id: "piperoll",
+    name: "PipeRoll Agent Incident Registry",
+    list: "PipeRoll Agent Incident Registry",
+    context: false,
+  },
+  {
+    id: "eu_dg_comp",
+    name: "European Commission competition cases",
+    list: "European Commission antitrust, cartel and DMA case data",
+    context: false,
+  },
+  {
+    id: "disclose_io",
+    name: "disclose.io program list",
+    list: "disclose.io vulnerability disclosure program list",
+    context: true,
+  },
+  {
+    id: "uk_cma",
+    name: "UK Competition and Markets Authority cases",
+    list: "UK Competition and Markets Authority cases",
+    context: false,
+  },
+  {
+    id: "canada_ai_register",
+    name: "Government of Canada AI Register",
+    list: "Government of Canada AI Register",
+    context: true,
+  },
+  {
+    id: "ftc_competition",
+    name: "FTC nonmerger enforcement actions",
+    list: "FTC nonmerger enforcement action list",
+    context: false,
+  },
+  {
+    id: "omb_ai_inventory",
+    name: "US federal AI use case inventory",
+    list: "US federal AI use case inventory",
+    context: true,
+  },
+  {
+    id: "co_sic_penalties",
+    name: "Colombia SIC consumer protection sanctions",
+    list: "Colombia SIC consumer protection sanctions list",
+    context: false,
+  },
+  {
+    id: "uk_atrs",
+    name: "UK Algorithmic Transparency Recording Standard records",
+    list: "UK Algorithmic Transparency Records",
+    context: true,
+  },
+  {
+    id: "nhtsa_recalls",
+    name: "NHTSA vehicle and equipment recalls",
+    list: "NHTSA recalls file",
+    context: false,
+  },
+  {
+    id: "fmti",
+    name: "Foundation Model Transparency Index",
+    list: "Foundation Model Transparency Index",
+    context: true,
+  },
+  {
+    id: "uk_mhra",
+    name: "UK MHRA field safety notice lists",
+    list: "UK MHRA field safety notice lists",
+    context: false,
+  },
+  {
+    id: "nl_algoritmeregister",
+    name: "Dutch Algorithm Register",
+    list: "Dutch Algorithm Register",
+    context: true,
+  },
+  {
+    id: "nhtsa_odi",
+    name: "NHTSA defect investigations",
+    list: "NHTSA defect investigations file",
+    context: false,
+  },
+  { id: "fedramp", name: "FedRAMP Marketplace", list: "FedRAMP Marketplace data", context: true },
+  {
+    id: "epoch_ai",
+    name: "Epoch AI Data on AI Models",
+    list: "Epoch AI Data on AI Models",
+    context: true,
+  },
+  {
+    id: "c2pa_conforming",
+    name: "C2PA Conforming Products List",
+    list: "C2PA Conforming Products List",
+    context: true,
+  },
+  { id: "gleif", name: "GLEIF LEI records", list: "GLEIF LEI records", context: true },
+] as const satisfies ReadonlyArray<{
+  id: VrdbSourceId;
+  name: string;
+  list: string;
+  context: boolean;
+}>;
+
+/** The lists whose records never raise a risk, and the lists whose records can. */
+const REGISTERS = NEW_LISTS.filter((list) => list.context);
+const RAISING = NEW_LISTS.filter((list) => !list.context);
+
+const RECORD_SOURCES: RecordSourceId[] = [
+  "kev",
+  "nvd",
+  "hibp",
+  "sec",
+  "statuspage",
+  "ofac",
+  "uk_sanctions",
+  "eu_fsf",
+  "cve",
+  "un_sanctions",
+  "csl",
+  "aiid",
+  "atlas",
+  "nhtsa_sgo",
+  "fda_ai_devices",
+  "fda_device_recalls",
+  ...NEW_LISTS.map((list) => list.id),
+];
+
+/**
+ * The four AI-specific lists: the server's name of each (vrdb/sources.ts), the class its records
+ * have (sourceRegistry/classify.ts) and an address of the form its records have, with an invented
+ * id. Every match of them is by name, so each record is weak.
+ */
+const AI_LISTS = [
+  {
+    id: "aiid",
+    name: "AI Incident Database",
+    category: "unverified",
+    url: "https://incidentdatabase.ai/cite/9001",
+    recordId: "9001",
+  },
+  {
+    id: "atlas",
+    name: "MITRE ATLAS case studies",
+    category: "trusted_press",
+    url: "https://atlas.mitre.org/studies/AML.CS9001",
+    recordId: "AML.CS9001",
+  },
+  {
+    id: "nhtsa_sgo",
+    name: "NHTSA Standing General Order crash reports",
+    category: "official",
+    url: "https://www.nhtsa.gov/laws-regulations/standing-general-order-crash-reporting?reportingEntity=acmecars&automation=ads",
+    recordId: "acmecars:ads",
+  },
+  {
+    id: "fda_ai_devices",
+    name: "FDA list of AI-enabled medical devices",
+    category: "official",
+    url: "https://www.fda.gov/medical-devices/software-medical-device-samd/artificial-intelligence-enabled-medical-devices?company=acmecloud",
+    recordId: "acmecloud",
+  },
+] as const satisfies ReadonlyArray<{
+  id: RecordSourceId;
+  name: string;
+  category: SourceCategory;
+  url: string;
+  recordId: string;
+}>;
+type AiList = (typeof AI_LISTS)[number];
+const [AIID, ATLAS] = AI_LISTS;
+
+/**
+ * What the terms of the AI-specific lists ask a screen that shows their data to say, as the server
+ * stores it (vrdb/sources.ts). Never translated. The notice of MITRE ATLAS is below: it names a year.
+ */
+const AI_NOTICES = {
+  aiid: "AI Incident Database, Responsible AI Collaborative (incidentdatabase.ai), CC BY-SA 4.0. Adapted by VerifyWise; the adapted records are shared under CC BY-SA 4.0.",
+  nhtsa_sgo:
+    "NHTSA Standing General Order crash reports, US Department of Transportation. Counted by VerifyWise; NHTSA states the data may be incomplete or unverified.",
+  fda_ai_devices: "FDA list of AI-enabled medical devices, US Food and Drug Administration",
+};
+/**
+ * The notice of the ATLAS case studies: MITRE's copyright line up to the year of the day (Q32), with
+ * the mark. The server stores it with the year of the day in UTC, so a test sets the clock before it
+ * reads one.
+ */
+const atlasNotice = (year: number) =>
+  `MITRE ATLAS™ case studies, Copyright 2021-${year} The MITRE Corporation, under the Apache License 2.0. Adapted by VerifyWise.`;
+
+/** The record of an AI-specific list as the server describes it: weak, in the class of its list. */
+const aiRecordOf = (
+  list: AiList,
+  record: Partial<NonNullable<CredibilitySource["record"]>> = {},
+): CredibilitySource => ({
+  ...recordOf(list.id, { match: "weak", source_record_id: list.recordId, ...record }),
+  url: list.url,
+  category: list.category,
+});
+
+/**
+ * The two lists that came after the AI-specific ones, both open: the US Consolidated Screening List
+ * (the export-control and trade-restriction lists of Commerce, State and Treasury, without the SDN
+ * list that OFAC holds) and the FDA's recalls of the devices on its AI list. The server's name of
+ * each (vrdb/sources.ts), the class its records have (sourceRegistry/classify.ts), the status it
+ * gives a record it no longer holds (`missingStatus`) and an address of the form its records have,
+ * with an invented id. A match by name is weak.
+ */
+const CSL_AND_RECALLS = [
+  {
+    id: "csl",
+    name: "US Consolidated Screening List",
+    list: "US Consolidated Screening List",
+    category: "official",
+    dropped: "delisted",
+    url: "https://www.trade.gov/consolidated-screening-list?list=el&entry=acmetradingco",
+    recordId: "el:acmetradingco",
+  },
+  {
+    id: "fda_device_recalls",
+    name: "FDA recalls of AI-enabled medical devices",
+    // What "the {list} entry" says: a recall is an entry of the FDA's recall database.
+    list: "FDA device recall database",
+    category: "official",
+    dropped: "withdrawn",
+    url: "https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfRES/res.cfm?start_search=1&event_id=90001",
+    recordId: "90001",
+  },
+] as const satisfies ReadonlyArray<{
+  id: RecordSourceId;
+  name: string;
+  list: string;
+  category: SourceCategory;
+  dropped: Exclude<RecordStatus, "active" | "rejected">;
+  url: string;
+  recordId: string;
+}>;
+type CslOrRecalls = (typeof CSL_AND_RECALLS)[number];
+
+/**
+ * What the terms of those two lists ask a screen that shows their data to say, as the server stores
+ * it (vrdb/sources.ts). Never translated. ITA asks for a sentence that names its Data API; the
+ * product reads the downloadable file, so the notice of the screening list names the list.
+ */
+const CSL_AND_RECALLS_NOTICES = {
+  csl: "This product uses data from the International Trade Administration's Consolidated Screening List but is not endorsed or certified by the International Trade Administration. Entries adapted by VerifyWise.",
+  // The string the server stores for the list (vrdb/sources.ts), as amended when the FDA's
+  // enforcement reports were folded into the recalls list.
+  fda_device_recalls:
+    "FDA medical device recalls and enforcement reports through openFDA, US Food and Drug Administration (CC0 1.0), joined by VerifyWise to the FDA list of AI-enabled medical devices. Data provided by the U.S. Food and Drug Administration (https://open.fda.gov).",
+};
+
+/** The record of one of those lists as the server describes it: weak, in the class of its list. */
+const cslOrRecallRecordOf = (
+  list: CslOrRecalls,
+  record: Partial<NonNullable<CredibilitySource["record"]>> = {},
+): CredibilitySource => ({
+  ...recordOf(list.id, { match: "weak", source_record_id: list.recordId, ...record }),
+  url: list.url,
+  category: list.category,
+});
+
+/**
+ * What the line of a Low label says when every source it cites is a register or a status list (a
+ * list whose records never raise a risk): the server's English line, word for word.
+ */
+const REGISTER_ONLY_SENTENCE =
+  "Low: only registers that list the vendor are cited, and a register entry is not evidence of a risk.";
+
+/** The sentence of every rule, with what the server's English line says for the same basis. */
+const RULE_SENTENCES: Array<[name: string, basis: CredibilityBasis, sentence: string]> = [
+  [
+    "a record with its id and the day of its copy",
+    basisOf("official_record", [recordOf("kev")]),
+    "High: CISA Known Exploited Vulnerabilities lists it (CVE-2026-28001), as of 7 Oct 2026.",
+  ],
+  [
+    "a record with its id only",
+    basisOf("official_record", [recordOf("kev", { as_of: undefined })]),
+    "High: CISA Known Exploited Vulnerabilities lists it (CVE-2026-28001).",
+  ],
+  [
+    "a record with the day of its copy only",
+    basisOf("official_record", [recordOf("ofac", { source_record_id: undefined })]),
+    "High: OFAC Specially Designated Nationals list lists it, as of 7 Oct 2026.",
+  ],
+  [
+    "a record looked up on the web",
+    basisOf("official_record", [
+      recordOf("nvd", { source_record_id: undefined, as_of: undefined }),
+    ]),
+    "High: the National Vulnerability Database lists it.",
+  ],
+  [
+    "a record of the CVE List",
+    basisOf("official_record", [recordOf("cve")]),
+    "High: the CVE Program lists it (CVE-2026-28001), as of 7 Oct 2026.",
+  ],
+  [
+    "an entry of the UN list matched by an identifier",
+    basisOf("official_record", [recordOf("un_sanctions", { source_record_id: "EXe.012" })]),
+    "High: UN Security Council Consolidated List lists it (EXe.012), as of 7 Oct 2026.",
+  ],
+  [
+    "an official page",
+    basisOf("official_page", [
+      cited({ url: "https://www.sec.gov/newsroom/press-releases/2026-1", category: "official" }),
+    ]),
+    "High: an official source reports it (sec.gov).",
+  ],
+  [
+    "an official page whose address does not parse",
+    basisOf("official_page", [cited({ url: "not a url", category: "official" })]),
+    "High: an official source reports it.",
+  ],
+  [
+    "the vendor's statement",
+    basisOf("vendor_statement", [
+      cited({
+        url: "https://status.acme.example/incidents/1",
+        category: "vendor",
+        publisher: "vendor",
+        vendor_kind: "statement",
+      }),
+    ]),
+    "High: the vendor states it on its own pages (status.acme.example).",
+  ],
+  [
+    "the vendor's statement on a page whose address does not parse",
+    basisOf("vendor_statement", [
+      cited({ url: "", category: "vendor", publisher: "vendor", vendor_kind: "statement" }),
+    ]),
+    "High: the vendor states it on its own pages.",
+  ],
+  [
+    "two trusted publishers",
+    basisOf("trusted_press_two", [
+      press("reuters", "Reuters", "https://www.reuters.com/a"),
+      press("reuters", "Reuters", "https://www.reuters.com/b"),
+      press("bbc", "BBC", "https://www.bbc.co.uk/news/1"),
+    ]),
+    "High: 2 independent trusted publishers report it (Reuters, BBC).",
+  ],
+  [
+    "two trusted publishers with neither a name nor an address",
+    basisOf("trusted_press_two", [press("a", undefined, "x"), press("b", undefined, "y")]),
+    "High: 2 independent trusted publishers report it.",
+  ],
+  [
+    "one trusted publisher",
+    basisOf("trusted_press_one", [
+      press("reuters", "Reuters", "https://www.reuters.com/a"),
+      cited(),
+    ]),
+    "Medium: one trusted publisher reports it (Reuters); no official source and no second independent publisher.",
+  ],
+  [
+    "one trusted publisher with neither a name nor an address",
+    basisOf("trusted_press_one", [press("reuters", undefined, "x")]),
+    "Medium: one trusted publisher reports it; no official source and no second independent publisher.",
+  ],
+  [
+    "search results only",
+    basisOf("capped_unconfirmed", [cited({ category: "official", reading: "unconfirmed" })]),
+    "Medium: only search results show it; the pages could not be read.",
+  ],
+  [
+    "contradicted results",
+    basisOf("contradicted", [cited({ reading: "contradicted" })]),
+    "Low: the pages do not hold what the search results quoted.",
+  ],
+  [
+    "an entry matched by name",
+    basisOf("name_only", [recordOf("ofac", { match: "weak" })], true),
+    "Low: the OFAC SDN list entry matches the vendor by name only.",
+  ],
+  [
+    "unverified sources",
+    basisOf("unverified", [
+      cited(),
+      cited({ url: "https://www.blog.example/post" }),
+      cited({ url: "https://forum.example/thread/2" }),
+    ]),
+    "Low: only unverified sources report it (forum.example, blog.example).",
+  ],
+  [
+    "unverified sources whose addresses do not parse",
+    basisOf("unverified", [cited({ url: "nowhere" })]),
+    "Low: only unverified sources report it.",
+  ],
+  [
+    "a finding that cites a register only",
+    basisOf("unverified", [recordOf("fedramp")]),
+    REGISTER_ONLY_SENTENCE,
+  ],
+  [
+    "the vendor's own claims",
+    basisOf("self_claim", [
+      cited({
+        url: "https://acme.example/security",
+        category: "vendor",
+        publisher: "vendor",
+        vendor_kind: "self_claim",
+      }),
+    ]),
+    "Low: only the vendor's own claims support it.",
+  ],
+  [
+    "a withdrawn record",
+    basisOf("inactive", [recordOf("kev", { status: "withdrawn", as_of: "2026-10-09" })]),
+    "Low: CISA Known Exploited Vulnerabilities withdrew the record on 9 Oct 2026.",
+  ],
+  [
+    "a record withdrawn on no known day",
+    basisOf("inactive", [recordOf("kev", { status: "withdrawn", as_of: undefined })]),
+    "Low: CISA Known Exploited Vulnerabilities withdrew the record.",
+  ],
+  [
+    "a rejected record",
+    basisOf("inactive", [recordOf("nvd", { status: "rejected", as_of: "2026-10-09" })]),
+    "Low: the National Vulnerability Database rejected the record on 9 Oct 2026.",
+  ],
+  [
+    "a record rejected on no known day",
+    basisOf("inactive", [recordOf("nvd", { status: "rejected", as_of: undefined })]),
+    "Low: the National Vulnerability Database rejected the record.",
+  ],
+  [
+    "a CVE the CVE Program rejected",
+    basisOf("inactive", [recordOf("cve", { status: "rejected", as_of: "2026-10-31" })]),
+    "Low: the CVE Program rejected the record on 31 Oct 2026.",
+  ],
+  [
+    "a record whose CVE the CVE Program rejected",
+    basisOf("inactive", [
+      recordOf("kev", { status: "rejected", as_of: "2026-10-31", rejected_by: "cve" }),
+    ]),
+    "Low: the CVE Program rejected the record on 31 Oct 2026.",
+  ],
+  [
+    "a record whose CVE the NVD rejected",
+    basisOf("inactive", [
+      recordOf("kev", { status: "rejected", as_of: "2026-10-31", rejected_by: "nvd" }),
+    ]),
+    "Low: the National Vulnerability Database rejected the record on 31 Oct 2026.",
+  ],
+  [
+    "an entry the UN delisted",
+    basisOf("inactive", [recordOf("un_sanctions", { status: "delisted", as_of: "2026-10-09" })]),
+    "Low: UN Security Council Consolidated List removed the record on 9 Oct 2026.",
+  ],
+  [
+    "a delisted entry",
+    basisOf("inactive", [recordOf("ofac", { status: "delisted", as_of: "2026-10-09" })]),
+    "Low: OFAC Specially Designated Nationals list removed the record on 9 Oct 2026.",
+  ],
+  [
+    "an entry delisted on no known day",
+    basisOf("inactive", [recordOf("ofac", { status: "delisted", as_of: undefined })]),
+    "Low: OFAC Specially Designated Nationals list removed the record.",
+  ],
+  // The AI-specific lists: matched by name, and withdrawn (not delisted) when they drop a record.
+  ...AI_LISTS.flatMap((list): Array<[name: string, basis: CredibilityBasis, sentence: string]> => [
+    [
+      `an entry of the ${list.name} matched by name`,
+      basisOf("name_only", [aiRecordOf(list)], true),
+      `Low: the ${list.name} entry matches the vendor by name only.`,
+    ],
+    [
+      `a record the ${list.name} withdrew`,
+      basisOf("inactive", [aiRecordOf(list, { status: "withdrawn", as_of: "2026-10-09" })]),
+      `Low: ${list.name} withdrew the record on 9 Oct 2026.`,
+    ],
+    [
+      `a record the ${list.name} withdrew on no known day`,
+      basisOf("inactive", [aiRecordOf(list, { status: "withdrawn", as_of: undefined })]),
+      `Low: ${list.name} withdrew the record.`,
+    ],
+  ]),
+  // The US Consolidated Screening List and the FDA recalls: matched by name. The sentence of a record
+  // that its list no longer holds follows the status the record has, so each status is worded for
+  // each list: the screening list delists a record and the recalls withdraw it, and the words are
+  // those of the status ("removed", "withdrew") whichever list wrote it.
+  ...CSL_AND_RECALLS.flatMap(
+    (list): Array<[name: string, basis: CredibilityBasis, sentence: string]> => [
+      [
+        `an entry of the ${list.name} matched by name`,
+        basisOf("name_only", [cslOrRecallRecordOf(list)], true),
+        `Low: the ${list.list} entry matches the vendor by name only.`,
+      ],
+      ...(
+        [
+          ["withdrawn", "withdrew"],
+          ["delisted", "removed"],
+        ] as const
+      ).flatMap(
+        ([status, verb]): Array<[name: string, basis: CredibilityBasis, sentence: string]> => [
+          [
+            `a ${status} record of the ${list.name}`,
+            basisOf("inactive", [cslOrRecallRecordOf(list, { status, as_of: "2026-10-09" })]),
+            `Low: ${list.name} ${verb} the record on 9 Oct 2026.`,
+          ],
+          [
+            `a ${status} record of the ${list.name} on no known day`,
+            basisOf("inactive", [cslOrRecallRecordOf(list, { status, as_of: undefined })]),
+            `Low: ${list.name} ${verb} the record.`,
+          ],
+        ],
+      ),
+    ],
+  ),
+  // A weak record gives only Low support, whatever its class: MITRE ATLAS is trusted press, and
+  // its case studies are matched by name, so one is no publisher of a line (credibility.ts).
+  [
+    "one trusted publisher next to a weak record of MITRE ATLAS",
+    basisOf(
+      "trusted_press_one",
+      [press("reuters", "Reuters", "https://www.reuters.com/a"), aiRecordOf(ATLAS)],
+      true,
+    ),
+    "Medium: one trusted publisher reports it (Reuters); no official source and no second independent publisher.",
+  ],
+  [
+    "a weak record of MITRE ATLAS alone",
+    basisOf("trusted_press_one", [aiRecordOf(ATLAS)], true),
+    "Medium: one trusted publisher reports it; no official source and no second independent publisher.",
+  ],
+  [
+    "two trusted publishers next to a weak record of MITRE ATLAS",
+    basisOf(
+      "trusted_press_two",
+      [
+        press("reuters", "Reuters", "https://www.reuters.com/a"),
+        aiRecordOf(ATLAS),
+        press("bbc", "BBC", "https://www.bbc.co.uk/news/1"),
+      ],
+      true,
+    ),
+    "High: 2 independent trusted publishers report it (Reuters, BBC).",
+  ],
+];
+
+const NAME_ONLY_NOTE = "Matched by name only: this may be another company.";
+
+/** The line the server gives a finding rated by its earlier confidence (controllers/vendorResearch.ctrl.ts). */
+const LEGACY_SENTENCE =
+  "Rated before the source rules; this is the earlier confidence level until the label is recomputed.";
+
+/** The line the server gives an accepted or dismissed finding rated by it (services/vendorResearch/credibilityText.ts). */
+const DECIDED_LEGACY_SENTENCE = "Rated with the earlier confidence rule.";
+
+describe("credibilityRationale", () => {
+  it.each(RULE_SENTENCES)("words %s as the server's line does", (_name, basis, sentence) => {
+    expect(credibilityRationale(basis, english, "en")).toEqual({ sentence, stale: null });
+  });
+
+  it("names a publisher by its host when the registry gives no name, and each entry once", () => {
+    const { sentence } = credibilityRationale(
+      basisOf("trusted_press_two", [
+        press("ft", undefined, "https://www.ft.com/content/1"),
+        press("bbc", "BBC", "https://www.bbc.co.uk/news/1"),
+        press("bbc", "BBC News", "https://www.bbc.co.uk/news/2"),
+      ]),
+      english,
+      "en",
+    );
+    expect(sentence).toBe("High: 2 independent trusted publishers report it (ft.com, BBC).");
+  });
+
+  it("holds with what supports the label: the first source read, never a contradicted one or an inactive record", () => {
+    const page = credibilityRationale(
+      basisOf("official_page", [
+        cited({ url: "https://www.ftc.gov/a", category: "official", reading: "contradicted" }),
+        cited({ url: "https://www.sec.gov/b", category: "official", reading: "unconfirmed" }),
+        cited({ url: "https://www.fca.org.uk/c", category: "official" }),
+      ]),
+      english,
+      "en",
+    );
+    expect(page.sentence).toBe("High: an official source reports it (fca.org.uk).");
+
+    const record = credibilityRationale(
+      basisOf("official_record", [
+        recordOf("kev", { status: "withdrawn", source_record_id: "CVE-2026-1" }),
+        recordOf("ofac", { match: "weak", source_record_id: "29001" }),
+        recordOf("kev", { source_record_id: "CVE-2026-2" }),
+      ]),
+      english,
+      "en",
+    );
+    expect(record.sentence).toBe(
+      "High: CISA Known Exploited Vulnerabilities lists it (CVE-2026-2), as of 7 Oct 2026.",
+    );
+  });
+
+  it("names the list of every database a record can match by name", () => {
+    const sentenceOf = (source: RecordSourceId) =>
+      credibilityRationale(
+        basisOf("name_only", [recordOf(source, { match: "weak" })], true),
+        english,
+        "en",
+      ).sentence;
+    expect(sentenceOf("uk_sanctions")).toBe(
+      "Low: the UK Sanctions List entry matches the vendor by name only.",
+    );
+    expect(sentenceOf("eu_fsf")).toBe(
+      "Low: the EU financial sanctions list entry matches the vendor by name only.",
+    );
+    expect(sentenceOf("sec")).toBe(
+      "Low: the SEC EDGAR filings entry matches the vendor by name only.",
+    );
+    expect(sentenceOf("nvd")).toBe("Low: the NVD entry matches the vendor by name only.");
+    expect(sentenceOf("cve")).toBe("Low: the CVE List entry matches the vendor by name only.");
+    expect(sentenceOf("un_sanctions")).toBe(
+      "Low: the UN Security Council Consolidated List entry matches the vendor by name only.",
+    );
+    expect(sentenceOf("csl")).toBe(
+      "Low: the US Consolidated Screening List entry matches the vendor by name only.",
+    );
+    expect(sentenceOf("fda_device_recalls")).toBe(
+      "Low: the FDA device recall database entry matches the vendor by name only.",
+    );
+    // The lists added on 2026-11-10 read "the {list} entry" too, never "the the … entry entry".
+    expect(sentenceOf("uk_ofsi")).toBe(
+      "Low: the UK OFSI financial sanctions enforcement notices entry matches the vendor by name only.",
+    );
+    expect(sentenceOf("nhtsa_recalls")).toBe(
+      "Low: the NHTSA recalls file entry matches the vendor by name only.",
+    );
+    for (const list of RAISING) {
+      const sentence = sentenceOf(list.id);
+      expect(sentence).toBe(`Low: the ${list.list} entry matches the vendor by name only.`);
+      expect(sentence).not.toMatch(/\bthe the\b|\bentry entry\b/);
+    }
+    // A record of a register is context for a finding, never what supports it (prompt vr-15): the
+    // line of a label has no sentence for it, so its list is never named here.
+    for (const list of REGISTERS) expect(sentenceOf(list.id)).toBe("");
+  });
+
+  describe("a record of a register is context for a finding, never what supports it", () => {
+    const KEV_SENTENCE =
+      "High: CISA Known Exploited Vulnerabilities lists it (CVE-2026-28001), as of 7 Oct 2026.";
+    const sentenceOf = (basis: CredibilityBasis) =>
+      credibilityRationale(basis, english, "en").sentence;
+
+    it("a FedRAMP record cited before a KEV record does not give its name to the label the KEV record decided", () => {
+      const sentence = sentenceOf(
+        basisOf("official_record", [recordOf("fedramp"), recordOf("kev")]),
+      );
+      expect(sentence).toBe(KEV_SENTENCE);
+      expect(sentence).not.toContain("FedRAMP Marketplace");
+    });
+
+    it("holds for every register and status list, whichever is cited first", () => {
+      for (const list of REGISTERS) {
+        const before = sentenceOf(basisOf("official_record", [recordOf(list.id), recordOf("kev")]));
+        const after = sentenceOf(basisOf("official_record", [recordOf("kev"), recordOf(list.id)]));
+        expect([list.id, before]).toEqual([list.id, KEV_SENTENCE]);
+        expect([list.id, after]).toEqual([list.id, KEV_SENTENCE]);
+      }
+    });
+
+    it("has no sentence when a register record is all the official record there is", () => {
+      for (const list of REGISTERS) {
+        expect([
+          list.id,
+          credibilityRationale(basisOf("official_record", [recordOf(list.id)]), english, "en"),
+        ]).toEqual([list.id, { sentence: "", stale: null }]);
+      }
+    });
+
+    it("leaves the other new lists in the sentence: a record of one of them is named as its operator", () => {
+      for (const list of RAISING) {
+        expect([list.id, sentenceOf(basisOf("official_record", [recordOf(list.id)]))]).toEqual([
+          list.id,
+          `High: ${list.name} lists it (CVE-2026-28001), as of 7 Oct 2026.`,
+        ]);
+      }
+    });
+
+    it("names no register in the line of a label decided by name only, nor a host in the line of unverified sources", () => {
+      expect(
+        sentenceOf(
+          basisOf(
+            "name_only",
+            [recordOf("epoch_ai", { match: "weak" }), recordOf("uk_ofsi", { match: "weak" })],
+            true,
+          ),
+        ),
+      ).toBe(
+        "Low: the UK OFSI financial sanctions enforcement notices entry matches the vendor by name only.",
+      );
+      const register = {
+        ...recordOf("disclose_io", { match: "weak" }),
+        category: "unverified" as const,
+        url: "https://disclose.example/program/1",
+      };
+      expect(
+        sentenceOf(
+          basisOf("unverified", [register, cited({ url: "https://forum.example/thread/1" })], true),
+        ),
+      ).toBe("Low: only unverified sources report it (forum.example).");
+    });
+
+    describe("a finding that cites registers only, and a register that is stale or withdrawn", () => {
+      const wordsOf = (basis: CredibilityBasis) => credibilityRationale(basis, english, "en");
+
+      it("says that only registers are cited, for every register and status list", () => {
+        for (const list of REGISTERS) {
+          expect([list.id, wordsOf(basisOf("unverified", [recordOf(list.id)]))]).toEqual([
+            list.id,
+            { sentence: REGISTER_ONLY_SENTENCE, stale: null },
+          ]);
+        }
+        // Matched by name, or several of them: the same line.
+        expect(
+          wordsOf(basisOf("unverified", [recordOf("gleif", { match: "weak" })], true)).sentence,
+        ).toBe(REGISTER_ONLY_SENTENCE);
+        expect(
+          wordsOf(
+            basisOf("unverified", [recordOf("fedramp"), recordOf("gleif"), recordOf("epoch_ai")]),
+          ).sentence,
+        ).toBe(REGISTER_ONLY_SENTENCE);
+      });
+
+      it("names no register in it, and does not call a register an unverified source", () => {
+        for (const list of REGISTERS) {
+          const { sentence } = wordsOf(basisOf("unverified", [recordOf(list.id)]));
+          expect(sentence).not.toContain(list.name);
+          expect(sentence).not.toContain(list.list);
+          expect(sentence).not.toContain("unverified");
+        }
+      });
+
+      it("is the line of the label the backfill decided again, too", () => {
+        const backfilled = {
+          ...basisOf("unverified", [recordOf("fedramp")]),
+          rule: "backfill_unverified" as const,
+        };
+        expect(credibilityRationale(backfilled, english, "en").sentence).toBe(
+          `${REGISTER_ONLY_SENTENCE} Rated again with the current rule.`,
+        );
+      });
+
+      it("keeps the other lines of the rule when anything besides a register is cited", () => {
+        // An unverified page beside a register: the page is what the line is about.
+        expect(wordsOf(basisOf("unverified", [recordOf("fedramp"), cited()])).sentence).toBe(
+          "Low: only unverified sources report it (forum.example).",
+        );
+        // Nothing cited, or a record its list withdrew and no register: the line it always had.
+        expect(wordsOf(basisOf("unverified", [])).sentence).toBe(
+          "Low: only unverified sources report it.",
+        );
+        expect(
+          wordsOf(basisOf("unverified", [recordOf("kev", { status: "withdrawn" })])).sentence,
+        ).toBe("Low: only unverified sources report it.");
+        // A register beside an official page that decided a High label: the sentence of that rule.
+        expect(
+          wordsOf(
+            basisOf("official_page", [
+              recordOf("fedramp"),
+              cited({ url: "https://www.fca.org.uk/c", category: "official" }),
+            ]),
+          ).sentence,
+        ).toBe("High: an official source reports it (fca.org.uk).");
+      });
+
+      it("reads a withdrawn register record alone as a register only, and names no register", () => {
+        for (const list of REGISTERS) {
+          for (const status of ["withdrawn", "rejected", "delisted"] as const) {
+            const record = recordOf(list.id, { status, as_of: "2026-11-01" });
+            // As the server words it: the label falls to the rule of an unverified source.
+            expect([list.id, status, wordsOf(basisOf("unverified", [record])).sentence]).toEqual([
+              list.id,
+              status,
+              REGISTER_ONLY_SENTENCE,
+            ]);
+            // A basis stored by the earlier rule (`inactive`) has no line that names the register.
+            expect([list.id, status, wordsOf(basisOf("inactive", [record]))]).toEqual([
+              list.id,
+              status,
+              { sentence: "", stale: null },
+            ]);
+          }
+        }
+      });
+
+      it("names the record of another list that its list dropped, whichever record is cited first", () => {
+        const register = recordOf("fedramp", { status: "withdrawn", as_of: "2026-11-01" });
+        const dropped = recordOf("kev", { status: "withdrawn", as_of: "2026-10-09" });
+        for (const sources of [
+          [register, dropped],
+          [dropped, register],
+        ]) {
+          expect(wordsOf(basisOf("inactive", sources)).sentence).toBe(
+            "Low: CISA Known Exploited Vulnerabilities withdrew the record on 9 Oct 2026.",
+          );
+        }
+      });
+
+      it("counts no stale register copy: a stale register beside a current record adds no line", () => {
+        for (const list of REGISTERS) {
+          const stale = recordOf(list.id, { stale: true, as_of: "2026-09-01" });
+          expect([list.id, wordsOf(basisOf("official_record", [recordOf("kev"), stale]))]).toEqual([
+            list.id,
+            { sentence: KEV_SENTENCE, stale: null },
+          ]);
+        }
+      });
+
+      it("counts a stale copy of another list, and the oldest day among those alone", () => {
+        expect(
+          wordsOf(
+            basisOf("official_record", [
+              recordOf("kev"),
+              recordOf("ofac", { stale: true, as_of: "2026-08-01" }),
+            ]),
+          ),
+        ).toEqual({
+          sentence: KEV_SENTENCE,
+          stale: "The source has not been updated since 1 Aug 2026.",
+        });
+        // A register that is older still is not the oldest: only the other lists' copies count.
+        expect(
+          wordsOf(
+            basisOf("official_record", [
+              recordOf("kev", { stale: true, as_of: "2026-10-05" }),
+              recordOf("fedramp", { stale: true, as_of: "2026-09-01" }),
+            ]),
+          ).stale,
+        ).toBe("The source has not been updated since 5 Oct 2026.");
+      });
+    });
+  });
+
+  it("words a strong match of the US Consolidated Screening List as it does the other official lists", () => {
+    // An entry the OFAC lists derive (a website or an LEI of the vendor) can match strongly; the
+    // BIS and State lists carry neither, so their entries match by name and stay Low.
+    const basis = basisOf("official_record", [
+      recordOf("csl", { source_record_id: "ssi:acmetradingco" }),
+    ]);
+    expect(credibilityRationale(basis, english, "en")).toEqual({
+      sentence:
+        "High: US Consolidated Screening List lists it (ssi:acmetradingco), as of 7 Oct 2026.",
+      stale: null,
+    });
+    expect(nameOnlyNote(basis, english)).toBeNull();
+  });
+
+  it("names the publishers of the strong sources only: a weak record is none, whatever its class", () => {
+    // MITRE ATLAS is trusted press, and every match of it is by name: it gives only Low support, so
+    // the sentence of the Medium rule must not name it as the publisher that reports the risk.
+    const basis = basisOf(
+      "trusted_press_one",
+      [aiRecordOf(ATLAS), press("reuters", "Reuters", "https://www.reuters.com/a")],
+      true,
+    );
+    const { sentence } = credibilityRationale(basis, english, "en");
+    expect(sentence).toBe(
+      "Medium: one trusted publisher reports it (Reuters); no official source and no second independent publisher.",
+    );
+    for (const name of ["atlas", "ATLAS", "MITRE", "mitre.org"]) {
+      expect(sentence).not.toContain(name);
+    }
+    // The record says what it is in the note of its own, which the screen shows beside the line.
+    expect(nameOnlyNote(basis, english)).toBe(NAME_ONLY_NOTE);
+  });
+
+  it("names no publisher for a weak record: alone, with another one, or withdrawn", () => {
+    const withdrawn = aiRecordOf(ATLAS, { status: "withdrawn" });
+    const sentenceOf = (...sources: CredibilitySource[]) =>
+      credibilityRationale(basisOf("trusted_press_one", sources, true), english, "en").sentence;
+    const unnamed =
+      "Medium: one trusted publisher reports it; no official source and no second independent publisher.";
+    expect(sentenceOf(aiRecordOf(ATLAS))).toBe(unnamed);
+    expect(sentenceOf(aiRecordOf(ATLAS), aiRecordOf(AIID))).toBe(unnamed);
+    expect(sentenceOf(withdrawn, press("reuters", "Reuters", "https://www.reuters.com/a"))).toBe(
+      "Medium: one trusted publisher reports it (Reuters); no official source and no second independent publisher.",
+    );
+  });
+
+  it("a rejected CVE reads as rejected by the CVE Program, whichever list's record it was", () => {
+    const rejected = (source: RecordSourceId) =>
+      credibilityRationale(
+        basisOf("inactive", [
+          recordOf(source, { status: "rejected", as_of: undefined, rejected_by: "cve" }),
+        ]),
+        english,
+        "en",
+      ).sentence;
+    for (const source of ["kev", "nvd", "cve"] as const) {
+      expect(rejected(source)).toBe("Low: the CVE Program rejected the record.");
+    }
+    // A list the screen does not know rejected it: no sentence, rather than one that blames the
+    // record's own list.
+    expect(
+      credibilityRationale(
+        basisOf("inactive", [
+          recordOf("kev", { status: "rejected", rejected_by: "mystery" as RecordSourceId }),
+        ]),
+        english,
+        "en",
+      ),
+    ).toEqual({ sentence: "", stale: null });
+  });
+
+  it("an identifier match has no name-only note", () => {
+    const basis = basisOf("official_record", [
+      recordOf("un_sanctions", { source_record_id: "EXe.012" }),
+      recordOf("uk_sanctions", { source_record_id: "RUS3601" }),
+    ]);
+    expect(credibilityRationale(basis, english, "en").sentence).toBe(
+      "High: UN Security Council Consolidated List lists it (EXe.012), as of 7 Oct 2026.",
+    );
+    expect(nameOnlyNote(basis, english)).toBeNull();
+  });
+
+  it("reads the day of a copy only from a day or an ISO time, as the server does", () => {
+    const dayOf = (as_of: string) =>
+      credibilityRationale(basisOf("official_record", [recordOf("kev", { as_of })]), english, "en")
+        .sentence;
+    expect(dayOf("2026-10-07T09:23:00.000Z")).toBe(
+      "High: CISA Known Exploited Vulnerabilities lists it (CVE-2026-28001), as of 7 Oct 2026.",
+    );
+    for (const odd of ["7 Oct 2026", "Oct 7, 2026", "2026-10-07 09:23", "2026-13-45", ""]) {
+      expect(dayOf(odd)).toBe(
+        "High: CISA Known Exploited Vulnerabilities lists it (CVE-2026-28001).",
+      );
+    }
+  });
+
+  it("adds the day of the oldest out-of-date copy that a finding cites", () => {
+    const words = credibilityRationale(
+      basisOf("official_record", [
+        recordOf("kev", { stale: true, as_of: "2026-10-07" }),
+        recordOf("ofac", { match: "weak", stale: true, as_of: "2026-10-05" }),
+        recordOf("uk_sanctions", { stale: true, as_of: undefined }),
+        recordOf("eu_fsf", { as_of: "2026-10-01" }),
+      ]),
+      english,
+      "en",
+    );
+    expect(words).toEqual({
+      sentence:
+        "High: CISA Known Exploited Vulnerabilities lists it (CVE-2026-28001), as of 7 Oct 2026.",
+      stale: "The source has not been updated since 5 Oct 2026.",
+    });
+  });
+
+  it("shows nothing for a rule it does not know, a basis without the source its rule needs, or no basis", () => {
+    const nothing = { sentence: "", stale: null };
+    const stale = recordOf("kev", { stale: true });
+    for (const basis of [
+      basisOf("mystery" as CredibilityRule, [stale]),
+      basisOf("constructor" as CredibilityRule, [stale]),
+      basisOf("official_record", [cited(), recordOf("kev", { match: "weak" })]),
+      basisOf("official_record", [recordOf("mystery" as RecordSourceId)]),
+      basisOf("official_page", [recordOf("kev")]),
+      basisOf("vendor_statement", [cited({ category: "vendor", vendor_kind: "self_claim" })]),
+      basisOf("name_only", [recordOf("ofac")]),
+      basisOf("name_only", [recordOf("mystery" as RecordSourceId, { match: "weak" })]),
+      basisOf("inactive", [recordOf("kev", { stale: true })]),
+      basisOf("inactive", [recordOf("kev", { status: "revoked" as never })]),
+      { ...basisOf("official_record", []), sources: "nope" as never },
+      { ...basisOf("official_record", []), sources: [null, 7] as never },
+    ]) {
+      expect(credibilityRationale(basis, english, "en")).toEqual(nothing);
+    }
+    expect(credibilityRationale(null, english, "en")).toEqual(nothing);
+    expect(credibilityRationale(undefined, english, "en")).toEqual(nothing);
+  });
+
+  it("writes the days in the language of the screen", () => {
+    const t = (key: string) => translations.de[key] ?? key;
+    const words = credibilityRationale(
+      basisOf("official_record", [recordOf("kev", { stale: true, as_of: "2026-03-12" })]),
+      t,
+      "de",
+    );
+    expect(words.sentence).toContain(formatResearchDate("2026-03-12", "de"));
+    expect(words.sentence).not.toContain("Mar 2026");
+    expect(words.stale).toContain(formatResearchDate("2026-03-12", "de"));
+  });
+});
+
+describe("nameOnlyNote", () => {
+  it("is the note whenever a cited record matched by name only, whatever the rule", () => {
+    expect(
+      nameOnlyNote(basisOf("name_only", [recordOf("ofac", { match: "weak" })], true), english),
+    ).toBe(NAME_ONLY_NOTE);
+    // The weak record caps only what it gives: two trusted publishers still make High, with the note.
+    expect(
+      nameOnlyNote(
+        basisOf(
+          "trusted_press_two",
+          [
+            recordOf("ofac", { match: "weak" }),
+            press("reuters", "Reuters", "https://www.reuters.com/a"),
+            press("bbc", "BBC", "https://www.bbc.co.uk/news/1"),
+          ],
+          true,
+        ),
+        english,
+      ),
+    ).toBe(NAME_ONLY_NOTE);
+  });
+
+  it.each(AI_LISTS)("is the note for a record of the $name, which only a name matched", (list) => {
+    expect(nameOnlyNote(basisOf("name_only", [aiRecordOf(list)], true), english)).toBe(
+      NAME_ONLY_NOTE,
+    );
+  });
+
+  it.each(CSL_AND_RECALLS)(
+    "is the note for a record of the $name, which only a name matched",
+    (list) => {
+      expect(nameOnlyNote(basisOf("name_only", [cslOrRecallRecordOf(list)], true), english)).toBe(
+        NAME_ONLY_NOTE,
+      );
+    },
+  );
+
+  it("is nothing otherwise", () => {
+    expect(nameOnlyNote(basisOf("official_record", [recordOf("kev")]), english)).toBeNull();
+    expect(
+      nameOnlyNote({ ...basisOf("name_only", []), name_only: "true" as never }, english),
+    ).toBeNull();
+    expect(nameOnlyNote(null, english)).toBeNull();
+    expect(nameOnlyNote(undefined, english)).toBeNull();
+  });
+});
+
+describe("the labels the backfill wrote (M3)", () => {
+  it("a label carried over from the confidence says so in the server's words, and nothing else", () => {
+    expect(credibilityRationale({ rule: "legacy_confidence" }, english, "en")).toEqual({
+      sentence: LEGACY_SENTENCE,
+      stale: null,
+    });
+  });
+
+  it("a pending finding's label carried over from the confidence is the earlier rating until it is recomputed", () => {
+    expect(credibilityRationale({ rule: "legacy_confidence" }, english, "en", "pending")).toEqual({
+      sentence: LEGACY_SENTENCE,
+      stale: null,
+    });
+  });
+
+  it.each(["accepted", "dismissed"])(
+    "the label of a finding that is %s, carried over from the confidence, keeps that rating, as the server says",
+    (status) => {
+      expect(credibilityRationale({ rule: "legacy_confidence" }, english, "en", status)).toEqual({
+        sentence: DECIDED_LEGACY_SENTENCE,
+        stale: null,
+      });
+    },
+  );
+
+  it("the status of a finding changes nothing for a label a rule decided", () => {
+    const basis = basisOf("unverified", [cited()]);
+    expect(credibilityRationale(basis, english, "en", "dismissed")).toEqual(
+      credibilityRationale(basis, english, "en", "pending"),
+    );
+  });
+
+  it.each(LANGS)("words the decided earlier rating in %s", (lang) => {
+    const t = (key: string) => translations[lang][key] ?? key;
+    const { sentence } = credibilityRationale({ rule: "legacy_confidence" }, t, "en", "accepted");
+    expect(sentence).not.toBe(DECIDED_LEGACY_SENTENCE);
+    expect(sentence).toBe(translations[lang][DECIDED_LEGACY_SENTENCE]);
+    expect(sentence).not.toBe(translations[lang][LEGACY_SENTENCE]);
+  });
+
+  it("a label the backfill decided again reads its rule's sentence, then that it was rated again", () => {
+    expect(
+      credibilityRationale(
+        { ...basisOf("unverified", [cited()]), rule: "backfill_unverified" },
+        english,
+        "en",
+      ),
+    ).toEqual({
+      sentence:
+        "Low: only unverified sources report it (forum.example). Rated again with the current rule.",
+      stale: null,
+    });
+  });
+
+  it("a label the backfill decided again under a rule without a sentence reads only the note", () => {
+    expect(
+      credibilityRationale(
+        { ...basisOf("official_record", [cited()]), rule: "backfill_official_record" },
+        english,
+        "en",
+      ).sentence,
+    ).toBe("Rated again with the current rule.");
+    // A rule nobody knows under the backfill's name is no rule.
+    expect(
+      credibilityRationale(
+        { ...basisOf("unverified", [cited()]), rule: "backfill_mystery" as never },
+        english,
+        "en",
+      ),
+    ).toEqual({ sentence: "", stale: null });
+  });
+
+  it("the name-only note follows a basis of the backfill, and a carried-over label has none", () => {
+    expect(
+      nameOnlyNote(
+        {
+          ...basisOf("name_only", [recordOf("ofac", { match: "weak" })], true),
+          rule: "backfill_name_only",
+        },
+        english,
+      ),
+    ).toBe(NAME_ONLY_NOTE);
+    expect(nameOnlyNote({ rule: "legacy_confidence" }, english)).toBeNull();
+  });
+});
+
+describe("earlierRatingNote", () => {
+  it("is the muted note of a label carried over from the confidence", () => {
+    expect(earlierRatingNote({ rule: "legacy_confidence" }, english)).toBe("Earlier rating");
+  });
+
+  it("is nothing for a label a rule decided, one the backfill decided again, or none", () => {
+    expect(earlierRatingNote(basisOf("official_record", [recordOf("kev")]), english)).toBeNull();
+    expect(
+      earlierRatingNote(
+        { ...basisOf("unverified", [cited()]), rule: "backfill_unverified" },
+        english,
+      ),
+    ).toBeNull();
+    expect(earlierRatingNote(null, english)).toBeNull();
+    expect(earlierRatingNote(undefined, english)).toBeNull();
+    // A rule nobody knows is no earlier rating.
+    expect(earlierRatingNote({ rule: "legacy_mystery" } as never, english)).toBeNull();
+  });
+
+  it("is looked up in the dictionary, so that it is shown in the language of the screen", () => {
+    const asked: string[] = [];
+    earlierRatingNote({ rule: "legacy_confidence" }, (key) => {
+      asked.push(key);
+      return key;
+    });
+    expect(asked).toEqual(["Earlier rating"]);
+  });
+});
+
+describe("the labels of credibility", () => {
+  it("names each label, each category of a source and each status of a record that is not active", () => {
+    expect(
+      ["low", "medium", "high"].map((label) => credibilityLabel(label as never, english)),
+    ).toEqual(["Low", "Medium", "High"]);
+    expect(
+      ["official", "trusted_press", "vendor", "unverified"].map((category) =>
+        sourceCategoryLabel(category as never, english),
+      ),
+    ).toEqual(["Official", "Trusted press", "Vendor", "Unverified"]);
+    expect(
+      ["withdrawn", "rejected", "delisted"].map((status) =>
+        recordStatusLabel(status as never, english),
+      ),
+    ).toEqual(["Withdrawn", "Rejected", "Delisted"]);
+  });
+
+  it("shows nothing for a value it does not know, and nothing for an active record", () => {
+    for (const odd of ["certain", "constructor", "", null, undefined]) {
+      expect(credibilityLabel(odd as never, english)).toBeNull();
+      expect(sourceCategoryLabel(odd as never, english)).toBeNull();
+      expect(recordStatusLabel(odd as never, english)).toBeNull();
+    }
+    expect(sourceCategoryLabel("toString" as never, english)).toBeNull();
+    expect(recordStatusLabel("active", english)).toBeNull();
+  });
+});
+
+describe("coverageLines", () => {
+  /** One list as a run saw it: asked, nothing found, a copy an hour old. Its name is the server's. */
+  const listCopy = (id: VrdbSourceId, overrides: Partial<CoverageSource> = {}): CoverageSource => ({
+    id,
+    name: "The server's name",
+    attribution: "The server's attribution",
+    mode: "mirror",
+    checked: true,
+    outcome: "none",
+    strong: 0,
+    weak: 0,
+    last_success_at: "2026-10-10T11:00:00.000Z",
+    stale: false,
+    ...overrides,
+  });
+  const coverageOf = (overrides: Partial<RunCoverage> = {}): RunCoverage => ({
+    registry_version: "2026-10-29.1",
+    sources: [
+      listCopy("kev", { outcome: "found", strong: 1 }),
+      listCopy("ofac", { outcome: "found", weak: 2 }),
+      listCopy("uk_sanctions"),
+      listCopy("eu_fsf"),
+    ],
+    lookups: [
+      { id: "nvd", outcome: "found" },
+      { id: "sec", outcome: "none" },
+      { id: "hibp", outcome: "not_researched" },
+      { id: "statuspage", outcome: "failed" },
+    ],
+    cited: { official: 2, trusted_press: 1, vendor: 0, unverified: 3 },
+    ...overrides,
+  });
+  const linesOf = (coverage: RunCoverage) => coverageLines(coverage, english, "en");
+  const ATTRIBUTIONS = [
+    "CISA Known Exploited Vulnerabilities catalog (CC0 1.0)",
+    "OFAC Specially Designated Nationals list, US Department of the Treasury",
+    "UK Sanctions List, FCDO. Contains public sector information licensed under the Open Government Licence v3.0.",
+    "EU consolidated list of financial sanctions, © European Union",
+  ];
+
+  it("counts the lists the run checked and names the ones that held a record, in the screen's own names", () => {
+    const lines = linesOf(coverageOf());
+    expect(lines.checked).toBe(
+      "Checked 4 public lists and registers. 2 had records: CISA Known Exploited Vulnerabilities, OFAC Specially Designated Nationals list.",
+    );
+    expect(lines.alsoChecked).toBe("Also checked: the National Vulnerability Database, SEC EDGAR.");
+    expect(lines.asOf).toBe("Data as of 10 Oct 2026.");
+  });
+
+  it("says it in the singular, and says when no list held a record", () => {
+    const one = linesOf(coverageOf({ sources: [listCopy("kev")], lookups: [] }));
+    expect(one.checked).toBe("Checked 1 public list or register. None had a record.");
+    expect(one.alsoChecked).toBeNull();
+    const held = linesOf(
+      coverageOf({ sources: [listCopy("kev", { outcome: "found", strong: 3 })], lookups: [] }),
+    );
+    expect(held.checked).toBe(
+      "Checked 1 public list or register. 1 had a record: CISA Known Exploited Vulnerabilities.",
+    );
+  });
+
+  it("names the web databases alone when the run asked no list", () => {
+    const lines = linesOf(coverageOf({ sources: [] }));
+    expect(lines.checked).toBe("Checked: the National Vulnerability Database, SEC EDGAR");
+    expect(lines.alsoChecked).toBeNull();
+    expect(lines.asOf).toBeNull();
+    expect(linesOf(coverageOf({ sources: [], lookups: [] })).checked).toBeNull();
+  });
+
+  it("names the lists and the databases the run could not check", () => {
+    expect(linesOf(coverageOf()).notChecked).toBe("Not checked: the vendor's status page");
+    const noCopy = coverageOf({
+      sources: [
+        listCopy("kev", { outcome: "found", strong: 1 }),
+        listCopy("ofac", { checked: false, outcome: "failed", last_success_at: null }),
+        listCopy("uk_sanctions", { checked: false, outcome: "failed", last_success_at: null }),
+        listCopy("eu_fsf", { checked: false, outcome: "not_researched" }),
+      ],
+      lookups: [
+        { id: "nvd", outcome: "found" },
+        { id: "hibp", outcome: "off" },
+      ],
+    });
+    expect(linesOf(noCopy).notChecked).toBe(
+      "Not checked: OFAC Specially Designated Nationals list, UK Sanctions List",
+    );
+    expect(linesOf(coverageOf({ lookups: [] })).notChecked).toBeNull();
+  });
+
+  it("names the lists that held no record for the disclosure, and gives the days of the copies once", () => {
+    expect(linesOf(coverageOf()).allLists).toBe(
+      "No records: UK Sanctions List, EU consolidated list of financial sanctions.",
+    );
+    const twoDays = coverageOf({
+      sources: [
+        listCopy("ofac", { last_success_at: "2026-10-09T23:00:00.000Z" }),
+        listCopy("uk_sanctions"),
+        listCopy("eu_fsf"),
+      ],
+    });
+    expect(linesOf(twoDays).allLists).toBe(
+      "No records: OFAC Specially Designated Nationals list, UK Sanctions List, EU consolidated list of financial sanctions.",
+    );
+    // One compact range, as the language writes it ("9 – 10 Oct 2026" in en-GB).
+    expect(linesOf(twoDays).asOf).toMatch(/^Data as of 9\s?–\s?10 Oct 2026\.$/);
+    const found = coverageOf({ sources: [listCopy("kev", { outcome: "found", strong: 1 })] });
+    expect(linesOf(found).allLists).toBeNull();
+  });
+
+  it("names no list twice: a list is either among those with a record or among those without", () => {
+    const lines = linesOf(coverageOf());
+    for (const name of ["CISA Known Exploited Vulnerabilities", "UK Sanctions List"]) {
+      const said = [lines.checked, lines.allLists].join(" ").split(name).length - 1;
+      expect(said).toBe(1);
+    }
+  });
+
+  it("names each out-of-date list the run checked, with the day of its copy", () => {
+    const stale = coverageOf({
+      sources: [
+        listCopy("kev", {
+          outcome: "found",
+          strong: 1,
+          stale: true,
+          last_success_at: "2026-10-07T09:23:00.000Z",
+        }),
+        listCopy("ofac", { stale: true, last_success_at: "2026-10-07T09:41:00.000Z" }),
+        // Not asked by this run, so not what its findings rest on.
+        listCopy("uk_sanctions", {
+          checked: false,
+          outcome: "not_researched",
+          stale: true,
+          last_success_at: "2026-10-06T00:00:00.000Z",
+        }),
+        listCopy("eu_fsf"),
+      ],
+    });
+    expect(linesOf(stale).stale).toEqual([
+      "CISA Known Exploited Vulnerabilities: last updated 7 Oct 2026, not up to date",
+      "OFAC Specially Designated Nationals list: last updated 7 Oct 2026, not up to date",
+    ]);
+    expect(linesOf(coverageOf()).stale).toEqual([]);
+  });
+
+  it("counts the sources that the findings cite, by category", () => {
+    expect(linesOf(coverageOf()).cited).toBe(
+      "Sources cited: 2 official, 1 trusted press, 0 vendor, 3 unverified",
+    );
+    const odd = coverageOf({
+      cited: { official: "2" as never, trusted_press: -1, vendor: Number.NaN, unverified: 1.7 },
+    });
+    expect(linesOf(odd).cited).toBe(
+      "Sources cited: 0 official, 0 trusted press, 0 vendor, 1 unverified",
+    );
+    expect(linesOf(coverageOf({ cited: undefined as never })).cited).toBe(
+      "Sources cited: 0 official, 0 trusted press, 0 vendor, 0 unverified",
+    );
+  });
+
+  it("says the public databases are turned off when every list is", () => {
+    const off = coverageOf({
+      sources: (["kev", "ofac", "uk_sanctions", "eu_fsf"] as const).map((id) =>
+        listCopy(id, { checked: false, outcome: "off" }),
+      ),
+      lookups: [
+        { id: "nvd", outcome: "off" },
+        { id: "sec", outcome: "off" },
+      ],
+      cited: { official: 0, trusted_press: 1, vendor: 0, unverified: 0 },
+    });
+    expect(linesOf(off)).toEqual({
+      checked: null,
+      alsoChecked: null,
+      asOf: null,
+      allLists: null,
+      notChecked: null,
+      unchecked: [],
+      stale: [],
+      cited: "Sources cited: 0 official, 1 trusted press, 0 vendor, 0 unverified",
+      off: true,
+      attributions: [],
+    });
+  });
+
+  it("does not call the databases turned off when the run checked none of them for another reason", () => {
+    expect(linesOf(coverageOf({ sources: [], lookups: [] })).off).toBe(false);
+    const someOff = coverageOf({
+      sources: [
+        listCopy("kev", { checked: false, outcome: "off" }),
+        listCopy("ofac", { checked: false, outcome: "failed" }),
+      ],
+    });
+    expect(linesOf(someOff).off).toBe(false);
+  });
+
+  it("gives the attribution of every list it checked, in the screen's own words", () => {
+    expect(linesOf(coverageOf()).attributions).toEqual(ATTRIBUTIONS);
+    const ukFailed = coverageOf({
+      sources: [
+        listCopy("kev", { outcome: "found", strong: 1 }),
+        listCopy("ofac"),
+        listCopy("uk_sanctions", { checked: false, outcome: "failed" }),
+        listCopy("eu_fsf", { checked: false, outcome: "not_researched" }),
+      ],
+    });
+    expect(linesOf(ukFailed).attributions).toEqual(ATTRIBUTIONS.slice(0, 2));
+  });
+
+  describe("with the lists of M2: the NVD and the SEC read through, the CVE and UN lists mirrored", () => {
+    const NOTICES = {
+      nvd: "This product uses data from the NVD API but is not endorsed or certified by the NVD.",
+      sec: "SEC EDGAR, US Securities and Exchange Commission",
+      un_sanctions: "United Nations Security Council Consolidated List",
+    };
+    /**
+     * The notice of the CVE records: MITRE's copyright designation up to the year of the day (Q7),
+     * and no registered mark. It is the string the server stores (vrdb/sources.ts), so a test sets
+     * the clock before it reads one.
+     */
+    const cveNotice = (year: number) =>
+      `CVE records Copyright © 1999-${year}, The MITRE Corporation, under the CVE Terms of Use (https://www.cve.org/Legal/TermsOfUse)`;
+    /** A run of the M2 server: the NVD is a source of the vendor risk database, not a lookup. */
+    const m2 = (overrides: Partial<RunCoverage> = {}) =>
+      coverageOf({
+        sources: [
+          listCopy("kev", { outcome: "found", strong: 1 }),
+          listCopy("nvd", {
+            mode: "read_through",
+            outcome: "found",
+            strong: 2,
+            last_success_at: "2026-10-10T08:30:00.000Z",
+          }),
+          listCopy("ofac", { outcome: "found", weak: 2 }),
+          listCopy("uk_sanctions"),
+          listCopy("eu_fsf"),
+        ],
+        lookups: [
+          { id: "hibp", outcome: "not_researched" },
+          { id: "sec", outcome: "none" },
+          { id: "statuspage", outcome: "failed" },
+        ],
+        ...overrides,
+      });
+
+    it("the NVD is checked as a database, with its notice in the data sources", () => {
+      const lines = linesOf(m2());
+      expect(lines.checked).toBe(
+        "Checked 5 public lists and registers. 3 had records: CISA Known Exploited Vulnerabilities, the National Vulnerability Database, OFAC Specially Designated Nationals list.",
+      );
+      expect(lines.alsoChecked).toBe("Also checked: SEC EDGAR.");
+      expect(lines.notChecked).toBe("Not checked: the vendor's status page");
+      expect(lines.attributions).toEqual([ATTRIBUTIONS[0], NOTICES.nvd, ...ATTRIBUTIONS.slice(1)]);
+    });
+
+    it("says when the NVD answered nothing, failed or was not asked, as it does for a copy", () => {
+      const nvd = (overrides: Partial<CoverageSource>) =>
+        linesOf(
+          m2({
+            sources: [
+              listCopy("nvd", {
+                mode: "read_through",
+                last_success_at: "2026-10-09T23:00:00.000Z",
+                ...overrides,
+              }),
+            ],
+            lookups: [],
+          }),
+        );
+
+      const none = nvd({ outcome: "none" });
+      expect(none.checked).toBe("Checked 1 public list or register. None had a record.");
+      expect(none.allLists).toBe("No records: the National Vulnerability Database.");
+      expect(none.asOf).toBe("Data as of 9 Oct 2026.");
+      expect(none.attributions).toEqual([NOTICES.nvd]);
+
+      const failed = nvd({ checked: false, outcome: "failed", last_success_at: null });
+      expect(failed.checked).toBeNull();
+      expect(failed.notChecked).toBe("Not checked: the National Vulnerability Database");
+      expect(failed.attributions).toEqual([]);
+
+      // The answer could not be refreshed, but the run was offered the records it had stored: the
+      // findings may cite them, so the notice the NVD's terms ask for is shown.
+      const offeredStored = nvd({ checked: false, outcome: "failed", strong: 1 });
+      expect(offeredStored.notChecked).toBe("Not checked: the National Vulnerability Database");
+      expect(offeredStored.attributions).toEqual([NOTICES.nvd]);
+
+      // A vendor with nothing to ask the NVD by (no domain, no product): not a gap of the run.
+      const unasked = nvd({ checked: false, outcome: "not_researched", last_success_at: null });
+      expect(unasked.checked).toBeNull();
+      expect(unasked.notChecked).toBeNull();
+      expect(unasked.attributions).toEqual([]);
+
+      const stale = nvd({ outcome: "none", stale: true });
+      expect(stale.stale).toEqual([
+        "the National Vulnerability Database: last updated 9 Oct 2026, not up to date",
+      ]);
+    });
+
+    it("names the SEC, the CVE List and the UN list, with what their terms ask the screen to say", () => {
+      vi.setSystemTime(new Date("2026-10-31T12:00:00Z"));
+      const lines = linesOf(
+        m2({
+          sources: [
+            listCopy("sec", { mode: "read_through", outcome: "found", strong: 1 }),
+            listCopy("cve"),
+            listCopy("un_sanctions", { outcome: "found", strong: 1 }),
+          ],
+          lookups: [
+            { id: "hibp", outcome: "none" },
+            { id: "statuspage", outcome: "none" },
+          ],
+        }),
+      );
+      expect(lines.checked).toBe(
+        "Checked 3 public lists and registers. 2 had records: SEC EDGAR, UN Security Council Consolidated List.",
+      );
+      expect(lines.alsoChecked).toBe("Also checked: Have I Been Pwned, the vendor's status page.");
+      expect(lines.allLists).toBe("No records: the CVE Program.");
+      expect(lines.attributions).toEqual([NOTICES.sec, cveNotice(2026), NOTICES.un_sanctions]);
+
+      // An answer of the SEC that could not be refreshed still offered its stored filing: credited.
+      const failed = linesOf(
+        m2({
+          sources: [
+            listCopy("sec", { mode: "read_through", checked: false, outcome: "failed", strong: 1 }),
+          ],
+          lookups: [],
+        }),
+      );
+      expect(failed.notChecked).toBe("Not checked: SEC EDGAR");
+      expect(failed.attributions).toEqual([NOTICES.sec]);
+    });
+
+    it("writes the year of the CVE notice from the UTC clock, at each call", () => {
+      const notice = () => linesOf(m2({ sources: [listCopy("cve")], lookups: [] })).attributions;
+      // In whatever zone the tests run, the local year is 1999 here, so that only the UTC year can be
+      // right: in UTC itself, or in a zone that shares New Year with it, a notice that read the local
+      // clock would otherwise pass.
+      const localYear = vi.spyOn(Date.prototype, "getFullYear").mockReturnValue(1999);
+      try {
+        // Either side of New Year in UTC.
+        vi.setSystemTime(new Date("2026-12-31T23:30:00Z"));
+        expect(notice()).toEqual([cveNotice(2026)]);
+        vi.setSystemTime(new Date("2027-01-01T00:30:00Z"));
+        expect(notice()).toEqual([cveNotice(2027)]);
+      } finally {
+        localYear.mockRestore();
+      }
+    });
+
+    it("turned off, the NVD is off with the lists", () => {
+      const off = linesOf(
+        m2({
+          sources: (["kev", "nvd", "ofac", "uk_sanctions", "eu_fsf"] as const).map((id) =>
+            listCopy(id, {
+              checked: false,
+              outcome: "off",
+              mode: id === "nvd" ? "read_through" : "mirror",
+            }),
+          ),
+        }),
+      );
+      expect(off.off).toBe(true);
+      expect(off.attributions).toEqual([]);
+    });
+
+    it("a run stored before M2 still shows the NVD among the databases it asked", () => {
+      expect(linesOf(coverageOf()).alsoChecked).toBe(
+        "Also checked: the National Vulnerability Database, SEC EDGAR.",
+      );
+    });
+  });
+
+  describe("with the AI-specific lists: the AI Incident Database, MITRE ATLAS, NHTSA and the FDA", () => {
+    /** Every match of these lists is by name, so a run counts weak records only. */
+    const aiRun = (overrides: Partial<RunCoverage> = {}) =>
+      coverageOf({
+        sources: [
+          listCopy("aiid", { outcome: "found", weak: 2 }),
+          listCopy("atlas", { outcome: "found", weak: 1 }),
+          listCopy("nhtsa_sgo"),
+          listCopy("fda_ai_devices", { outcome: "found", weak: 1 }),
+        ],
+        lookups: [],
+        ...overrides,
+      });
+
+    it("counts the records each list held, in the screen's own names", () => {
+      expect(linesOf(aiRun()).checked).toBe(
+        "Checked 4 public lists and registers. 3 had records: AI Incident Database, MITRE ATLAS case studies, FDA list of AI-enabled medical devices.",
+      );
+    });
+
+    it("says which of them held no record, as of the day of its copy", () => {
+      expect(linesOf(aiRun()).allLists).toBe(
+        "No records: NHTSA Standing General Order crash reports.",
+      );
+      const allNone = aiRun({
+        sources: AI_LISTS.map((list) => listCopy(list.id)),
+      });
+      expect(linesOf(allNone).allLists).toBe(
+        "No records: AI Incident Database, MITRE ATLAS case studies, NHTSA Standing General Order crash reports, FDA list of AI-enabled medical devices.",
+      );
+    });
+
+    it("names the lists the run could not check, and the ones that are out of date", () => {
+      const lines = linesOf(
+        aiRun({
+          sources: [
+            listCopy("aiid", { checked: false, outcome: "failed", last_success_at: null }),
+            listCopy("atlas", { stale: true, last_success_at: "2026-10-07T09:23:00.000Z" }),
+            // Not asked by this run, or turned off: not a gap of its findings.
+            listCopy("nhtsa_sgo", { checked: false, outcome: "not_researched" }),
+            listCopy("fda_ai_devices", { checked: false, outcome: "off" }),
+          ],
+        }),
+      );
+      expect(lines.notChecked).toBe("Not checked: AI Incident Database");
+      expect(lines.stale).toEqual([
+        "MITRE ATLAS case studies: last updated 7 Oct 2026, not up to date",
+      ]);
+      expect(lines.off).toBe(false);
+    });
+
+    it("gives the notice of each list it checked, with what its terms ask the screen to say", () => {
+      vi.setSystemTime(new Date("2026-10-31T12:00:00Z"));
+      expect(linesOf(aiRun()).attributions).toEqual([
+        AI_NOTICES.aiid,
+        atlasNotice(2026),
+        AI_NOTICES.nhtsa_sgo,
+        AI_NOTICES.fda_ai_devices,
+      ]);
+      // A list the run did not ask gives no notice: nothing of it is in the findings.
+      const atlasFailed = aiRun({
+        sources: [
+          listCopy("atlas", { checked: false, outcome: "failed" }),
+          listCopy("fda_ai_devices"),
+        ],
+      });
+      expect(linesOf(atlasFailed).attributions).toEqual([AI_NOTICES.fda_ai_devices]);
+    });
+
+    it("writes the year of the ATLAS notice from the UTC clock, at each call", () => {
+      const notice = () =>
+        linesOf(aiRun({ sources: [listCopy("atlas", { outcome: "found", weak: 1 })] }))
+          .attributions;
+      // The local year is 1999 here, so that only the UTC year can be right.
+      const localYear = vi.spyOn(Date.prototype, "getFullYear").mockReturnValue(1999);
+      try {
+        vi.setSystemTime(new Date("2026-12-31T23:30:00Z"));
+        expect(notice()).toEqual([atlasNotice(2026)]);
+        vi.setSystemTime(new Date("2027-01-01T00:30:00Z"));
+        expect(notice()).toEqual([atlasNotice(2027)]);
+      } finally {
+        localYear.mockRestore();
+      }
+    });
+
+    it("turned off, they are off with the other lists", () => {
+      const off = linesOf(
+        aiRun({
+          sources: [
+            listCopy("kev", { checked: false, outcome: "off" }),
+            ...AI_LISTS.map((list) => listCopy(list.id, { checked: false, outcome: "off" })),
+          ],
+        }),
+      );
+      expect(off.off).toBe(true);
+      expect(off.checked).toBeNull();
+      expect(off.attributions).toEqual([]);
+    });
+  });
+
+  describe("with the US Consolidated Screening List and the FDA recalls of AI-enabled devices", () => {
+    /** Every match of these lists is by name, so a run counts weak records only. */
+    const pairRun = (overrides: Partial<RunCoverage> = {}) =>
+      coverageOf({
+        sources: [
+          listCopy("csl", { outcome: "found", weak: 2 }),
+          listCopy("fda_device_recalls", { outcome: "found", weak: 1 }),
+        ],
+        lookups: [],
+        ...overrides,
+      });
+
+    it("counts the records each list held, in the screen's own names", () => {
+      expect(linesOf(pairRun()).checked).toBe(
+        "Checked 2 public lists and registers. 2 had records: US Consolidated Screening List, FDA recalls of AI-enabled medical devices.",
+      );
+    });
+
+    it("says which of them held no record, as of the day of its copy", () => {
+      const noneAtAll = pairRun({ sources: CSL_AND_RECALLS.map((list) => listCopy(list.id)) });
+      expect(linesOf(noneAtAll).allLists).toBe(
+        "No records: US Consolidated Screening List, FDA recalls of AI-enabled medical devices.",
+      );
+      const recallsOnly = pairRun({
+        sources: [
+          listCopy("csl", { outcome: "found", weak: 1 }),
+          listCopy("fda_device_recalls", { last_success_at: "2026-10-09T23:00:00.000Z" }),
+        ],
+      });
+      expect(linesOf(recallsOnly).allLists).toBe(
+        "No records: FDA recalls of AI-enabled medical devices.",
+      );
+      expect(linesOf(recallsOnly).asOf).toMatch(/^Data as of 9\s?–\s?10 Oct 2026\.$/);
+      expect(linesOf(pairRun()).allLists).toBeNull();
+    });
+
+    it("names the lists the run could not check, and the ones that are out of date", () => {
+      const lines = linesOf(
+        pairRun({
+          sources: [
+            listCopy("csl", { checked: false, outcome: "failed", last_success_at: null }),
+            listCopy("fda_device_recalls", {
+              stale: true,
+              last_success_at: "2026-10-07T09:23:00.000Z",
+            }),
+          ],
+        }),
+      );
+      expect(lines.notChecked).toBe("Not checked: US Consolidated Screening List");
+      expect(lines.stale).toEqual([
+        "FDA recalls of AI-enabled medical devices: last updated 7 Oct 2026, not up to date",
+      ]);
+      expect(lines.off).toBe(false);
+
+      // A list that is out of date but was not asked is no gap of the findings, and one that was
+      // not researched (the category it serves was not) is none either.
+      const unasked = linesOf(
+        pairRun({
+          sources: [
+            listCopy("csl", { checked: false, outcome: "not_researched", stale: true }),
+            listCopy("fda_device_recalls", { checked: false, outcome: "not_researched" }),
+          ],
+        }),
+      );
+      expect(unasked.notChecked).toBeNull();
+      expect(unasked.stale).toEqual([]);
+      expect(unasked.checked).toBeNull();
+    });
+
+    it("gives the notice of each list it checked, as its owner wrote it and in the order of the run", () => {
+      const notices = linesOf(pairRun()).attributions;
+      expect(notices).toEqual([
+        CSL_AND_RECALLS_NOTICES.csl,
+        CSL_AND_RECALLS_NOTICES.fda_device_recalls,
+      ]);
+      // The product reads ITA's downloadable file, not its Data API: the notice does not say so.
+      expect(notices.join(" ")).not.toContain("Data API");
+
+      const recallsFirst = pairRun({
+        sources: [listCopy("fda_device_recalls"), listCopy("csl")],
+      });
+      expect(linesOf(recallsFirst).attributions).toEqual([
+        CSL_AND_RECALLS_NOTICES.fda_device_recalls,
+        CSL_AND_RECALLS_NOTICES.csl,
+      ]);
+
+      // A list the run did not ask gives no notice: nothing of it is in the findings.
+      const cslFailed = pairRun({
+        sources: [
+          listCopy("csl", { checked: false, outcome: "failed", last_success_at: null }),
+          listCopy("fda_device_recalls"),
+        ],
+      });
+      expect(linesOf(cslFailed).attributions).toEqual([CSL_AND_RECALLS_NOTICES.fda_device_recalls]);
+    });
+
+    it("sits among the other lists in the order the run gives them", () => {
+      const lines = linesOf(
+        coverageOf({
+          sources: [
+            listCopy("kev", { outcome: "found", strong: 1 }),
+            listCopy("ofac"),
+            listCopy("un_sanctions"),
+            listCopy("csl", { outcome: "found", weak: 1 }),
+            listCopy("fda_ai_devices"),
+            listCopy("fda_device_recalls", { outcome: "found", weak: 1 }),
+          ],
+        }),
+      );
+      expect(lines.checked).toBe(
+        "Checked 6 public lists and registers. 3 had records: CISA Known Exploited Vulnerabilities, US Consolidated Screening List, FDA recalls of AI-enabled medical devices.",
+      );
+      expect(lines.allLists).toBe(
+        "No records: OFAC Specially Designated Nationals list, UN Security Council Consolidated List, FDA list of AI-enabled medical devices.",
+      );
+      expect(lines.attributions).toEqual([
+        ATTRIBUTIONS[0],
+        ATTRIBUTIONS[1],
+        "United Nations Security Council Consolidated List",
+        CSL_AND_RECALLS_NOTICES.csl,
+        "FDA list of AI-enabled medical devices, US Food and Drug Administration",
+        CSL_AND_RECALLS_NOTICES.fda_device_recalls,
+      ]);
+    });
+
+    it("turned off, they are off with the other lists", () => {
+      const off = linesOf(
+        pairRun({
+          sources: [
+            listCopy("kev", { checked: false, outcome: "off" }),
+            ...CSL_AND_RECALLS.map((list) => listCopy(list.id, { checked: false, outcome: "off" })),
+          ],
+        }),
+      );
+      expect(off.off).toBe(true);
+      expect(off.checked).toBeNull();
+      expect(off.attributions).toEqual([]);
+
+      // One of them on is not off.
+      const oneOn = linesOf(
+        pairRun({
+          sources: [
+            listCopy("csl", { checked: false, outcome: "off" }),
+            listCopy("fda_device_recalls"),
+          ],
+        }),
+      );
+      expect(oneOn.off).toBe(false);
+      expect(oneOn.attributions).toEqual([CSL_AND_RECALLS_NOTICES.fda_device_recalls]);
+    });
+  });
+
+  describe("with the lists added on 2026-11-10: named like every other list", () => {
+    /** What the terms of three of them ask a screen to say, as the server stores it (vrdb/sources.ts). */
+    const NOTICES = {
+      canada_sema:
+        "Contains information licensed under the Open Government Licence - Canada (https://open.canada.ca/en/open-government-licence-canada). Source: Global Affairs Canada, Consolidated Canadian Autonomous Sanctions List. Not endorsed by the Government of Canada. Entries adapted by VerifyWise.",
+      uk_ofsi:
+        "UK Office of Financial Sanctions Implementation (HM Treasury) enforcement notices, published on GOV.UK. Contains public sector information licensed under the Open Government Licence v3.0. Adapted by VerifyWise; no endorsement by HM Treasury is implied.",
+      gleif:
+        "GLEIF LEI data (CC0 1.0), from the Global Legal Entity Identifier Foundation's API. VerifyWise is not associated with GLEIF, and GLEIF does not provide, support, authorise or endorse VerifyWise or its products.",
+    };
+    /** A run that asked these lists and none of the databases looked up on the web. */
+    const runOf = (...sources: CoverageSource[]) => coverageOf({ sources, lookups: [] });
+    const kev = () => listCopy("kev", { outcome: "found", strong: 1 });
+    /** A list that held one record, matched by name: every match of the new lists is. */
+    const found = (id: VrdbSourceId, overrides: Partial<CoverageSource> = {}) =>
+      listCopy(id, { outcome: "found", weak: 1, ...overrides });
+    const noCopy = (id: VrdbSourceId, overrides: Partial<CoverageSource> = {}) =>
+      listCopy(id, { checked: false, outcome: "failed", last_success_at: null, ...overrides });
+
+    it("names a list that held a record, and the ones that held none behind the disclosure", () => {
+      const lines = linesOf(
+        runOf(
+          kev(),
+          listCopy("ofac"),
+          found("uk_ofsi"),
+          listCopy("charlotin"),
+          listCopy("epoch_ai"),
+          noCopy("gleif", { mode: "read_through" }),
+        ),
+      );
+      expect(lines.checked).toBe(
+        "Checked 5 public lists and registers. 2 had records: CISA Known Exploited Vulnerabilities, UK OFSI financial sanctions enforcement notices.",
+      );
+      expect(lines.allLists).toBe(
+        "No records: OFAC Specially Designated Nationals list, AI Hallucination Cases database, Epoch AI Data on AI Models.",
+      );
+      expect(lines.notChecked).toBe("Not checked: GLEIF LEI records");
+      // A list that held no record owes no credit: nothing of it is in the findings.
+      expect(lines.attributions).toEqual([ATTRIBUTIONS[0], ATTRIBUTIONS[1], NOTICES.uk_ofsi]);
+    });
+
+    it("counts every list the run asked, whatever list it is, and a count that is not a whole number is no record", () => {
+      const none = (...ids: VrdbSourceId[]) => ids.map((id) => listCopy(id));
+      const checkedOf = (...sources: CoverageSource[]) => linesOf(runOf(...sources)).checked;
+      expect(checkedOf(...none("charlotin", "epoch_ai"))).toBe(
+        "Checked 2 public lists and registers. None had a record.",
+      );
+      expect(checkedOf(kev(), ...none("charlotin", "epoch_ai", "fmti"))).toBe(
+        "Checked 4 public lists and registers. 1 had a record: CISA Known Exploited Vulnerabilities.",
+      );
+      const odd = listCopy("charlotin", {
+        outcome: "found",
+        strong: "2" as never,
+        weak: Number.NaN,
+      });
+      expect(checkedOf(odd)).toBe("Checked 1 public list or register. None had a record.");
+    });
+
+    it("says nothing of a list the run did not ask: the vendor has no website, or the list is off", () => {
+      const lines = linesOf(
+        runOf(
+          kev(),
+          listCopy("charlotin", { checked: false, outcome: "not_researched" }),
+          listCopy("epoch_ai", { checked: false, outcome: "off" }),
+        ),
+      );
+      expect(lines.checked).toBe(
+        "Checked 1 public list or register. 1 had a record: CISA Known Exploited Vulnerabilities.",
+      );
+      expect(lines.notChecked).toBeNull();
+      expect(lines.attributions).toEqual([ATTRIBUTIONS[0]]);
+    });
+
+    it("always names a list it could not check, and credits it only when it offered a record it had stored", () => {
+      const lines = linesOf(
+        runOf(
+          kev(),
+          noCopy("charlotin"),
+          noCopy("gleif", {
+            mode: "read_through",
+            strong: 1,
+            last_success_at: "2026-10-09T08:00:00.000Z",
+          }),
+        ),
+      );
+      expect(lines.notChecked).toBe(
+        "Not checked: AI Hallucination Cases database, GLEIF LEI records",
+      );
+      expect(lines.checked).toBe(
+        "Checked 1 public list or register. 1 had a record: CISA Known Exploited Vulnerabilities.",
+      );
+      // The stored record is in the findings, so its notice is shown; the other list offered none.
+      expect(lines.attributions).toEqual([ATTRIBUTIONS[0], NOTICES.gleif]);
+    });
+
+    it("still names an out-of-date list in a line of its own, whether or not it held a record", () => {
+      const lines = linesOf(
+        runOf(
+          listCopy("charlotin", { stale: true, last_success_at: "2026-10-07T09:23:00.000Z" }),
+          found("uk_ofsi", { stale: true, last_success_at: "2026-10-06T00:00:00.000Z" }),
+        ),
+      );
+      expect(lines.stale).toEqual([
+        "AI Hallucination Cases database: last updated 7 Oct 2026, not up to date",
+        "UK OFSI financial sanctions enforcement notices: last updated 6 Oct 2026, not up to date",
+      ]);
+      expect(lines.checked).toBe(
+        "Checked 2 public lists and registers. 1 had a record: UK OFSI financial sanctions enforcement notices.",
+      );
+      expect(lines.allLists).toBe("No records: AI Hallucination Cases database.");
+    });
+
+    it("keeps Canada's sanctions list among the lists it names, with its day and its notice", () => {
+      const lines = linesOf(runOf(listCopy("canada_sema"), listCopy("uk_ofsi")));
+      expect(lines.checked).toBe("Checked 2 public lists and registers. None had a record.");
+      expect(lines.allLists).toBe(
+        "No records: Consolidated Canadian Autonomous Sanctions List, UK OFSI financial sanctions enforcement notices.",
+      );
+      expect(lines.asOf).toBe("Data as of 10 Oct 2026.");
+      expect(lines.attributions).toEqual([NOTICES.canada_sema]);
+    });
+
+    it("hides no list that held a record or failed, however many lists the run asked", () => {
+      const held = linesOf(runOf(...NEW_LISTS.map((list) => found(list.id))));
+      expect(held.checked).toBe(
+        `Checked ${NEW_LISTS.length} public lists and registers. ${NEW_LISTS.length} had records: ${NEW_LISTS.map((list) => list.name).join(", ")}.`,
+      );
+      expect(held.allLists).toBeNull();
+      expect(held.attributions).toHaveLength(NEW_LISTS.length);
+
+      const failed = linesOf(runOf(...NEW_LISTS.map((list) => noCopy(list.id))));
+      expect(failed.notChecked).toBe(
+        `Not checked: ${NEW_LISTS.map((list) => list.name).join(", ")}`,
+      );
+      expect(failed.checked).toBeNull();
+      expect(failed.attributions).toEqual([]);
+    });
+
+    it("turned off, they are off with the other lists", () => {
+      const off = linesOf(
+        runOf(
+          listCopy("kev", { checked: false, outcome: "off" }),
+          ...NEW_LISTS.map((list) => listCopy(list.id, { checked: false, outcome: "off" })),
+        ),
+      );
+      expect(off.off).toBe(true);
+      expect(off.checked).toBeNull();
+      expect(off.attributions).toEqual([]);
+
+      // One of them on is not off, and a list that held nothing is counted.
+      const oneOn = linesOf(
+        runOf(listCopy("kev", { checked: false, outcome: "off" }), listCopy("charlotin")),
+      );
+      expect(oneOn.off).toBe(false);
+      expect(oneOn.checked).toBe("Checked 1 public list or register. None had a record.");
+    });
+  });
+
+  it("leaves out a list or a database it does not know", () => {
+    const lines = linesOf(
+      coverageOf({
+        sources: [
+          listCopy("mystery" as VrdbSourceId, { outcome: "found", strong: 3, stale: true }),
+          listCopy("constructor" as VrdbSourceId),
+          listCopy("kev"),
+        ],
+        lookups: [{ id: "mystery" as RecordSourceId, outcome: "found" }],
+      }),
+    );
+    expect(lines.checked).toBe("Checked 1 public list or register. None had a record.");
+    expect(lines.allLists).toBe("No records: CISA Known Exploited Vulnerabilities.");
+    expect(lines.stale).toEqual([]);
+    expect(lines.attributions).toEqual(ATTRIBUTIONS.slice(0, 1));
+    expect(JSON.stringify(lines)).not.toContain("server");
+  });
+
+  it("writes the days in the language of the screen", () => {
+    const t = (key: string) => translations.fr[key] ?? key;
+    const lines = coverageLines(
+      coverageOf({
+        sources: [listCopy("ofac", { stale: true, last_success_at: "2026-03-12T11:00:00.000Z" })],
+      }),
+      t,
+      "fr",
+    );
+    expect(lines.asOf).toContain(formatResearchDate("2026-03-12", "fr"));
+    expect(lines.stale[0]).toContain(formatResearchDate("2026-03-12", "fr"));
+  });
+});
+
+describe("joinAttributions", () => {
+  it("drops an attribution's own full stop before the semicolon that joins it to the next", () => {
+    expect(
+      joinAttributions([
+        "CISA Known Exploited Vulnerabilities catalog (CC0 1.0)",
+        "OFAC Specially Designated Nationals list, US Department of the Treasury",
+        "UK Sanctions List, FCDO. Contains public sector information licensed under the Open Government Licence v3.0.",
+        "EU consolidated list of financial sanctions, © European Union",
+      ]),
+    ).toBe(
+      "CISA Known Exploited Vulnerabilities catalog (CC0 1.0); OFAC Specially Designated Nationals list, US Department of the Treasury; UK Sanctions List, FCDO. Contains public sector information licensed under the Open Government Licence v3.0; EU consolidated list of financial sanctions, © European Union",
+    );
+  });
+
+  it("joins the notices of the AI-specific lists the same way: the full stop of each but the last is dropped", () => {
+    expect(
+      joinAttributions([
+        AI_NOTICES.aiid,
+        atlasNotice(2026),
+        AI_NOTICES.nhtsa_sgo,
+        AI_NOTICES.fda_ai_devices,
+      ]),
+    ).toBe(
+      "AI Incident Database, Responsible AI Collaborative (incidentdatabase.ai), CC BY-SA 4.0. Adapted by VerifyWise; the adapted records are shared under CC BY-SA 4.0; MITRE ATLAS™ case studies, Copyright 2021-2026 The MITRE Corporation, under the Apache License 2.0. Adapted by VerifyWise; NHTSA Standing General Order crash reports, US Department of Transportation. Counted by VerifyWise; NHTSA states the data may be incomplete or unverified; FDA list of AI-enabled medical devices, US Food and Drug Administration",
+    );
+  });
+
+  it("joins the notices of the screening list and the recalls the same way, whichever comes last", () => {
+    const { csl, fda_device_recalls: recalls } = CSL_AND_RECALLS_NOTICES;
+    // The notice of each ends in a full stop: the one before a semicolon goes, the last stays.
+    expect(joinAttributions([csl, recalls])).toBe(
+      "This product uses data from the International Trade Administration's Consolidated Screening List but is not endorsed or certified by the International Trade Administration. Entries adapted by VerifyWise; FDA medical device recalls and enforcement reports through openFDA, US Food and Drug Administration (CC0 1.0), joined by VerifyWise to the FDA list of AI-enabled medical devices. Data provided by the U.S. Food and Drug Administration (https://open.fda.gov).",
+    );
+    expect(joinAttributions([recalls, csl])).toBe(
+      "FDA medical device recalls and enforcement reports through openFDA, US Food and Drug Administration (CC0 1.0), joined by VerifyWise to the FDA list of AI-enabled medical devices. Data provided by the U.S. Food and Drug Administration (https://open.fda.gov); This product uses data from the International Trade Administration's Consolidated Screening List but is not endorsed or certified by the International Trade Administration. Entries adapted by VerifyWise.",
+    );
+    // Only a final full stop is dropped: the one inside the screening list's notice is its own.
+    expect(joinAttributions([csl, recalls])).toContain(
+      "International Trade Administration. Entries adapted",
+    );
+  });
+
+  it("leaves the last attribution as its owner wrote it, and a lone one too", () => {
+    const NVD =
+      "This product uses data from the NVD API but is not endorsed or certified by the NVD.";
+    expect(joinAttributions(["United Nations Security Council Consolidated List", NVD])).toBe(
+      `United Nations Security Council Consolidated List; ${NVD}`,
+    );
+    expect(joinAttributions([NVD])).toBe(NVD);
+    expect(joinAttributions([])).toBe("");
+  });
+});
+
+/** A run whose two attesting lists matched the vendor, in every form their lines take. */
+const attesting = (
+  id: "fedramp" | "c2pa_conforming",
+  attestations: CoverageAttestation[],
+): CoverageSource => ({
+  id,
+  name: "The server's name",
+  attribution: "The server's attribution",
+  mode: "mirror",
+  checked: true,
+  outcome: "found",
+  strong: 0,
+  weak: attestations.length,
+  last_success_at: "2026-11-23T15:18:18.788Z",
+  stale: false,
+  attestations,
+});
+const attestation = (overrides: Partial<CoverageAttestation> = {}): CoverageAttestation => ({
+  status: "fedramp_authorized",
+  impact: "High",
+  since: "2024-09-09",
+  count: 1,
+  strength: "strong",
+  as_of: "2026-11-23",
+  ...overrides,
+});
+const ATTESTING_RUN: RunCoverage = {
+  registry_version: "sr-6",
+  sources: [
+    attesting("fedramp", [
+      attestation(),
+      attestation({ impact: null }),
+      attestation({ since: null }),
+      attestation({ status: null, strength: "weak" }),
+    ]),
+    attesting("c2pa_conforming", [
+      attestation({ status: "c2pa_conforming", impact: null, since: "2026-11-09", count: 1 }),
+      attestation({ status: "c2pa_conforming", impact: null, since: "2026-11-09", count: 2 }),
+      attestation({ status: null, impact: null, since: null, count: 0 }),
+    ]),
+  ],
+  lookups: [],
+  cited: { official: 0, trusted_press: 0, vendor: 0, unverified: 0 },
+};
+
+describe("attestationLines", () => {
+  const linesOf = (coverage: RunCoverage) => attestationLines(coverage, english, "en");
+
+  it("says what the FedRAMP Marketplace lists of the vendor, under Certifications, with the day of the copy", () => {
+    expect(linesOf(ATTESTING_RUN).certifications).toEqual([
+      "Listed in the FedRAMP Marketplace: FedRAMP Authorized since 9 Sept 2024, impact level High. Data as of 23 Nov 2026.",
+      "Listed in the FedRAMP Marketplace: FedRAMP Authorized since 9 Sept 2024. Data as of 23 Nov 2026.",
+      "Listed in the FedRAMP Marketplace: FedRAMP Authorized. Data as of 23 Nov 2026.",
+      "Listed in the FedRAMP Marketplace. Matched by name only: this may be another company. Data as of 23 Nov 2026.",
+      "Listed in the C2PA Conforming Products List: 1 conforming product, since 9 Nov 2026. Data as of 23 Nov 2026.",
+      "Listed in the C2PA Conforming Products List: 2 conforming products, the newest since 9 Nov 2026. Data as of 23 Nov 2026.",
+      "Listed in the C2PA Conforming Products List. Data as of 23 Nov 2026.",
+    ]);
+  });
+
+  it("names the status the record gives, never a better one", () => {
+    const run = (status: CoverageAttestation["status"]) =>
+      linesOf({ ...ATTESTING_RUN, sources: [attesting("fedramp", [attestation({ status })])] })
+        .certifications?.[0] ?? "";
+    expect(run("fedramp_in_process")).toContain("FedRAMP In Process since");
+    expect(run("fedramp_ready")).toContain("FedRAMP Ready since");
+    expect(run("agency_in_process")).toContain("Agency In Process since");
+    for (const status of ["fedramp_in_process", "fedramp_ready", "agency_in_process"] as const) {
+      expect(run(status)).not.toContain("Authorized");
+    }
+    // A status the screen does not know says only that the vendor is listed.
+    expect(run("mystery" as never)).toBe(
+      "Listed in the FedRAMP Marketplace. Data as of 23 Nov 2026.",
+    );
+  });
+
+  it("shows no impact level it does not know, and nothing for a list that does not attest or was not asked", () => {
+    const odd = linesOf({
+      ...ATTESTING_RUN,
+      sources: [attesting("fedramp", [attestation({ impact: "<b>Max</b>" })])],
+    });
+    expect(odd.certifications?.[0]).toBe(
+      "Listed in the FedRAMP Marketplace: FedRAMP Authorized since 9 Sept 2024. Data as of 23 Nov 2026.",
+    );
+    const other = linesOf({
+      ...ATTESTING_RUN,
+      sources: [
+        { ...attesting("fedramp", [attestation()]), id: "kev" },
+        { ...attesting("fedramp", [attestation()]), checked: false, outcome: "failed" },
+      ],
+    });
+    expect(other).toEqual({});
+    expect(linesOf({ ...ATTESTING_RUN, sources: [] })).toEqual({});
+    expect(attestationLines(null, english, "en")).toEqual({});
+  });
+
+  it("makes the category line say no risks were found beside a listing", () => {
+    const certifications = entry("nothing_found", "", "certifications");
+    expect(describeCategoryLine(certifications, english, { listed: true })).toBe(
+      "Certifications: no risks found",
+    );
+    expect(describeCategoryLine(certifications, english)).toBe("Certifications: nothing found");
+    expect(
+      describeCategoryLine(entry("findings", "", "certifications"), english, { listed: true }),
+    ).toBe("Certifications: risks found");
+  });
+
+  it.each(LANGS)("is worded in %s, keeping FedRAMP's own names", (lang) => {
+    const t = (key: string) => translations[lang][key] ?? key;
+    const lines = attestationLines(ATTESTING_RUN, t, lang).certifications ?? [];
+    expect(lines).toHaveLength(7);
+    for (const line of lines) {
+      expect(line).not.toContain("{");
+      expect(line).not.toContain("Listed in");
+    }
+    expect(lines[0]).toContain("FedRAMP Authorized");
+    expect(lines[0]).toContain("High");
+  });
+});
+
+describe("translation", () => {
+  /** Every key the helpers look up while describing the whole closed sets. */
+  const keysRequested = () => {
+    const keys = new Set<string>();
+    const t = (key: string) => {
+      keys.add(key);
+      return key;
+    };
+    for (const [stored] of RUN_ERRORS) describeRunError(stored, t);
+    for (const stored of RETIRED_RUN_ERRORS) describeRunError(stored, t);
+    describeRunError("unknown", t);
+    describeRunError(null, t);
+    for (const [outcome, stored] of FIXED_NOTES) describeCategoryNote(entry(outcome, stored), t);
+    describeCategoryNote(entry("nothing_found", "A note the model wrote"), t);
+    for (const category of [
+      "security_incidents",
+      "certifications",
+      "legal_regulatory",
+      "ai_specific",
+      "availability",
+      "financial_health",
+    ] as const) {
+      for (const outcome of ALL_OUTCOMES) {
+        describeCategoryLine(entry(outcome, "", category), t);
+      }
+    }
+    for (const reason of [
+      "not_applicable",
+      "already_covered",
+      "inaccurate",
+      "accepted_risk",
+      "other",
+    ] as const) {
+      dismissReasonLabel(reason, t);
+    }
+    // What a value the client does not know is shown as.
+    categoryLabel("mystery" as never, t);
+    outcomeLabel("mystery" as never, t);
+    dismissReasonLabel("mystery" as never, t);
+    // Every sentence of the credibility rules, and the names of the databases they name.
+    for (const [, basis] of RULE_SENTENCES) credibilityRationale(basis, t, "en");
+    credibilityRationale(basisOf("official_record", [recordOf("kev", { stale: true })]), t, "en");
+    for (const source of RECORD_SOURCES) {
+      credibilityRationale(basisOf("official_record", [recordOf(source)]), t, "en");
+      credibilityRationale(
+        basisOf("name_only", [recordOf(source, { match: "weak" })], true),
+        t,
+        "en",
+      );
+    }
+    nameOnlyNote(basisOf("name_only", [], true), t);
+    // The labels that were decided before the rules, or again by them.
+    credibilityRationale({ rule: "legacy_confidence" }, t, "en");
+    credibilityRationale({ rule: "legacy_confidence" }, t, "en", "dismissed");
+    credibilityRationale(
+      { ...basisOf("unverified", [cited()]), rule: "backfill_unverified" },
+      t,
+      "en",
+    );
+    earlierRatingNote({ rule: "legacy_confidence" }, t);
+    for (const label of ["low", "medium", "high"] as const) credibilityLabel(label, t);
+    for (const category of ["official", "trusted_press", "vendor", "unverified"] as const) {
+      sourceCategoryLabel(category, t);
+    }
+    for (const status of ["withdrawn", "rejected", "delisted"] as const)
+      recordStatusLabel(status, t);
+    // The coverage of a run, with every list and every database checked, and a stale copy. The
+    // lists added on 2026-11-10 held nothing: but Canada's sanctions list they are counted, not named.
+    const askedOf = (ids: readonly VrdbSourceId[]): RunCoverage => ({
+      registry_version: "2026-10-29.1",
+      sources: ids.map((id) => ({
+        id,
+        name: id,
+        attribution: id,
+        mode: "mirror" as const,
+        checked: true,
+        outcome: "none" as const,
+        strong: 0,
+        weak: 0,
+        last_success_at: "2026-10-10T11:00:00.000Z",
+        stale: true,
+      })),
+      lookups: [],
+      cited: { official: 1, trusted_press: 1, vendor: 1, unverified: 1 },
+    });
+    const SHIPPED_LISTS: VrdbSourceId[] = [
+      "kev",
+      "nvd",
+      "sec",
+      "ofac",
+      "uk_sanctions",
+      "eu_fsf",
+      "cve",
+      "un_sanctions",
+      "csl",
+      "aiid",
+      "atlas",
+      "nhtsa_sgo",
+      "fda_ai_devices",
+      "fda_device_recalls",
+    ];
+    coverageLines(
+      {
+        ...askedOf([...SHIPPED_LISTS, ...NEW_LISTS.map((list) => list.id)]),
+        lookups: RECORD_SOURCES.map((id) => ({ id, outcome: "found" as const })),
+      },
+      t,
+      "en",
+    );
+    // The count of the lists in its other forms: one list, one or several with a record, and the
+    // web databases alone; and the days of the copies as a range.
+    const heldBy = (ids: readonly VrdbSourceId[], held: number): RunCoverage => {
+      const coverage = askedOf(ids);
+      return {
+        ...coverage,
+        sources: coverage.sources.map((source, index) =>
+          index < held
+            ? {
+                ...source,
+                outcome: "found" as const,
+                weak: 1,
+                last_success_at: `2026-10-0${index + 1}T11:00:00.000Z`,
+              }
+            : source,
+        ),
+      };
+    };
+    for (const coverage of [
+      askedOf(["kev"]),
+      heldBy(["kev", "ofac"], 1),
+      heldBy(["kev", "ofac", "uk_sanctions"], 2),
+      { ...askedOf([]), lookups: [{ id: "hibp" as const, outcome: "found" as const }] },
+    ]) {
+      coverageLines(coverage, t, "en");
+    }
+    // What a listing in the vendor's favour says, in every form.
+    attestationLines(ATTESTING_RUN, t, "en");
+    describeCategoryLine(entry("nothing_found", "", "certifications"), t, { listed: true });
+    return [...keys];
+  };
+
+  it("looks up the dictionary for the closed sets, so that the check below has something to check", () => {
+    expect(keysRequested()).toEqual(
+      expect.arrayContaining([
+        "The model call timed out.",
+        "The web could not be reached from the server.",
+        "{category}: {outcome}",
+        "AI note (unverified)",
+        "Not applicable to this vendor",
+        "High: {operator} lists it ({record}), as of {date}.",
+        "Low: {operator} removed the record.",
+        "The source has not been updated since {date}.",
+        "Matched by name only: this may be another company.",
+        "Earlier rating",
+        LEGACY_SENTENCE,
+        DECIDED_LEGACY_SENTENCE,
+        "Rated again with the current rule.",
+        "Trusted press",
+        "Delisted",
+        "the vendor's status page",
+        "OFAC SDN list",
+        "Checked {count} public lists and registers.",
+        "Checked 1 public list or register.",
+        "None had a record.",
+        "1 had a record: {sources}.",
+        "{count} had records: {sources}.",
+        "Also checked: {sources}.",
+        "Data as of {dates}.",
+        "No records: {sources}.",
+        "Checked: {sources}",
+        "{source}: last updated {date}, not up to date",
+        "the CVE Program",
+        "UN Security Council Consolidated List",
+        "NVD",
+        "SEC EDGAR filings",
+        "CVE List",
+        "AI Incident Database",
+        "MITRE ATLAS case studies",
+        "NHTSA Standing General Order crash reports",
+        "FDA list of AI-enabled medical devices",
+        "US Consolidated Screening List",
+        "FDA recalls of AI-enabled medical devices",
+        "FDA device recall database",
+        // The line of a finding that cites registers only.
+        REGISTER_ONLY_SENTENCE,
+        // A listing in the vendor's favour, and the category line beside it.
+        "Listed in the FedRAMP Marketplace.",
+        "Listed in the FedRAMP Marketplace: {status}.",
+        "Listed in the FedRAMP Marketplace: {status} since {date}.",
+        "Listed in the FedRAMP Marketplace: {status} since {date}, impact level {impact}.",
+        "Listed in the C2PA Conforming Products List.",
+        "Listed in the C2PA Conforming Products List: 1 conforming product, since {date}.",
+        "Listed in the C2PA Conforming Products List: {count} conforming products, the newest since {date}.",
+        "no risks found",
+        // The lists added on 2026-11-10, by name and by the name their entries have.
+        "Consolidated Canadian Autonomous Sanctions List",
+        "UK OFSI financial sanctions enforcement notices",
+        "NHTSA recalls file",
+        "GLEIF LEI records",
+      ]),
+    );
+  });
+
+  it.each(LANGS)("has a %s entry for every sentence and label the helpers can produce", (lang) => {
+    const missing = keysRequested().filter((key) => translations[lang][key] === undefined);
+    expect(missing).toEqual([]);
+  });
+
+  it.each(LANGS)(
+    "names the AI-specific lists in %s, and leaves their notices as they are",
+    (lang) => {
+      const t = (key: string) => translations[lang][key] ?? key;
+      const lines = coverageLines(
+        {
+          registry_version: "2026-10-29.1",
+          sources: AI_LISTS.map((list) => ({
+            id: list.id,
+            name: "The server's name",
+            attribution: "The server's attribution",
+            mode: "mirror" as const,
+            checked: true,
+            outcome: "found" as const,
+            strong: 0,
+            weak: 1,
+            last_success_at: "2026-10-10T11:00:00.000Z",
+            stale: false,
+          })),
+          lookups: [],
+          cited: { official: 0, trusted_press: 0, vendor: 0, unverified: 0 },
+        },
+        t,
+        lang,
+      );
+      for (const list of AI_LISTS) {
+        const words = translations[lang][list.name];
+        expect(lines.checked).toContain(words);
+        // In the sentence of a record matched by name, and of one the list withdrew.
+        for (const basis of [
+          basisOf("name_only", [aiRecordOf(list)], true),
+          basisOf("inactive", [aiRecordOf(list, { status: "withdrawn" })]),
+        ]) {
+          const { sentence } = credibilityRationale(basis, t, lang);
+          expect(sentence).toContain(words);
+          expect(sentence).not.toContain("{");
+        }
+      }
+      // The descriptive names are worded in the language; the name of the database is its own.
+      for (const list of AI_LISTS.filter((entry) => entry.id !== "aiid")) {
+        expect(translations[lang][list.name]).not.toBe(list.name);
+        const { sentence } = credibilityRationale(
+          basisOf("name_only", [aiRecordOf(list)], true),
+          t,
+          lang,
+        );
+        expect(sentence).not.toContain(list.name);
+      }
+      // The words of a licence are never translated.
+      expect(lines.attributions).toContain(AI_NOTICES.aiid);
+      expect(lines.attributions).toContain(AI_NOTICES.nhtsa_sgo);
+      expect(lines.attributions).toContain(AI_NOTICES.fda_ai_devices);
+    },
+  );
+
+  it.each(LANGS)(
+    "names the US Consolidated Screening List and the FDA recalls in %s, and leaves their notices as they are",
+    (lang) => {
+      const t = (key: string) => translations[lang][key] ?? key;
+      const lines = coverageLines(
+        {
+          registry_version: "2026-10-29.1",
+          sources: CSL_AND_RECALLS.map((list) => ({
+            id: list.id,
+            name: "The server's name",
+            attribution: "The server's attribution",
+            mode: "mirror" as const,
+            checked: true,
+            outcome: "found" as const,
+            strong: 0,
+            weak: 1,
+            last_success_at: "2026-10-10T11:00:00.000Z",
+            stale: false,
+          })),
+          lookups: [],
+          cited: { official: 0, trusted_press: 0, vendor: 0, unverified: 0 },
+        },
+        t,
+        lang,
+      );
+      for (const list of CSL_AND_RECALLS) {
+        // Each is worded in the language, though the screening list keeps the title it is known by.
+        const words = translations[lang][list.name];
+        const listWords = translations[lang][list.list];
+        expect(words).toBeDefined();
+        expect(words).not.toBe(list.name);
+        expect(listWords).toBeDefined();
+        expect(listWords).not.toBe(list.list);
+        expect(lines.checked).toContain(words);
+        // In the sentence of a record matched by name (the list its entry is on), and of one the list
+        // dropped, by its status (the database that dropped it).
+        for (const [basis, expected] of [
+          [basisOf("name_only", [cslOrRecallRecordOf(list)], true), listWords],
+          [basisOf("inactive", [cslOrRecallRecordOf(list, { status: list.dropped })]), words],
+        ] as const) {
+          const { sentence } = credibilityRationale(basis, t, lang);
+          expect(sentence).toContain(expected);
+          expect(sentence).not.toContain(list.name);
+          expect(sentence).not.toContain("{");
+        }
+      }
+      // The words of a licence are never translated.
+      expect(lines.attributions).toEqual([
+        CSL_AND_RECALLS_NOTICES.csl,
+        CSL_AND_RECALLS_NOTICES.fda_device_recalls,
+      ]);
+    },
+  );
+
+  /**
+   * The titles that stay as they are in every language: a database is known by its own title, as the
+   * AI Incident Database is. Every other name of the lists added on 2026-11-10 is worded in the language.
+   */
+  const KEPT_AS_WRITTEN = new Set([
+    "PipeRoll Agent Incident Registry",
+    "Epoch AI Data on AI Models",
+    "Foundation Model Transparency Index",
+    "FedRAMP Marketplace",
+    "C2PA Conforming Products List",
+  ]);
+
+  it.each(LANGS)(
+    "has the name and the list name of every list added on 2026-11-10 in %s",
+    (lang) => {
+      for (const list of NEW_LISTS) {
+        for (const english of new Set([list.name, list.list])) {
+          const words = translations[lang][english];
+          expect(words, `${lang}: ${english}`).toBeDefined();
+          // Only a title that a database goes by stays as it is.
+          expect([english, words === english]).toEqual([english, KEPT_AS_WRITTEN.has(english)]);
+        }
+      }
+    },
+  );
+
+  it.each(LANGS)(
+    "names the lists added on 2026-11-10 in %s, in the coverage and in the line of a label, and leaves their notices as they are",
+    (lang) => {
+      const t = (key: string) => translations[lang][key] ?? key;
+      const coverage: RunCoverage = {
+        registry_version: "2026-10-29.1",
+        sources: NEW_LISTS.map((list) => ({
+          id: list.id,
+          name: "The server's name",
+          attribution: "The server's attribution",
+          mode: "mirror" as const,
+          checked: true,
+          outcome: "found" as const,
+          strong: 0,
+          weak: 1,
+          last_success_at: "2026-10-10T11:00:00.000Z",
+          stale: false,
+        })),
+        lookups: [],
+        cited: { official: 0, trusted_press: 0, vendor: 0, unverified: 0 },
+      };
+      const lines = coverageLines(coverage, t, lang);
+      for (const list of NEW_LISTS) {
+        expect(lines.checked).toContain(translations[lang][list.name]);
+      }
+      // The words of a licence are never translated: they are the English screen's, list by list.
+      expect(lines.attributions).toHaveLength(NEW_LISTS.length);
+      expect(lines.attributions).toEqual(coverageLines(coverage, english, "en").attributions);
+
+      // In the sentence of a record matched by name, for the lists whose records can raise a risk.
+      for (const list of RAISING) {
+        const { sentence } = credibilityRationale(
+          basisOf("name_only", [recordOf(list.id, { match: "weak" })], true),
+          t,
+          lang,
+        );
+        expect(sentence, `${lang}: ${list.id}`).toContain(translations[lang][list.list]);
+        expect(sentence).not.toContain("{");
+      }
+    },
+  );
+
+  it.each(LANGS)(
+    "counts the lists in %s, in each of its forms, with no placeholder left",
+    (lang) => {
+      const t = (key: string) => translations[lang][key] ?? key;
+      const linesFor = (ids: readonly VrdbSourceId[], held: number) =>
+        coverageLines(
+          {
+            registry_version: "2026-10-29.1",
+            sources: ids.map((id, index) => ({
+              id,
+              name: "The server's name",
+              attribution: "The server's attribution",
+              mode: "mirror" as const,
+              checked: true,
+              outcome: index < held ? ("found" as const) : ("none" as const),
+              strong: 0,
+              weak: index < held ? 1 : 0,
+              last_success_at: "2026-10-10T11:00:00.000Z",
+              stale: false,
+            })),
+            lookups: [{ id: "hibp", outcome: "none" }],
+            cited: { official: 0, trusted_press: 0, vendor: 0, unverified: 0 },
+          },
+          t,
+          lang,
+        );
+      const COUNTS = {
+        de: [
+          "1 öffentliche Liste",
+          "3 öffentliche Listen",
+          "Keine enthielt",
+          "1 enthielt",
+          "2 enthielten",
+        ],
+        fr: [
+          "1 liste ou registre",
+          "3 listes et registres",
+          "Aucun ne contenait",
+          "1 contenait",
+          "2 contenaient",
+        ],
+        es: ["1 lista o registro", "3 listas y registros", "Ninguno tenía", "1 tenía", "2 tenían"],
+      } as const;
+      const [one, many, none, heldOne, heldMany] = COUNTS[lang];
+      expect(linesFor(["kev"], 0).checked).toContain(one);
+      expect(linesFor(["kev"], 0).checked).toContain(none);
+      expect(linesFor(["kev", "ofac", "uk_sanctions"], 1).checked).toContain(many);
+      expect(linesFor(["kev", "ofac", "uk_sanctions"], 1).checked).toContain(heldOne);
+      expect(linesFor(["kev", "ofac", "uk_sanctions"], 2).checked).toContain(heldMany);
+      for (const held of [0, 1, 2]) {
+        const lines = linesFor(["kev", "ofac", "uk_sanctions"], held);
+        for (const line of [lines.checked, lines.alsoChecked, lines.asOf, lines.allLists]) {
+          expect(line ?? "").not.toContain("{");
+        }
+      }
+    },
+  );
+
+  it.each(LANGS)(
+    "says in %s that only registers are cited, in the words its neighbours use for a Low label",
+    (lang) => {
+      const t = (key: string) => translations[lang][key] ?? key;
+      const registers = credibilityRationale(basisOf("unverified", [recordOf("fedramp")]), t, lang);
+      const neighbour = credibilityRationale(basisOf("unverified", [cited()]), t, lang);
+      expect(registers).toEqual({
+        sentence: translations[lang][REGISTER_ONLY_SENTENCE],
+        stale: null,
+      });
+      // Worded in the language, with no placeholder and no angle bracket.
+      expect(registers.sentence).not.toBe(REGISTER_ONLY_SENTENCE);
+      expect(registers.sentence).not.toMatch(/[<>{}]/);
+      // It starts with the word that the other sentences of a Low label start with: "Niedrig:",
+      // "Faible :", "Bajo:".
+      const label = (sentence: string) => sentence.split(":")[0].trim();
+      expect(label(registers.sentence)).toBe(label(neighbour.sentence));
+      expect(label(registers.sentence)).toBe(translations[lang]["Low"]);
+    },
+  );
+
+  it.each(LANGS)("describes a run error and a category line in %s", (lang) => {
+    const t = (key: string) => translations[lang][key] ?? key;
+    expect(describeRunError("timed out", t)).toBe(
+      translations[lang]["The research run timed out."],
+    );
+    expect(describeRunError("Model call failed: HTTP 502", t)).toContain("502");
+    expect(describeRunError("Model call failed: HTTP 502", t)).not.toContain("{status}");
+    expect(describeCategoryLine(entry("nothing_found", ""), t)).not.toBe(
+      "Security incidents: nothing found",
+    );
+    expect(describeCategoryNote(entry("nothing_found", "A note"), t)).toEqual({
+      kind: "model",
+      text: "A note",
+      label: translations[lang]["AI note (unverified)"],
+    });
+  });
+
+  it.each(LANGS)("fills the counts of the page note into the %s sentence", (lang) => {
+    const t = (key: string) => translations[lang][key] ?? key;
+    const note = describeCategoryNote(
+      entry("nothing_found", "No risks found; 2 of 5 pages could not be read"),
+      t,
+    );
+    expect(note).toMatchObject({ kind: "fixed" });
+    const text = note?.text ?? "";
+    expect(text).toContain("2");
+    expect(text).toContain("5");
+    expect(text).not.toContain("{");
+    expect(text).not.toBe("No risks were found. 2 of 5 pages could not be read.");
+  });
+
+  it("reads the language that is active when no translator is passed", async () => {
+    await setLanguage("de");
+    try {
+      expect(describeRunError("timed out")).toBe(translations.de["The research run timed out."]);
+    } finally {
+      await setLanguage("en");
+    }
+  });
+});

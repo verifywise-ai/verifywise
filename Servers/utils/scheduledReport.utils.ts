@@ -1,5 +1,6 @@
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
+import { reportVisibilityPredicate, ReportViewer } from "./reportVisibility.utils";
 import { computeNextRun } from "../services/reporting/scheduleCalculator";
 
 export async function createScheduledReportQuery(
@@ -11,9 +12,9 @@ export async function createScheduledReportQuery(
   const rows: any = await sequelize.query(
     `INSERT INTO scheduled_reports
        (organization_id, template_id, template_version_id, name, scope, project_id, framework_id, framework_ids, project_framework_id,
-        sections_config, ai_blocks_config, format, schedule_config, delivery_config, is_active, owner_id, created_by, next_run_at)
+        sections_config, ai_blocks_config, report_parameters, format, schedule_config, delivery_config, is_active, owner_id, created_by, next_run_at)
      VALUES (:organization_id, :templateId, :templateVersionId, :name, :scope, :projectId, :frameworkId, :frameworkIds, :projectFrameworkId,
-        :sections, :ai, :format, :schedule, :delivery, true, :userId, :userId, :nextRun)
+        :sections, :ai, :reportParameters, :format, :schedule, :delivery, true, :userId, :userId, :nextRun)
      RETURNING *`,
     {
       replacements: {
@@ -31,6 +32,7 @@ export async function createScheduledReportQuery(
         frameworkIds: input.frameworkIds ? JSON.stringify(input.frameworkIds) : null,
         sections: JSON.stringify(input.sectionsConfig),
         ai: JSON.stringify(input.aiBlocksConfig),
+        reportParameters: JSON.stringify(input.reportParameters ?? {}),
         format: input.format,
         schedule: JSON.stringify(input.scheduleConfig),
         delivery: JSON.stringify(input.deliveryConfig),
@@ -43,17 +45,60 @@ export async function createScheduledReportQuery(
   return rows[0];
 }
 
-export async function listScheduledReportsQuery(organization_id: number): Promise<any[]> {
+// A schedule carries its recipients and its stored report details, so it is
+// read under the same rule as the runs it produces (reportVisibility.utils):
+// a project schedule only by Admins and the people who can open the project
+// (owner, member, or through a group), an organization-wide one by any member.
+// The viewer is required on the list so no caller can get every schedule of
+// the organization by omission.
+function scheduleVisibility(
+  viewer: ReportViewer,
+  organization_id: number,
+  replacements: Record<string, unknown>,
+): string {
+  const predicate = reportVisibilityPredicate(viewer, organization_id, "sr.project_id");
+  if (!predicate) return "";
+  Object.assign(replacements, predicate.replacements);
+  return ` AND ${predicate.sql}`;
+}
+
+export async function listScheduledReportsQuery(
+  organization_id: number,
+  viewer: ReportViewer,
+): Promise<any[]> {
+  const replacements: Record<string, unknown> = { organization_id };
+  const visibility = scheduleVisibility(viewer, organization_id, replacements);
   return sequelize.query(
-    `SELECT * FROM scheduled_reports WHERE organization_id = :organization_id AND deleted_at IS NULL ORDER BY created_at DESC`,
-    { replacements: { organization_id }, type: QueryTypes.SELECT },
+    `SELECT sr.* FROM scheduled_reports sr
+      WHERE sr.organization_id = :organization_id AND sr.deleted_at IS NULL${visibility}
+      ORDER BY sr.created_at DESC`,
+    { replacements, type: QueryTypes.SELECT },
   );
 }
 
-export async function getScheduledReportQuery(id: number, organization_id: number): Promise<any> {
+// parameters_config comes from the schedule's template version: it names the
+// report kind and the declared fields, which run-now and validation need. The
+// version is the one validateTemplateVersionOwnership accepted at create, and
+// versions are append-only, so it cannot change under the schedule.
+const VERSION_PARAMETERS_SQL = `COALESCE(v.parameters_config, '{}'::jsonb) AS parameters_config`;
+const VERSION_JOIN_SQL = `LEFT JOIN report_template_versions v ON v.id = sr.template_version_id`;
+
+// A schedule the viewer may not read comes back as null, the same as a missing
+// one. Every caller passes the viewer: the read endpoint, and the write paths,
+// which then answer an unreadable schedule like a missing id.
+export async function getScheduledReportQuery(
+  id: number,
+  organization_id: number,
+  viewer: ReportViewer,
+): Promise<any> {
+  const replacements: Record<string, unknown> = { id, organization_id };
+  const visibility = scheduleVisibility(viewer, organization_id, replacements);
   const rows: any[] = await sequelize.query(
-    `SELECT * FROM scheduled_reports WHERE id = :id AND organization_id = :organization_id AND deleted_at IS NULL`,
-    { replacements: { id, organization_id }, type: QueryTypes.SELECT },
+    `SELECT sr.*, ${VERSION_PARAMETERS_SQL}
+       FROM scheduled_reports sr
+       ${VERSION_JOIN_SQL}
+      WHERE sr.id = :id AND sr.organization_id = :organization_id AND sr.deleted_at IS NULL${visibility}`,
+    { replacements, type: QueryTypes.SELECT },
   );
   return rows[0] ?? null;
 }
@@ -87,8 +132,9 @@ export async function softDeleteQuery(id: number, organization_id: number): Prom
  */
 export async function findDueScheduledReportsQuery(now: Date): Promise<any[]> {
   return sequelize.query(
-    `SELECT sr.*, r.name AS owner_role
+    `SELECT sr.*, r.name AS owner_role, ${VERSION_PARAMETERS_SQL}
        FROM scheduled_reports sr
+       ${VERSION_JOIN_SQL}
        LEFT JOIN organization_members om
          ON om.user_id = sr.owner_id AND om.organization_id = sr.organization_id
        LEFT JOIN roles r ON r.id = om.role_id
@@ -156,6 +202,7 @@ export const UPDATABLE_FIELDS: Record<string, string> = {
   projectFrameworkId: "project_framework_id",
   sectionsConfig: "sections_config",
   aiBlocksConfig: "ai_blocks_config",
+  reportParameters: "report_parameters",
   format: "format",
   scheduleConfig: "schedule_config",
   deliveryConfig: "delivery_config",
@@ -167,6 +214,7 @@ const JSON_FIELDS = new Set([
   "frameworkIds",
   "sectionsConfig",
   "aiBlocksConfig",
+  "reportParameters",
   "scheduleConfig",
   "deliveryConfig",
 ]);

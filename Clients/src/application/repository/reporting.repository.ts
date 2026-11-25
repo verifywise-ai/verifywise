@@ -15,16 +15,23 @@ import type {
   GenerateReportResponse,
   ReportRun,
   ReportRunAnalysis,
+  LastReportParameters,
   ReportRunPage,
   ReportSectionCatalogEntry,
   ReportTemplate,
   ReportTemplateWriteBody,
+  ScheduledReportDetail,
   ScheduledReportUpdateBody,
 } from "../../domain/interfaces/i.reporting";
 
 // Backend responses are wrapped as { data: <payload> }; apiServices already
 // returns { data: response.data, ... }, so the payload is at r.data.data.
 const extract = <T>(r: any): T => (r?.data?.data ?? r?.data) as T;
+
+// The run wizard and the schedule edit dialog show the server's own 400
+// messages (missing or invalid report details), so the global toast, which
+// would only say "Bad Request", is not wanted on these writes.
+const OWN_ERROR_UI = { suppressGlobalErrorToast: true };
 
 export async function getTemplates(): Promise<any[]> {
   return extract(await apiServices.get("/reporting/templates"));
@@ -35,8 +42,14 @@ export async function getTemplate(id: number): Promise<any> {
 export async function getScheduledReports(): Promise<any[]> {
   return extract(await apiServices.get("/reporting/scheduled-reports"));
 }
+// v1 accepts reportParameters and the quarterly frequency.
+// One schedule with its template version's declared report details. The edit
+// dialog says itself when this fails, so the global toast is not wanted.
+export async function getScheduledReport(id: number): Promise<ScheduledReportDetail> {
+  return extract(await apiServices.get(`/v1/scheduled-reports/${id}`, OWN_ERROR_UI));
+}
 export async function createScheduledReport(body: any): Promise<any> {
-  return extract(await apiServices.post("/reporting/scheduled-reports", body));
+  return extract(await apiServices.post("/v1/scheduled-reports", body, OWN_ERROR_UI));
 }
 export async function runScheduledReportNow(id: number): Promise<any> {
   return extract(await apiServices.post(`/reporting/scheduled-reports/${id}/run-now`, {}));
@@ -50,7 +63,7 @@ export async function updateScheduledReport(
   id: number,
   body: ScheduledReportUpdateBody,
 ): Promise<unknown> {
-  return extract(await apiServices.patch(`/reporting/scheduled-reports/${id}`, body));
+  return extract(await apiServices.patch(`/v1/scheduled-reports/${id}`, body, OWN_ERROR_UI));
 }
 
 // The backend soft-delete endpoint has existed since the reporting MVP with no
@@ -93,6 +106,14 @@ export async function downloadReportRun(id: number): Promise<Blob> {
   return r.data as Blob;
 }
 
+// The internal fix-it list stored beside an OSFI E-23 report; same checks as the download above.
+export async function downloadReportRunFixItList(id: number): Promise<Blob> {
+  const r: any = await apiServices.get(`/v1/report-runs/${id}/download/fix-it-list`, {
+    responseType: "blob",
+  });
+  return r.data as Blob;
+}
+
 // Enqueue an async report generation; returns the run id to poll.
 export async function generateReportV2(
   body: GenerateReportRequestBody,
@@ -109,15 +130,23 @@ export async function getSectionCatalog(): Promise<ReportSectionCatalogEntry[]> 
   return extract(await apiServices.get("/reporting/sections"));
 }
 
+// Template writes go through v1, which accepts parameters_config (the report
+// kind); the legacy /reporting/templates writes are frozen and drop it.
 export async function createTemplate(body: ReportTemplateWriteBody): Promise<ReportTemplate> {
-  return extract(await apiServices.post("/reporting/templates", body));
+  return extract(await apiServices.post("/v1/report-templates", body));
 }
 
 export async function updateTemplate(
   id: number,
   body: ReportTemplateWriteBody,
 ): Promise<ReportTemplate> {
-  return extract(await apiServices.patch(`/reporting/templates/${id}`, body));
+  return extract(await apiServices.patch(`/v1/report-templates/${id}`, body));
+}
+
+// Server-side copy into the caller's organization, carrying the latest
+// version's sections, AI blocks, framework selection and report kind.
+export async function duplicateTemplate(id: number): Promise<ReportTemplate> {
+  return extract(await apiServices.post(`/v1/report-templates/${id}/duplicate`, {}));
 }
 
 export async function archiveTemplate(id: number): Promise<{ ok: boolean }> {
@@ -125,7 +154,15 @@ export async function archiveTemplate(id: number): Promise<{ ok: boolean }> {
 }
 
 export async function runTemplateNow(id: number, body: Record<string, unknown>) {
-  return extract(await apiServices.post(`/reporting/templates/${id}/run`, body));
+  return extract(await apiServices.post(`/v1/report-templates/${id}/run`, body, OWN_ERROR_UI));
+}
+
+// The answers from this template's latest successful run in the organization,
+// period and final flag left out; null when it has never run. Not `extract`:
+// it would turn a null payload into the whole envelope.
+export async function getLastReportParameters(id: number): Promise<LastReportParameters | null> {
+  const r: any = await apiServices.get(`/v1/report-templates/${id}/last-parameters`, OWN_ERROR_UI);
+  return (r?.data?.data ?? null) as LastReportParameters | null;
 }
 
 export async function getRunAnalyses(runId: number): Promise<ReportRunAnalysis[]> {

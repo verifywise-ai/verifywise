@@ -1,6 +1,6 @@
 const mockGenerateText = jest.fn();
 jest.mock("ai", () => ({ generateText: (...a: any[]) => mockGenerateText(...a) }));
-// sectionSummaries imports referenceDay from ./facts, which imports isoDate
+// sectionSummaries imports reportReferenceDay from ./facts, which imports isoDate
 // from dataCollector, which imports the real sequelize instance at module
 // load. Unmocked, that opens a DB connection during a unit test.
 jest.mock("../../../../database/db", () => ({ sequelize: {} }));
@@ -13,6 +13,7 @@ import {
   SECTION_SUMMARY_STAGE_BUDGET_MS,
 } from "../sectionSummaries";
 import logger from "../../../../utils/logger/fileLogger";
+import { e23ReportData } from "../../tests/helpers/e23ReportData";
 
 const sections = {
   projectRisks: { totalRisks: 2, risks: [{ name: "R1" }] },
@@ -102,6 +103,71 @@ describe("runSectionSummaries", () => {
     );
     expect(out).toEqual({});
     expect(mockGenerateText).not.toHaveBeenCalled();
+  });
+
+  it("writes no summary for the sign-off page, the inventory appendix or the E-23 glance", async () => {
+    const out = await runSectionSummaries(
+      "model" as any,
+      {
+        sections: {
+          signOff: { note: "present" },
+          mrmInventoryAppendix: { active: [{ name: "M1" }], retired: [] },
+          e23Glance: { modelsInScope: 4 },
+          mrmFleet: {
+            totals: { models: 1, untiered: 0, byTier: { "1": 1, "2": 0, "3": 0 } },
+            validationCoverage: {
+              validated: 1,
+              inReview: 0,
+              notPassed: 0,
+              notStarted: 0,
+              overdue: 0,
+            },
+            openFindingsBySeverity: { critical: 0, high: 0, medium: 0, low: 0 },
+            monitoring: { withActiveThresholds: 1, withRecentMetric: 1 },
+            activity: {
+              period: null,
+              validationsSignedOff: 0,
+              findingsOpened: 0,
+              findingsClosed: 0,
+              breaches: 0,
+              revalidationEvents: 0,
+            },
+            perTier: [],
+            exceptions: [],
+          },
+        },
+      } as any,
+    );
+    expect(Object.keys(out)).toEqual(["mrmFleet"]);
+    expect(mockGenerateText).toHaveBeenCalledTimes(1);
+    expect(mockGenerateText.mock.calls[0][0].prompt).toContain("Models in scope (not retired): 1");
+  });
+
+  it("names no model in a board run's MRM status and contradiction prompts (spec 8.3)", async () => {
+    const promptsFor = async (audience: "osfi" | "board") => {
+      mockGenerateText.mockClear();
+      const rd = e23ReportData({ audience });
+      const { mrmFleet, e23Contradictions } = rd.sections;
+      await runSectionSummaries(
+        "model" as any,
+        {
+          ...rd,
+          sections: { mrmFleet, e23Contradictions },
+        } as any,
+      );
+      return mockGenerateText.mock.calls.map((c) => c[0].prompt as string).join("\n");
+    };
+    const names = ["Fraud detector", "Pricing engine", "Churn model", "Credit scorer"];
+
+    const board = await promptsFor("board");
+    for (const name of names) expect(board).not.toContain(name);
+    expect(board).not.toContain("Name the models");
+    expect(board).toContain("Models with exceptions: 2");
+
+    const osfi = await promptsFor("osfi");
+    expect(osfi).toContain("Fraud detector");
+    expect(osfi).toContain("Credit scorer");
+    expect(osfi).toContain("Name the models with exceptions");
   });
 
   it("skips a dataCollector-shaped empty section (zero counts, empty arrays)", async () => {

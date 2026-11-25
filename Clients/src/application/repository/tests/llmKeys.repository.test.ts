@@ -57,7 +57,9 @@ describe("Test LLM Keys Repository", () => {
       await createLLMKey({ body: mockLLMKey });
 
       expect(apiServices.post).toHaveBeenCalledTimes(1);
-      expect(apiServices.post).toHaveBeenCalledWith("/llm-keys", mockLLMKey);
+      expect(apiServices.post).toHaveBeenCalledWith("/v1/llm-keys", mockLLMKey, {
+        suppressGlobalErrorToast: true,
+      });
     });
 
     it("should return the full response on successful API call", async () => {
@@ -108,7 +110,9 @@ describe("Test LLM Keys Repository", () => {
       await editLLMKey({ id: "1", body: updateBody });
 
       expect(apiServices.patch).toHaveBeenCalledTimes(1);
-      expect(apiServices.patch).toHaveBeenCalledWith("/llm-keys/1", updateBody);
+      expect(apiServices.patch).toHaveBeenCalledWith("/v1/llm-keys/1", updateBody, {
+        suppressGlobalErrorToast: true,
+      });
     });
 
     it("should return the full response on successful API call", async () => {

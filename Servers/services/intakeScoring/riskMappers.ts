@@ -5,7 +5,7 @@
 import { ModelRiskCategory } from "../../domain.layer/enums/model-risk-category.enum";
 import { ModelRiskLevel } from "../../domain.layer/enums/model-risk-level.enum";
 import {
-  calculateRiskLevel,
+  calculateModelRiskLevel,
   LIKELIHOOD_SCALE,
   SEVERITY_SCALE,
   RISK_CALCULATION_WEIGHTS,
@@ -53,18 +53,9 @@ export const weightedRiskScore = (l: Likelihood, s: Severity): number =>
   LIKELIHOOD_SCALE[l] * RISK_CALCULATION_WEIGHTS.LIKELIHOOD_WEIGHT +
   SEVERITY_SCALE[s] * RISK_CALCULATION_WEIGHTS.SEVERITY_WEIGHT;
 
-export function modelRiskLevelFor(l: Likelihood, s: Severity): ModelRiskLevel {
-  switch (calculateRiskLevel(l, s)) {
-    case "Very high risk":
-      return ModelRiskLevel.CRITICAL;
-    case "High risk":
-      return ModelRiskLevel.HIGH;
-    case "Medium risk":
-      return ModelRiskLevel.MEDIUM;
-    default:
-      return ModelRiskLevel.LOW;
-  }
-}
+/** The shared formula's model risk level (`calculateModelRiskLevel`). */
+export const modelRiskLevelFor = (l: Likelihood, s: Severity): ModelRiskLevel =>
+  calculateModelRiskLevel(l, s) ?? ModelRiskLevel.LOW;
 
 // Keyword -> model risk category, first match wins (in this order), matched
 // case-insensitively against the register categories of a suggestion.

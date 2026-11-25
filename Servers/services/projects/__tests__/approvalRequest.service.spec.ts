@@ -43,6 +43,7 @@ import { notifyApprovalRequested } from "../../inAppNotification.service";
 import { getUserByIdQuery } from "../../../utils/user.utils";
 import { getApprovalWorkflowByIdQuery } from "../../../utils/approvalWorkflow.utils";
 import { ValidationException } from "../../../domain.layer/exceptions/custom.exception";
+import { ApprovalRequestStatus } from "../../../domain.layer/enums/approval-workflow.enum";
 import { moveUseCaseIntoReview } from "../../../utils/lifecycle.utils";
 import {
   createApprovalRequestQuery,
@@ -196,6 +197,61 @@ describe("createUseCaseApprovalRequest", () => {
     await createUseCaseApprovalRequest(useCase, 2, 1, {} as any, stale);
 
     expect(mockGetWorkflow).toHaveBeenCalledWith(1, 1, expect.anything());
+  });
+
+  it("auto-approves when the workflow's level covers the use case, by default", async () => {
+    const steps = [buildStep(1, [7])];
+    const usable = {
+      workflow: buildWorkflow(steps, { auto_approve_max_risk: "Limited risk" }),
+      steps,
+    };
+    mockTryAutoApprove.mockResolvedValue({
+      autoApproved: true,
+      riskLevel: "Minimal risk",
+      threshold: "Limited risk",
+    } as any);
+
+    const result = await createUseCaseApprovalRequest(useCase, 2, 1, {} as any, usable);
+
+    expect(mockTryAutoApprove).toHaveBeenCalledWith(
+      50,
+      usable.workflow,
+      "use_case",
+      11,
+      1,
+      expect.anything(),
+    );
+    expect(result?.autoApproved).toBe(true);
+  });
+
+  // A resubmission after a rejection must reach a person again, even when the
+  // use case's risk was lowered to the workflow's auto-approve level.
+  it("never auto-approves with allowAutoApprove false", async () => {
+    const steps = [buildStep(1, [7])];
+    const usable = {
+      workflow: buildWorkflow(steps, { auto_approve_max_risk: "Limited risk" }),
+      steps,
+    };
+    mockTryAutoApprove.mockResolvedValue({ autoApproved: true } as any);
+
+    const result = await createUseCaseApprovalRequest(
+      { ...useCase, ai_risk_classification: "Minimal risk" },
+      2,
+      1,
+      {} as any,
+      usable,
+      { allowAutoApprove: false },
+    );
+
+    expect(mockTryAutoApprove).not.toHaveBeenCalled();
+    expect(result?.autoApproved).toBe(false);
+    expect(mockCreateRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ status: ApprovalRequestStatus.PENDING }),
+      steps,
+      1,
+      expect.anything(),
+    );
+    expect(moveUseCaseIntoReview).toHaveBeenCalledWith(1, 11, 2, expect.anything());
   });
 
   it("creates no request when the use case has no workflow", async () => {

@@ -78,6 +78,17 @@ export const de: Record<string, string> = {
   "Create virtual key": "Virtuellen Schlüssel erstellen",
   "Delete endpoint": "Endpunkt löschen",
   "Delete prompt": "Prompt löschen",
+  "Delete dataset": "Datensatz löschen",
+  "Delete this dataset and its test cases?": "Diesen Datensatz und seine Testfälle löschen?",
+  "Could not save the dataset. Try again.":
+    "Der Datensatz konnte nicht gespeichert werden. Versuchen Sie es erneut.",
+  "Could not delete the dataset. Try again.":
+    "Der Datensatz konnte nicht gelöscht werden. Versuchen Sie es erneut.",
+  "Could not delete the prompt. Try again.":
+    "Der Prompt konnte nicht gelöscht werden. Versuchen Sie es erneut.",
+  "Could not load the datasets. Try again.":
+    "Die Datensätze konnten nicht geladen werden. Versuchen Sie es erneut.",
+  "This cannot be undone.": "Dies kann nicht rückgängig gemacht werden.",
   "Denied": "Abgelehnt",
   "Dismiss suggestion": "Vorschlag verwerfen",
   "Edit tool settings": "Tool-Einstellungen bearbeiten",
@@ -631,6 +642,10 @@ export const de: Record<string, string> = {
     "Diese Einstellung gilt für beide Protokolltypen des AI Gateway.",
   "Delete records": "Datensätze löschen",
   "Failed to save settings": "Einstellungen konnten nicht gespeichert werden",
+  "Edit prompt messages, test with variables, and publish versions.":
+    "Prompt-Nachrichten bearbeiten, mit Variablen testen und Versionen veröffentlichen.",
+  "Browse {models} LLM models across {providers} providers.":
+    "{models} LLM-Modelle von {providers} Anbietern durchsuchen.",
 };
 
 export const fr: Record<string, string> = {
@@ -710,6 +725,16 @@ export const fr: Record<string, string> = {
   "Create virtual key": "Créer une clé virtuelle",
   "Delete endpoint": "Supprimer le point de terminaison",
   "Delete prompt": "Supprimer le prompt",
+  "Delete dataset": "Supprimer le jeu de données",
+  "Delete this dataset and its test cases?": "Supprimer ce jeu de données et ses cas de test ?",
+  "Could not save the dataset. Try again.":
+    "Impossible d'enregistrer le jeu de données. Réessayez.",
+  "Could not delete the dataset. Try again.":
+    "Impossible de supprimer le jeu de données. Réessayez.",
+  "Could not delete the prompt. Try again.": "Impossible de supprimer le prompt. Réessayez.",
+  "Could not load the datasets. Try again.":
+    "Impossible de charger les jeux de données. Réessayez.",
+  "This cannot be undone.": "Cette action est irréversible.",
   "Denied": "Refusé",
   "Dismiss suggestion": "Ignorer la suggestion",
   "Edit tool settings": "Modifier les paramètres de l'outil",
@@ -1268,6 +1293,10 @@ export const fr: Record<string, string> = {
     "Ce paramètre s'applique aux deux types de journaux de l'AI Gateway.",
   "Delete records": "Supprimer les enregistrements",
   "Failed to save settings": "Impossible d'enregistrer les paramètres",
+  "Edit prompt messages, test with variables, and publish versions.":
+    "Modifiez les messages du prompt, testez avec des variables et publiez des versions.",
+  "Browse {models} LLM models across {providers} providers.":
+    "Parcourez {models} modèles LLM de {providers} fournisseurs.",
 };
 
 export const es: Record<string, string> = {
@@ -1347,6 +1376,17 @@ export const es: Record<string, string> = {
   "Create virtual key": "Crear clave virtual",
   "Delete endpoint": "Eliminar endpoint",
   "Delete prompt": "Eliminar prompt",
+  "Delete dataset": "Eliminar conjunto de datos",
+  "Delete this dataset and its test cases?":
+    "¿Eliminar este conjunto de datos y sus casos de prueba?",
+  "Could not save the dataset. Try again.":
+    "No se pudo guardar el conjunto de datos. Inténtelo de nuevo.",
+  "Could not delete the dataset. Try again.":
+    "No se pudo eliminar el conjunto de datos. Inténtelo de nuevo.",
+  "Could not delete the prompt. Try again.": "No se pudo eliminar el prompt. Inténtelo de nuevo.",
+  "Could not load the datasets. Try again.":
+    "No se pudieron cargar los conjuntos de datos. Inténtelo de nuevo.",
+  "This cannot be undone.": "Esta acción no se puede deshacer.",
   "Denied": "Denegado",
   "Dismiss suggestion": "Descartar sugerencia",
   "Edit tool settings": "Editar configuración de la herramienta",
@@ -1903,4 +1943,8 @@ export const es: Record<string, string> = {
     "Este ajuste se aplica a ambos tipos de registros del AI Gateway.",
   "Delete records": "Eliminar registros",
   "Failed to save settings": "No se pudo guardar la configuración",
+  "Edit prompt messages, test with variables, and publish versions.":
+    "Edite los mensajes del prompt, pruebe con variables y publique versiones.",
+  "Browse {models} LLM models across {providers} providers.":
+    "Explore {models} modelos LLM de {providers} proveedores.",
 };
