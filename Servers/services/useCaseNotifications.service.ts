@@ -89,6 +89,7 @@ export function notifyUseCaseApprovalOutcome(
       approvalResult.riskLevel!,
       approvalResult.threshold!,
       baseUrl(),
+      useCase.id,
     ).catch((error) => {
       console.error("Failed to send auto-approval notification:", error);
     });

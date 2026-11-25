@@ -1220,7 +1220,7 @@ describe("approvalRequest.ctrl", () => {
       );
     });
 
-    it("keeps the approval-workflows link for other entity types", async () => {
+    it("links other entity types to the request in the approvals modal", async () => {
       const req = createReq({ params: { id: "9" }, body: { comments: "No" } });
       const res = createRes();
       const mockTransaction = { commit: jest.fn(), rollback: jest.fn() };
@@ -1243,7 +1243,7 @@ describe("approvalRequest.ctrl", () => {
         expect.objectContaining({
           entity_type: undefined,
           entity_id: undefined,
-          action_url: expect.stringContaining("/approval-workflows"),
+          action_url: expect.stringMatching(/\/approval-workflows\?request=9$/),
         }),
         true,
         expect.anything(),

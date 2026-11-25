@@ -436,6 +436,25 @@ Notifications for policy requests carry `entity_type` POLICY and the policy id:
 - Step approvers (step 1 and later steps) get a link to `/approval-workflows?request=:requestId`, which opens the approval requests modal on that request (the same link the Home queue uses). The notification bell rewrites links stored before this change (`/approval-requests/:id`) to the same address.
 - The requester's approved and rejected notifications link to the policy editor, `/policies/:id/edit`.
 
+## Notification links
+
+Every approval notice (in-app `action_url` and the email button) links to the
+request's own item when the app has a page for it, and to the request
+otherwise. `utils/approvalLinks.utils.ts` holds both rules:
+`approvalLinkedEntity(entity_type, entity_id)` returns the use case or policy
+(null for anything else), and `approvalRequestPath(requestId)` gives
+`/approval-workflows?request=:id`, which opens the approvals modal in whichever
+tab lists the request. There is no `/approval-requests/:id` page.
+
+- An approval request id is never stored as a notice's `entity_id`: a notice
+  without a linked item leaves `entity_id` empty (a fully approved notice keeps
+  its label type, such as AI action, with no id).
+- Notifiers that take a `useCase.id` argument (`notifyApprovalRequested`,
+  `notifyApprovalComplete`, `notifyApprovalAutoApproved`) receive the request
+  id there; the item comes separately (`entity`, `entityId`, `useCaseId`).
+- File approval notices (file upload, and the rejection sent when a file or
+  policy with a pending request is deleted) link to the request.
+
 ## Deleting an entity with a pending request
 
 `rejectApprovalRequestOnEntityDelete` (`utils/approvalRequest.utils.ts`) rejects

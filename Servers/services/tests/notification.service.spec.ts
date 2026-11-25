@@ -2,7 +2,8 @@
  * @fileoverview Notification Service Tests
  *
  * Tests for notification.service.ts including type mapping,
- * sendNotification delegation, and notifyStepApprovers.
+ * sendNotification delegation, notifyStepApprovers and the links approval
+ * notices carry.
  *
  * @module tests/notification.service
  */
@@ -16,6 +17,9 @@ jest.mock("../../database/db", () => ({
 
 jest.mock("../inAppNotification.service", () => ({
   sendInAppNotification: jest.fn(),
+  buildEntityUrl: jest.fn((type: string, id: number) =>
+    type === "policy" ? `/policies/${id}/edit` : `/project-view?projectId=${id}`,
+  ),
 }));
 
 jest.mock("../../constants/emailTemplates", () => ({
@@ -37,10 +41,16 @@ jest.mock("../../domain.layer/interfaces/i.notification", () => ({
   },
   NotificationEntityType: {
     USE_CASE: "use_case",
+    POLICY: "policy",
   },
 }));
 
-import { sendNotification, notifyStepApprovers } from "../notification.service";
+import {
+  sendNotification,
+  notifyStepApprovers,
+  notifyRequesterRejected,
+  notifyRequesterStepCompleted,
+} from "../notification.service";
 import { sendInAppNotification } from "../inAppNotification.service";
 import { sequelize } from "../../database/db";
 
@@ -187,6 +197,96 @@ describe("notification.service", () => {
       mockQuery.mockRejectedValue(new Error("DB error"));
 
       await expect(notifyStepApprovers(1, 100, 1, "Test")).rejects.toThrow("DB error");
+    });
+  });
+
+  describe("approval notice links", () => {
+    const BASE = "https://app.test";
+    const ORIGINAL_FRONTEND_URL = process.env.FRONTEND_URL;
+    beforeAll(() => {
+      process.env.FRONTEND_URL = BASE;
+    });
+    afterAll(() => {
+      process.env.FRONTEND_URL = ORIGINAL_FRONTEND_URL;
+    });
+
+    const stepContext = {
+      completed_step: 1,
+      next_step: 2,
+      total_steps: 2,
+      approver_name: "Alice",
+    };
+
+    it("links a step approver to the request, and names no entity", async () => {
+      mockQuery
+        .mockResolvedValueOnce([{ approver_id: 10, approver_name: "Alice" }] as any)
+        .mockResolvedValueOnce([] as any);
+
+      await notifyStepApprovers(1, 100, 1, "File Approval: a.pdf");
+
+      const [, notice, , email] = mockSendInApp.mock.calls[0];
+      expect(notice).toEqual(
+        expect.objectContaining({
+          entity_type: undefined,
+          entity_id: undefined,
+          action_url: "/approval-workflows?request=100",
+        }),
+      );
+      expect(email!.variables.approval_url).toBe(`${BASE}/approval-workflows?request=100`);
+    });
+
+    it("links a rejection to the request, and names no entity", async () => {
+      await notifyRequesterRejected(1, 5, 100, "Policy: Acceptable use", {
+        requester_name: "Charlie",
+      });
+
+      const [, notice, , email] = mockSendInApp.mock.calls[0];
+      expect(notice).toEqual(
+        expect.objectContaining({
+          entity_type: undefined,
+          entity_id: undefined,
+          action_url: "/approval-workflows?request=100",
+        }),
+      );
+      expect(email!.variables.request_url).toBe(`${BASE}/approval-workflows?request=100`);
+    });
+
+    it("links step progress on a use case to the use case, not to the request id", async () => {
+      mockQuery.mockResolvedValueOnce([] as any);
+
+      await notifyRequesterStepCompleted(1, 5, 100, "Use Case: Chatbot", stepContext, {
+        type: "use_case",
+        id: 58,
+      });
+
+      const [, notice, , email] = mockSendInApp.mock.calls[0];
+      expect(notice).toEqual(
+        expect.objectContaining({
+          entity_type: "use_case",
+          entity_id: 58,
+          action_url: "/project-view?projectId=58",
+        }),
+      );
+      expect(email!.variables.request_url).toBe(`${BASE}/project-view?projectId=58`);
+    });
+
+    it("links step progress to the request when the entity has no page", async () => {
+      mockQuery.mockResolvedValueOnce([] as any);
+
+      await notifyRequesterStepCompleted(1, 5, 100, "AI action", stepContext, {
+        type: "ai_action",
+        id: 7,
+      });
+
+      const [, notice, , email] = mockSendInApp.mock.calls[0];
+      expect(notice).toEqual(
+        expect.objectContaining({
+          entity_type: undefined,
+          entity_id: undefined,
+          action_url: "/approval-workflows?request=100",
+        }),
+      );
+      expect(email!.variables.request_url).toBe(`${BASE}/approval-workflows?request=100`);
     });
   });
 });

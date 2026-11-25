@@ -232,7 +232,7 @@ export const notifyUseCaseApprovalRequested = async (
         organizationId,
         approver.approver_id,
         {
-          id: project.id!,
+          id: approval.request.id!,
           name: approval.request.request_name,
           workflowName: approval.workflowTitle,
           stepNumber: 1,
@@ -240,6 +240,7 @@ export const notifyUseCaseApprovalRequested = async (
         },
         requesterName,
         baseUrl,
+        { type: "use_case", id: project.id! },
       ),
     ),
   );
