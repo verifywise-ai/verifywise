@@ -13,6 +13,8 @@ import {
 } from "@mui/material";
 import { Plus, Trash2, Play, Save } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
+import Alert from "../../../components/Alert";
+import StandardModal from "../../../components/Modals/StandardModal";
 import Select from "../../../components/Inputs/Select";
 import Field from "../../../components/Inputs/Field";
 import palette from "../../../themes/palette";
@@ -67,6 +69,10 @@ export default function TestDatasetPanel({
   const [isRunning, setIsRunning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  /** Why the last save or delete failed; cleared by the next attempt or another dataset. */
+  const [actionError, setActionError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -91,6 +97,7 @@ export default function TestDatasetPanel({
   }, [loadDatasets]);
 
   const selectDataset = (id: string) => {
+    setActionError(null);
     if (id === "new") {
       setSelectedDatasetId("new");
       setDatasetName("New dataset");
@@ -135,6 +142,7 @@ export default function TestDatasetPanel({
 
   const handleSave = async () => {
     setIsSaving(true);
+    setActionError(null);
     try {
       if (selectedDatasetId === "new") {
         const res = await apiServices.post<Record<string, any>>(
@@ -164,7 +172,7 @@ export default function TestDatasetPanel({
         );
       }
     } catch {
-      /* silently handle */
+      setActionError("Could not save the dataset. Try again.");
     } finally {
       setIsSaving(false);
     }
@@ -228,6 +236,8 @@ export default function TestDatasetPanel({
 
   const deleteDataset = async () => {
     if (selectedDatasetId === "new") return;
+    setIsDeleting(true);
+    setActionError(null);
     try {
       await apiServices.delete(
         `/ai-gateway/prompts/${promptId}/test-datasets/${selectedDatasetId}`,
@@ -238,9 +248,14 @@ export default function TestDatasetPanel({
       setTestCases([{ variables: {}, expected_output: "" }]);
       setResults([]);
     } catch {
-      /* silently handle */
+      setActionError("Could not delete the dataset. Try again.");
+    } finally {
+      setIsDeleting(false);
+      setIsDeleteOpen(false);
     }
   };
+
+  const savedName = datasets.find((d) => d.id === selectedDatasetId)?.name ?? datasetName;
 
   const datasetItems = [
     { _id: "new", name: "+ New dataset" },
@@ -287,12 +302,22 @@ export default function TestDatasetPanel({
             <CustomizableButton
               text="Delete"
               icon={<Trash2 size={13} strokeWidth={1.5} />}
-              onClick={deleteDataset}
+              onClick={() => setIsDeleteOpen(true)}
               variant="text"
               sx={{ height: 30, fontSize: 12, color: vwPalette.status.error.text }}
             />
           )}
         </Box>
+        {actionError && (
+          <Box sx={{ mt: "8px" }}>
+            <Alert
+              variant="error"
+              body={actionError}
+              isToast={false}
+              onClick={() => setActionError(null)}
+            />
+          </Box>
+        )}
         {isRunning && (
           <Box sx={{ mt: "8px" }}>
             <LinearProgress
@@ -405,6 +430,20 @@ export default function TestDatasetPanel({
           </Typography>
         </Box>
       </Box>
+
+      <StandardModal
+        isOpen={isDeleteOpen}
+        onClose={() => setIsDeleteOpen(false)}
+        title="Delete dataset"
+        description={`Delete "${savedName}" and its test cases?`}
+        onSubmit={deleteDataset}
+        submitButtonText="Delete"
+        submitButtonColor={vwPalette.status.error.text}
+        isSubmitting={isDeleting}
+        maxWidth="480px"
+      >
+        <Typography fontSize={13}>This cannot be undone.</Typography>
+      </StandardModal>
     </Box>
   );
 }

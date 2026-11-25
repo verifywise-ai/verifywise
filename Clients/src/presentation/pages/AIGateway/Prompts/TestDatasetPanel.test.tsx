@@ -1,4 +1,4 @@
-import { screen, waitFor, fireEvent } from "@testing-library/react";
+import { screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
 vi.mock("../../../../infrastructure/api/networkServices", () => ({
@@ -148,24 +148,76 @@ describe("TestDatasetPanel", () => {
     });
   });
 
-  it("deletes the selected dataset and resets to a new blank one", async () => {
+  const openRegressionSuite = async () => {
     mockGet.mockResolvedValue({
       data: { test_datasets: [{ id: 5, name: "Regression suite", test_cases: [] }] },
     });
-    mockDelete.mockResolvedValue({ data: {} });
     renderWithProviders(<TestDatasetPanel {...baseProps} />);
     await waitFor(() => expect(mockGet).toHaveBeenCalled());
-
-    const combos = screen.getAllByRole("combobox");
-    fireEvent.mouseDown(combos[0]);
+    fireEvent.mouseDown(screen.getAllByRole("combobox")[0]);
     fireEvent.click(screen.getByRole("option", { name: "Regression suite" }));
+  };
+
+  it("asks for confirmation, then deletes the dataset and resets to a new blank one", async () => {
+    mockDelete.mockResolvedValue({ data: {} });
+    await openRegressionSuite();
 
     fireEvent.click(screen.getByRole("button", { name: /Delete/ }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText('Delete "Regression suite" and its test cases?')).toBeVisible();
+    expect(mockDelete).not.toHaveBeenCalled();
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
 
     await waitFor(() => {
       expect(mockDelete).toHaveBeenCalledWith("/ai-gateway/prompts/1/test-datasets/5");
     });
-    expect(screen.getByLabelText("Name")).toHaveValue("New dataset");
+    await waitFor(() => expect(screen.getByLabelText("Name")).toHaveValue("New dataset"));
+  });
+
+  it("keeps the dataset when the confirmation is cancelled", async () => {
+    await openRegressionSuite();
+
+    fireEvent.click(screen.getByRole("button", { name: /Delete/ }));
+    fireEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Cancel" }),
+    );
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(mockDelete).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Name")).toHaveValue("Regression suite");
+  });
+
+  it("says so when deleting fails, and keeps the dataset", async () => {
+    mockDelete.mockRejectedValue(new Error("Forbidden"));
+    await openRegressionSuite();
+
+    fireEvent.click(screen.getByRole("button", { name: /Delete/ }));
+    fireEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Delete" }),
+    );
+
+    expect(await screen.findByText("Could not delete the dataset. Try again.")).toBeVisible();
+    expect(screen.getByLabelText("Name")).toHaveValue("Regression suite");
+  });
+
+  it("says so when saving fails, and clears the message on another dataset", async () => {
+    mockPost.mockRejectedValue(new Error("Server error"));
+    mockGet.mockResolvedValue({
+      data: { test_datasets: [{ id: 5, name: "Regression suite", test_cases: [] }] },
+    });
+    renderWithProviders(<TestDatasetPanel {...baseProps} />);
+    await waitFor(() => expect(mockGet).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByText("Save dataset"));
+
+    expect(await screen.findByText("Could not save the dataset. Try again.")).toBeVisible();
+
+    fireEvent.mouseDown(screen.getAllByRole("combobox")[0]);
+    fireEvent.click(screen.getByRole("option", { name: "Regression suite" }));
+
+    expect(screen.queryByText("Could not save the dataset. Try again.")).not.toBeInTheDocument();
   });
 
   it("runs all test cases and displays streamed results", async () => {
