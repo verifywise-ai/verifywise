@@ -29,8 +29,7 @@ import {
 } from "../../domain.layer/interfaces/i.postMarketMonitoring";
 import { enqueueAutomationAction } from "../automations/automationProducer";
 import logger from "../../utils/logger/fileLogger";
-
-const BASE_URL = process.env.BASE_URL || "http://localhost:5173";
+import { frontendBaseUrl } from "../../utils/frontendUrl.utils";
 
 /**
  * Calculate next due date based on frequency settings
@@ -63,7 +62,7 @@ function calculateNextDueDate(
 /**
  * Build notification data for email
  */
-function buildNotificationData(
+export function buildNotificationData(
   cycle: IPMMCycleWithDetails,
   config: any,
   organizationName: string,
@@ -84,7 +83,7 @@ function buildNotificationData(
       day: "numeric",
     }),
     days_remaining: daysRemaining,
-    monitoring_link: `${BASE_URL}/project/${config.project_id}/post-market-monitoring`,
+    monitoring_link: `${frontendBaseUrl()}/project-view?projectId=${config.project_id}&tab=monitoring`,
     organization_name: organizationName,
   };
 }
