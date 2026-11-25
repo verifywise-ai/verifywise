@@ -167,6 +167,10 @@ test.describe("Notification bell accessibility", () => {
           }),
         }),
       );
+      // Keep the count fixed: the live stream adds 1 per pushed notification.
+      await page.route("**/api/notifications/stream*", (route) =>
+        route.fulfill({ status: 200, contentType: "text/event-stream", body: "" }),
+      );
       await page.goto("/");
 
       const bell = page.getByRole("button", { name: label, exact: true });
