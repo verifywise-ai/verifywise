@@ -198,9 +198,11 @@ export const validateCreateModelRiskV1 = [
   // Computed from likelihood and severity; a sent value must still be valid.
   isOneOf(body("risk_level").optional(), RISK_LEVELS, oneOf("risk_level", RISK_LEVELS)),
   requiredRefId("owner", "owner is required and must be a positive integer"),
+  // Optional, like the other mitigation fields: empty ("" or null) means none.
   body("target_date")
+    .optional({ values: "falsy" })
     .isISO8601()
-    .withMessage("target_date is required and must be a valid ISO 8601 date"),
+    .withMessage("target_date must be a valid ISO 8601 date"),
   ...optionalModelRiskFields,
   handleValidationErrors,
 ];
@@ -227,8 +229,9 @@ export const validateUpdateModelRiskV1 = [
   clearableListValue("severity", SEVERITIES),
   isOneOf(body("risk_level").optional(), RISK_LEVELS, oneOf("risk_level", RISK_LEVELS)),
   requiredRefId("owner", "owner must be a positive integer").optional(),
+  // An emptied date ("" or null) clears it.
   body("target_date")
-    .optional()
+    .optional({ values: "falsy" })
     .isISO8601()
     .withMessage("target_date must be a valid ISO 8601 date"),
   ...optionalModelRiskFields,

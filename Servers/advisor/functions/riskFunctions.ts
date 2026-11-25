@@ -133,7 +133,10 @@ const fetchRisks = async (
       );
     }
     if (params.mitigationStatus) {
-      risks = risks.filter((r) => r.mitigation_status === params.mitigationStatus);
+      // A risk with no mitigation status has not started mitigation.
+      risks = risks.filter(
+        (r) => (r.mitigation_status ?? "Not Started") === params.mitigationStatus,
+      );
     }
     if (params.riskLevel) {
       risks = risks.filter((r) => effectiveLevel(r) === params.riskLevel);
@@ -353,7 +356,9 @@ const getExecutiveSummary = async (
 
     // Mitigation progress
     const mitigationProgress = {
-      notStarted: risks.filter((r) => r.mitigation_status === "Not Started").length,
+      // No status counts as not started, as in getRiskAnalytics.
+      notStarted: risks.filter((r) => (r.mitigation_status ?? "Not Started") === "Not Started")
+        .length,
       inProgress: risks.filter((r) => r.mitigation_status === "In Progress").length,
       completed: risks.filter((r) => r.mitigation_status === "Completed").length,
     };
@@ -471,20 +476,22 @@ const agentCreateRisk = createWriteToolFn({
         risk_category: params.category ? [validateRiskCategory(params.category as string)] : [],
         risk_owner:
           params.risk_owner && Number(params.risk_owner) ? Number(params.risk_owner) : null,
-        mitigation_status: "Not Started",
         risk_level_autocalculated: "Medium risk",
         ai_lifecycle_phase: "Problem definition & planning",
         review_notes: "",
-        current_risk_level: "Medium risk",
+        // The mitigation is optional and the user gave none: store none rather
+        // than a status, current level or residual level nobody chose.
+        mitigation_status: null,
+        current_risk_level: null,
         mitigation_plan: "",
         implementation_strategy: "",
         mitigation_evidence_document: "",
-        likelihood_mitigation: "Possible",
-        risk_severity: "Moderate",
-        final_risk_level: "",
+        likelihood_mitigation: null,
+        risk_severity: null,
+        final_risk_level: null,
         risk_approval: null,
         approval_status: RISK_APPROVAL_NOT_REQUIRED,
-        date_of_assessment: new Date(),
+        date_of_assessment: null,
         deadline: params.deadline || null,
         assessment_mapping: "",
         controls_mapping: "",

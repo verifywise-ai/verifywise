@@ -19,11 +19,31 @@ describe("risk import parseRow residual level", () => {
     expect(data.final_risk_level).toBeNull();
   });
 
-  it("derives the residual level from the stored default likelihood", () => {
+  it("leaves the residual likelihood and level empty when the sheet has no residual likelihood", () => {
     const data = parseRow({ risk_severity: "Catastrophic" } as never);
-    // stored likelihood_mitigation defaults to Rare: 1 + 3 * 5 = 16
-    expect(data.likelihood_mitigation).toBe("Rare");
-    expect(data.final_risk_level).toBe("High risk");
+    expect(data.likelihood_mitigation).toBeNull();
+    expect(data.final_risk_level).toBeNull();
+  });
+
+  it("imports a row with no mitigation fields, leaving them all empty", () => {
+    const data = parseRow({
+      risk_name: "Model drift",
+      risk_owner: 3,
+      risk_description: "Accuracy drops over time",
+    } as never);
+    expect(data).toMatchObject({
+      mitigation_status: null,
+      current_risk_level: null,
+      deadline: null,
+      mitigation_plan: null,
+      implementation_strategy: null,
+      likelihood_mitigation: null,
+      risk_severity: null,
+      final_risk_level: null,
+      risk_approval: null,
+      approval_status: "Not required",
+      date_of_assessment: null,
+    });
   });
 });
 

@@ -543,9 +543,9 @@ with `{ errors: [{ field, message, location }] }`, one message per field.
 
 | | Model | Model risk |
 |---|---|---|
-| Required on create | `provider`, `model`, `version` (non-empty strings) | `risk_name` (non-empty), `risk_category`, `likelihood`, `severity` (lists), `owner` (positive integer), `target_date` (ISO 8601) |
+| Required on create | `provider`, `model`, `version` (non-empty strings) | `risk_name` (non-empty), `risk_category`, `likelihood`, `severity` (lists), `owner` (positive integer) |
 | Defaulted by the server | `status` (Pending), `status_date` (now) | `status` (Open) |
-| Checked when sent | `status`, `type` (enums; `type` "" or null = unclassified), `status_date` (ISO 8601), `approver` (positive integer; "", 0, null = none), `projects`, `frameworks` (integer arrays), `capabilities` (string or string array), `security_assessment`, `deleteProjects`, `deleteFrameworks` (booleans), text fields (strings) | `status`, `risk_level` (enums; the level is ignored when likelihood and severity are set), `likelihood`, `severity` (lists; on update null or "" clears one, and the stored level stays), `model_id` (positive integer; "" or null = none), text fields |
+| Checked when sent | `status`, `type` (enums; `type` "" or null = unclassified), `status_date` (ISO 8601), `approver` (positive integer; "", 0, null = none), `projects`, `frameworks` (integer arrays), `capabilities` (string or string array), `security_assessment`, `deleteProjects`, `deleteFrameworks` (booleans), text fields (strings) | `target_date` (ISO 8601; optional like the other mitigation fields, `""` or null = none, and on update clears it), `status`, `risk_level` (enums; the level is ignored when likelihood and severity are set), `likelihood`, `severity` (lists; on update null or "" clears one, and the stored level stays), `model_id` (positive integer; "" or null = none), text fields |
 
 The required set is the create forms' (`NewModelInventory`, `NewModelRisk`)
 minus the fields the server defaults, so the forms never send a body v1

@@ -126,18 +126,20 @@ const optionalRiskBodyFields = [
     .optional({ nullable: true })
     .isString()
     .withMessage("review_notes must be a string"),
+  // The mitigation fields are optional on create and update. An empty value
+  // ("" or null) means none; a value that is sent is still checked.
   body("mitigation_status")
-    .optional({ nullable: true })
+    .optional({ values: "falsy" })
     .isIn(MITIGATION_STATUSES)
     .withMessage(`mitigation_status must be one of: ${MITIGATION_STATUSES.join(", ")}`),
   body("current_risk_level")
-    .optional({ nullable: true })
+    .optional({ values: "falsy" })
     // The legacy "Very Low risk" spelling is still accepted; store the new one.
     .customSanitizer(normalizeCurrentRiskLevel)
     .isIn(CURRENT_RISK_LEVELS)
     .withMessage(`current_risk_level must be one of: ${CURRENT_RISK_LEVELS.join(", ")}`),
   body("deadline")
-    .optional({ nullable: true })
+    .optional({ values: "falsy" })
     .isISO8601()
     .withMessage("deadline must be a valid ISO 8601 date"),
   body("mitigation_plan")
@@ -155,11 +157,11 @@ const optionalRiskBodyFields = [
     .isLength({ max: 255 })
     .withMessage("mitigation_evidence_document must be at most 255 characters"),
   body("likelihood_mitigation")
-    .optional({ nullable: true })
+    .optional({ values: "falsy" })
     .isIn(LIKELIHOODS)
     .withMessage(`likelihood_mitigation must be one of: ${LIKELIHOODS.join(", ")}`),
   body("risk_severity")
-    .optional({ nullable: true })
+    .optional({ values: "falsy" })
     .isIn(RISK_SEVERITIES)
     .withMessage(`risk_severity must be one of: ${RISK_SEVERITIES.join(", ")}`),
   body("final_risk_level")
@@ -179,7 +181,7 @@ const optionalRiskBodyFields = [
     .isLength({ max: 255 })
     .withMessage("approval_status must be at most 255 characters"),
   body("date_of_assessment")
-    .optional({ nullable: true })
+    .optional({ values: "falsy" })
     .isISO8601()
     .withMessage("date_of_assessment must be a valid ISO 8601 date"),
   body("project_id")

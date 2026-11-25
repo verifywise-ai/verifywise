@@ -260,11 +260,23 @@ describe("the vendor risk form opened on a preview", () => {
     const preview = previewOf();
     renderForm(preview);
 
+    await userEvent.clear(screen.getByDisplayValue(TEXTS.impact));
+    await clickSave();
+
+    expect(await screen.findByText("Impact description is required.")).toBeVisible();
+    expect(preview.onSave).not.toHaveBeenCalled();
+  });
+
+  // The action plan is optional, so an emptied plan is saved empty.
+  it("saves a preview whose action plan the person emptied", async () => {
+    const preview = previewOf();
+    renderForm(preview);
+
     await userEvent.clear(screen.getByDisplayValue(TEXTS.plan));
     await clickSave();
 
-    expect(await screen.findByText(/Action plan/, { selector: "p, span, div" })).toBeVisible();
-    expect(preview.onSave).not.toHaveBeenCalled();
+    await waitFor(() => expect(preview.onSave).toHaveBeenCalledTimes(1));
+    expect(preview.onSave).toHaveBeenCalledWith(expect.objectContaining({ action_plan: "" }));
   });
 
   it("stays open, with the edits in it, when the owner's save fails", async () => {

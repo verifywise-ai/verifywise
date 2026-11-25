@@ -102,14 +102,14 @@ export const riskMitigationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'For each risk requiring mitigation, document the following:',
+      text: 'The mitigation fields are optional. You can save a risk without them and add the plan later, once you know how you will reduce the risk. When you are ready, document the following:',
     },
     {
       type: 'ordered-list',
       items: [
         { bold: 'Mitigation plan', text: 'Describe the specific actions to reduce the risk' },
         { bold: 'Implementation strategy', text: 'Outline how the mitigation will be executed' },
-        { bold: 'Deadline', text: 'Set a target date for completing the mitigation' },
+        { bold: 'Deadline', text: 'Set a target date for completing the mitigation. A risk without a deadline gets no deadline reminders' },
         { bold: 'Approver', text: 'Optionally, pick the person who approves the risk and its mitigation. See Risk approval below' },
       ],
     },
@@ -127,7 +127,7 @@ export const riskMitigationContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Current risk level', text: 'The level you pick by hand on the mitigation form. When it is set, VerifyWise shows it for the risk in tables, cards, filters and reports. When it is empty, the inherent level is shown' },
-        { bold: 'Residual risk', text: 'Calculated automatically from the residual likelihood and residual severity with the same formula as the inherent level (likelihood + 3 × severity) once mitigations are in place' },
+        { bold: 'Residual risk', text: 'Calculated automatically from the residual likelihood and residual severity with the same formula as the inherent level (likelihood + 3 × severity) once mitigations are in place. Both start empty, and the residual level stays empty until you pick both' },
       ],
     },
     {

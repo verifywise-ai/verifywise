@@ -130,8 +130,8 @@ describe("updateSuggestedRiskItemQuery", () => {
     expect(sql).toContain("|| :patch::jsonb");
     expect(sql).toContain("RETURNING");
     expect(sql).toContain("s.status = :pending");
-    // accepting can't leave an item without a mitigation plan, even in a race
-    expect(sql).toContain("(e.item || :patch::jsonb)->>'mitigationPlan'");
+    // The mitigation plan is optional: accepting does not depend on it.
+    expect(sql).not.toContain("mitigationPlan");
     expect(optsOf().replacements).toEqual({
       id: 5,
       organizationId: 9,
@@ -171,15 +171,10 @@ describe("setAllSuggestionStatesQuery", () => {
     expect(n).toBe(4);
   });
 
-  it("can leave items without a mitigation plan unchanged", async () => {
+  it("accepts items without a mitigation plan too, since the plan is optional", async () => {
     mockQuery.mockResolvedValue([{ count: 2 }] as any);
-    await setAllSuggestionStatesQuery(5, "suggested", "accepted", 3, 9, {
-      requireMitigationPlan: true,
-    });
-    const sql = sqlOf();
-    const condition = "btrim(COALESCE(e.item->>'mitigationPlan', '')) <> ''";
-    // both in the count and in the CASE that changes the item
-    expect(sql.split(condition).length - 1).toBe(2);
+    expect(await setAllSuggestionStatesQuery(5, "suggested", "accepted", 3, 9)).toBe(2);
+    expect(sqlOf()).not.toContain("mitigationPlan");
   });
 
   it("returns 0 when the submission has no suggestions", async () => {

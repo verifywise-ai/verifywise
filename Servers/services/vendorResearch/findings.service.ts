@@ -122,6 +122,13 @@ function registerText(value: unknown, max: number): string | null {
   return cleaned === "" || !fitsWithin(cleaned, max) ? null : cleaned;
 }
 
+/** Like registerText, but a text that is empty once cleaned is kept, as "": the field is optional. */
+function optionalRegisterText(value: unknown, max: number): string | null {
+  if (typeof value !== "string") return null;
+  const cleaned = cleanText(value).trim();
+  return fitsWithin(cleaned, max) ? cleaned : null;
+}
+
 const isOneOf = <T extends string>(values: readonly T[], value: unknown): value is T =>
   typeof value === "string" && (values as readonly string[]).includes(value);
 
@@ -159,10 +166,14 @@ function checkEdits(edits: FindingEdits): CheckedEdits {
     checked.impact_description = text;
   }
 
+  // The action plan is optional, as on the vendor risk form: an emptied plan is saved empty.
   if (edits.action_plan !== undefined) {
-    const text = registerText(edits.action_plan, limits.ACTION_PLAN.MAX);
+    const text = optionalRegisterText(edits.action_plan, limits.ACTION_PLAN.MAX);
     if (text === null) {
-      throw new ValidationException("The action plan must be 1 to 1000 characters", "action_plan");
+      throw new ValidationException(
+        "The action plan can be at most 1000 characters",
+        "action_plan",
+      );
     }
     checked.action_plan = text;
   }

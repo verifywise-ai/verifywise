@@ -23,7 +23,6 @@ export interface SuggestedRisksSectionProps {
   onChange(update: (block: SuggestedRisksBlock) => SuggestedRisksBlock): void;
 }
 
-const hasMitigation = (r: IntakeSuggestedRisk) => r.mitigationPlan.trim().length > 0;
 const ACCEPT_ALL = "accept-all";
 
 /** The risks suggested for a submission, each to accept, dismiss or edit before approval. */
@@ -43,7 +42,6 @@ function SuggestedRisksSection({
   // action starting or succeeding leaves it showing.
   const [error, setError] = useState<string | null>(null);
   const [errorKey, setErrorKey] = useState<string | null>(null);
-  const [skippedNote, setSkippedNote] = useState<number>(0);
 
   const muted = { fontSize: "13px", color: theme.palette.text.tertiary } as const;
 
@@ -86,7 +84,8 @@ function SuggestedRisksSection({
   const current = block;
   const accepted = current.items.filter((i) => i.state === "accepted").length;
   const dismissed = current.items.filter((i) => i.state === "dismissed").length;
-  const canAcceptAll = current.items.some((i) => i.state === "suggested" && hasMitigation(i));
+  // The mitigation plan is optional, so any suggestion can be accepted.
+  const canAcceptAll = current.items.some((i) => i.state === "suggested");
 
   function replaceItem(item: IntakeSuggestedRisk) {
     onChange((latest) => ({
@@ -126,7 +125,6 @@ function SuggestedRisksSection({
       // The items as the server stored them.
       const stored = response.data.items;
       onChange((latest) => ({ ...latest, items: stored }));
-      setSkippedNote(response.data.skipped);
     } catch {
       setErrorKey(ACCEPT_ALL);
       setError("Couldn't accept the suggestions. Please try again.");
@@ -194,11 +192,6 @@ function SuggestedRisksSection({
                     </>
                   )}
                 </Typography>
-                {!hasMitigation(risk) && (
-                  <Typography sx={{ fontSize: "12px", color: theme.palette.status.error.text }}>
-                    Add a mitigation plan before accepting this risk.
-                  </Typography>
-                )}
               </Box>
               <Box sx={{ display: "flex", alignItems: "flex-start", gap: "8px", flexShrink: 0 }}>
                 {risk.state !== "suggested" && (
@@ -215,7 +208,7 @@ function SuggestedRisksSection({
                       variant="contained"
                       size="small"
                       text="Accept"
-                      isDisabled={busy || !hasMitigation(risk)}
+                      isDisabled={busy}
                       onClick={() => act(risk, { state: "accepted" })}
                       testId={`suggested-risk-${risk.id}-accept`}
                     />
@@ -265,11 +258,6 @@ function SuggestedRisksSection({
       {current.droppedCount > 0 && (
         <Typography sx={muted}>
           <span>{current.droppedCount}</span> <span>lower-rated suggestions not shown</span>
-        </Typography>
-      )}
-      {skippedNote > 0 && (
-        <Typography sx={muted}>
-          <span>{skippedNote}</span> <span>not accepted: they need a mitigation plan first</span>
         </Typography>
       )}
       {error && (

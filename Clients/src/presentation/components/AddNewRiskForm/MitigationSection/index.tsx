@@ -18,7 +18,6 @@ import {
 import { MITIGATION_FORM_FIELD_ORDER } from "../../../constants/formValidationFieldMaps";
 import { createFieldBlurHandler } from "../../../../application/utils/formValidationFocus";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
-import selectValidation from "../../../../application/validations/selectValidation";
 import useUsers from "../../../../application/hooks/useUsers";
 import {
   mitigationStatusItems,
@@ -155,29 +154,18 @@ const MitigationSection: FC<MitigationSectionProps> = ({
     [t, approverUnchanged],
   );
 
+  // Every mitigation field is optional: a risk can be saved before its
+  // mitigation is known. Only the length limits of the free-text fields apply.
   const validators = useMemo<FieldValidators<MitigationFormValues>>(
     () => ({
-      mitigationStatus: (v: unknown) => {
-        const r = selectValidation("Mitigation status", v as number);
-        return r.accepted ? "" : r.message;
-      },
-      currentRiskLevel: (v: unknown) => {
-        const r = selectValidation("Current risk level", v as number);
-        return r.accepted ? "" : r.message;
-      },
-      deadline: (v: unknown) => {
-        const r = checkStringValidation("Deadline", v as string, 1);
-        return r.accepted ? "" : r.message;
-      },
       mitigationPlan: (v: unknown) => {
-        const r = checkStringValidation("Mitigation plan", v as string, 1, 1024);
+        const r = checkStringValidation("Mitigation plan", (v as string) ?? "", 0, 1024);
         return r.accepted ? "" : r.message;
       },
       implementationStrategy: (v: unknown) => {
-        const r = checkStringValidation("Implementation strategy", v as string, 1, 1024);
+        const r = checkStringValidation("Implementation strategy", (v as string) ?? "", 0, 1024);
         return r.accepted ? "" : r.message;
       },
-      // Approver, approval status and assessment date are optional.
     }),
     [],
   );
@@ -352,7 +340,6 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                 onBlur={handleFieldBlur("mitigationStatus")}
                 items={mitigationStatusItems}
                 sx={formFieldStyles}
-                isRequired
                 error={errors.mitigationStatus}
                 disabled={isEditingDisabled}
               />
@@ -368,7 +355,6 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                 onBlur={handleFieldBlur("currentRiskLevel")}
                 items={riskLevelItems}
                 sx={formFieldStyles}
-                isRequired
                 error={errors.currentRiskLevel}
                 disabled={isEditingDisabled}
               />
@@ -380,7 +366,6 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                 handleDateChange={(e) => handleDateChange("deadline", e)}
                 onBlur={handleFieldBlur("deadline")}
                 sx={{ flex: 1 }}
-                isRequired
                 error={errors.deadline}
                 disabled={isEditingDisabled}
               />
@@ -397,7 +382,6 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                 onChange={handleOnTextFieldChange("mitigationPlan")}
                 onBlur={handleFieldBlur("mitigationPlan")}
                 sx={{ flex: 1 }}
-                isRequired
                 error={errors.mitigationPlan}
                 disabled={isEditingDisabled}
                 placeholder="Write mitigation plan"
@@ -412,7 +396,6 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                 onChange={handleOnTextFieldChange("implementationStrategy")}
                 onBlur={handleFieldBlur("implementationStrategy")}
                 sx={{ flex: 1 }}
-                isRequired
                 error={errors.implementationStrategy}
                 disabled={isEditingDisabled}
                 placeholder="Write implementation strategy"

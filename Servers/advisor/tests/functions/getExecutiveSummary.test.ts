@@ -261,6 +261,19 @@ describe("Advisor Functions: getExecutiveSummary", () => {
       expect(result.mitigationProgress.completed).toBe(1);
     });
 
+    // The mitigation status is optional; a risk saved without one has not started.
+    it("counts a risk with no mitigation status as not started", async () => {
+      const testRisks = [
+        createMockRisk({ mitigation_status: null as any }),
+        createMockRisk({ mitigation_status: "Not Started" }),
+      ];
+      jest.spyOn(riskUtils, "getAllRisksQuery").mockResolvedValue(testRisks);
+
+      const result = await getExecutiveSummary({}, mockTenant);
+
+      expect(result.mitigationProgress.notStarted).toBe(2);
+    });
+
     it("should not count other statuses in progress breakdown", async () => {
       const testRisks = [
         createMockRisk({ mitigation_status: "Not Started" }),

@@ -310,6 +310,17 @@ describe("NewRisk (AddNewRisk), the length of the three texts", () => {
     expect(screen.queryByText(/can't be longer than/)).not.toBeInTheDocument();
   });
 
+  it("saves a risk without an action plan, since the plan is optional", async () => {
+    await saveRiskWith({ risk: 10, impact: 10, plan: 0 });
+
+    await waitFor(() => expect(updateMutateAsync).toHaveBeenCalledTimes(1));
+    expect(updateMutateAsync).toHaveBeenCalledWith({
+      id: 7,
+      data: expect.objectContaining({ action_plan: "" }),
+    });
+    expect(screen.queryByText("Action plan is required.")).not.toBeInTheDocument();
+  });
+
   it.each([
     ["risk description", { risk: 501, impact: 10, plan: 10 }, "Risk description", 500],
     ["impact description", { risk: 10, impact: 501, plan: 10 }, "Impact description", 500],

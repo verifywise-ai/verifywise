@@ -108,7 +108,7 @@ export const vendorRiskListContent: ArticleContent = {
         { bold: 'Vendor', text: 'The vendor the risk belongs to. If there are no vendors yet, add one on the Vendors tab first.' },
         { bold: 'Action owner', text: 'The person responsible for the action plan' },
         { bold: 'Risk description', text: 'What could go wrong with this vendor' },
-        { bold: 'Action plan', text: 'The steps or controls that reduce the risk' },
+        { bold: 'Action plan', text: 'Optional. The steps or controls that reduce the risk. You can add it later, once you know them' },
         { bold: 'Impact description', text: 'What happens if the risk occurs' },
         { bold: 'Applicable frameworks', text: 'Optional. The organization-level frameworks the risk applies to' },
         { bold: 'Likelihood and severity', text: 'These set the risk level. The level is a weighted score: likelihood plus three times severity' },
@@ -116,7 +116,7 @@ export const vendorRiskListContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'All fields except the frameworks are required. The Custom fields tab holds your organization\'s vendor risk fields. An existing risk also has an Activity tab and a Linked risks tab. Select a row to edit its risk.',
+      text: 'All fields except the action plan and the frameworks are required. The Custom fields tab holds your organization\'s vendor risk fields. An existing risk also has an Activity tab and a Linked risks tab. Select a row to edit its risk.',
     },
     {
       type: 'heading',

@@ -507,21 +507,21 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
       selectedRiskSeverity.name as RiskSeverity,
     );
 
+    // The residual pair is optional: without both there is no residual level,
+    // and the server stores none.
     const selectedMitigationLikelihood = likelihoodItems.find(
       (r) => r._id === mitigation.mitigationValues.likelihood,
     );
     const selectedMitigationSeverity = riskSeverityItems.find(
       (r) => r._id === mitigation.mitigationValues.riskSeverity,
     );
-    if (!selectedMitigationLikelihood || !selectedMitigationSeverity) {
-      console.error("Could not find selected likelihood or severity");
-      return;
-    }
-
-    const mitigation_risklevel = RiskCalculator.getRiskLevel(
-      selectedMitigationLikelihood.name as RiskLikelihood,
-      selectedMitigationSeverity.name as RiskSeverity,
-    );
+    const mitigation_risklevel =
+      selectedMitigationLikelihood && selectedMitigationSeverity
+        ? RiskCalculator.getRiskLevel(
+            selectedMitigationLikelihood.name as RiskLikelihood,
+            selectedMitigationSeverity.name as RiskSeverity,
+          )
+        : { level: "" };
 
     if (isValid) {
       onLoading(

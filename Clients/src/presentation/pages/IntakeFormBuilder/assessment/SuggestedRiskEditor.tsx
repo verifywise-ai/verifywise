@@ -66,10 +66,8 @@ function SuggestedRiskEditor({
       : undefined;
   const tooLong = (v: string) =>
     v.trim().length > TEXT_MAX ? `Must be at most ${TEXT_MAX} characters` : undefined;
-  const mitigationError =
-    risk.state === "accepted" && !draft.mitigationPlan.trim()
-      ? "An accepted risk needs a mitigation plan"
-      : tooLong(draft.mitigationPlan);
+  // The mitigation plan is optional, as in the risk register.
+  const mitigationError = tooLong(draft.mitigationPlan);
   // A model risk's level comes from likelihood and severity (decision 10);
   // both must be on the list before the suggestion can be saved.
   const modelLevel = computeModelRiskLevel(draft.likelihood, draft.severity);

@@ -987,7 +987,8 @@ export class ReportDataCollector {
         // mitigation_status 'Completed' while approval_status is 'Rejected'.
         // Reading approval under this name made the section's "how many are
         // unmitigated" question answer against approval state instead.
-        mitigationStatus: risk.mitigation_status || "Unknown",
+        // The status is optional; a risk with none has not started mitigation.
+        mitigationStatus: risk.mitigation_status || "Not Started",
         owner:
           `${risk.risk_owner_name || ""} ${risk.risk_owner_surname || ""}`.trim() || "Unassigned",
       })),

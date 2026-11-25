@@ -216,6 +216,30 @@ describe("useRiskForm", () => {
     expect(mockOnError).toHaveBeenCalledWith(reason);
   });
 
+  // The residual pair is optional: an untouched mitigation tab (nothing
+  // picked) must not stop the save.
+  it("creates a risk whose residual likelihood and severity are not picked", async () => {
+    const createRisk = vi.fn().mockResolvedValue({ status: 201, data: { data: { id: 9 } } });
+    const { result } = renderHook(
+      () =>
+        useRiskForm(
+          createProps({
+            createRisk,
+            initialMitigationValues: { likelihood: 0, riskSeverity: 0 } as never,
+          }),
+        ),
+      { wrapper: Wrapper },
+    );
+    result.current.riskValidateRef.current = () => true;
+    mockMitigationValidateRef.current = () => true;
+
+    await act(async () => {
+      await result.current.riskFormSubmitHandler();
+    });
+
+    expect(createRisk).toHaveBeenCalledTimes(1);
+  });
+
   it("returns usersLoading as false when users are loaded", () => {
     const { result } = renderHook(() => useRiskForm(createProps()), { wrapper: Wrapper });
     expect(result.current.usersLoading).toBe(false);

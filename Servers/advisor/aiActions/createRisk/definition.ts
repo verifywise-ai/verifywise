@@ -66,7 +66,7 @@ export const createRiskToolDefinition: AiActionToolDefinition = {
   function: {
     name: "agent_create_risk",
     description:
-      "Propose creating a new project risk. This is a WRITE action — it does NOT execute immediately. Instead, it files an approval request and returns a pending_approval status. A human Admin must approve before the risk is actually created.\n\nIMPORTANT — collecting required fields:\n1. Use this tool ONLY when the user explicitly asks to create, add, or log a new risk.\n2. Parse the user's first prompt for every required field listed below. Do NOT invent or default values you cannot derive from what the user actually said.\n3. If ANY required field is missing after parsing the first prompt, do NOT call this tool. Instead, send ONE message listing every missing field and asking the user to provide them all in their next reply. Group related fields together for clarity.\n4. For user-id fields (`approver`, `risk_owner`): if the user mentions a person by name or email, call `list_users` first to resolve the id, then include the numeric id here. If the user did not mention anyone, leave the field out: both are optional.\n5. Once you have ALL required fields, call this tool exactly once. Then tell the user to open Pending Approvals to approve or reject.\n\nIf this tool returns a validation_failed error, read the error messages, ask the user for the specific values that failed, and retry — do not loop.",
+      "Propose creating a new project risk. This is a WRITE action — it does NOT execute immediately. Instead, it files an approval request and returns a pending_approval status. A human Admin must approve before the risk is actually created.\n\nIMPORTANT — collecting required fields:\n1. Use this tool ONLY when the user explicitly asks to create, add, or log a new risk.\n2. Parse the user's first prompt for every required field listed below. Do NOT invent or default values you cannot derive from what the user actually said. The mitigation fields (mitigation_status, mitigation_plan, current_risk_level, implementation_strategy, deadline) are optional: include them only when the user gave them, and never ask for them before creating the risk.\n3. If ANY required field is missing after parsing the first prompt, do NOT call this tool. Instead, send ONE message listing every missing field and asking the user to provide them all in their next reply. Group related fields together for clarity.\n4. For user-id fields (`approver`, `risk_owner`): if the user mentions a person by name or email, call `list_users` first to resolve the id, then include the numeric id here. If the user did not mention anyone, leave the field out: both are optional.\n5. Once you have ALL required fields, call this tool exactly once. Then tell the user to open Pending Approvals to approve or reject.\n\nIf this tool returns a validation_failed error, read the error messages, ask the user for the specific values that failed, and retry — do not loop.",
     parameters: {
       type: "object",
       properties: {
@@ -133,27 +133,29 @@ export const createRiskToolDefinition: AiActionToolDefinition = {
         mitigation_status: {
           type: "string",
           enum: MITIGATION_STATUSES,
-          description: "Current state of any mitigation work for this risk. Required.",
+          description:
+            "Current state of any mitigation work for this risk. Optional: leave it out unless the user said where mitigation stands.",
         },
         mitigation_plan: {
           type: "string",
-          description: "How the risk will be mitigated. Required. 1–1024 characters.",
+          description:
+            "How the risk will be mitigated. Optional: leave it out unless the user described the plan. 1–1024 characters.",
         },
         current_risk_level: {
           type: "string",
           enum: CURRENT_RISK_LEVELS,
           description:
-            "Current overall risk level after considering mitigation efforts to date. Required.",
+            "Current overall risk level after considering mitigation efforts to date. Optional: leave it out unless the user gave it.",
         },
         implementation_strategy: {
           type: "string",
           description:
-            "Concrete steps the team will take to execute the mitigation plan. Required. 1–1024 characters.",
+            "Concrete steps the team will take to execute the mitigation plan. Optional: leave it out unless the user described them. 1–1024 characters.",
         },
         deadline: {
           type: "string",
           description:
-            "Target completion date for the mitigation. Required. ISO date string (YYYY-MM-DD).",
+            "Target completion date for the mitigation. Optional: leave it out unless the user gave a date. ISO date string (YYYY-MM-DD).",
         },
         approver: {
           type: "number",
@@ -171,18 +173,7 @@ export const createRiskToolDefinition: AiActionToolDefinition = {
           description: "When the risk was assessed. Optional. ISO date string (YYYY-MM-DD).",
         },
       },
-      required: [
-        "risk_name",
-        "risk_description",
-        "ai_lifecycle_phase",
-        "risk_category",
-        "impact",
-        "mitigation_status",
-        "mitigation_plan",
-        "current_risk_level",
-        "implementation_strategy",
-        "deadline",
-      ],
+      required: ["risk_name", "risk_description", "ai_lifecycle_phase", "risk_category", "impact"],
     },
   },
 };

@@ -153,9 +153,10 @@ const ModelRisksDialog: React.FC<ModelRisksDialogProps> = ({
         risk_level: selectedRisk.risk_level,
         status: selectedRisk.status,
         owner: selectedRisk.owner?.toString() || "",
-        target_date: selectedRisk.target_date,
+        // Optional: a risk without them opens with the fields empty.
+        target_date: selectedRisk.target_date || "",
         description: selectedRisk.description,
-        mitigation_plan: selectedRisk.mitigation_plan,
+        mitigation_plan: selectedRisk.mitigation_plan || "",
         impact: selectedRisk.impact,
         likelihood: selectedRisk.likelihood ?? "",
         severity: selectedRisk.severity ?? "",

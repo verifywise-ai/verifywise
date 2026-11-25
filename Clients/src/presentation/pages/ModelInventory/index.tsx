@@ -2531,9 +2531,10 @@ const ModelInventory: React.FC = () => {
                   risk_level: selectedModelRisk.risk_level,
                   status: selectedModelRisk.status,
                   owner: selectedModelRisk.owner,
+                  // Optional: a risk without a review date opens without one.
                   target_date: selectedModelRisk.target_date
                     ? new Date(selectedModelRisk.target_date).toISOString().split("T")[0]
-                    : new Date().toISOString().split("T")[0],
+                    : "",
                   description: selectedModelRisk.description || "",
                   mitigation_plan: selectedModelRisk.mitigation_plan || "",
                   impact: selectedModelRisk.impact || "",

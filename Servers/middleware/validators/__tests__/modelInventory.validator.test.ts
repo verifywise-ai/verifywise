@@ -100,7 +100,28 @@ describe("v1 model risk", () => {
   it("requires the form's fields (M-M10)", async () => {
     const r = await run(validateCreateModelRiskV1, { risk_name: "Drift" });
     // Decision 10: likelihood and severity set the level, which is no longer required.
-    expect(r.fields).toEqual(["likelihood", "owner", "risk_category", "severity", "target_date"]);
+    // The target date is optional, like the other mitigation fields.
+    expect(r.fields).toEqual(["likelihood", "owner", "risk_category", "severity"]);
+  });
+
+  it("creates without a target date, and still checks one that is sent", async () => {
+    const { target_date: _omitted, ...withoutDate } = risk;
+    expect((await run(validateCreateModelRiskV1, withoutDate)).status).toBeUndefined();
+    for (const empty of [null, ""]) {
+      expect(
+        (await run(validateCreateModelRiskV1, { ...risk, target_date: empty })).status,
+      ).toBeUndefined();
+    }
+    const r = await run(validateCreateModelRiskV1, { ...risk, target_date: "later" });
+    expect(r.fields).toEqual(["target_date"]);
+  });
+
+  it("lets an update clear the target date with null or an empty string", async () => {
+    for (const cleared of [null, ""]) {
+      expect(
+        (await run(validateUpdateModelRiskV1, { target_date: cleared }, { id: "3" })).status,
+      ).toBeUndefined();
+    }
   });
 
   it("checks a sent level and the lists on create", async () => {

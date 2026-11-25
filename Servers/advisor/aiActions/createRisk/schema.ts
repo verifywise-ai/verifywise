@@ -103,12 +103,13 @@ const isoDateString = z
  *       applicableProjects    → optional int[]
  *       applicableFrameworks  → optional int[]
  *
- *   - Tab 2 "Mitigation":
- *       mitigationStatus      → required, enum
- *       mitigationPlan        → required, 1..1024
- *       currentRiskLevel      → required, enum
- *       implementationStrategy→ required, 1..1024
- *       deadline              → required, ISO date
+ *   - Tab 2 "Mitigation": every field is optional, since a risk is often
+ *     logged before its mitigation is known. A value that is sent is checked.
+ *       mitigationStatus      → optional, enum
+ *       mitigationPlan        → optional, 1..1024
+ *       currentRiskLevel      → optional, enum
+ *       implementationStrategy→ optional, 1..1024
+ *       deadline              → optional, ISO date
  *       approver              → optional user id (risk_approval)
  *       approvalStatus        → optional, Pending / Approved / Rejected /
  *                                Not required; the risk service decides the
@@ -131,11 +132,11 @@ export const AgentCreateRiskSchema = z
     framework_ids: z.array(z.number().int().positive()).max(50).optional(),
 
     // Tab 2 — Mitigation
-    mitigation_status: RiskMitigationStatus,
-    mitigation_plan: z.string().min(1).max(1024),
-    current_risk_level: CurrentRiskLevel,
-    implementation_strategy: z.string().min(1).max(1024),
-    deadline: isoDateString,
+    mitigation_status: RiskMitigationStatus.optional(),
+    mitigation_plan: z.string().min(1).max(1024).optional(),
+    current_risk_level: CurrentRiskLevel.optional(),
+    implementation_strategy: z.string().min(1).max(1024).optional(),
+    deadline: isoDateString.optional(),
     approver: z.number().int().positive().optional(),
     approval_status: RiskApprovalStatusSchema.optional(),
     date_of_assessment: isoDateString.optional(),

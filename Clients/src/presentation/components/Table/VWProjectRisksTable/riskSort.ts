@@ -27,7 +27,7 @@ const sortValue = (
   risk: RiskModel,
   key: string,
   ownerName: OwnerNameLookup,
-): string | number | null => {
+): string | number | null | undefined => {
   switch (key) {
     // Strings go to compareNames as they are: it owns the case folding.
     case "risk_name":
@@ -42,7 +42,8 @@ const sortValue = (
       // The column shows the effective level, so it sorts by it.
       return riskLevelRank(getEffectiveRiskLevel(risk));
     case "deadline":
-      return riskCalendarDay(risk.deadline)?.getTime() ?? 0;
+      // undefined: no deadline (it is optional), sorted last either way.
+      return riskCalendarDay(risk.deadline)?.getTime();
     case "ale_estimate":
       return risk.ale_estimate ?? 0;
     default:
@@ -64,6 +65,11 @@ export const compareRisks = (
   const aValue = sortValue(a, key, ownerName);
   const bValue = sortValue(b, key, ownerName);
   if (aValue === null || bValue === null) return 0;
+  // A risk without a deadline is not the most urgent: last in both directions.
+  if (aValue === undefined || bValue === undefined) {
+    if (aValue === bValue) return 0;
+    return aValue === undefined ? 1 : -1;
+  }
 
   const sign = direction === "asc" ? 1 : -1;
   if (typeof aValue === "string" && typeof bValue === "string") {

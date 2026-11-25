@@ -132,21 +132,23 @@ export async function createRiskService(
       projectRiskData.severity,
     ),
     review_notes: projectRiskData.review_notes ?? null,
-    mitigation_status: projectRiskData.mitigation_status ?? null,
-    current_risk_level: normalizeCurrentRiskLevel(projectRiskData.current_risk_level ?? null),
-    deadline: projectRiskData.deadline ?? null,
+    // Every mitigation field is optional. An empty enum or date ("") is stored
+    // as none, as the update does (updateRiskByIdQuery).
+    mitigation_status: projectRiskData.mitigation_status || null,
+    current_risk_level: normalizeCurrentRiskLevel(projectRiskData.current_risk_level || null),
+    deadline: projectRiskData.deadline || null,
     mitigation_plan: projectRiskData.mitigation_plan ?? null,
     implementation_strategy: projectRiskData.implementation_strategy ?? null,
     mitigation_evidence_document: projectRiskData.mitigation_evidence_document ?? null,
-    likelihood_mitigation: projectRiskData.likelihood_mitigation ?? null,
-    risk_severity: projectRiskData.risk_severity ?? null,
+    likelihood_mitigation: projectRiskData.likelihood_mitigation || null,
+    risk_severity: projectRiskData.risk_severity || null,
     final_risk_level: calculateRiskLevel(
       projectRiskData.likelihood_mitigation,
       projectRiskData.risk_severity,
     ),
     risk_approval: approval.risk_approval,
     approval_status: approval.approval_status,
-    date_of_assessment: projectRiskData.date_of_assessment ?? null,
+    date_of_assessment: projectRiskData.date_of_assessment || null,
     is_demo: projectRiskData.is_demo ?? false,
     // FAIR quantitative fields — createRiskQuery already uses `?? null` on
     // these internally, but we mirror that here for uniformity.

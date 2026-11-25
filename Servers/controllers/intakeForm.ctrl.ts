@@ -2248,17 +2248,8 @@ export async function updateSuggestedRisk(req: Request, res: Response) {
     if (!current) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Suggested risk not found")));
     }
-    // The risk register requires a mitigation plan, so nothing is accepted
-    // without one, and an accepted risk can't have its plan cleared.
-    const resultingState = state ?? current.state;
-    if (
-      resultingState === "accepted" &&
-      !(content.mitigationPlan ?? current.mitigationPlan)?.trim()
-    ) {
-      return res
-        .status(400)
-        .json(STATUS_CODE[400](req.t!("Add a mitigation plan before accepting this risk")));
-    }
+    // The mitigation plan is optional, as in the risk register: a suggestion
+    // is accepted with or without one.
 
     // A model suggestion's level follows its likelihood and severity.
     if (
@@ -2284,8 +2275,8 @@ export async function updateSuggestedRisk(req: Request, res: Response) {
       req.organizationId!,
     );
     if (!item) {
-      // Decided, or changed by someone else (e.g. its plan cleared), between
-      // the read and the atomic write. Say which.
+      // Decided, or removed by someone else, between the read and the atomic
+      // write. Say which.
       const latest = await getSubmissionByIdQuery(submissionId, req.organizationId!);
       const message =
         latest && latest.status !== IntakeSubmissionStatus.PENDING
@@ -2302,8 +2293,9 @@ export async function updateSuggestedRisk(req: Request, res: Response) {
 }
 
 /**
- * Accept every suggestion still in "suggested". Dismissed ones stay dismissed;
- * ones without a mitigation plan are skipped and counted.
+ * Accept every suggestion still in "suggested". Dismissed ones stay dismissed.
+ * The mitigation plan is optional, so none is skipped for lacking one;
+ * `skipped` stays in the response for compatibility.
  * POST /intake/submissions/:id/suggested-risks/accept-all
  */
 export async function acceptAllSuggestedRisks(req: Request, res: Response) {
@@ -2332,7 +2324,6 @@ export async function acceptAllSuggestedRisks(req: Request, res: Response) {
       "accepted",
       req.userId!,
       req.organizationId!,
-      { requireMitigationPlan: true },
     );
     // The items as stored, so the client shows the server's states. A
     // submission decided meanwhile accepted nothing, which is not "skipped".

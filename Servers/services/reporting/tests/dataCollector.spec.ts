@@ -326,6 +326,23 @@ describe("dataCollector", () => {
       expect(result.sections.projectRisks!.risks[0].mitigationStatus).toBe("Not Started");
     });
 
+    it("shows a project risk saved without a mitigation status as Not Started, not Unknown", async () => {
+      mockGetProjectRisks.mockResolvedValue([
+        {
+          id: 12,
+          risk_name: "No mitigation yet",
+          risk_level_autocalculated: "Medium risk",
+          mitigation_status: null,
+          deadline: null,
+        },
+      ] as any);
+
+      const collector = createDataCollector(10, 1, 1, 100, 5);
+      const result = await collector.collectAllData(["projectRisks"]);
+
+      expect(result.sections.projectRisks!.risks[0].mitigationStatus).toBe("Not Started");
+    });
+
     it("reads model_risks.status (not the non-existent mitigation_status) and surfaces plan/date/impact/likelihood", async () => {
       // verifywise.model_risks has no `mitigation_status` column, so the old
       // read made every model risk in every report literally "Unknown".

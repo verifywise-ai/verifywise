@@ -589,8 +589,9 @@ export function parseRow(
   // Unknown values are rejected by validateRow before a row is parsed.
   const riskCategory = row.risk_category ? splitCategories(row.risk_category).valid : null;
 
-  // The stored residual likelihood defaults to Rare; derive the level from it.
-  const likelihoodMitigation = row.likelihood_mitigation ?? "Rare";
+  // The mitigation is optional: an empty residual likelihood stays empty (no
+  // made-up "Rare"), and the residual level then stays empty too.
+  const likelihoodMitigation = row.likelihood_mitigation || null;
 
   return {
     risk_name: row.risk_name?.trim() ?? null,
@@ -603,15 +604,16 @@ export function parseRow(
     severity: row.severity ?? null,
     risk_level_autocalculated: calculateRiskLevel(row.likelihood ?? null, row.severity ?? null),
     review_notes: row.review_notes ?? null,
-    mitigation_status: row.mitigation_status ?? null,
-    current_risk_level: normalizeCurrentRiskLevel(row.current_risk_level) ?? null,
+    // An empty mitigation cell ("" from an API caller) is stored as none.
+    mitigation_status: row.mitigation_status || null,
+    current_risk_level: normalizeCurrentRiskLevel(row.current_risk_level) || null,
     deadline: row.deadline ? riskCalendarDateFromCell(row.deadline) : null,
     mitigation_plan: row.mitigation_plan ?? null,
     implementation_strategy: row.implementation_strategy ?? null,
     likelihood_mitigation: likelihoodMitigation,
-    risk_severity: row.risk_severity ?? null,
+    risk_severity: row.risk_severity || null,
     // Derived like the inherent level; the sheet value is ignored.
-    final_risk_level: calculateRiskLevel(likelihoodMitigation, row.risk_severity ?? null),
+    final_risk_level: calculateRiskLevel(likelihoodMitigation, row.risk_severity || null),
     risk_approval: parseUserId(row.risk_approval),
     approval_status: importedApprovalStatus(row, callerIsAdmin),
     // An empty cell stays empty: the import time is not an assessment date.

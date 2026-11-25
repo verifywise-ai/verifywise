@@ -112,10 +112,12 @@ export async function getCurrentParameterCounts(
     } else if (parameter === "mitigation_status") {
       // Get counts for each mitigation status
       const mitigationCounts = (await sequelize.query(
-        `SELECT mitigation_status, COUNT(*) as count
+        // The mitigation status is optional: a risk with none has not started
+        // mitigation, so it counts as Not Started (as the Home queue does).
+        `SELECT COALESCE(mitigation_status::text, 'Not Started') AS mitigation_status, COUNT(*) as count
          FROM risks
          WHERE organization_id = :organizationId AND is_deleted = false
-         GROUP BY mitigation_status`,
+         GROUP BY 1`,
         {
           replacements: { organizationId },
           type: QueryTypes.SELECT,

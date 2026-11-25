@@ -49,7 +49,8 @@ const RiskLevel: FC<IRiskLevelProps> = ({
         id="likelihood-input"
         label="Likelihood"
         placeholder="Select likelihood of risk to happen"
-        value={likelihood}
+        // 0 means none picked yet (the residual pair is optional): show the placeholder.
+        value={likelihood || ""}
         onChange={handleOnSelectChange("likelihood")}
         onBlur={onLikelihoodBlur}
         items={likelihoodItems}
@@ -61,7 +62,7 @@ const RiskLevel: FC<IRiskLevelProps> = ({
         id="risk-severity-input"
         label="Risk severity"
         placeholder="Select risk severity"
-        value={riskSeverity}
+        value={riskSeverity || ""}
         onChange={handleOnSelectChange("riskSeverity")}
         onBlur={onRiskSeverityBlur}
         items={riskSeverityItems}
@@ -81,7 +82,12 @@ const RiskLevel: FC<IRiskLevelProps> = ({
         >
           Risk level
         </Typography>
-        <Chip label={riskLevel.level} size="medium" />
+        {riskLevel.level ? (
+          <Chip label={riskLevel.level} size="medium" />
+        ) : (
+          // No level until both are picked.
+          <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>—</Typography>
+        )}
       </Stack>
     </Stack>
   );

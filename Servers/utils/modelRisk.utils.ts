@@ -188,6 +188,11 @@ export async function updateModelRiskByIdQuery(
       )) as any;
     }
   }
+  // The target date is optional: an emptied date ("") clears it rather than
+  // reaching the timestamp column as text.
+  if (checked.target_date !== undefined && (checked.target_date as unknown) === "") {
+    checked.target_date = null as unknown as string;
+  }
   updatedModelRisk = checked;
 
   const updateModelRisk: Partial<IModelRisk> & { organization_id?: number } = { updated_at };

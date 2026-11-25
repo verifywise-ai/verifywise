@@ -151,20 +151,30 @@ describe("SuggestedRisksSection", () => {
     );
   });
 
-  it("can't accept a suggestion without a mitigation plan", () => {
+  // The mitigation plan is optional, as in the risk register.
+  it("accepts a suggestion without a mitigation plan", async () => {
+    vi.mocked(updateSuggestedRisk).mockResolvedValue({
+      data: item({ state: "accepted", mitigationPlan: "" }),
+    } as never);
     render(block([item({ mitigationPlan: "" })]));
-    expect(
-      screen.getByText("Add a mitigation plan before accepting this risk."),
-    ).toBeInTheDocument();
-    expect(screen.getByTestId("suggested-risk-a-accept")).toBeDisabled();
+    expect(screen.queryByText(/mitigation plan/i)).not.toBeInTheDocument();
+    expect(screen.getByTestId("suggested-risk-a-accept")).not.toBeDisabled();
+    expect(screen.getByTestId("suggested-risks-accept-all")).not.toBeDisabled();
+    fireEvent.click(screen.getByTestId("suggested-risk-a-accept"));
+    await waitFor(() =>
+      expect(updateSuggestedRisk).toHaveBeenCalledWith(11, "a", { state: "accepted" }),
+    );
   });
 
   it("accept all calls the endpoint and shows the items as the server stored them", async () => {
     vi.mocked(acceptAllSuggestedRisks).mockResolvedValue({
       data: {
-        accepted: 1,
-        skipped: 1,
-        items: [item({ state: "accepted" }), item({ id: "b", mitigationPlan: "" })],
+        accepted: 2,
+        skipped: 0,
+        items: [
+          item({ state: "accepted" }),
+          item({ id: "b", state: "accepted", mitigationPlan: "" }),
+        ],
       },
     });
     const onChange = vi.fn();
@@ -175,10 +185,7 @@ describe("SuggestedRisksSection", () => {
     const next = onChange.mock.calls[0][0](
       block([item(), item({ id: "b", mitigationPlan: "" })]),
     ) as SuggestedRisksBlock;
-    expect(next.items.map((i) => i.state)).toEqual(["accepted", "suggested"]);
-    expect(
-      await screen.findByText("not accepted: they need a mitigation plan first"),
-    ).toBeInTheDocument();
+    expect(next.items.map((i) => i.state)).toEqual(["accepted", "accepted"]);
   });
 
   it("a successful accept all leaves another risk's failed save showing", async () => {

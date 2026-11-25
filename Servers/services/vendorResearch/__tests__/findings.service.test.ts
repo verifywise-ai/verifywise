@@ -437,7 +437,8 @@ describe("acceptFinding", () => {
         await expectRefusedOutright({ impact_description: value }, "impact_description");
       });
 
-      it.each(notText)("refuses an action plan that is %s", async (_label, value) => {
+      // The action plan is optional: an empty one is saved empty, anything not text is refused.
+      it.each(notText.slice(0, 4))("refuses an action plan that is %s", async (_label, value) => {
         await expectRefusedOutright({ action_plan: value }, "action_plan");
       });
 
@@ -448,6 +449,15 @@ describe("acceptFinding", () => {
       it("refuses an impact description of 501 characters", async () => {
         await expectRefusedOutright({ impact_description: "a".repeat(501) }, "impact_description");
       });
+
+      it.each(notText.slice(4))(
+        "saves an action plan that is %s as empty",
+        async (_label, value) => {
+          await accept({ edits: { action_plan: value } });
+
+          expect(created().action_plan).toBe("");
+        },
+      );
 
       it("refuses an action plan of 1001 characters", async () => {
         await expectRefusedOutright({ action_plan: "a".repeat(1001) }, "action_plan");

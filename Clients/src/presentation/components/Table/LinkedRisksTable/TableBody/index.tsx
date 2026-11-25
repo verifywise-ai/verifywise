@@ -97,7 +97,8 @@ const LinkedRisksTableBody: React.FC<IProjectRiskTableBodyProps> = ({
                   {row.risk_description ? row.risk_description : "-"}
                 </TableCell>
                 <TableCell sx={cellStyle}>
-                  {row.risk_severity ? <Chip label={row.risk_severity} /> : "-"}
+                  {/* The inherent severity, next to the inherent likelihood (risk_severity is the residual one). */}
+                  {row.severity ? <Chip label={row.severity} /> : "-"}
                 </TableCell>
                 <TableCell sx={cellStyle}>{row.likelihood ? row.likelihood : "-"}</TableCell>
                 <TableCell sx={cellStyle}>{row.risk_category ? row.risk_category : "-"}</TableCell>
