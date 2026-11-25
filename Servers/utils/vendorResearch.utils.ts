@@ -1,6 +1,8 @@
 import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import { asyncLocalStorage } from "./context/context";
+import { decrypt, encrypt } from "./encryption.utils";
+import logger from "./logger/fileLogger";
 import {
   CategorySummaryEntry,
   DismissReason,
@@ -266,6 +268,30 @@ export const getLatestRunQuery = (
   vendorId: number,
 ): Promise<IVendorResearchRun | null> =>
   findRun("vendor_id = :vendorId", { organizationId, vendorId });
+
+/**
+ * The category summaries of the organization's latest finished runs (completed, or failed with a
+ * summary) created in the last `days` days, newest first, at most `limit` of them. Only the
+ * summaries are read: what the research settings window needs to tell whether recent runs got no
+ * news (see services/vendorResearch/searchStatus.ts). It does not filter on `search_engine`, which
+ * is null on a run none of whose searches was answered.
+ */
+export const listRecentRunSummariesQuery = async (
+  organizationId: number,
+  limit: number,
+  days: number,
+): Promise<unknown[]> => {
+  const rows = (await sequelize.query(
+    `SELECT category_summary FROM vendor_research_runs
+     WHERE organization_id = :organizationId AND status IN ('completed', 'failed')
+       AND category_summary IS NOT NULL
+       AND created_at >= NOW() - (:days * INTERVAL '1 day')
+     ORDER BY created_at DESC, id DESC
+     LIMIT :limit`,
+    { replacements: { organizationId, limit, days }, type: QueryTypes.SELECT },
+  )) as Array<{ category_summary: unknown }>;
+  return rows.map((row) => row.category_summary);
+};
 
 /** A run by id, whatever its status; null when it does not exist or belongs to another organization. */
 export const getRunByIdQuery = (
@@ -733,20 +759,25 @@ interface SettingsRow {
   research_llm_key_id: number | null;
   analysis_llm_key_id: number | null;
   scan_interval_days: number | null;
+  auto_research_on_create: boolean;
 }
 
 const settingsOf = (row: SettingsRow | undefined): VendorResearchSettings => ({
   researchKeyId: row?.research_llm_key_id ?? null,
   analysisKeyId: row?.analysis_llm_key_id ?? null,
   scanIntervalDays: row?.scan_interval_days ?? null,
+  autoResearchOnCreate: row?.auto_research_on_create ?? true,
 });
 
-/** What the organization chose for its runs; nothing chosen (no row) is three nulls. */
+/**
+ * What the organization chose for its runs; nothing chosen (no row) is three nulls and the
+ * automatic research of a new vendor on.
+ */
 export const getVendorResearchSettingsQuery = async (
   organizationId: number,
 ): Promise<VendorResearchSettings> => {
   const rows = (await sequelize.query(
-    `SELECT research_llm_key_id, analysis_llm_key_id, scan_interval_days
+    `SELECT research_llm_key_id, analysis_llm_key_id, scan_interval_days, auto_research_on_create
      FROM vendor_research_settings
      WHERE organization_id = :organizationId`,
     { replacements: { organizationId }, type: QueryTypes.SELECT },
@@ -761,7 +792,8 @@ export const getVendorResearchSettingsQuery = async (
  *
  * The scan interval is replaced only when the input names it: `undefined` leaves what is stored (a
  * page that does not know the setting saves the keys and must not turn the scan off), `null` turns
- * the scan off.
+ * the scan off. The automatic research of a new vendor works the same way: `undefined` leaves what
+ * is stored (true for a new row).
  */
 export const saveVendorResearchSettingsQuery = async (
   input: {
@@ -770,19 +802,21 @@ export const saveVendorResearchSettingsQuery = async (
     researchKeyId: number | null;
     analysisKeyId: number | null;
     scanIntervalDays?: number | null;
+    autoResearchOnCreate?: boolean;
   },
   transaction?: Transaction,
 ): Promise<VendorResearchSettings> => {
-  const { scanIntervalDays, ...rest } = input;
+  const { scanIntervalDays, autoResearchOnCreate, ...rest } = input;
   const rows = (await sequelize.query(
     `INSERT INTO vendor_research_settings
        (organization_id, research_llm_key_id, analysis_llm_key_id, scan_interval_days,
-        updated_by, updated_at)
+        auto_research_on_create, updated_by, updated_at)
      VALUES (
        :organizationId,
        (SELECT id FROM llm_keys WHERE organization_id = :organizationId AND id = :researchKeyId),
        (SELECT id FROM llm_keys WHERE organization_id = :organizationId AND id = :analysisKeyId),
        :scanIntervalDays,
+       :autoResearchOnCreate,
        :userId,
        NOW()
      )
@@ -793,20 +827,86 @@ export const saveVendorResearchSettingsQuery = async (
          WHEN :changesScanInterval THEN EXCLUDED.scan_interval_days
          ELSE vendor_research_settings.scan_interval_days
        END,
+       auto_research_on_create = CASE
+         WHEN :changesAutoResearch THEN EXCLUDED.auto_research_on_create
+         ELSE vendor_research_settings.auto_research_on_create
+       END,
        updated_by = EXCLUDED.updated_by,
        updated_at = EXCLUDED.updated_at
-     RETURNING research_llm_key_id, analysis_llm_key_id, scan_interval_days`,
+     RETURNING research_llm_key_id, analysis_llm_key_id, scan_interval_days,
+       auto_research_on_create`,
     {
       replacements: {
         ...rest,
         scanIntervalDays: scanIntervalDays ?? null,
         changesScanInterval: scanIntervalDays !== undefined,
+        autoResearchOnCreate: autoResearchOnCreate ?? true,
+        changesAutoResearch: autoResearchOnCreate !== undefined,
       },
       type: QueryTypes.SELECT,
       transaction,
     },
   )) as SettingsRow[];
   return settingsOf(rows[0]);
+};
+
+// ---------------------------------------------------------------------------
+// Brave Search key
+// ---------------------------------------------------------------------------
+
+/**
+ * The organization's Brave Search API key, decrypted, or null when it has none. A stored value that
+ * no longer decrypts (the deployment's encryption key changed) reads as no key: the research falls
+ * back to the other searches, and the settings page offers to enter the key again. Only the name of
+ * the error is logged; the message of a crypto error can carry input.
+ */
+export const getBraveKeyQuery = async (organizationId: number): Promise<string | null> => {
+  const rows = (await sequelize.query(
+    `SELECT brave_api_key_encrypted FROM vendor_research_settings
+     WHERE organization_id = :organizationId`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  )) as Array<{ brave_api_key_encrypted: string | null }>;
+  const stored = rows[0]?.brave_api_key_encrypted;
+  if (!stored) return null;
+  try {
+    return decrypt(stored);
+  } catch (error) {
+    logger.error(
+      `Stored Brave Search key of organization ${organizationId} could not be decrypted: ${
+        (error as Error)?.name ?? "error"
+      }`,
+    );
+    return null;
+  }
+};
+
+/**
+ * Stores the organization's Brave Search key, encrypted, or clears it (`null`). The settings row is
+ * created when the organization has none; the key and the research choices share it, and this
+ * statement touches no other choice.
+ */
+export const saveBraveKeyQuery = async (
+  organizationId: number,
+  plainKey: string | null,
+  userId: number,
+): Promise<void> => {
+  await sequelize.query(
+    `INSERT INTO vendor_research_settings
+       (organization_id, brave_api_key_encrypted, updated_by, updated_at)
+     VALUES (:organizationId, :encrypted, :userId, NOW())
+     ON CONFLICT (organization_id) DO UPDATE SET
+       brave_api_key_encrypted = EXCLUDED.brave_api_key_encrypted,
+       updated_by = EXCLUDED.updated_by,
+       updated_at = EXCLUDED.updated_at
+     WHERE vendor_research_settings.organization_id = :organizationId`,
+    {
+      replacements: {
+        organizationId,
+        encrypted: plainKey ? encrypt(plainKey) : null,
+        userId,
+      },
+    },
+  );
 };
 
 // ---------------------------------------------------------------------------

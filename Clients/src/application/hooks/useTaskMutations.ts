@@ -10,7 +10,7 @@
  */
 import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { createTask, updateTask, deleteTask } from "../repository/task.repository";
-import { taskQueryKeys } from "./useTasks";
+import { linkedTaskQueryKeys, taskQueryKeys } from "./useTasks";
 import { showMutationErrorToast } from "./utils/mutationErrorToast";
 import type { ITask } from "../../domain/interfaces/i.task";
 import { TaskStatus } from "../../domain/enums/task.enum";
@@ -56,7 +56,13 @@ function restoreTaskLists(queryClient: QueryClient, snapshots: ListSnapshot | un
   }
 }
 
-const DERIVED_TASK_KEYS: readonly (readonly unknown[])[] = [["deadlineWarnings"], ["dashboard"]];
+// Lists of tasks linked to an entity are not patched optimistically (a task
+// write may add or drop links): they are refetched instead.
+const DERIVED_TASK_KEYS: readonly (readonly unknown[])[] = [
+  ["deadlineWarnings"],
+  ["dashboard"],
+  linkedTaskQueryKeys.all,
+];
 
 export interface CreateTaskVariables {
   body: Partial<ITask>;

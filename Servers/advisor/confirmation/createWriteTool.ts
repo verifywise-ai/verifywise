@@ -7,6 +7,9 @@
  */
 
 import { submitForApproval } from "../approval/approvalGateway";
+import { REQUESTER_CLIENT_DATE_PARAM } from "../approval/types";
+import { getRequestClientDate } from "../../utils/context/context";
+import { acceptedClientDate } from "../../utils/validations/incidentManagementValidation.utils";
 import type { WarningLevel, ConfirmationToolResult } from "./types";
 
 export type WriteExecuteFn = (
@@ -78,6 +81,9 @@ export function createWriteToolFn(
       riskLevel: config.warningLevel,
       description,
       inputParams: sanitized,
+      // The requester's own day, kept for when an approver runs the action
+      // later (their request carries their own date).
+      requesterClientDate: acceptedClientDate(getRequestClientDate()) ?? undefined,
     });
 
     switch (result.outcome) {
@@ -118,5 +124,6 @@ function sanitizeParams(params: Record<string, unknown>): Record<string, unknown
   delete sanitized._userId;
   delete sanitized._requesterId;
   delete sanitized._organizationId;
+  delete sanitized[REQUESTER_CLIENT_DATE_PARAM];
   return sanitized;
 }

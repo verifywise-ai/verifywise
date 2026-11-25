@@ -12,8 +12,12 @@ import {
   dismissVendorRiskFinding,
   getLatestVendorResearch,
   getVendorResearchConfig,
+  getVendorResearchSearchKey,
+  getVendorResearchSearchStatus,
   getVendorResearchSettings,
   listVendorRiskFindings,
+  removeVendorResearchSearchKey,
+  saveVendorResearchSearchKey,
   saveVendorResearchSettings,
   startVendorResearch,
 } from "../repository/vendorResearch.repository";
@@ -27,6 +31,8 @@ import type {
   FindingStatus,
   VendorResearchConfig,
   VendorResearchRun,
+  VendorResearchSearchKey,
+  VendorResearchSearchStatus,
   VendorResearchSettings,
   VendorRiskFinding,
 } from "../../domain/interfaces/i.vendorResearch";
@@ -127,6 +133,8 @@ interface FindingsFilter {
 
 const configKey = () => [...VENDOR_RESEARCH_KEY, "config"] as const;
 const settingsKey = () => [...VENDOR_RESEARCH_KEY, "settings"] as const;
+const searchStatusKey = () => [...VENDOR_RESEARCH_KEY, "searchStatus"] as const;
+const searchKeyKey = () => [...VENDOR_RESEARCH_KEY, "searchKey"] as const;
 const latestKey = (vendorId: number | null) =>
   [...VENDOR_RESEARCH_KEY, "latest", vendorId] as const;
 
@@ -155,18 +163,79 @@ export function useVendorResearchSettings(enabled = true) {
 }
 
 /**
+ * Which search each LLM key gets, and whether the organization's recent runs got no news:
+ * what the research settings window warns about. Admin only, like the settings, and read each time
+ * the window opens. A failed read shows no warning and is not retried: the window works without it.
+ */
+export function useVendorResearchSearchStatus() {
+  return useQuery<VendorResearchSearchStatus>({
+    queryKey: searchStatusKey(),
+    queryFn: getVendorResearchSearchStatus,
+    staleTime: 0,
+    retry: false,
+  });
+}
+
+/**
  * Saving puts the choice the server kept into the cache, so that the window opened next reads it
- * at once. A 404 says a chosen key is gone (another Admin deleted it): the list of keys the
- * person chose from is out of date, so it is read again.
+ * at once, and reads the config again, whose `autoRunEnabled` follows the organization's setting.
+ * A 404 says a chosen key is gone (another Admin deleted it): the list of keys the person chose
+ * from is out of date, so it is read again.
  */
 export function useSaveVendorResearchSettings() {
   const queryClient = useQueryClient();
   return useMutation<VendorResearchSettings, APIError, VendorResearchSettings>({
     mutationFn: (settings) => saveVendorResearchSettings(settings),
-    onSuccess: (saved) => queryClient.setQueryData(settingsKey(), saved),
+    onSuccess: (saved) => {
+      queryClient.setQueryData(settingsKey(), saved);
+      void queryClient.invalidateQueries({ queryKey: configKey() });
+    },
     onError: (error) => {
       if (error.status === 404) void invalidateLLMKeyQueries(queryClient);
     },
+  });
+}
+
+/**
+ * The organization's Brave search key: whether one is stored and its last 4 characters. Admin only
+ * (the server answers everyone else with a 403), so the caller passes `enabled` as false for anyone
+ * else.
+ */
+export function useVendorResearchSearchKey(enabled = true) {
+  return useQuery<VendorResearchSearchKey>({
+    queryKey: searchKeyKey(),
+    queryFn: getVendorResearchSearchKey,
+    enabled,
+  });
+}
+
+/** A stored or removed key changes the search of every non-Anthropic key, so both are read again. */
+function useInvalidateSearchKey() {
+  const queryClient = useQueryClient();
+  return useCallback(
+    (saved: VendorResearchSearchKey) => {
+      queryClient.setQueryData(searchKeyKey(), saved);
+      void queryClient.invalidateQueries({ queryKey: searchKeyKey() });
+      void queryClient.invalidateQueries({ queryKey: searchStatusKey() });
+    },
+    [queryClient],
+  );
+}
+
+/** Saves the Brave key. A refused key rejects with the 422 `code` readable by `readVendorResearchError`. */
+export function useSaveVendorResearchSearchKey() {
+  const onSaved = useInvalidateSearchKey();
+  return useMutation<VendorResearchSearchKey, APIError, { key: string; skipCheck?: boolean }>({
+    mutationFn: (body) => saveVendorResearchSearchKey(body),
+    onSuccess: onSaved,
+  });
+}
+
+export function useRemoveVendorResearchSearchKey() {
+  const onRemoved = useInvalidateSearchKey();
+  return useMutation<VendorResearchSearchKey, APIError, void>({
+    mutationFn: () => removeVendorResearchSearchKey(),
+    onSuccess: onRemoved,
   });
 }
 

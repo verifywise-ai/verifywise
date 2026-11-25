@@ -62,6 +62,10 @@ export const de: Record<string, string> = {
     "Es werden alle Aufgaben Ihrer Organisation angezeigt. Hier können Sie Aufgaben erstellen und verwalten.",
   "Showing tasks you created or are assigned to. You can create and manage your tasks here.":
     "Es werden Aufgaben angezeigt, die Sie erstellt haben oder die Ihnen zugewiesen sind. Hier können Sie Ihre Aufgaben erstellen und verwalten.",
+  "Archive task": "Aufgabe archivieren",
+  "Could not load the linked tasks.": "Die verknüpften Aufgaben konnten nicht geladen werden.",
+  "No incidents to link": "Keine Vorfälle zum Verknüpfen",
+  "Could not load incidents.": "Vorfälle konnten nicht geladen werden.",
 };
 
 export const fr: Record<string, string> = {
@@ -125,6 +129,10 @@ export const fr: Record<string, string> = {
     "Toutes les tâches de votre organisation sont affichées. Vous pouvez créer et gérer des tâches ici.",
   "Showing tasks you created or are assigned to. You can create and manage your tasks here.":
     "Les tâches que vous avez créées ou qui vous sont assignées sont affichées. Vous pouvez créer et gérer vos tâches ici.",
+  "Archive task": "Archiver la tâche",
+  "Could not load the linked tasks.": "Impossible de charger les tâches liées.",
+  "No incidents to link": "Aucun incident à lier",
+  "Could not load incidents.": "Impossible de charger les incidents.",
 };
 
 export const es: Record<string, string> = {
@@ -188,4 +196,8 @@ export const es: Record<string, string> = {
     "Se muestran todas las tareas de su organización. Aquí puede crear y gestionar tareas.",
   "Showing tasks you created or are assigned to. You can create and manage your tasks here.":
     "Se muestran las tareas que usted creó o que tiene asignadas. Aquí puede crear y gestionar sus tareas.",
+  "Archive task": "Archivar tarea",
+  "Could not load the linked tasks.": "No se pudieron cargar las tareas vinculadas.",
+  "No incidents to link": "No hay incidentes para vincular",
+  "Could not load incidents.": "No se pudieron cargar los incidentes.",
 };

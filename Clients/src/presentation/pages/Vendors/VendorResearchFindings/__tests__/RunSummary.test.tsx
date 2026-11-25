@@ -15,7 +15,7 @@ import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import { LANGS, resetAudit, setLanguage, tr } from "../../../../../test/i18nHelpers";
 import { translations } from "../../../../../i18n/translations";
-import { FOUR_OUTCOMES, run } from "./fixtures";
+import { FOUR_OUTCOMES, coverage, listCopy, run } from "./fixtures";
 
 vi.mock(
   "../../../../../application/repository/vendorResearch.repository",
@@ -36,6 +36,7 @@ import RunSummary from "../RunSummary";
 const mocks = { latest: vi.mocked(repository.getLatestVendorResearch) };
 
 const CLAUDE_LINE = "Searched with Claude web search";
+const BRAVE_LINE = "Searched with Brave Search";
 const GDELT_LINE = "News searched with the GDELT Project (last 3 months)";
 const GDELT_NAME = "GDELT Project";
 const GDELT_URL = "https://www.gdeltproject.org/";
@@ -97,6 +98,35 @@ describe("the lines that say which search a run used", () => {
     expect(follows(screen.getByText(SEARCHES_LINE), screen.getByText(CLAUDE_LINE))).toBe(true);
     // Claude's search needs no credit of the kind GDELT asks for.
     expect(screen.queryByRole("link", { name: GDELT_NAME })).not.toBeInTheDocument();
+  });
+
+  it("names Brave Search with what the run did, once the details are open, and credits no GDELT", async () => {
+    mocks.latest.mockResolvedValue(searched({ search_engine: "brave" }));
+    renderSummary();
+
+    await screen.findByRole("button", { name: DETAILS });
+    expect(screen.queryByText(BRAVE_LINE)).not.toBeInTheDocument();
+    await openDetails();
+
+    expect(follows(screen.getByText(SEARCHES_LINE), screen.getByText(BRAVE_LINE))).toBe(true);
+    expect(screen.queryByText(CLAUDE_LINE)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: GDELT_NAME })).not.toBeInTheDocument();
+  });
+
+  it("names Brave Search for a run that counted no searches, like Claude's search", async () => {
+    mocks.latest.mockResolvedValue(
+      run({
+        category_summary: FOUR_OUTCOMES,
+        searches_used: 0,
+        pages_read: 0,
+        search_engine: "brave",
+      }),
+    );
+    renderSummary();
+    await openDetails();
+
+    expect(screen.getByText(BRAVE_LINE)).toBeInTheDocument();
+    expect(screen.queryByText(/^Searches: /)).not.toBeInTheDocument();
   });
 
   it("credits the GDELT Project with a link, under the summary and without a click", async () => {
@@ -277,6 +307,207 @@ describe("a category whose risks the cap of the run cut", () => {
   });
 });
 
+// Run 1 of 2026-11-23: the news engine never answered. A category checked on the vendor's own
+// pages only says so, and the run says without a click that its results may be incomplete.
+describe("a run whose news search was not available", () => {
+  const GAP = "News search was not available, so results may be incomplete.";
+  const OWN_PAGES_NOTE =
+    "News search was not available, so this was checked only on the vendor's own pages.";
+  const newsDown = () =>
+    searched({
+      category_summary: [
+        {
+          category: "security_incidents",
+          outcome: "search_failed",
+          note: "The search was not available",
+        },
+        {
+          category: "availability",
+          outcome: "nothing_found",
+          note: "News search was not available; checked on the vendor's own pages only",
+        },
+        {
+          category: "certifications",
+          outcome: "nothing_found",
+          note: "No risks found in the sources reviewed",
+        },
+      ],
+    });
+
+  afterAll(async () => {
+    await setLanguage("en");
+  });
+
+  it("warns on screen, and says under the category that only the vendor's pages were checked", async () => {
+    mocks.latest.mockResolvedValue(newsDown());
+    renderSummary();
+
+    expect(await screen.findByText(GAP)).toBeInTheDocument();
+    await openDetails();
+    const line = await screen.findByText("Availability: nothing found");
+    expect(follows(line, screen.getByText(OWN_PAGES_NOTE))).toBe(true);
+    // A fixed sentence, not the model's words.
+    expect(screen.queryByText("AI note (unverified)")).not.toBeInTheDocument();
+  });
+
+  it("does not warn when the search of a site category alone failed", async () => {
+    mocks.latest.mockResolvedValue(
+      searched({
+        category_summary: [
+          {
+            category: "certifications",
+            outcome: "search_failed",
+            note: "The search was not available",
+          },
+          {
+            category: "security_incidents",
+            outcome: "nothing_found",
+            note: "No risks found in the sources reviewed",
+          },
+        ],
+      }),
+    );
+    renderSummary();
+
+    await screen.findByRole("button", { name: DETAILS });
+    expect(screen.queryByText(GAP)).not.toBeInTheDocument();
+  });
+
+  it.each(LANGS)("says it in %s", async (lang) => {
+    resetAudit();
+    await setLanguage(lang);
+    mocks.latest.mockResolvedValue(newsDown());
+    renderSummary();
+
+    expect(await screen.findByText(tr(lang, GAP))).toBeInTheDocument();
+    expect(translations[lang][GAP]).not.toBe(GAP);
+    await openDetails(tr(lang, DETAILS));
+    expect(await screen.findByText(tr(lang, OWN_PAGES_NOTE))).toBeInTheDocument();
+    expect(translations[lang][OWN_PAGES_NOTE]).not.toBe(OWN_PAGES_NOTE);
+  });
+});
+
+// The lists that held no record are named only for a reader who asks, behind a link whose words
+// are in the language of the page.
+describe("the lists that held no record", () => {
+  const SHOW = "Show all lists";
+  const HIDE = "Hide the lists";
+
+  afterAll(async () => {
+    await setLanguage("en");
+  });
+
+  it.each(LANGS)("opens and closes them with words in %s", async (lang) => {
+    resetAudit();
+    await setLanguage(lang);
+    mocks.latest.mockResolvedValue(searched({ coverage: coverage() }));
+    renderSummary();
+
+    await openDetails(tr(lang, DETAILS));
+
+    for (const words of [SHOW, HIDE]) {
+      expect(translations[lang][words], `${lang}: ${words}`).toEqual(expect.any(String));
+      expect(translations[lang][words]).not.toBe(words);
+    }
+    await userEvent.click(await screen.findByText(tr(lang, SHOW)));
+    expect(await screen.findByText(tr(lang, HIDE))).toBeInTheDocument();
+    expect(screen.queryByText(SHOW)).not.toBeInTheDocument();
+    expect(screen.queryByText(HIDE)).not.toBeInTheDocument();
+  });
+});
+
+describe("a listing in the vendor's favour (the FedRAMP Marketplace)", () => {
+  /** The run of 2026-11-23 for a vendor the Marketplace lists by name: FedRAMP Authorized, High. */
+  const listed = (status: "fedramp_authorized" | "fedramp_in_process" = "fedramp_authorized") =>
+    searched({
+      category_summary: FOUR_OUTCOMES,
+      coverage: coverage({
+        sources: [
+          listCopy("kev"),
+          listCopy("fedramp", {
+            outcome: "found",
+            weak: 1,
+            last_success_at: "2026-11-23T15:18:18.788Z",
+            attestations: [
+              {
+                status,
+                impact: "High",
+                since: "2024-09-09",
+                count: 1,
+                strength: "weak",
+                as_of: "2026-11-23",
+              },
+            ],
+          }),
+        ],
+        lookups: [],
+      }),
+    });
+
+  afterAll(async () => {
+    await setLanguage("en");
+  });
+
+  it("shows it under Certifications, which says no risks were found, never as a risk", async () => {
+    mocks.latest.mockResolvedValue(listed());
+    renderSummary();
+    await openDetails();
+
+    const category = await screen.findByText("Certifications: no risks found");
+    const line = screen.getByText(
+      "Listed in the FedRAMP Marketplace: FedRAMP Authorized since 9 Sept 2024, impact level High. Matched by name only: this may be another company. Data as of 23 Nov 2026.",
+    );
+    expect(follows(category, line)).toBe(true);
+    expect(category.closest("li")).toContainElement(line);
+    expect(screen.queryByText("Certifications: nothing found")).not.toBeInTheDocument();
+    // The checked line names the list among those that held a record.
+    expect(
+      screen.getByText(
+        "Checked 2 public lists and registers. 1 had a record: FedRAMP Marketplace.",
+      ),
+    ).toBeInTheDocument();
+    // No warning on screen: a listing is no gap.
+    expect(screen.queryByText(/could not be checked/)).not.toBeInTheDocument();
+  });
+
+  it("says In Process for a provider the record lists as in process, never authorised", async () => {
+    mocks.latest.mockResolvedValue(listed("fedramp_in_process"));
+    renderSummary();
+    await openDetails();
+
+    expect(
+      await screen.findByText(/^Listed in the FedRAMP Marketplace: FedRAMP In Process since/),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/FedRAMP Authorized/)).not.toBeInTheDocument();
+  });
+
+  it.each(LANGS)("is worded in %s", async (lang) => {
+    resetAudit();
+    await setLanguage(lang);
+    mocks.latest.mockResolvedValue(listed());
+    renderSummary();
+    await openDetails(tr(lang, DETAILS));
+
+    expect(
+      await screen.findByText(
+        new RegExp(
+          `^${tr(
+            lang,
+            "Listed in the FedRAMP Marketplace: {status} since {date}, impact level {impact}.",
+            {
+              status: "FedRAMP Authorized",
+              date: "§",
+              impact: "High",
+            },
+          )
+            .split("§")[0]
+            .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
+        ),
+      ),
+    ).toBeInTheDocument();
+  });
+});
+
 describe("the lines of the engine in German, French and Spanish", () => {
   afterAll(async () => {
     await setLanguage("en");
@@ -319,7 +550,7 @@ describe("the dictionary", () => {
   // The credit is built from the translation of the sentence, so a translation has to keep what
   // the screen finds in it: the name of the project, once, to put the link on.
   it.each(LANGS)("has the words of the engine lines in %s", (lang) => {
-    for (const key of [CLAUDE_LINE, GDELT_LINE]) {
+    for (const key of [CLAUDE_LINE, BRAVE_LINE, GDELT_LINE]) {
       const text = translations[lang][key];
       expect(text, `${lang}: ${key}`).toEqual(expect.any(String));
       expect(text.trim().length).toBeGreaterThan(0);
@@ -328,5 +559,6 @@ describe("the dictionary", () => {
     const sentence = translations[lang][GDELT_LINE];
     expect(sentence.split(GDELT_NAME)).toHaveLength(2);
     expect(translations[lang][CLAUDE_LINE]).toContain("Claude");
+    expect(translations[lang][BRAVE_LINE]).toContain("Brave Search");
   });
 });

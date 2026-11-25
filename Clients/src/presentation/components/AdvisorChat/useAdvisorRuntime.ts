@@ -5,6 +5,7 @@ import { AdvisorDomain, getWelcomeMessage } from "./advisorConfig";
 import { useAdvisorConversationSafe } from "../../../application/contexts/AdvisorConversation.context";
 import { store } from "../../../application/redux/store";
 import { ENV_VARs } from "../../../../env.vars";
+import { CLIENT_DATE_HEADER, clientDate } from "../../../infrastructure/api/clientDate";
 
 // Extended UIMessage type with optional createdAt for our use case
 type ExtendedUIMessage = UIMessage & { createdAt?: Date };
@@ -212,7 +213,10 @@ export const useAdvisorRuntime = (
         api: getChatApiUrl(),
         headers: (): Record<string, string> => {
           const token = store.getState().auth?.authToken;
-          return token ? { Authorization: `Bearer ${token}` } : {};
+          // The user's local date, for days the Advisor records for them.
+          const headers: Record<string, string> = { [CLIENT_DATE_HEADER]: clientDate() };
+          if (token) headers.Authorization = `Bearer ${token}`;
+          return headers;
         },
         body: { llmKeyId: selectedLLMKeyId, parallel: parallelAgents ?? false },
         // Every send goes through here, so the chat can clear an old error.

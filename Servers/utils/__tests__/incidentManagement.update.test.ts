@@ -22,8 +22,9 @@ describe("diffIncidentColumns", () => {
     status: "Closed",
     description: "Unchanged",
     // As pg returns a TIMESTAMP WITHOUT TIME ZONE value (server-local wall clock).
-    approval_date: new Date(2026, 9, 1),
-    occurred_date: new Date(2026, 8, 20),
+    // DATE columns read back as "YYYY-MM-DD".
+    approval_date: "2026-10-01",
+    occurred_date: "2026-09-20",
     project_id: 3,
     approved_by: "Jane Doe",
     archived: false,
@@ -183,33 +184,46 @@ describe("enqueueIncidentUpdatedAutomations", () => {
     jest.clearAllMocks();
   });
 
-  it("enqueues the first active incident_updated automation with old/new replacements", async () => {
-    mockQuery.mockResolvedValueOnce([
-      [
-        {
-          trigger_key: "incident_updated",
-          action_key: "send_email",
-          automation_id: 9,
-          params: { subject: "Incident updated", body: "Changed" },
-        },
-      ],
-      1,
-    ]);
+  const actionRow = (automationId: number, order: number, legacy = false) => ({
+    automation_id: automationId,
+    action_key: order === 1 ? "send_email" : "send_slack",
+    params: { subject: `${automationId}-${order}`, body: "Changed" },
+    order,
+    legacy_first_action_only: legacy,
+  });
+  const subjects = () => mockEnqueue.mock.calls.map(([, data]: any) => data.subject);
+
+  it("enqueues every action of every active incident_updated automation", async () => {
+    mockQuery.mockResolvedValueOnce([actionRow(9, 1), actionRow(9, 2), actionRow(12, 1)]);
     const oldIncident = { status: "Closed" } as any;
     const newIncident = { dataValues: { status: "Investigating" } } as any;
 
     await enqueueIncidentUpdatedAutomations(1, oldIncident, newIncident);
 
     // Runs after commit, outside the update transaction.
-    expect(mockQuery.mock.calls[0][1]).toEqual({ replacements: { organizationId: 1 } });
+    expect(mockQuery.mock.calls[0][1]).toMatchObject({
+      replacements: { organizationId: 1, triggerKey: "incident_updated" },
+      transaction: undefined,
+    });
+    expect(subjects()).toEqual(["9-1", "9-2", "12-1"]);
     expect(mockEnqueue).toHaveBeenCalledWith(
       "send_email",
       expect.objectContaining({ automation_id: 9, organizationId: 1 }),
     );
   });
 
+  it("keeps a legacy-flagged automation to the event's first action", async () => {
+    mockQuery.mockResolvedValueOnce([
+      actionRow(9, 1, true),
+      actionRow(9, 2, true),
+      actionRow(12, 2),
+    ]);
+    await enqueueIncidentUpdatedAutomations(1, {} as any, { dataValues: {} } as any);
+    expect(subjects()).toEqual(["9-1", "12-2"]);
+  });
+
   it("does nothing when the organization has no incident_updated automation", async () => {
-    mockQuery.mockResolvedValueOnce([[], 0]);
+    mockQuery.mockResolvedValueOnce([]);
     await enqueueIncidentUpdatedAutomations(1, {} as any, { dataValues: {} } as any);
     expect(mockEnqueue).not.toHaveBeenCalled();
   });

@@ -29,6 +29,14 @@ export interface SearchResult {
   publishedAt: string | null;
   /** The publisher's name or domain, for news; null for web results. */
   source: string | null;
+  /**
+   * True when the engine's terms allow its text (the title and the snippet) to be used during the
+   * run and not kept: Brave Search (see braveSearch.ts). The web session marks the ledger entry of
+   * such a result (`LedgerEntry.transient`), and the pipeline stores nothing of its text: not in
+   * the evidence of the run, a finding's sources or the trace. It is carried by each result, not by
+   * the engine, so that a result keeps its mark through a wrapper that has switched engines since.
+   */
+  transient?: boolean;
 }
 
 export const MAX_RESULTS = 10;
@@ -43,9 +51,10 @@ export class SearchEngineError extends Error {
 
 /**
  * Who an engine is, as the run record and the cache name it: the search of the Claude and OpenAI
- * providers, the news of the GDELT Project, or a replay of a recording.
+ * providers, Brave Search with an organization's key, the news of the GDELT Project, or a replay
+ * of a recording.
  */
-export type SearchEngineId = "anthropic" | "openai" | "gdelt" | "replay";
+export type SearchEngineId = "anthropic" | "openai" | "brave" | "gdelt" | "replay";
 
 export interface SearchEngine {
   /** Which engine this is. A wrapper reports the engine that answers now. */

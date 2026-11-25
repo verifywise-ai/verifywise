@@ -3,6 +3,8 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Stack, Typography, useTheme, Box, IconButton } from "@mui/material";
 import { Plus, X, RotateCcw } from "lucide-react";
 import SelectComponent from "../Inputs/Select";
+import AutoCompleteField from "../Inputs/Autocomplete";
+import { incidentLinkLabel } from "./incidentLinkLabel";
 import { getAllEntities } from "../../../application/repository/entity.repository";
 import { getAllVendors } from "../../../application/repository/vendor.repository";
 import { getAllPolicies } from "../../../application/repository/policy.repository";
@@ -21,11 +23,20 @@ interface EntityLinkSelectorProps {
   disabled?: boolean;
 }
 
+/** Link types picked directly from one list (no use case or framework step). */
+const DIRECT_TYPES = ["vendor", "model", "policy", "incident"];
+
+interface IncidentOption {
+  _id: number;
+  name: string;
+}
+
 // Top-level entity type options
 const ENTITY_TYPE_OPTIONS = [
   { _id: "vendor", name: "Vendor" },
   { _id: "model", name: "Model" },
   { _id: "policy", name: "Policy" },
+  { _id: "incident", name: "Incident" },
   { _id: "use_case", name: "Use-case" },
   { _id: "framework", name: "Framework (Organizational)" },
 ];
@@ -47,6 +58,9 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
   const [vendors, setVendors] = useState<any[]>([]);
   const [models, setModels] = useState<any[]>([]);
   const [policies, setPolicies] = useState<any[]>([]);
+  const [incidents, setIncidents] = useState<IncidentOption[]>([]);
+  // The empty message waits for a successful read; a failed one says so.
+  const [incidentsLoad, setIncidentsLoad] = useState<"loading" | "ready" | "error">("loading");
   const [projects, setProjects] = useState<any[]>([]);
   const [frameworks, setFrameworks] = useState<any[]>([]);
   const [projectFrameworks, setProjectFrameworks] = useState<any[]>([]);
@@ -85,6 +99,23 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
       setPolicies(data || []);
     } catch (error) {
       console.error("Error fetching policies:", error);
+    }
+  }, []);
+
+  // Fetch incidents. Archived ones cannot be linked, so they are left out.
+  const fetchIncidents = useCallback(async () => {
+    try {
+      const response = await getAllEntities({ routeUrl: "/ai-incident-managements" });
+      const rows: any[] = Array.isArray(response?.data) ? response.data : [];
+      setIncidents(
+        rows
+          .filter((incident) => incident?.id && incident.archived !== true)
+          .map((incident) => ({ _id: incident.id, name: incidentLinkLabel(incident) })),
+      );
+      setIncidentsLoad("ready");
+    } catch (error) {
+      console.error("Error fetching incidents:", error);
+      setIncidentsLoad("error");
     }
   }, []);
 
@@ -409,9 +440,10 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
     fetchVendors();
     fetchModels();
     fetchPolicies();
+    fetchIncidents();
     fetchProjects();
     fetchFrameworks();
-  }, [fetchVendors, fetchModels, fetchPolicies, fetchProjects, fetchFrameworks]);
+  }, [fetchVendors, fetchModels, fetchPolicies, fetchIncidents, fetchProjects, fetchFrameworks]);
 
   // Load project frameworks when project is selected
   useEffect(() => {
@@ -485,10 +517,12 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
           _id: p.id,
           name: p.title || `Policy ${p.id}`,
         }));
+      case "incident":
+        return incidents;
       default:
         return [];
     }
-  }, [selectedTopLevel, vendors, models, policies]);
+  }, [selectedTopLevel, vendors, models, policies, incidents]);
 
   // Get project options
   const projectOptions = useMemo(() => {
@@ -518,7 +552,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
   const canAddLink = useMemo(() => {
     if (!selectedTopLevel) return false;
 
-    if (["vendor", "model", "policy"].includes(selectedTopLevel)) {
+    if (DIRECT_TYPES.includes(selectedTopLevel)) {
       return !!selectedEntityId;
     }
 
@@ -540,7 +574,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
     let entityName: string;
     let entityId: number;
 
-    if (["vendor", "model", "policy"].includes(selectedTopLevel)) {
+    if (DIRECT_TYPES.includes(selectedTopLevel)) {
       entityType = selectedTopLevel as EntityType;
       const option = directEntityOptions.find((opt) => opt._id === selectedEntityId);
       entityName = option?.name || `${selectedTopLevel} #${selectedEntityId}`;
@@ -610,6 +644,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
       vendor: "Vendor",
       model: "Model",
       policy: "Policy",
+      incident: "Incident",
       nist_subcategory: "NIST AI RMF",
       iso42001_subclause: "ISO 42001 Clause",
       iso42001_annexcategory: "ISO 42001 Annex",
@@ -648,8 +683,28 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
 
     if (!selectedTopLevel) return dropdowns;
 
+    // Incidents can be many: a searchable list (by ID or use case)
+    if (selectedTopLevel === "incident") {
+      dropdowns.push(
+        <AutoCompleteField<IncidentOption>
+          key="incident"
+          id="incident-link-select"
+          placeholder={incidentsLoad === "loading" ? "Loading..." : "Search incidents"}
+          options={incidents}
+          value={incidents.find((option) => option._id === selectedEntityId) ?? null}
+          getOptionLabel={(option) => option.name}
+          isOptionEqualToValue={(option, selected) => option._id === selected._id}
+          onChange={(_event, option) => setSelectedEntityId(option ? option._id : "")}
+          disabled={disabled || incidents.length === 0}
+          slotProps={{ listbox: { "data-vw-no-translate": "true" } as any }}
+          sx={{ width: "280px" }}
+        />,
+      );
+      return dropdowns;
+    }
+
     // Direct entity selection (vendor, model, policy)
-    if (["vendor", "model", "policy"].includes(selectedTopLevel)) {
+    if (DIRECT_TYPES.includes(selectedTopLevel)) {
       dropdowns.push(
         <SelectComponent
           key="direct-entity"
@@ -778,7 +833,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
         fontSize={"13px"}
         sx={{ margin: 0, height: "22px" }}
       >
-        Linked Items
+        Linked items
       </Typography>
 
       {/* Display existing links */}
@@ -925,6 +980,29 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
           }}
         >
           No use-cases available
+        </Typography>
+      )}
+
+      {selectedTopLevel === "incident" && incidentsLoad === "error" && (
+        <Typography
+          sx={{
+            fontSize: "12px",
+            color: theme.palette.error.main,
+          }}
+        >
+          Could not load incidents.
+        </Typography>
+      )}
+
+      {selectedTopLevel === "incident" && incidentsLoad === "ready" && incidents.length === 0 && (
+        <Typography
+          sx={{
+            fontSize: "12px",
+            color: theme.palette.text.secondary,
+            fontStyle: "italic",
+          }}
+        >
+          No incidents to link
         </Typography>
       )}
 

@@ -11,16 +11,19 @@ import {
   useTheme,
   Divider,
 } from "@mui/material";
+import { X } from "lucide-react";
 import Toggle from "../../Inputs/Toggle";
 import Checkbox from "../../Inputs/Checkbox";
 import dayjs, { Dayjs } from "dayjs";
 import { CustomizableButton } from "../../button/customizable-button";
-import { ReactComponent as CloseIcon } from "../../../assets/icons/close.svg";
 import { ReactComponent as SaveIconSVGWhite } from "../../../assets/icons/save-white.svg";
 import { getAllEntities } from "../../../../application/repository/entity.repository";
 import { useProjects } from "../../../../application/hooks/useProjects";
 import { User } from "../../../../domain/types/User";
 import { Project } from "../../../../domain/types/Project";
+import { logEngine } from "../../../../application/tools/log.engine";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import { focusFormFieldById } from "../../../../application/utils/formValidationFocus";
@@ -46,9 +49,11 @@ import {
   HarmCategory,
 } from "../../../../domain/enums/aiIncidentManagement.enum";
 import { HistorySidebar } from "../../Common/HistorySidebar";
+import LinkedTasks from "../../LinkedTasks";
 import TabBar from "../../TabBar";
 import { TabContext } from "@mui/lab";
 import JiraIssueChip from "../../JiraIssueChip";
+import { toLocalDateOnly } from "../../../tools/isoDateToString";
 import type { JiraIncidentLink } from "../../../../application/repository/jiraIncidents.repository";
 
 // To
@@ -84,8 +89,9 @@ interface SideDrawerIncidentProps {
 
 export interface NewIncidentFormValues {
   incident_id?: string;
+  /** The use case's title as stored (free text; older incidents and Jira imports have only this). */
   ai_project: string;
-  /** FK to projects — set alongside ai_project when a use case is picked (issue #4583). */
+  /** FK to projects: the use case picked, with its title copied into ai_project (issue #4583). */
   project_id?: number | string | null;
   /** FK to model_inventories — affected model (issue #4583). */
   model_inventory_id?: number | string | null;
@@ -94,9 +100,19 @@ export interface NewIncidentFormValues {
   type: string;
   severity: Severity;
   status: IncidentManagementStatus;
+  /** "YYYY-MM-DD" */
   occurred_date: string;
+  /** "YYYY-MM-DD" */
   date_detected: string;
+  /**
+   * The reporter's name. Set from the picked user; older incidents and Jira
+   * imports have only this text (no reporter_id).
+   */
   reporter: string;
+  /** FK to users: the reporter picked from the organization's users. */
+  reporter_id?: number | string | null;
+  /** The reporter_id user's full name as loaded (display only, never sent). */
+  reporter_name?: string | null;
   categories_of_harm: string[];
   affected_persons_groups?: string;
   description: string;
@@ -117,7 +133,13 @@ export interface NewIncidentFormValues {
   expected_updated_at?: string;
 }
 
-const initialState: NewIncidentFormValues = {
+/**
+ * The values of a new incident. Dates default to the user's own today,
+ * computed when the drawer opens (not when the page loaded, and not the UTC
+ * date, which is tomorrow in the US evening and fails "cannot be in the
+ * future").
+ */
+const createInitialState = (): NewIncidentFormValues => ({
   ai_project: "",
   project_id: "",
   model_inventory_id: "",
@@ -125,9 +147,10 @@ const initialState: NewIncidentFormValues = {
   type: "",
   severity: Severity.MINOR,
   status: IncidentManagementStatus.OPEN,
-  occurred_date: new Date().toISOString().split("T")[0],
-  date_detected: new Date().toISOString().split("T")[0],
+  occurred_date: toLocalDateOnly(new Date()),
+  date_detected: toLocalDateOnly(new Date()),
   reporter: "",
+  reporter_id: "",
   categories_of_harm: [],
   description: "",
   affected_persons_groups: "",
@@ -140,7 +163,7 @@ const initialState: NewIncidentFormValues = {
   approved_by: "",
   approval_date: "",
   approval_notes: "",
-};
+});
 
 /** Normalise FK picker values ("" / null / numeric strings) to integer ids or null (issue #4583). */
 const toId = (v: unknown) => (v === undefined || v === null || v === "" ? null : Number(v));
@@ -149,7 +172,26 @@ const FK_FIELDS = new Set<keyof NewIncidentFormValues>([
   "project_id",
   "model_inventory_id",
   "assignee_id",
+  "reporter_id",
 ]);
+
+/**
+ * The reporter picker's option for an incident whose reporter is not one of
+ * the listed users: a name stored as text only (older incidents, Jira
+ * imports) or a user who has left the organization. Picking it keeps the
+ * stored reporter.
+ */
+export const STORED_REPORTER_OPTION = "__stored_reporter__";
+
+/**
+ * The use case picker's option for an incident whose use case is stored as
+ * text only (older incidents, Jira imports), with no project_id. Picking it
+ * keeps the stored text.
+ */
+export const STORED_USE_CASE_OPTION = "__stored_use_case__";
+
+/** The drawer's name for the use case field, on the form and in messages. */
+const USE_CASE_LABEL = "Use case";
 
 /**
  * Whether two form values are the same for change detection: "" / null /
@@ -175,8 +217,8 @@ export const isSameFormValue = (
 
 /** The drawer's label for each editable field, as shown on the form. */
 export const INCIDENT_FIELD_LABELS: Partial<Record<keyof NewIncidentFormValues, string>> = {
-  ai_project: "AI use case or framework",
-  project_id: "AI use case or framework",
+  ai_project: USE_CASE_LABEL,
+  project_id: USE_CASE_LABEL,
   type: "Incident type",
   severity: "Severity",
   status: "Status",
@@ -185,6 +227,7 @@ export const INCIDENT_FIELD_LABELS: Partial<Record<keyof NewIncidentFormValues, 
   occurred_date: "Occurred date",
   date_detected: "Detected date",
   reporter: "Reporter",
+  reporter_id: "Reporter",
   model_system_version: "Model / system version",
   categories_of_harm: "Categories of harm",
   affected_persons_groups: "Affected persons / groups",
@@ -209,12 +252,13 @@ const NON_EDITABLE_FIELDS = new Set<keyof NewIncidentFormValues>([
   "expected_updated_at",
   "approved_by",
   "approval_date",
+  "reporter_name",
 ]);
 
 const severityOptions = [
   { _id: Severity.MINOR, name: "Minor" },
   { _id: Severity.SERIOUS, name: "Serious" },
-  { _id: Severity.VERY_SERIOUS, name: "Very Serious" },
+  { _id: Severity.VERY_SERIOUS, name: "Very serious" },
 ];
 
 const statusOptions = [
@@ -230,14 +274,21 @@ const approvalStatusOptions = [
   { _id: AIIncidentManagementApprovalStatus.PENDING, name: "Pending" },
   { _id: AIIncidentManagementApprovalStatus.APPROVED, name: "Approved" },
   { _id: AIIncidentManagementApprovalStatus.REJECTED, name: "Rejected" },
-  {
-    _id: AIIncidentManagementApprovalStatus.NOT_REQUIRED,
-    name: "Not Required",
-  },
+  { _id: AIIncidentManagementApprovalStatus.NOT_REQUIRED, name: "Not required" },
 ];
 
-const incidentTypes = Object.values(IncidentType);
+// Values are sent as stored; the option text is translated on screen.
+const incidentTypeOptions = Object.values(IncidentType).map((type) => ({ _id: type, name: type }));
 const harmCategories = Object.values(HarmCategory);
+
+/** Section heading styles: sentence case, small and muted. */
+const sectionTitleSx = { fontSize: 13, fontWeight: 600 } as const;
+const sectionHintSx = { fontSize: 12, fontWeight: 400 } as const;
+/** One field of a two-field row: full width on a phone, half from sm up. */
+const halfFieldSx = { gap: "6px", width: { xs: "100%", sm: "50%" }, minWidth: 0 } as const;
+const fieldRowDirection = { xs: "column", sm: "row" } as const;
+
+const DRAWER_TITLE_ID = "incident-drawer-title";
 
 const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
   isOpen,
@@ -252,9 +303,11 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
   canApprove = true,
 }) => {
   const theme = useTheme();
-  const [values, setValues] = useState<NewIncidentFormValues>(initialData || initialState);
+  const { t } = useTranslation();
+  const [values, setValues] = useState<NewIncidentFormValues>(
+    () => initialData || createInitialState(),
+  );
   const [users, setUsers] = useState<User[]>([]);
-  const [, setIsLoadingUsers] = useState(false);
   const [modelInventories, setModelInventories] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("details");
   const [isSaving, setIsSaving] = useState(false);
@@ -278,7 +331,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
       return isEdit && !!baseline && isSameFormValue(key, v, baseline[key]);
     };
     return {
-      ai_project: (v: unknown) => (!v ? "Project is required." : ""),
+      ai_project: (v: unknown) => (!v ? "Use case is required." : ""),
       type: (v: unknown) => (!v && !unchanged("type", v) ? INCIDENT_TYPE_REQUIRED_MESSAGE : ""),
       severity: (v: unknown) =>
         !v && !unchanged("severity", v) ? INCIDENT_SEVERITY_REQUIRED_MESSAGE : "",
@@ -300,7 +353,9 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
           checkFuture: !detectedUnchanged,
         });
       },
-      reporter: (v: unknown) => (!v ? "Reporter is required." : ""),
+      // A picked user or, on older incidents, the stored reporter text.
+      reporter: (v: unknown, all: NewIncidentFormValues) =>
+        !v && toId(all.reporter_id) === null ? "Reporter is required." : "",
       model_system_version: (v: unknown) =>
         typeof v === "string" &&
         v.length > INCIDENT_TEXT_MAX_LENGTH &&
@@ -311,7 +366,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
         unchanged("description", v) ? "" : validateIncidentDescription(v),
       categories_of_harm: (v: unknown) => {
         const cats = v as string[];
-        return !cats || cats.length < 1 ? "Please select at least one Category of Harm." : "";
+        return !cats || cats.length < 1 ? "Select at least one category of harm." : "";
       },
     };
   }, [isEdit]);
@@ -334,16 +389,22 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
     return [...harmCategories, ...new Set(extra)] as string[];
   }, [isEdit, initialData]);
 
-  // Use the useProjects hook to get approved projects only
-  const { approvedProjects } = useProjects();
+  // Every use case the user can see: the server accepts any use case of the
+  // organization (not only approved ones), so none is left out of the picker.
+  const { data: projects } = useProjects();
 
   // A newly opened drawer is a new draft: forget any save still in flight.
+  // A new incident starts from fresh defaults, so its dates are the user's
+  // today when they open it.
   useEffect(() => {
     if (isOpen) {
       draftSeqRef.current += 1;
       isSavingRef.current = false;
       setIsSaving(false);
+      if (!initialData) setValues(createInitialState());
     }
+    // Only on open: initialData changes are handled below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
   // Fetch Users
@@ -374,15 +435,17 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
     });
   }, [initialData]);
 
+  // A failed list leaves its picker empty (a stored value still shows); the
+  // failure is logged, and the server checks every reference on save.
   const fetchUsers = async () => {
-    setIsLoadingUsers(true);
     try {
       const response = await getAllEntities({ routeUrl: "/users" });
       if (response?.data) setUsers(response.data);
     } catch (error) {
-      console.error("Error fetching users:", error);
-    } finally {
-      setIsLoadingUsers(false);
+      logEngine({
+        type: "error",
+        message: `Failed to load users for the incident drawer: ${error}`,
+      });
     }
   };
 
@@ -392,40 +455,124 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
       const response = await getAllEntities({ routeUrl: "/modelInventory" });
       if (response?.data) setModelInventories(response.data);
     } catch (error) {
-      console.error("Error fetching model inventory:", error);
+      logEngine({
+        type: "error",
+        message: `Failed to load models for the incident drawer: ${error}`,
+      });
     }
   };
 
+  // Use case options keyed by project id. Titles are not unique, so a title
+  // shared by several use cases gets the use case's ID after it. An incident
+  // opened with a use case that is not listed (stored as text only, or a use
+  // case the user cannot see) keeps it as an extra option, built from the
+  // incident as opened, so it still shows and can be picked again.
+  // Rejected use cases are left out; pending ones stay (they can have
+  // incidents while awaiting approval). A stored rejected one still shows as
+  // the extra option below.
+  const projectList = useMemo<Project[]>(
+    () => (Array.isArray(projects) ? projects.filter((p) => p.approval_status !== "rejected") : []),
+    [projects],
+  );
+  const baselineProjectId = toId(initialData?.project_id);
+  const baselineProjectLabel = initialData?.ai_project || "";
+  const baselineProjectIsListed =
+    baselineProjectId !== null && projectList.some((p) => p.id === baselineProjectId);
+  const storedProjectOptionId: string | number = baselineProjectId ?? STORED_USE_CASE_OPTION;
+  const hasStoredProjectOption = !baselineProjectIsListed && !!baselineProjectLabel;
   const projectOptions = useMemo(() => {
-    // Use a Set to track unique project titles
-    const seen = new Set<string>();
+    const titleCounts = new Map<string, number>();
+    projectList.forEach((p) =>
+      titleCounts.set(p.project_title, (titleCounts.get(p.project_title) ?? 0) + 1),
+    );
+    const options: { _id: string | number; name: string; noTranslate: true }[] = projectList.map(
+      (p) => ({
+        _id: p.id,
+        name:
+          (titleCounts.get(p.project_title) ?? 0) > 1 && p.uc_id
+            ? `${p.project_title} (${p.uc_id})`
+            : p.project_title,
+        noTranslate: true,
+      }),
+    );
+    if (hasStoredProjectOption) {
+      options.unshift({
+        _id: storedProjectOptionId,
+        name: baselineProjectLabel,
+        noTranslate: true,
+      });
+    }
+    return options;
+  }, [projectList, hasStoredProjectOption, storedProjectOptionId, baselineProjectLabel]);
+  const projectValue = toId(values.project_id) ?? (values.ai_project ? STORED_USE_CASE_OPTION : "");
 
-    return Array.isArray(approvedProjects)
-      ? approvedProjects
-          .filter((p: Project) => {
-            // Only keep the first occurrence of each project_title
-            if (seen.has(p.project_title)) return false;
-            seen.add(p.project_title);
-            return true;
-          })
-          .map((p: Project) => ({
-            _id: p.project_title,
-            name: p.project_title,
-          }))
-      : [];
-  }, [approvedProjects]);
+  // Reporter options keyed by user id. An incident opened with a reporter who
+  // is not a listed user (text only, or someone who left) keeps that reporter
+  // as an extra option, built from the incident as opened (initialData), so
+  // the user can go back to it after picking someone else.
+  const reporterId = toId(values.reporter_id);
+  const baselineReporterId = toId(initialData?.reporter_id);
+  const baselineReporterLabel = initialData
+    ? initialData.reporter_name || initialData.reporter || ""
+    : "";
+  const baselineReporterIsListed =
+    baselineReporterId !== null && users.some((u) => u.id === baselineReporterId);
+  const storedReporterOptionId: string | number = baselineReporterId ?? STORED_REPORTER_OPTION;
+  const hasStoredReporterOption = !baselineReporterIsListed && !!baselineReporterLabel;
+  const reporterOptions = useMemo(() => {
+    const options: { _id: string | number; name: string; noTranslate?: boolean }[] = users.map(
+      (u) => ({
+        _id: u.id,
+        name: `${u.name} ${u.surname}`.trim(),
+        noTranslate: true,
+      }),
+    );
+    if (hasStoredReporterOption) {
+      options.unshift({
+        _id: storedReporterOptionId,
+        name: baselineReporterLabel,
+        noTranslate: true,
+      });
+    }
+    return options;
+  }, [users, hasStoredReporterOption, storedReporterOptionId, baselineReporterLabel]);
+  const reporterValue = reporterId ?? (values.reporter ? STORED_REPORTER_OPTION : "");
 
-  const userOptions = useMemo(
-    () => users.map((u) => ({ _id: u.name, name: `${u.name} ${u.surname}` })),
-    [users],
+  const handleReporterChange = useCallback(
+    (e: any) => {
+      const picked = e.target.value;
+      setValues((prev) => {
+        if (hasStoredReporterOption && String(picked) === String(storedReporterOptionId)) {
+          // Back to the reporter the incident was opened with.
+          if (!initialData) return prev;
+          return {
+            ...prev,
+            reporter_id: initialData.reporter_id,
+            reporter: initialData.reporter,
+            reporter_name: initialData.reporter_name,
+          };
+        }
+        const user = users.find((u) => u.id === Number(picked));
+        if (!user) return prev;
+        // The server writes the user's full name into the reporter text too.
+        return {
+          ...prev,
+          reporter_id: user.id,
+          reporter: `${user.name} ${user.surname}`.trim(),
+          reporter_name: `${user.name} ${user.surname}`.trim(),
+        };
+      });
+      clearFieldError("reporter");
+    },
+    [users, clearFieldError, hasStoredReporterOption, storedReporterOptionId, initialData],
   );
 
   // Owner/assignee options keyed by user id (issue #4583)
   const assigneeOptions = useMemo(
     () => [
       // "(none)" clears the owner FK — '' is normalised to null on save (issue #4583)
-      { _id: "" as string | number, name: "(none)" },
-      ...users.map((u) => ({ _id: u.id, name: `${u.name} ${u.surname}` })),
+      { _id: "" as string | number, name: "(none)", noTranslate: false },
+      ...users.map((u) => ({ _id: u.id, name: `${u.name} ${u.surname}`, noTranslate: true })),
     ],
     [users],
   );
@@ -434,29 +581,38 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
   const modelInventoryOptions = useMemo(
     () => [
       // "(none)" clears the affected-model FK — '' is normalised to null on save (issue #4583)
-      { _id: "" as string | number, name: "(none)" },
+      { _id: "" as string | number, name: "(none)", noTranslate: false },
       ...modelInventories.map((m) => ({
         _id: m.id,
         name: [m.provider, m.model].filter(Boolean).join(" "),
+        noTranslate: true,
       })),
     ],
     [modelInventories],
   );
 
-  // Use-case select keeps the free-text ai_project (backward compatible) and
-  // also records the project FK (issue #4583).
+  // The use case is picked by id (project_id); its title is copied into the
+  // free-text ai_project, which the server requires and older incidents use.
   const handleProjectChange = useCallback(
     (e: any) => {
-      const title = e.target.value;
-      const project = (approvedProjects as any[]).find((p) => p.project_title === title);
-      setValues((prev) => ({
-        ...prev,
-        ai_project: title,
-        project_id: project?.id ?? "",
-      }));
+      const picked = e.target.value;
+      setValues((prev) => {
+        if (hasStoredProjectOption && String(picked) === String(storedProjectOptionId)) {
+          // Back to the use case the incident was opened with.
+          if (!initialData) return prev;
+          return {
+            ...prev,
+            ai_project: initialData.ai_project,
+            project_id: initialData.project_id,
+          };
+        }
+        const project = projectList.find((p) => p.id === Number(picked));
+        if (!project) return prev;
+        return { ...prev, ai_project: project.project_title, project_id: project.id };
+      });
       clearFieldError("ai_project");
     },
-    [approvedProjects, clearFieldError],
+    [projectList, clearFieldError, hasStoredProjectOption, storedProjectOptionId, initialData],
   );
 
   const handleFieldChange = useCallback(
@@ -505,7 +661,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
     draftSeqRef.current += 1;
     setIsOpen(false);
     baselineRef.current = null;
-    setValues(initialState);
+    setValues(createInitialState());
     resetErrors();
     setActiveTab("details");
   };
@@ -529,13 +685,14 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
         project_id: toId(values.project_id),
         model_inventory_id: toId(values.model_inventory_id),
         assignee_id: toId(values.assignee_id),
+        reporter_id: toId(values.reporter_id),
       };
       // When editing, send only what the user changed (plus the version), so
       // a save never writes back stale copies of fields someone else changed.
       const baseline = baselineRef.current;
       let body: Partial<NewIncidentFormValues> = Object.fromEntries(
         Object.entries(formData).filter(
-          ([key]) => key !== "approved_by" && key !== "approval_date",
+          ([key]) => key !== "approved_by" && key !== "approval_date" && key !== "reporter_name",
         ),
       );
       if (isEdit && baseline) {
@@ -543,6 +700,14 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
         for (const key of Object.keys(formData) as (keyof NewIncidentFormValues)[]) {
           if (NON_EDITABLE_FIELDS.has(key)) continue;
           if (!isSameFormValue(key, formData[key], baseline[key])) changed[key] = formData[key];
+        }
+        // The reporter is one value in two fields: send both whenever either
+        // changed. A reporter text alone tells the server the reporter is no
+        // longer a user (re-picking the original user after a rename changes
+        // only the text); with the id, the server writes the user's name.
+        if ("reporter" in changed || "reporter_id" in changed) {
+          changed.reporter = formData.reporter;
+          changed.reporter_id = formData.reporter_id;
         }
         if (values.expected_updated_at) changed.expected_updated_at = values.expected_updated_at;
         body = changed as Partial<NewIncidentFormValues>;
@@ -581,79 +746,105 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
 
   useModalKeyHandling({ isOpen, onClose: handleClose });
 
+  const drawerTitle = isViewMode
+    ? "View incident"
+    : isApprovalOnly
+      ? "Record approval"
+      : isEdit
+        ? "Edit incident"
+        : "Create new incident";
+
+  const sectionHeading = (title: string, hint: string) => (
+    <Stack direction="row" gap="8px" alignItems="baseline" flexWrap="wrap">
+      <Typography component="h3" sx={{ ...sectionTitleSx, color: theme.palette.text.primary }}>
+        {title}
+      </Typography>
+      <Typography sx={{ ...sectionHintSx, color: theme.palette.text.tertiary }}>{hint}</Typography>
+    </Stack>
+  );
+
+  const sectionDivider = (
+    <Box sx={{ py: "12px" }}>
+      <Divider sx={{ mx: "-20px" }} />
+    </Box>
+  );
+
   return (
     <Drawer
       anchor="right"
       open={isOpen}
       onClose={handleClose}
+      slotProps={{
+        paper: { "role": "dialog", "aria-modal": true, "aria-labelledby": DRAWER_TITLE_ID },
+      }}
       sx={{
         "margin": 0,
         "& .MuiDrawer-paper": {
           margin: 0,
           borderRadius: 0,
+          width: "min(700px, 100vw)",
         },
       }}
     >
       <Stack
         sx={{
-          width: 700,
+          width: "100%",
           maxHeight: "100vh",
           overflowY: "auto",
-          p: theme.spacing(10),
+          p: "20px",
           bgcolor: theme.palette.background.paper,
         }}
       >
-        {/* Header */}
-
-        {mode !== "view" && (
-          <>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
-              <Stack direction="row" alignItems="center" spacing={1}>
-                <Typography fontWeight={600} color={theme.palette.text.primary}>
-                  {isApprovalOnly
-                    ? "Record approval"
-                    : isEdit
-                      ? "Edit incident"
-                      : "Create new incident"}
-                </Typography>
-                {isEdit && values.incident_id && (
-                  <Typography
-                    fontWeight={400}
-                    fontSize={14}
-                    sx={{
-                      ml: 1,
-                    }}
-                  >
-                    <Typography component="span" color={theme.palette.text.secondary} fontSize={14}>
-                      (Incident ID:{" "}
-                    </Typography>
-                    <Typography component="span" color={theme.palette.text.tertiary} fontSize={14}>
-                      {values.incident_id})
-                    </Typography>
-                  </Typography>
-                )}
-                {isEdit && jiraLink && <JiraIssueChip link={jiraLink} />}
-              </Stack>
-              <Box onClick={handleClose} sx={{ cursor: "pointer" }}>
-                <CloseIcon />
-              </Box>
-            </Stack>
-            <Divider
-              sx={{
-                mb: 4,
-                mx: `calc(-1 * ${theme.spacing(10)})`,
-              }}
-            />
-          </>
-        )}
+        {/* Header, in every mode */}
+        <Stack
+          direction="row"
+          justifyContent="space-between"
+          alignItems="center"
+          gap="8px"
+          mb="6px"
+        >
+          <Stack direction="row" alignItems="center" gap="8px" flexWrap="wrap" minWidth={0}>
+            <Typography
+              id={DRAWER_TITLE_ID}
+              component="h2"
+              fontWeight={600}
+              color={theme.palette.text.primary}
+            >
+              {drawerTitle}
+            </Typography>
+            {isEdit && values.incident_id && (
+              <Typography
+                component="span"
+                fontSize={14}
+                color={theme.palette.text.secondary}
+                data-vw-no-translate="true"
+              >
+                {fill(t("(Incident ID: {id})"), { id: values.incident_id })}
+              </Typography>
+            )}
+            {isEdit && jiraLink && <JiraIssueChip link={jiraLink} />}
+          </Stack>
+          <CustomizableButton
+            variant="text"
+            iconOnly
+            ariaLabel="Close"
+            onClick={handleClose}
+            isDisabled={isSaving}
+            testId="incident-drawer-close"
+          >
+            <X size={16} strokeWidth={1.5} />
+          </CustomizableButton>
+        </Stack>
+        <Divider sx={{ mb: "8px", mx: "-20px" }} />
 
         {/* TabBar for edit mode */}
         {isEdit && incidentId && (
           <TabContext value={activeTab}>
-            <Box sx={{ marginBottom: 3 }}>
+            <Box sx={{ mb: "6px" }}>
               <TabBar
                 tabs={[
                   { label: "Incident details", value: "details", icon: "AlertTriangle" },
+                  { label: "Linked tasks", value: "tasks", icon: "CheckSquare" },
                   { label: "Activity", value: "activity", icon: "History" },
                 ]}
                 activeTab={activeTab}
@@ -666,43 +857,30 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
         {/* Activity tab content */}
         {activeTab === "activity" && isEdit && incidentId ? (
           <HistorySidebar inline isOpen={true} entityType="incident" entityId={incidentId} />
+        ) : activeTab === "tasks" && isEdit && incidentId ? (
+          <Box sx={{ pt: "8px" }}>
+            <LinkedTasks
+              entityType="incident"
+              entityId={incidentId}
+              emptyMessage="No linked tasks you can see."
+            />
+          </Box>
         ) : (
           <form onSubmit={handleSaveIncident}>
-            <Stack spacing={4} width="100%">
-              {/* SECTION 1: INCIDENT INFORMATION */}
-              <Stack spacing={4}>
-                <Stack direction="row" spacing={1} alignItems="baseline">
-                  <Typography
-                    sx={{
-                      fontSize: 12,
-                      fontWeight: 600,
-                      textTransform: "uppercase",
-                      color: theme.palette.text.secondary,
-                      letterSpacing: "0.5px",
-                    }}
-                  >
-                    INCIDENT INFORMATION
-                  </Typography>
-                  <Typography
-                    sx={{
-                      fontSize: 12,
-                      fontWeight: 400,
-                      color: theme.palette.text.tertiary,
-                    }}
-                  >
-                    (Basic incident details)
-                  </Typography>
-                </Stack>
+            <Stack gap="8px" width="100%">
+              {/* Section 1: incident information */}
+              <Stack gap="8px">
+                {sectionHeading("Incident information", "Basic incident details")}
 
-                {/* Row: AI Project + Incident Type */}
-                <Stack direction={"row"} gap={theme.spacing(8)} sx={{ mt: 2 }}>
-                  <Stack sx={{ gap: 3, width: "50%" }}>
+                {/* Row: use case + incident type */}
+                <Stack direction={fieldRowDirection} gap="16px" sx={{ mt: "4px" }}>
+                  <Stack sx={halfFieldSx}>
                     <SelectComponent
                       id="ai_project"
-                      label="AI use case or framework"
-                      placeholder="Select AI use case or framework"
+                      label={USE_CASE_LABEL}
+                      placeholder="Select use case"
                       items={projectOptions}
-                      value={values.ai_project}
+                      value={projectValue}
                       onChange={handleProjectChange}
                       error={errors.ai_project}
                       isRequired
@@ -710,15 +888,12 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                       disabled={detailsDisabled}
                     />
                   </Stack>
-                  <Stack sx={{ gap: 3, width: "50%" }}>
+                  <Stack sx={halfFieldSx}>
                     <SelectComponent
                       id="type"
                       label="Incident type"
                       placeholder="Select incident type"
-                      items={incidentTypes.map((t) => ({
-                        _id: t,
-                        name: t,
-                      }))}
+                      items={incidentTypeOptions}
                       value={values.type}
                       onChange={handleFieldChange("type")}
                       error={errors.type}
@@ -729,9 +904,9 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                   </Stack>
                 </Stack>
 
-                {/* Row: Severity + Status */}
-                <Stack direction={"row"} gap={theme.spacing(8)} sx={{ mt: 2 }}>
-                  <Stack sx={{ gap: 3, width: "50%" }}>
+                {/* Row: severity + status */}
+                <Stack direction={fieldRowDirection} gap="16px" sx={{ mt: "4px" }}>
+                  <Stack sx={halfFieldSx}>
                     <SelectComponent
                       id="severity"
                       label="Severity"
@@ -745,7 +920,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                       disabled={detailsDisabled}
                     />
                   </Stack>
-                  <Stack sx={{ gap: 3, width: "50%" }}>
+                  <Stack sx={halfFieldSx}>
                     <SelectComponent
                       id="status"
                       label="Status"
@@ -760,9 +935,9 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                   </Stack>
                 </Stack>
 
-                {/* Row: Affected model + Owner (issue #4583 FK pickers) */}
-                <Stack direction={"row"} gap={theme.spacing(8)} sx={{ mt: 2 }}>
-                  <Stack sx={{ gap: 3, width: "50%", minWidth: 0 }}>
+                {/* Row: affected model + owner (issue #4583 FK pickers) */}
+                <Stack direction={fieldRowDirection} gap="16px" sx={{ mt: "4px" }}>
+                  <Stack sx={halfFieldSx}>
                     <SelectComponent
                       id="model_inventory_id"
                       label="Affected model"
@@ -775,7 +950,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                       disabled={detailsDisabled}
                     />
                   </Stack>
-                  <Stack sx={{ gap: 3, width: "50%", minWidth: 0 }}>
+                  <Stack sx={halfFieldSx}>
                     <SelectComponent
                       id="assignee_id"
                       label="Owner"
@@ -790,10 +965,10 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                   </Stack>
                 </Stack>
 
-                {/* Row: Occurred Date + Detected Date */}
-                <Stack direction={"row"} gap={theme.spacing(8)} sx={{ mt: 2 }}>
+                {/* Row: occurred date + detected date */}
+                <Stack direction={fieldRowDirection} gap="16px" sx={{ mt: "4px" }}>
                   <Suspense fallback={<div>Loading...</div>}>
-                    <Stack sx={{ gap: 3, width: "50%" }}>
+                    <Stack sx={halfFieldSx}>
                       <DatePicker
                         label="Occurred date"
                         date={dayjs(values.occurred_date)}
@@ -804,7 +979,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                         disabled={detailsDisabled}
                       />
                     </Stack>
-                    <Stack sx={{ gap: 3, width: "50%" }}>
+                    <Stack sx={halfFieldSx}>
                       <DatePicker
                         label="Detected date"
                         date={dayjs(values.date_detected)}
@@ -818,23 +993,23 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                   </Suspense>
                 </Stack>
 
-                {/* Row: Reporter + Model/System Version */}
-                <Stack direction={"row"} gap={theme.spacing(8)} sx={{ mt: 2 }}>
-                  <Stack sx={{ gap: 3, width: "50%" }}>
+                {/* Row: reporter + model/system version */}
+                <Stack direction={fieldRowDirection} gap="16px" sx={{ mt: "4px" }}>
+                  <Stack sx={halfFieldSx}>
                     <SelectComponent
                       id="reporter"
                       label="Reporter"
                       placeholder="Select reporter"
-                      items={userOptions}
-                      value={values.reporter}
-                      onChange={handleFieldChange("reporter")}
+                      items={reporterOptions}
+                      value={reporterValue}
+                      onChange={handleReporterChange}
                       error={errors.reporter}
                       isRequired
                       sx={{ flex: 1 }}
                       disabled={detailsDisabled}
                     />
                   </Stack>
-                  <Stack sx={{ gap: 3, width: "50%" }}>
+                  <Stack sx={halfFieldSx}>
                     <Field
                       id="model_version"
                       label="Model / system version"
@@ -849,38 +1024,11 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                 </Stack>
               </Stack>
 
-              <Box sx={{ py: 6 }}>
-                <Divider
-                  sx={{
-                    mx: `calc(-1 * ${theme.spacing(10)})`,
-                  }}
-                />
-              </Box>
+              {sectionDivider}
 
-              {/* SECTION 2: IMPACT ASSESSMENT */}
-              <Stack spacing={4}>
-                <Stack direction="row" spacing={1} alignItems="baseline">
-                  <Typography
-                    sx={{
-                      fontSize: 12,
-                      fontWeight: 600,
-                      textTransform: "uppercase",
-                      color: theme.palette.text.secondary,
-                      letterSpacing: "0.5px",
-                    }}
-                  >
-                    IMPACT ASSESSMENT
-                  </Typography>
-                  <Typography
-                    sx={{
-                      fontSize: 12,
-                      fontWeight: 400,
-                      color: theme.palette.text.tertiary,
-                    }}
-                  >
-                    (What was affected)
-                  </Typography>
-                </Stack>
+              {/* Section 2: impact assessment */}
+              <Stack gap="8px">
+                {sectionHeading("Impact assessment", "What was affected")}
 
                 {/* Categories of harm */}
                 <FormLabel
@@ -893,13 +1041,9 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                 >
                   Categories of harm
                 </FormLabel>
-                <FormGroup
-                  id="categories-of-harm"
-                  row
-                  sx={{ gap: theme.spacing(3), flexWrap: "nowrap" }}
-                >
+                <FormGroup id="categories-of-harm" row sx={{ gap: "6px", flexWrap: "wrap" }}>
                   {harmOptions.map((category) => (
-                    <Box key={category} sx={{ flex: 1 }}>
+                    <Box key={category} sx={{ flex: "1 1 120px" }}>
                       <Checkbox
                         id={`harm-category-${category}`}
                         label={category}
@@ -917,7 +1061,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                   <Typography
                     role="alert"
                     color="error"
-                    sx={{ mt: 0.5, fontSize: 13, fontWeight: 500 }}
+                    sx={{ mt: "1px", fontSize: 13, fontWeight: 500 }}
                   >
                     {errors.categories_of_harm}
                   </Typography>
@@ -954,38 +1098,11 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                 />
               </Stack>
 
-              <Box sx={{ py: 6 }}>
-                <Divider
-                  sx={{
-                    mx: `calc(-1 * ${theme.spacing(10)})`,
-                  }}
-                />
-              </Box>
+              {sectionDivider}
 
-              {/* SECTION 3: RESPONSE & ACTIONS */}
-              <Stack spacing={4}>
-                <Stack direction="row" spacing={1} alignItems="baseline">
-                  <Typography
-                    sx={{
-                      fontSize: 12,
-                      fontWeight: 600,
-                      textTransform: "uppercase",
-                      color: theme.palette.text.secondary,
-                      letterSpacing: "0.5px",
-                    }}
-                  >
-                    RESPONSE & ACTIONS
-                  </Typography>
-                  <Typography
-                    sx={{
-                      fontSize: 12,
-                      fontWeight: 400,
-                      color: theme.palette.text.tertiary,
-                    }}
-                  >
-                    (What was/will be done)
-                  </Typography>
-                </Stack>
+              {/* Section 3: response and actions */}
+              <Stack gap="8px">
+                {sectionHeading("Response and actions", "What was or will be done")}
 
                 <Field
                   id="immediate_mitigations"
@@ -1007,42 +1124,15 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                 />
               </Stack>
 
-              <Box sx={{ py: 6 }}>
-                <Divider
-                  sx={{
-                    mx: `calc(-1 * ${theme.spacing(10)})`,
-                  }}
-                />
-              </Box>
+              {sectionDivider}
 
-              {/* SECTION 4: APPROVAL & REPORTING */}
-              <Stack spacing={4}>
-                <Stack direction="row" spacing={1} alignItems="baseline">
-                  <Typography
-                    sx={{
-                      fontSize: 12,
-                      fontWeight: 600,
-                      textTransform: "uppercase",
-                      color: theme.palette.text.secondary,
-                      letterSpacing: "0.5px",
-                    }}
-                  >
-                    APPROVAL & REPORTING
-                  </Typography>
-                  <Typography
-                    sx={{
-                      fontSize: 12,
-                      fontWeight: 400,
-                      color: theme.palette.text.tertiary,
-                    }}
-                  >
-                    (Approval workflow)
-                  </Typography>
-                </Stack>
+              {/* Section 4: approval and reporting */}
+              <Stack gap="8px">
+                {sectionHeading("Approval and reporting", "Approval workflow")}
 
-                {/* Row: Approval Status + Approved By */}
-                <Stack direction={"row"} gap={theme.spacing(8)} sx={{ mt: 2 }}>
-                  <Stack sx={{ gap: 3, width: "50%" }}>
+                {/* Row: approval status + approved by */}
+                <Stack direction={fieldRowDirection} gap="16px" sx={{ mt: "4px" }}>
+                  <Stack sx={halfFieldSx}>
                     <SelectComponent
                       id="approval_status"
                       placeholder="Select approval status"
@@ -1055,7 +1145,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                     />
                   </Stack>
                   {/* Set by the server when the approval status changes. */}
-                  <Stack sx={{ gap: 3, width: "50%" }}>
+                  <Stack sx={halfFieldSx}>
                     <Field
                       id="approved_by"
                       label="Approved by"
@@ -1067,9 +1157,9 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                   </Stack>
                 </Stack>
 
-                {/* Row: Approval Date (read-only, set by the server) */}
-                <Stack direction={"row"} gap={theme.spacing(8)} sx={{ mt: 2 }}>
-                  <Stack sx={{ gap: 3, width: "50%" }}>
+                {/* Row: approval date (read-only, set by the server) */}
+                <Stack direction={fieldRowDirection} gap="16px" sx={{ mt: "4px" }}>
+                  <Stack sx={halfFieldSx}>
                     <Field
                       id="approval_date"
                       label="Approval date"
@@ -1091,7 +1181,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                   disabled={approvalDisabled}
                 />
 
-                {/* Interim Report Toggle */}
+                {/* Interim report toggle */}
                 <FormControlLabel
                   control={
                     <Toggle
@@ -1101,7 +1191,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                   }
                   label="This incident has an interim report"
                   sx={{
-                    "mt": 2,
+                    "mt": "4px",
                     "& .MuiFormControlLabel-label": {
                       fontSize: 13,
                     },
@@ -1112,13 +1202,8 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
             </Stack>
 
             {/* Buttons */}
-            <Stack
-              direction="row"
-              spacing={2}
-              mt={6}
-              justifyContent={mode === "view" ? "flex-start" : "flex-end"}
-            >
-              {mode === "view" ? (
+            <Stack direction="row" gap="8px" mt="12px" justifyContent="flex-end">
+              {isViewMode ? (
                 <CustomizableButton variant="contained" text="Close" onClick={handleClose} />
               ) : (
                 <>

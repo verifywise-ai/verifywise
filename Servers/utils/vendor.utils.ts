@@ -5,20 +5,17 @@ import { VendorsProjectsModel } from "../domain.layer/models/vendorsProjects/ven
 import { QueryTypes, Transaction } from "sequelize";
 import { getUserProjects, updateProjectUpdatedByIdQuery } from "./project.utils";
 import { IVendor } from "../domain.layer/interfaces/i.vendor";
-import { enqueueAutomationAction } from "../services/automations/automationProducer";
-import { TenantAutomationActionModel } from "../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
 import {
   buildVendorReplacements,
   buildVendorUpdateReplacements,
 } from "./automation/vendor.automation.utils";
-import { replaceTemplateVariables } from "./automation/automation.utils";
+import { runEventAutomations } from "./automation/automationActions.utils";
 import { fetchCustomFieldsForEntities } from "./customField.utils";
 import { withdrawApprovalRequestQuery } from "./approvalRequest.utils";
 import { ApprovalRequestStatus } from "../domain.layer/enums/approval-workflow.enum";
 import { recordEntityDeletion } from "./changeHistory.base.utils";
 import { findUserFieldOutsideOrganization } from "./user.utils";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
-import logger from "./logger/fileLogger";
 import { calculateVendorRiskScore } from "./vendorScorecard.utils";
 
 export const getAllVendorsQuery = async (organizationId: number): Promise<IVendor[]> => {
@@ -392,49 +389,14 @@ export const createNewVendorQuery = async (
 
   if (!options.runAutomations) return createdVendor;
 
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat JOIN automations a ON a.organization_id = :organizationId AND a.trigger_id = pat.id JOIN automation_actions_data aa ON aa.organization_id = :organizationId AND a.id = aa.automation_id JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'vendor_added' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
-    if (automation["trigger_key"] === "vendor_added") {
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildVendorReplacements(createdVendor);
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // After commit: a rolled-back write must not send the email.
-      transaction.afterCommit(() => {
-        enqueueAutomationAction(automation.action_key, {
-          ...processedParams,
-          organizationId,
-        }).catch((error) => logger.error(`[vendor] vendor_added enqueue failed: ${error}`));
-      });
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    }
-  }
+  // Every action of every active automation; one flagged legacy keeps only the
+  // event's first. After commit: a rolled-back write must not send the email.
+  await runEventAutomations(
+    organizationId,
+    "vendor_added",
+    () => buildVendorReplacements(createdVendor),
+    { transaction, logContext: `vendor_added, vendor ${vendorId}` },
+  );
   return createdVendor;
 };
 
@@ -575,49 +537,14 @@ export const updateVendorByIdQuery = async (
   result[0]["projects"] = projects.map((p) => p.project_id);
   await updateProjectUpdatedByIdQuery(id, "vendors", organizationId, transaction);
   const updatedVendor = result[0];
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat JOIN automations a ON a.organization_id = :organizationId AND a.trigger_id = pat.id JOIN automation_actions_data aa ON aa.organization_id = :organizationId AND a.id = aa.automation_id JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'vendor_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
-    if (automation["trigger_key"] === "vendor_updated") {
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildVendorUpdateReplacements(oldVendor, updatedVendor);
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // After commit: a rolled-back write must not send the email.
-      transaction.afterCommit(() => {
-        enqueueAutomationAction(automation.action_key, {
-          ...processedParams,
-          organizationId,
-        }).catch((error) => logger.error(`[vendor] vendor_updated enqueue failed: ${error}`));
-      });
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    }
-  }
+  // Every action of every active automation; one flagged legacy keeps only the
+  // event's first. After commit: a rolled-back write must not send the email.
+  await runEventAutomations(
+    organizationId,
+    "vendor_updated",
+    () => buildVendorUpdateReplacements(oldVendor, updatedVendor),
+    { transaction, logContext: `vendor_updated, vendor ${id}` },
+  );
   return updatedVendor;
 };
 
@@ -703,49 +630,14 @@ export const deleteVendorByIdQuery = async (
   const deletedVendor = result[0];
   // Nothing deleted (unknown id): no "vendor deleted" email.
   if (!deletedVendor) return false;
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat JOIN automations a ON a.organization_id = :organizationId AND a.trigger_id = pat.id JOIN automation_actions_data aa ON aa.organization_id = :organizationId AND a.id = aa.automation_id JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'vendor_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
-    if (automation["trigger_key"] === "vendor_deleted") {
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildVendorReplacements(deletedVendor);
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // After commit: a rolled-back write must not send the email.
-      transaction.afterCommit(() => {
-        enqueueAutomationAction(automation.action_key, {
-          ...processedParams,
-          organizationId,
-        }).catch((error) => logger.error(`[vendor] vendor_deleted enqueue failed: ${error}`));
-      });
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    }
-  }
+  // Every action of every active automation; one flagged legacy keeps only the
+  // event's first. After commit: a rolled-back write must not send the email.
+  await runEventAutomations(
+    organizationId,
+    "vendor_deleted",
+    () => buildVendorReplacements(deletedVendor),
+    { transaction, logContext: `vendor_deleted, vendor ${id}` },
+  );
   return result.length > 0;
 };
 

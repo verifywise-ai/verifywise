@@ -744,6 +744,8 @@ notice.
 | `model_updated` | Model modified |
 | `model_deleted` | Model deleted |
 
+`model_added`, `model_updated` and `model_deleted` run every action of every active automation of the trigger; an automation that existed before that change keeps only the event's first action until it is edited and saved (`legacy_first_action_only`). See [Automations → Dispatch of entity events](../infrastructure/automations.md#dispatch-of-entity-events).
+
 Creating a model, attaching a model to a new project, and creating a model risk each notify (`model_risk_candidates`, in-app) the owners of project risks sharing those projects when the risks have model-risk link candidates they have never seen. No `risk_links` rows are written; the owner reviews candidates in the existing link picker.
 
 ## Key Files

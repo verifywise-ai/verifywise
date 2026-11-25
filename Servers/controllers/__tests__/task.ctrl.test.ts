@@ -41,6 +41,7 @@ jest.mock("../../utils/statusCode.utils", () => ({
     401: (d: any) => ({ message: "Unauthorized", data: d }),
     403: (d: any) => ({ message: "Forbidden", data: d }),
     404: (d: any) => ({ message: "Not Found", data: d }),
+    409: (d: any) => ({ message: "Conflict", data: d }),
     500: (d: any) => ({ message: "Internal Server Error", data: d }),
     503: (d: any) => ({ message: "Service Unavailable", data: d }),
   },
@@ -55,6 +56,8 @@ jest.mock("../../services/inAppNotification.service", () => ({
 jest.mock("../../utils/taskEntityLink.utils", () => ({
   getTaskEntityLinksQuery: jest.fn().mockResolvedValue([]),
   persistTaskEntityLinks: jest.fn().mockResolvedValue(0),
+  isValidEntityType: jest.fn((type: string) => ["vendor", "policy", "incident"].includes(type)),
+  ArchivedIncidentLinkError: class ArchivedIncidentLinkError extends Error {},
 }));
 jest.mock("../../utils/changeHistory.base.utils", () => ({
   recordEntityCreation: jest.fn().mockResolvedValue(undefined),
@@ -72,6 +75,7 @@ import { buildTask } from "../../tests/factories/task.factory";
 import {
   createTask,
   getAllTasks,
+  getTasksLinkedToEntity,
   getTaskById,
   updateTask,
   deleteTask,
@@ -88,7 +92,11 @@ import {
   restoreTaskByIdQuery,
   hardDeleteTaskByIdQuery,
 } from "../../utils/task.utils";
-import { persistTaskEntityLinks } from "../../utils/taskEntityLink.utils";
+import {
+  ArchivedIncidentLinkError,
+  persistTaskEntityLinks,
+} from "../../utils/taskEntityLink.utils";
+import { sequelize } from "../../database/db";
 
 const mockPersistLinks = persistTaskEntityLinks as jest.MockedFunction<
   typeof persistTaskEntityLinks
@@ -219,6 +227,24 @@ describe("task.ctrl", () => {
         expect.anything(),
       );
     });
+    it("answers 409 and rolls back when a new link is to an archived incident", async () => {
+      mockCreate.mockResolvedValue(mockTask(buildTask({ id: 5 })) as any);
+      mockPersistLinks.mockRejectedValueOnce(new ArchivedIncidentLinkError());
+      const res = createRes();
+      await createTask(
+        createReq({
+          body: { title: "T1", entity_links: [{ entity_id: 12, entity_type: "incident" }] },
+        }),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json.mock.calls[0][0].data).toBe(
+        "Restore this incident before linking it to a task.",
+      );
+      const transaction = await (sequelize.transaction as any).mock.results.at(-1).value;
+      expect(transaction.rollback).toHaveBeenCalled();
+      expect(transaction.commit).not.toHaveBeenCalled();
+    });
     it("should not persist entity_links when none are provided", async () => {
       const task = mockTask(buildTask());
       mockCreate.mockResolvedValue(task as any);
@@ -288,6 +314,16 @@ describe("task.ctrl", () => {
         });
       },
     );
+    it("legacy GET /tasks ignores linked_entity parameters (contract unchanged)", async () => {
+      mockGetAll.mockResolvedValue([] as any);
+      const res = createRes();
+      await getAllTasks(
+        createReq({ query: { linked_entity_type: "spaceship", linked_entity_id: "x" } } as any),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect((mockGetAll.mock.calls[0][2] as any).linked_entity).toBeUndefined();
+    });
     it("reports an empty list as zero pages", async () => {
       mockGetAll.mockResolvedValue([] as any);
       const res = createRes();
@@ -300,6 +336,67 @@ describe("task.ctrl", () => {
         hasNext: false,
         hasPrev: false,
       });
+    });
+  });
+
+  describe("getTasksLinkedToEntity (GET /api/v1/tasks/linked/:entityType/:entityId)", () => {
+    it("lists the tasks linked to the entity with the caller's visibility", async () => {
+      mockGetAll.mockResolvedValue([mockTask(buildTask({ id: 700 }))] as any);
+      const res = createRes();
+      await getTasksLinkedToEntity(
+        createReq({
+          userId: 3,
+          role: "Editor",
+          organizationId: 7,
+          params: { entityType: "incident", entityId: "12" },
+        } as any),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(mockGetAll).toHaveBeenCalledWith({ userId: 3, role: "Editor" }, 7, {
+        organization_id: 7,
+        linked_entity: { entity_type: "incident", entity_id: 12 },
+      });
+      const body = res.json.mock.calls[0][0].data;
+      expect(body.map((t: any) => t.id)).toEqual([700]);
+    });
+    it("leaves archived tasks out (no include_archived)", async () => {
+      mockGetAll.mockResolvedValue([] as any);
+      await getTasksLinkedToEntity(
+        createReq({ params: { entityType: "incident", entityId: "12" } } as any),
+        createRes(),
+      );
+      expect((mockGetAll.mock.calls[0][2] as any).include_archived).toBeUndefined();
+    });
+    it("answers 401 without a user", async () => {
+      const res = createRes();
+      await getTasksLinkedToEntity(
+        createReq({ userId: undefined, params: { entityType: "incident", entityId: "12" } } as any),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(mockGetAll).not.toHaveBeenCalled();
+    });
+    it.each([
+      ["spaceship", "12"],
+      ["incident", "0"],
+      ["incident", "-3"],
+      ["incident", "12abc"],
+      ["incident", "99999999999999999999"],
+    ])("answers 400 for type %s and id %s", async (entityType, entityId) => {
+      const res = createRes();
+      await getTasksLinkedToEntity(createReq({ params: { entityType, entityId } } as any), res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockGetAll).not.toHaveBeenCalled();
+    });
+    it("answers 500 when the read fails", async () => {
+      mockGetAll.mockRejectedValue(new Error("DB error"));
+      const res = createRes();
+      await getTasksLinkedToEntity(
+        createReq({ params: { entityType: "incident", entityId: "12" } } as any),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(500);
     });
   });
 
@@ -422,6 +519,23 @@ describe("task.ctrl", () => {
         { userId: 1, role: "Admin" },
         1,
         expect.anything(),
+      );
+    });
+    it("answers 409 when an update adds a link to an archived incident", async () => {
+      mockGetById.mockResolvedValue(mockTask(buildTask()) as any);
+      mockUpdate.mockResolvedValue(mockTask(buildTask({ id: 7 })) as any);
+      mockPersistLinks.mockRejectedValueOnce(new ArchivedIncidentLinkError());
+      const res = createRes();
+      await updateTask(
+        createReq({
+          params: { id: "7" },
+          body: { title: "T2", entity_links: [{ entity_id: 12, entity_type: "incident" }] },
+        }),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json.mock.calls[0][0].data).toBe(
+        "Restore this incident before linking it to a task.",
       );
     });
     it("should not persist entity_links when none are provided", async () => {

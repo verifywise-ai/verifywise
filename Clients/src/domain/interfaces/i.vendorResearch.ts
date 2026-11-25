@@ -181,6 +181,34 @@ export interface CoverageSource {
   /** When the copy was last brought up to date (ISO 8601); null when it never was. */
   last_success_at: string | null;
   stale: boolean;
+  /**
+   * For a list whose entries attest something in the vendor's favour (the FedRAMP Marketplace, the
+   * C2PA Conforming Products List), what each matched record says; absent for other lists and for
+   * older runs. Context, never a risk.
+   */
+  attestations?: CoverageAttestation[];
+}
+
+/** The status a listing attests (FedRAMP's four statuses, or a C2PA conformance). */
+export type AttestationStatus =
+  | "fedramp_authorized"
+  | "fedramp_ready"
+  | "fedramp_in_process"
+  | "agency_in_process"
+  | "c2pa_conforming";
+
+/** What one matched record of an attesting list says, in closed words. */
+export interface CoverageAttestation {
+  status: AttestationStatus | null;
+  /** A FedRAMP impact level as the Marketplace writes it ("High", "LI-SaaS"…); null for none. */
+  impact: string | null;
+  /** The day (YYYY-MM-DD) of the status, or of the newest conformance; null when unknown. */
+  since: string | null;
+  /** How many offerings or products the list names for the vendor. */
+  count: number;
+  strength: "strong" | "weak";
+  /** The day (YYYY-MM-DD) of the copy the record is from. */
+  as_of: string;
 }
 
 /**
@@ -202,9 +230,10 @@ export interface RunCoverage {
 
 /**
  * The search a run's searches went to: Claude's own web search, the web search of OpenAI (no run
- * uses it yet: its keys search the news today), or the news of the GDELT Project.
+ * uses it yet: its keys search the news today), Brave Search (the organization's Brave key), or
+ * the news of the GDELT Project.
  */
-export type RunSearchEngine = "anthropic" | "openai" | "gdelt";
+export type RunSearchEngine = "anthropic" | "openai" | "brave" | "gdelt";
 
 /**
  * One research run, as the API sends it: an allowlist. The counters are in it;
@@ -250,8 +279,15 @@ export interface VendorResearchRun {
  */
 export interface FindingSource {
   url: string;
+  /** Empty when `quote_withheld` is set. */
   title: string;
+  /** Empty when `quote_withheld` is set. */
   quote: string;
+  /**
+   * True when the source's page could not be read and the finding rests on a search excerpt the
+   * server may not keep: the title and the quote are empty, only the address is left.
+   */
+  quote_withheld?: true;
   published_at: string | null;
   category?: SourceCategory;
   /** The key of independence: the registry entry, the database, or "vendor". */
@@ -438,22 +474,62 @@ export interface AcceptFindingBody {
   frameworks?: number[];
 }
 
-/** What the server has set up. Research can run when the organization has an LLM key. */
+/**
+ * What the server has set up. Research can run when the organization has an LLM key.
+ * `autoRunAllowed` is the deployment's switch for the automatic research of a new vendor;
+ * `autoRunEnabled` is whether it happens for this organization, which needs the deployment's switch
+ * and the organization's setting.
+ */
 export interface VendorResearchConfig {
   hasLlmKey: boolean;
+  autoRunAllowed: boolean;
   autoRunEnabled: boolean;
 }
+
+/**
+ * The search a research run gets from a key: Claude's own web search for an Anthropic key that
+ * calls Anthropic's API; for every other key, Brave Search when the organization has a Brave key,
+ * and the news of the GDELT Project without one.
+ */
+export type ResearchSearchEngine = "anthropic" | "brave" | "gdelt";
+
+/**
+ * What the research settings window warns about (Admin only): the search of each LLM key by id,
+ * of the default (the newest key; `null` without a key), and whether the organization's latest
+ * runs that say something about the news (up to 3, last 30 days) all got none.
+ */
+export interface VendorResearchSearchStatus {
+  engines: {
+    default: ResearchSearchEngine | null;
+    byKey: Record<number, ResearchSearchEngine>;
+  };
+  recentRunsFoundNoNews: boolean;
+  /** Whether the organization has stored a Brave search key. */
+  braveConfigured: boolean;
+}
+
+/** The organization's Brave search key (Admin only): whether one is stored and its last 4 characters. */
+export interface VendorResearchSearchKey {
+  provider: "brave";
+  configured: boolean;
+  last4: string | null;
+}
+
+/** Why the server refused to save a search key: Brave rejected it, or could not be reached. */
+export type SearchKeyErrorCode = "invalid_key" | "unreachable";
 
 /**
  * Which of the organization's LLM keys the research uses, as an Admin chose, and how often the
  * scheduled scan researches the vendors again. `null` leaves a key to the default: the newest key
  * for the research, and the research key for the analysis. For `scanIntervalDays`, `null` is off,
- * and the server takes 7, 14 or 30.
+ * and the server takes 7, 14 or 30. `autoResearchOnCreate` says whether a new vendor is researched
+ * as soon as it is added (on until an Admin turns it off).
  */
 export interface VendorResearchSettings {
   researchKeyId: number | null;
   analysisKeyId: number | null;
   scanIntervalDays: number | null;
+  autoResearchOnCreate: boolean;
 }
 
 /**

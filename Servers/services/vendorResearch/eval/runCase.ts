@@ -20,6 +20,7 @@ import { buildMateriality } from "../materiality";
 import type { RecordsLookup } from "../records/types";
 import { type ResearchTarget, buildTarget } from "../target";
 import { type RunTrace, type TraceRecorder, createTraceRecorder } from "../trace";
+import { shippedBundleIds } from "../vrdb/bundle";
 import { offerRecords } from "../vrdb/lookup";
 import type { VrdbLookup, VrdbRow } from "../vrdb/types";
 import { createReplayEngine, createReplayPageReader, createScriptedGenerate } from "./replay";
@@ -53,6 +54,9 @@ const replayVrdb =
       states: copies.states,
       enabled: copies.enabled !== false,
       readThrough,
+      // The lists the release ships, as the live lookup covers them, so that a replay covers
+      // what the run it replays covered (`coveredSources`).
+      bundled: shippedBundleIds(),
     }).outcome;
   };
 

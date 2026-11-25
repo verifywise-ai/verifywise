@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useContext } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Stack,
   Table,
@@ -12,13 +12,14 @@ import {
   useTheme,
 } from "@mui/material";
 import TablePaginationActions from "../TablePagination";
-import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
-import { DashboardState, User, InputValues } from "../../../application/interfaces/appStates";
+import { useDispatch } from "react-redux";
+import { setInputValues } from "../../../application/redux/ui/uiSlice";
+import { InputValues } from "../../../application/interfaces/appStates";
 import singleTheme from "../../themes/v1SingleTheme";
 import { RISK_LABELS } from "../../components/RiskLevel/constants";
-import { getAllVendors } from "../../../application/repository/vendor.repository";
 import { background } from "../../themes/palette";
 import { getEffectiveRiskLevel } from "../../../application/utils/riskLevel";
+import useUsers from "../../../application/hooks/useUsers";
 
 const DEFAULT_ROWS_PER_PAGE = 10;
 const RISKS_ROWS_PER_PAGE_KEY = "verifywise_risks_rows_per_page";
@@ -62,7 +63,6 @@ const CustomizableBasicTable = ({
   paginated = false,
   table,
   onRowClick,
-  label,
   setSelectedRow,
   setAnchorEl,
 }: TableProps) => {
@@ -73,7 +73,10 @@ const CustomizableBasicTable = ({
     const saved = localStorage.getItem(RISKS_ROWS_PER_PAGE_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_ROWS_PER_PAGE;
   });
-  const { setInputValues, dashboardValues, setDashboardValues } = useContext(VerifyWiseContext);
+  const dispatch = useDispatch();
+  // Risk-owner name lookup is backed by the users React Query cache (the
+  // legacy dashboardValues.users it replaces was never populated).
+  const { users } = useUsers();
 
   useEffect(() => setPage(0), [data]);
 
@@ -88,25 +91,9 @@ const CustomizableBasicTable = ({
     setPage(0);
   }, []);
 
-  const fetchVendors = useCallback(async () => {
-    try {
-      const response = await getAllVendors();
-      setDashboardValues((prev: DashboardState) => ({
-        ...prev,
-        vendors: response.data,
-      }));
-    } catch (error) {
-      console.error("Error fetching vendors:", error);
-    }
-  }, [setDashboardValues]);
-
-  useEffect(() => {
-    if (label !== "Project risk") fetchVendors();
-  }, [label, fetchVendors]);
-
   const onRowClickHandler = (event: React.MouseEvent<HTMLTableRowElement>, rowData: TableRow) => {
     setSelectedRow?.(rowData);
-    setInputValues(rowData as InputValues);
+    dispatch(setInputValues(rowData as InputValues));
     setAnchorEl?.(event.currentTarget);
     onRowClick?.(rowData.id);
   };
@@ -162,9 +149,7 @@ const CustomizableBasicTable = ({
                     : row.impact || ""}
                 </TableCell>
                 <TableCell>
-                  {(dashboardValues.users as User[])?.find(
-                    (user: User) => user.id === parseInt(String(row.risk_owner)),
-                  )?.name ||
+                  {users.find((user) => user.id === parseInt(String(row.risk_owner)))?.name ||
                     (typeof row.risk_owner === "string" ? row.risk_owner : String(row.risk_owner))}
                 </TableCell>
                 <TableCell>{riskLevelChecker(getEffectiveRiskLevel(row))}</TableCell>

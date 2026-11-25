@@ -319,6 +319,18 @@ describe("vendor and vendor risk writes", () => {
       expect(res.status).toBe(202);
       expect(enqueue).toHaveBeenCalledTimes(1);
     });
+
+    it("enqueues every active delete automation, not only the first", async () => {
+      await activateAutomation(orgId, "vendor_deleted");
+      await activateAutomation(orgId, "vendor_deleted");
+      const vendorId = await createTestVendor(orgId);
+
+      expect((await admin.delete(`/api/vendors/${vendorId}`)).status).toBe(202);
+
+      const automationIds = enqueue.mock.calls.map(([, data]) => data.automation_id);
+      expect(automationIds).toHaveLength(2);
+      expect(new Set(automationIds).size).toBe(2);
+    });
   });
 
   describe("vendor risk frameworks", () => {

@@ -7,7 +7,7 @@ Incident Management in VerifyWise provides a comprehensive system for tracking, 
 ## Key Features
 
 - Incident lifecycle management (Open → Investigating → Mitigated → Closed, plus Suspended and Emergency action; closed incidents can be reopened)
-- Multi-level severity classification (Minor, Serious, Very Serious)
+- Multi-level severity classification (Minor, Serious, Very serious)
 - Approval workflow with audit trail
 - Harm category tracking
 - Field-level change history
@@ -26,9 +26,10 @@ ai_incident_managements
 ├── ai_project (TEXT NOT NULL)
 ├── type (ENUM)
 ├── severity (ENUM)
-├── occurred_date (TIMESTAMPTZ NOT NULL)
-├── date_detected (TIMESTAMPTZ NOT NULL)
-├── reporter (TEXT NOT NULL)
+├── occurred_date (DATE NOT NULL)
+├── date_detected (DATE NOT NULL)
+├── reporter (VARCHAR(255) NOT NULL) -- name; the reporter_id user's full name when set
+├── reporter_id (FK → users, ON DELETE SET NULL)
 ├── status (ENUM, default: Open)
 ├── categories_of_harm (JSON NOT NULL)
 ├── affected_persons_groups (TEXT)
@@ -39,13 +40,91 @@ ai_incident_managements
 ├── model_system_version (TEXT)
 ├── interim_report (BOOLEAN, default: false)
 ├── approval_status (ENUM, default: Pending)
-├── approved_by (TEXT)
-├── approval_date (TIMESTAMPTZ)
+├── approved_by (VARCHAR(255)) -- name, set by the server
+├── approved_by_id (FK → users, ON DELETE SET NULL) -- set by the server
+├── approval_date (DATE) -- set by the server
 ├── approval_notes (TEXT)
 ├── archived (BOOLEAN, default: false)
 ├── created_at (TIMESTAMPTZ)
 └── updated_at (TIMESTAMPTZ)
 ```
+
+### Dates and people
+
+`occurred_date`, `date_detected` and `approval_date` are `DATE` columns
+(migration `20261123192509-incident-dates-and-people`; they were
+`TIMESTAMP` until 2026-11). The API sends and returns them as `YYYY-MM-DD`.
+Sequelize registers its `DATEONLY` parser for the `date` type on every pooled
+connection, so raw `sequelize.query` reads get the string too, never a JS Date
+at server-local midnight. A request may send an ISO date-time; its date part
+(`YYYY-MM-DD` prefix, offset ignored) is stored. A JS Date built by server
+code (a Jira issue's creation time) is stored as its UTC
+date (`toIncidentDateValue` in `incidentManagementValidation.utils.ts`).
+People-facing formatting (automation emails, reports) uses
+`formatIncidentDay`, which formats the day in UTC so a server west of UTC
+never shows the day before.
+
+The migration converted existing rows with `col::date`, the stored wall-clock
+date: the drawer always sent `YYYY-MM-DD` and the server-side writers sent
+Dates as UTC (Sequelize sessions run at `+00:00`), so this is the date each
+row was created with. Its `down` converts back to `TIMESTAMP` at midnight.
+
+On the page, the table and CE marking format the stored day itself
+(`toDateOnlyString` then the user's date format), the occurred date filter
+compares local midnight of that day (`dateOnlyToLocalDay`), and the export
+writes `YYYY-MM-DD`. The drawer's default dates are the user's own today,
+computed when it opens (`createInitialState`), not the UTC date at page load.
+
+`reporter_id` and `approved_by_id` are user foreign keys (`ON DELETE SET
+NULL`, like `assignee_id`). The text columns stay: Jira imports send a name
+only, rows created before 2026-11 have a first name only (no backfill: a first
+name cannot be matched to one user), and the server writes the user's full
+name into the text whenever it sets an id, so readers of the text stay right.
+The list and single reads add `reporter_name` and `approved_by_name` (the
+users' current full names while they are members of the incident's
+organization; null without an id or once the user has left, as the report's
+reporter and Wise Search do); the page shows
+`reporter_name || reporter` and `approved_by_name || approved_by`
+(`AIIncidentManagementModel.reporterLabel` / `approverLabel`).
+
+- **Reporter on create:** required as a `reporter_id` or a non-empty
+  `reporter` text. A `reporter_id` must be a member of the caller's
+  organization (`getIncidentMemberName`; otherwise 400 `INVALID_REFERENCE` on
+  `reporter_id`), and the server writes their full name into `reporter`,
+  ignoring any text sent. The drawer picks reporters by user id; the Advisor
+  sends the requesting user's id and name when they are a member of the
+  organization, else their name text only ("User #<id>").
+- **Reporter on update:** a changed `reporter_id` is checked the same way as
+  on create and makes `reporter` that member's current full name, ignoring
+  any text sent. One sent back unchanged leaves the stored reporter (id and
+  text) as it is, whatever text was sent: the page shows the user's current
+  name from the join, and a write that does not change the reporter never
+  writes the reporter column (so an approve-only caller or a restore never
+  does), nor is a departed reporter re-checked. A changed `reporter` text sent without `reporter_id`
+  clears the stored `reporter_id` (the text now names someone else). Clearing
+  `reporter_id` (null or "") leaves the text, sent or stored, as the reporter,
+  so it must not be blank. The drawer sends `reporter` and `reporter_id`
+  together whenever the reporter changed, and offers the reporter the incident
+  was opened with as an extra option when it is not among the listed users
+  (text only, or departed), so the user can go back to it.
+- **Approver:** `approved_by_id` is server-set like `approved_by` and
+  `approval_date` (dropped from every request). A decision stamps the acting
+  user's id and name and the user's own date (see
+  [Editing versus approving](#editing-versus-approving)); Pending or
+  Not required, and the reopen reset, clear all three.
+- **Removed or deleted users:** removing a member from the organization does
+  not clear `reporter_id` or `approved_by_id` (they record who did something,
+  not who is responsible now, unlike the owner); deleting the account nulls
+  them through the foreign key, and the page falls back to the stored text.
+- Change history tracks both the text and the id columns, under the same
+  labels ("Reporter", "Approved by"; ids formatted as the user's name,
+  scoped to the organization). The service records one row per person change
+  (`incidentHistoryColumns`, and `creationHistoryValues` on create): the user
+  row when the person is a user both before and after the change, so a change
+  between two users with the same name is still recorded; otherwise the text
+  row, so both sides are names (a text-only reporter, or an approver recorded
+  before `approved_by_id` existed, becoming a user reads "Bob" → "Jane
+  Smith", not "-" → "Jane Smith"), even when only the id changed.
 
 ### Incident Change History Table
 
@@ -167,11 +246,13 @@ The update route lets in a caller holding either key (`authorizeAny` in `middlew
 
 `approved_by` and `approval_date` are set by the server, never by the caller: every write path drops them from the request (`withoutServerSetApprovalFields`). When `approval_status` changes (`approvalStampFor`):
 
-- to Approved or Rejected: `approved_by` is the acting user's name (`name surname` from `users`, `getIncidentApproverName`, `User #<id>` without a name) and `approval_date` is now;
-- to Pending or Not required: both are cleared;
-- unchanged (for example only the notes change): both stay as stored.
+- to Approved or Rejected: `approved_by` is the acting user's name (`name surname` from `users`, `getIncidentApproverName`, `User #<id>` without a name), `approved_by_id` their id and `approval_date` the acting user's calendar day (`incidentToday`, below);
+- to Pending or Not required: all three are cleared;
+- unchanged (for example only the notes change): they stay as stored.
 
-On create (`createNewIncident`), a caller without `incident.approve` gets an incident that starts Pending with no approver, date or notes, whatever was sent. A caller with it may create the incident Approved or Rejected; the server then records them as approver, dated now. Creation history records the approval as stored.
+The approval date is the actor's own day, not the UTC one: an approver in Toronto at 20:00 records that day, not tomorrow. The console sends the browser's local date in the `X-Client-Date` header on every request (`Clients/src/infrastructure/api/clientDate.ts`, added by the axios interceptor and the Advisor chat transport); `authenticateJWT` stores it unchecked in the request context (`readClientDateHeader` / `getRequestClientDate` in `Servers/utils/context/context.ts`). `incidentToday(clientDate)` uses it only when it is a bare real date (`YYYY-MM-DD`) that is today somewhere on earth right now (from today in UTC-12, `earliestIncidentToday`, to today in UTC+14, `latestIncidentDate`), else today in UTC; so a caller can move the date by at most their own time zone, never backdate it. API-token callers and the MCP server send no header and get the UTC date. The approver and the fact the server sets the date stay server-controlled. The Advisor's new incidents use the requester's day for `occurred_date` and `date_detected`: a write tool captures the requester's accepted date when they ask (`createWriteTool`, `acceptedClientDate`) and the approval gateway stores it with the action's params as `_requesterClientDate` (`REQUESTER_CLIENT_DATE_PARAM`, server-set: the tool bridge drops every underscore param from the model, and the wrapper drops this one), so an approver running the action later from another time zone does not change it. Without one the executor uses the current request's date, else UTC. The approval request view (`approvalRequest.utils.ts`) leaves the internal param out.
+
+On create (`createNewIncident`), a caller without `incident.approve` gets an incident that starts Pending with no approver, date or notes, whatever was sent. A caller with it may create the incident Approved or Rejected; the server then records them as approver, dated today. Creation history records the approval as stored.
 
 `updateIncident` refuses a call with neither `access` nor `changedBySystem`. System writers (`changedBySystem: true`, the Jira status sync) default to `SYSTEM_INCIDENT_ACCESS`: details only, never approval. The Advisor's incident tools and the MCP `update_incident` tool check `incident.edit` for their user and pass edit-only access: they change details only and never record approval.
 
@@ -209,8 +290,14 @@ Archived incidents are left out of:
 - the dashboard's incident counts and status chart (`fetchIncidentMetrics` in
   `Clients/src/application/hooks/useDashboardMetrics.ts`), so they match the page;
 - Wise Search (`alwaysWhere: "archived IS NOT TRUE"` on `incident_management`
-  in `Servers/utils/search.utils.ts`, see [search.md](./search.md));
+  in `Servers/utils/search.utils.ts`, see [search.md](./search.md)), which
+  also matches the reporter user's current full name (`searchExpressions`,
+  members of the incident's organization only) besides the stored `reporter`
+  text;
 - the CE marking "Link incidents" picker (see [CE Marking Integration](#ce-marking-integration));
+- the task drawer's incident picker: an archived incident cannot be linked to
+  a task (409 from `POST /tasks/:id/entities`), though links made before it
+  was archived stay (see [tasks.md](./tasks.md#linked-items));
 - reports (see [Reports](#reports));
 - the Home queue (`services/homeQueue/sources/incidents.source.ts`), the Jira
   status sync and the Advisor's incident lists and analytics, as before.
@@ -240,7 +327,10 @@ transaction:
    that rolls back sends nothing.
 
 The incident's CE marking links go with it (`fk_ce_incidents_incident`,
-`ON DELETE CASCADE`).
+`ON DELETE CASCADE`). Its task links (`task_entity_links` rows with
+`entity_type` `incident`, which have no foreign key) are deleted by
+`deleteIncidentByIdQuery` right after the incident row, in the same
+transaction; the tasks themselves stay.
 
 ### Change History
 
@@ -258,9 +348,9 @@ POST /aiIncidentManagement/
   ai_project: "Customer Service Chatbot",
   type: "Unexpected behavior",
   severity: "Serious",
-  occurred_date: "2025-01-15T10:30:00Z",
-  date_detected: "2025-01-15T11:00:00Z",
-  reporter: "John Smith",
+  occurred_date: "2025-01-15",
+  date_detected: "2025-01-15",
+  reporter_id: 12,          // or reporter: "John Smith" (text only)
   status: "Open",
   categories_of_harm: ["Safety", "Rights"],
   affected_persons_groups: "End users",
@@ -355,13 +445,13 @@ Stored values are those of `AIIncidentManagementApprovalStatus`
 `Approved`, `Rejected`, `Not required`. The column is `VARCHAR(20)` with the
 CHECK constraint `ai_incident_managements_approval_status_check`.
 `APPROVAL_STATUS_ENUM` in the validation utils is built from the enum. The edit
-form labels the option "Not Required", but the value it saves is
-`Not required`.
+form's option labels are the stored values ("Not required"), translated on
+screen; the value saved is never translated.
 
 When approved or rejected (set by the server, see
 [Editing versus approving](#editing-versus-approving)):
 - `approved_by` is the name of the user who changed the status
-- `approval_date` is the moment of the change
+- `approval_date` is the day of the change, in the approver's time zone
 - `approval_notes` optional comments (needs `incident.approve`)
 
 Approval is sign-off on closing the incident. When a Closed incident is reopened
@@ -453,15 +543,11 @@ incidents status sync (`changedBySystem: true`, see
    (`incidentManagementValidation.utils.ts`) that the reset uses to decide
    whether an approval field was touched:
    - `''`, null and undefined are all empty;
-   - date columns compare **calendar dates** (`incidentCalendarDate`). The
-     columns are TIMESTAMP WITHOUT TIME ZONE and the project installs no custom
-     pg type parser, so pg parses them (oid 1114) as server-local time: a stored
-     Date is read by its local components (the wall-clock date stored), and a
-     string starting `YYYY-MM-DD` is that date (Postgres ignores any offset for
-     this column type). Known, separate issue: the API serialises these Dates
-     with `toISOString()`, which shifts the date on a non-UTC server; the fix is
-     a single pg type parser for oid 1114, not part of this change;
-   - foreign keys compare as numbers, `archived` / `interim_report` treat empty
+   - date columns compare **calendar dates** (`incidentCalendarDate`): the
+     columns are DATE and read back as `YYYY-MM-DD` strings (see
+     [Dates and people](#dates-and-people)); a string starting `YYYY-MM-DD` is
+     that date, a JS Date its UTC date;
+   - foreign keys (including `reporter_id` and `approved_by_id`) compare as numbers, `archived` / `interim_report` treat empty
      as false, harm categories compare as lists.
    `archived` is never written as NULL.
 7. If nothing changed, returns the row as it is: no UPDATE, no `updated_at`
@@ -565,11 +651,34 @@ All incident modifications are tracked:
   archive confirmation says archived incidents leave the default list,
   dashboard, search and reports and can be restored from the "Archived only"
   view. The status cards count the incidents of the chosen view, the set a
-  card click filters. "No archived incidents." shows only when there are none;
-  when filters or search hide the archived ones, the usual empty state shows.
-- Incident list with filtering
-- Filter by: incident_id, ai_project, type, severity, status, approval_status
-- Search functionality
+  card click filters. "No archived incidents." shows only when there are none.
+- Empty states (`IncidentTable`): when a search, a status card or a filter
+  hides every row, the table says "No incidents match these filters." with a
+  Clear filters button (clears the search, the status card and the filters,
+  not the view select). With nothing narrowing the list, "Active only" and
+  every incident archived says so and points to the "Archived only" view;
+  otherwise the "No incidents reported yet" state shows.
+- Filters (`TableFilter`): incident ID, use case, affected model, owner, type,
+  severity, status and occurred date. The occurred date column is a
+  `dateRange: "recent"` column: it offers "is today", "since yesterday" and "in
+  the last 7 days / 2 weeks / 30 days" (today and the N days before it), the
+  same ranges in the classic filter and as phase 1 chips (Today, Since
+  yesterday, Last 7 days, Last 2 weeks, Last 30 days), compared by the user's
+  local calendar day (`in_last_*` operators in
+  `Clients/src/application/utils/filterConditions.ts`). Due-date columns on
+  other pages keep the forward-looking "in N days" operators.
+- Search (`incidentMatchesSearch` in `pages/IncidentManagement/incidentSearch.ts`):
+  the visible incident ID ("INC-12"), the use case title and the reporter's
+  name, ignoring case and surrounding spaces. The database id is not searched.
+- Toasts: info and success close after 3 seconds; errors and warnings (such as
+  the edit-conflict message) stay until the user closes them. Clear filters
+  closes only the info toast ("Filtering by ...").
+- After a save, archive or restore the list is fetched again in place (no
+  loading skeleton, no table remount), so the page, sort, filters and scroll
+  position are kept. The skeleton shows on the first load only. The success
+  toast shows only when that refresh worked; when it fails, its "Failed to load
+  incidents" error stays up instead, so a stale list is never shown as fresh
+  (the saved drawer still closes, since the save itself succeeded).
 - Role-based create (`incident.create`: Admin, Editor), edit (`incident.edit`) and approval (`incident.approve`)
 - Export functionality
 
@@ -579,34 +688,69 @@ All incident modifications are tracked:
 |-----------|---------|
 | `IncidentManagement` | Main page |
 | `IncidentTable` | Sortable, paginated table |
-| `NewIncident` | Create/edit/view modal |
+| `NewIncident` | Create/edit/view drawer |
 | `IncidentStatusCard` | Metrics display |
 | `IncidentManagementSteps` | User onboarding tour |
 
 ### Incident Modal Sections
 
-The modal is organized into 4 sections:
+The drawer (`components/Modals/NewIncident`) is a right-hand MUI drawer,
+`min(700px, 100vw)` wide; two-field rows stack on narrow screens. Its header
+shows in every mode: "Create new incident", "Edit incident", "Record approval"
+or "View incident", the incident ID and Jira chip when editing, and a close
+button (a focusable button labelled "Close"). The drawer paper is a modal
+dialog (`role="dialog"`, `aria-modal`) named by its title (`aria-labelledby`).
 
-1. **Incident Information**
-   - Project, type, severity
+Option labels (incident types, harm categories, severity, status, approval
+status) are the stored values in sentence case, translated on screen through
+`Clients/src/i18n/modules/incidents.ts`; the values sent to the API are never
+translated. Names that are data (use cases, users, models) are marked
+`noTranslate`.
+
+The use case picker lists the use cases the user can see (`useProjects`),
+including ones awaiting approval, since the server accepts any use case of the
+organization for `project_id`; rejected ones (`approval_status: "rejected"`)
+are left out. Options are keyed by project id; a title shared by several use
+cases gets the use case ID after it ("Chatbot (UC-5)"). Picking one sets
+`project_id` and copies the title into the free-text `ai_project`. An incident
+whose use case is not in the list (stored as text only, such as a Jira import,
+not visible to the user, or rejected) keeps it as an extra option, selected, so the
+stored value still shows and can be picked again (`STORED_USE_CASE_OPTION` for
+text only).
+
+The drawer is organized into 4 sections:
+
+1. **Incident information**
+   - Use case, type, severity
    - Status, dates
    - Reporter, model version
 
-2. **Impact Assessment**
+2. **Impact assessment**
    - Harm categories (multi-select)
    - Affected persons/groups
    - Description
    - Relationship/causality
 
-3. **Response & Actions**
+3. **Response and actions**
    - Immediate mitigations
    - Planned corrective actions
 
-4. **Approval & Reporting**
+4. **Approval and reporting**
    - Approval status (needs `incident.approve`)
    - Approved by, approval date (read-only, set by the server)
    - Approval notes (needs `incident.approve`)
    - Interim report toggle (needs `incident.edit`)
+
+An existing incident's drawer has three tabs: "Incident details" (the form
+above), "Linked tasks" and "Activity" (change history). "Linked tasks"
+(`components/LinkedTasks`) is a read-only list of the tasks linked to the
+incident that the user can see (`GET /api/v1/tasks/linked/incident/<id>`,
+same visibility as the tasks page; archived tasks left out): title, status,
+assignees or "Unassigned", and due date. With none it says "No linked tasks
+you can see.", since tasks the user cannot see are not listed. Clicking a task opens it on the tasks
+page. Tasks are linked from the task drawer's linked items (see
+[tasks.md](./tasks.md#linked-items)); the critical incident workflow links its
+remediation task itself.
 
 ### Table Features
 
@@ -635,7 +779,8 @@ The rules live in `Servers/utils/validations/incidentManagementValidation.utils.
 | approval_status | Optional, defaults to Pending; one of `AIIncidentManagementApprovalStatus` | Cannot be blanked; same rule when changed |
 | occurred_date, date_detected | Required; a real date (YYYY-MM-DD or an ISO date-time); not later than today in UTC+14 | Cannot be blanked; same rule when changed |
 | date_detected vs occurred_date | Detected on or after occurred (calendar dates) | Checked when either date changes, on the dates the row ends up with (request over the stored row) |
-| reporter | Required, text, at most 255 characters | Cannot be blanked; same rule when changed |
+| reporter | Required as a `reporter_id` or text (at most 255 characters); with a `reporter_id` the text is the user's full name | A changed `reporter_id` sets the text to the user's name, an unchanged one keeps the stored text; otherwise checked on the reporter the row ends up with (text sent, or stored) when the text changes or `reporter_id` is cleared |
+| reporter_id | Optional user id (positive integer) of a member of the organization | Membership checked only when changed; a changed reporter text sent without it clears it |
 | model_system_version | Optional text, at most 255 characters | Same |
 | description | 5-32,767 characters (`INCIDENT_DESCRIPTION_MAX_LENGTH`, Jira's text-field limit; column is TEXT) | Checked only when it changes |
 | affected_persons_groups, relationship_causality, immediate_mitigations, planned_corrective_actions, approval_notes | Optional text (TEXT, no length limit) | Same |
@@ -668,7 +813,7 @@ The rules live in `Servers/utils/validations/incidentManagementValidation.utils.
   its transaction. Both the REST create and the Advisor's `agent_create_incident` use it, so both
   get the same validation, reference checks (including `project_id`), server-set approval fields,
   creation history and the incident response workflow for Very serious incidents (enqueued after
-  commit). The Advisor names the requesting user as reporter ("AI Advisor" without one), passes the
+  commit). The Advisor names the requesting user as reporter (by user id while they are a member, else "User #<id>" as text; "AI Advisor" without one), passes the
   tool's `project_id` (an id outside the organization is refused with the reference error), never
   records approval (`canApprove: false`), and records history as the executing user, or as the
   system without one. The MCP server has no incident create tool. Update: `updateIncident` (`services/incidentManagement.service.ts`) against the locked row,
@@ -679,9 +824,8 @@ The rules live in `Servers/utils/validations/incidentManagementValidation.utils.
   needs no defaults.
 - **Creation history** records the saved row (defaults, parsed harm categories and the server's
   approval fields), not the request body, leaving out column defaults the caller did not send
-  (false `archived` / `interim_report`, an empty harm category list). Occurred and detected dates
-  are formatted from the stored day's local date parts (`GENERIC_FORMATTERS.calendarDate`), so a
-  server east of UTC does not record the day before.
+  (false `archived` / `interim_report`, an empty harm category list). Dates are recorded as the
+  stored `YYYY-MM-DD` (`GENERIC_FORMATTERS.date`).
 - **Whitespace-only `status` / `approval_status` on create** count as omitted and take the
   defaults.
 
@@ -795,6 +939,8 @@ incidents are not included." (`archivedIncidentsNote` in
 | `incident_updated` | Incident modified |
 | `incident_deleted` | Incident deleted (after commit; never for a missing incident) |
 
+`incident_added`, `incident_updated` and `incident_deleted` run every action of every active automation of the trigger; an automation that existed before that change keeps only the event's first action until it is edited and saved (`legacy_first_action_only`). See [Automations → Dispatch of entity events](../infrastructure/automations.md#dispatch-of-entity-events).
+
 `incident_added` is enqueued in `transaction.afterCommit` inside
 `createNewIncidentQuery`, so it applies to every caller (the HTTP create, the AI
 Advisor, the Jira import and the demo driver): a rolled-back create never sends
@@ -883,8 +1029,10 @@ members qualify; when none does, the task is created unassigned. The task's
 creator (`creator_id`) is the approving user, else the assignee, else the
 organization's first Admin, so it is not null. Task history records the
 creation as a system change. The assignee gets the usual task-assigned notice.
-Tasks cannot link to incidents (`task_entity_links` has no incident type), so
-the link is in the description.
+In the same transaction the task is linked to the incident (`task_entity_links`,
+`entity_type` `incident`), so it shows in the incident's "Linked tasks" tab and
+the incident in the task's linked items; the description also carries the
+incident's URL.
 
 **Admin escalation** (`notifyAdminsOfCriticalIncident`): every organization
 member with role Admin gets an in-app notice (`system` type, linked to
@@ -1077,11 +1225,10 @@ Known issues outside this change, recorded so they are not lost:
   controllers). For those, a user id from another organization written into a
   tracked field would be shown with that user's name. Fix: pass
   `{ organizationId, transaction }` from each caller.
-- **TIMESTAMP WITHOUT TIME ZONE dates shift on non-UTC servers
-  (pre-existing).** pg parses these columns (oid 1114) as server-local time
-  and the API serialises them with `toISOString()`, so `occurred_date`,
-  `date_detected` and `approval_date` can show a day early or late when the
-  server is not on UTC. Fix: a single pg type parser for oid 1114.
+- **Approval date is the UTC day.** The server records `approval_date` as
+  today in UTC, so an approval late in the evening west of UTC shows the next
+  day. Recording the approver's own day would need the client's date or time
+  zone in the request.
 
 ## Related Documentation
 

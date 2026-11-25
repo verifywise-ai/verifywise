@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { ThemeProvider } from "@mui/material/styles";
 import { light } from "../../../../../themes";
-import { VerifyWiseContext } from "../../../../../../application/contexts/VerifyWise.context";
 import GenerateReportFrom from "../index";
 
 const WITH_FRAMEWORK = {
@@ -19,6 +18,10 @@ const WITHOUT_FRAMEWORK = {
   framework: [],
 };
 
+vi.mock("../../../../../../application/hooks/useProjects", () => ({
+  useProjects: () => ({ data: [WITH_FRAMEWORK, WITHOUT_FRAMEWORK], isLoading: false }),
+}));
+
 const NOTICE = /this use case has no framework assigned/i;
 
 function renderForm(projectId: number | null) {
@@ -33,11 +36,7 @@ function renderForm(projectId: number | null) {
 
   return render(
     <ThemeProvider theme={light}>
-      <VerifyWiseContext.Provider
-        value={{ dashboardValues: { projects: [WITH_FRAMEWORK, WITHOUT_FRAMEWORK] } } as never}
-      >
-        <GenerateReportFrom reportType="project" values={values} onValuesChange={vi.fn()} />
-      </VerifyWiseContext.Provider>
+      <GenerateReportFrom reportType="project" values={values} onValuesChange={vi.fn()} />
     </ThemeProvider>,
   );
 }

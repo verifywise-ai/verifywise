@@ -1,10 +1,11 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Box, Stack, Typography } from "@mui/material";
-import { useSearchParams } from "react-router";
+import { useNavigate, useSearchParams } from "react-router";
 import { CheckCircle2, Info, Settings2, X } from "lucide-react";
 import Select from "../../../components/Inputs/Select";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import { CustomizableButton } from "../../../components/button/customizable-button";
+import { VWLink } from "../../../components/Link";
 import AddNewRisk from "../../../components/Modals/NewRisk";
 import { textStyles } from "../../../themes/typography";
 import { alertTextSx, infoAlertSx, successAlertSx } from "../../RiskInheritanceGraph/reportStyles";
@@ -12,7 +13,7 @@ import useTranslation from "../../../../application/hooks/useTranslation";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import useUsers from "../../../../application/hooks/useUsers";
 import { useCan } from "../../../../application/hooks/useCan";
-import { useIsAdmin } from "../../../../application/hooks/useIsAdmin";
+import { LLM_KEY_CREATE_PATH } from "../../../../application/constants/llmKeyDeepLink";
 import {
   useAcceptFinding,
   useDismissFinding,
@@ -101,7 +102,8 @@ export default function VendorResearchFindings({
 }: VendorResearchFindingsProps) {
   const { t } = useTranslation();
   const canEdit = useCan("vendor.edit");
-  const isAdmin = useIsAdmin();
+  const canManageKeys = useCan("llmKeys.admin");
+  const navigate = useNavigate();
 
   // The vendor starts as the URL says. The link in a notification can also arrive while this
   // page is mounted (only the URL changes), so a new vendor in the URL is followed too. With no
@@ -172,9 +174,9 @@ export default function VendorResearchFindings({
   const latest = useLatestVendorResearch(vendorId);
 
   const notConfigured = config.data !== undefined && !config.data.hasLlmKey;
-  // Only an Admin chooses the keys (the server refuses everyone else), and there is nothing to
-  // choose from until the organization has one.
-  const canChooseKeys = isAdmin && config.data?.hasLlmKey === true;
+  // Only a role that manages the LLM keys chooses them (the server refuses everyone else), and
+  // there is nothing to choose from until the organization has one.
+  const canChooseKeys = canManageKeys && config.data?.hasLlmKey === true;
 
   const vendorOptions = useMemo(() => {
     const named = vendors
@@ -445,9 +447,16 @@ export default function VendorResearchFindings({
             <Typography ref={emptyElement} tabIndex={-1} sx={emptyTextSx}>
               Vendor research is not set up.
             </Typography>
-            {isAdmin && (
+            {/* Whoever can add a key goes straight to the add-key form. */}
+            {canManageKeys && (
               <Typography sx={{ ...textStyles.bodySmall, color: "text.tertiary" }}>
-                {t("Add an LLM key under Settings → API Keys, in the LLM Keys section.")}
+                {t("Research needs an LLM key.")}{" "}
+                <VWLink
+                  onClick={() => navigate(LLM_KEY_CREATE_PATH)}
+                  sx={{ fontSize: "inherit", verticalAlign: "baseline" }}
+                >
+                  {t("Add an LLM key")}
+                </VWLink>
               </Typography>
             )}
           </>
@@ -499,38 +508,42 @@ export default function VendorResearchFindings({
           </Box>
         )}
 
-        <Stack
-          direction="row"
-          sx={{
-            alignItems: "flex-end",
-            justifyContent: "space-between",
-            gap: "12px",
-            flexWrap: "wrap",
-          }}
-        >
-          <Select
-            id="research-findings-vendor"
-            label="Vendor"
-            value={vendorId ?? ALL_VENDORS}
-            items={vendorOptions}
-            sx={{ width: "260px" }}
-            onChange={(event) => {
-              const next = event.target.value;
-              setVendorId(next === ALL_VENDORS ? null : Number(next));
-              setLastAcceptedRiskId(null);
+        {/* Before research is set up there is nothing to filter, unless findings from an earlier
+            key are still pending. */}
+        {!(notConfigured && rows.length === 0 && vendorId === null) && (
+          <Stack
+            direction="row"
+            sx={{
+              alignItems: "flex-end",
+              justifyContent: "space-between",
+              gap: "12px",
+              flexWrap: "wrap",
             }}
-          />
-          {canChooseKeys && (
-            <CustomizableButton
-              variant="outlined"
-              startIcon={<Settings2 size={16} />}
-              onClick={() => setSettingsOpen(true)}
-              sx={controlHeightSx}
-            >
-              Research settings
-            </CustomizableButton>
-          )}
-        </Stack>
+          >
+            <Select
+              id="research-findings-vendor"
+              label="Vendor"
+              value={vendorId ?? ALL_VENDORS}
+              items={vendorOptions}
+              sx={{ width: "260px" }}
+              onChange={(event) => {
+                const next = event.target.value;
+                setVendorId(next === ALL_VENDORS ? null : Number(next));
+                setLastAcceptedRiskId(null);
+              }}
+            />
+            {canChooseKeys && (
+              <CustomizableButton
+                variant="outlined"
+                startIcon={<Settings2 size={16} />}
+                onClick={() => setSettingsOpen(true)}
+                sx={controlHeightSx}
+              >
+                Research settings
+              </CustomizableButton>
+            )}
+          </Stack>
+        )}
 
         {/* What is pending, in two sentences, and where the research of the chosen vendor
                   stands. The run is there for a vendor with nothing pending too: it must stay

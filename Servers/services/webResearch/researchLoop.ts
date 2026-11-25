@@ -61,6 +61,19 @@ export const MIN_QUERY_CHARS = 3;
 const MAX_QUERY_CHARS = 200;
 export const MAX_URL_CHARS = 2048;
 const MAX_FOCUS_CHARS = 120;
+/**
+ * The fields of an action, in the order of the schema. A provider that decodes against the schema
+ * accepts them in this order only, so the prompt lists them, and writes its example, in it.
+ */
+export const LOOP_ACTION_FIELDS = [
+  "action",
+  "category",
+  "query",
+  "kind",
+  "url",
+  "focus",
+  "part",
+] as const;
 /** The actions of a step that the loop runs; the prompt tells the model this number. */
 export const MAX_ACTIONS_PER_STEP = 4;
 /**
@@ -92,6 +105,8 @@ function withActionList(answer: unknown): unknown {
  * The objects are not `.strict()`, as the one of the analysis is not (see `vendorResearch/schema.ts`):
  * an unknown property is dropped, because reporting it would write a key that the model chose, and
  * that a page can steer it to, into the system prompt of the self-correction.
+ *
+ * The properties stand in the order of LOOP_ACTION_FIELDS (a test holds them to it).
  */
 export function createLoopStepSchema<C extends string>(
   categories: readonly [C, ...C[]],
@@ -233,8 +248,19 @@ const UNPARSEABLE_ERROR_NAMES: ReadonlySet<string> = new Set([
 ]);
 
 // What the model is told, in the loop's own words: a result never repeats the message of an error.
-const INVALID_SEARCH = "Invalid step: a search needs a query and a category.";
-const INVALID_READ = "Invalid step: a read needs a url and a category.";
+// Each names the field that was wrong. A provider that decodes against the schema writes the fields
+// of an action in the schema's order only, so a model that writes "kind" before "query" can no
+// longer write the query: the missing query is told with that order (seen 2026-11-23, Claude Haiku
+// through an OpenAI-compatible gateway, on every search of a run).
+const MISSING_QUERY =
+  'Invalid step: the search had no "query". Write the fields of an action in this order: ' +
+  `${LOOP_ACTION_FIELDS.join(", ")}; a search has a query of at least ${MIN_QUERY_CHARS} characters.`;
+const SHORT_QUERY = `Invalid step: the query of a search needs at least ${MIN_QUERY_CHARS} characters.`;
+const MISSING_SEARCH_CATEGORY =
+  'Invalid step: the search had no "category". Give every search the category it is for.';
+const MISSING_URL = 'Invalid step: the read had no "url". Give every read the address to read.';
+const MISSING_READ_CATEGORY =
+  'Invalid step: the read had no "category". Give every read the category it is for.';
 const UNPARSEABLE_ANSWER =
   "Invalid step: answer with one JSON object in the format you were given.";
 const NO_ACTION = "Invalid step: a step needs at least one action.";
@@ -549,7 +575,12 @@ type Checked<C extends string> =
 
 type CheckedRead<C extends string> = Extract<Checked<C>, { kind: "read" }>;
 
-/** Checks a search or a read against its own rules; an action that breaks one is refused. */
+/**
+ * Checks a search or a read against its own rules; an action that breaks one is refused, with a
+ * reason that names the field (`missing_query`, `short_query`, `missing_url`, `missing_category`).
+ * A loop that researches one category gives an action without a category that one: it can research
+ * no other, so the field can only mean it.
+ */
 function checkAction<C extends string>(
   action: LoopAction<C>,
   researchable: readonly C[],
@@ -564,29 +595,31 @@ function checkAction<C extends string>(
     text,
     trace: { tool: "invalid", outcome: "refused", reason, ...fields },
   });
+  const category = action.category ?? (researchable.length === 1 ? researchable[0] : undefined);
   if (action.action === "search") {
     const query = fromModel(action.query);
     const feed = action.kind ?? defaultKind;
-    const fields = { category: action.category, kind: feed, query };
-    if (query.length < MIN_QUERY_CHARS || action.category === undefined) {
-      return invalid(INVALID_SEARCH, "invalid_search", fields);
+    const fields = { category, kind: feed, query };
+    if (query === "") return invalid(MISSING_QUERY, "missing_query", fields);
+    if (query.length < MIN_QUERY_CHARS) return invalid(SHORT_QUERY, "short_query", fields);
+    if (category === undefined) {
+      return invalid(MISSING_SEARCH_CATEGORY, "missing_category", fields);
     }
-    if (!researchable.includes(action.category)) {
+    if (!researchable.includes(category)) {
       return invalid(NOT_RESEARCHABLE, "not_researchable", fields);
     }
-    return { kind: "search", category: action.category, query, feed };
+    return { kind: "search", category, query, feed };
   }
   const url = fromModel(action.url);
-  const fields = { category: action.category, url };
-  if (url === "" || action.category === undefined) {
-    return invalid(INVALID_READ, "invalid_read", fields);
-  }
-  if (!researchable.includes(action.category)) {
+  const fields = { category, url };
+  if (url === "") return invalid(MISSING_URL, "missing_url", fields);
+  if (category === undefined) return invalid(MISSING_READ_CATEGORY, "missing_category", fields);
+  if (!researchable.includes(category)) {
     return invalid(NOT_RESEARCHABLE, "not_researchable", fields);
   }
   return {
     kind: "read",
-    category: action.category,
+    category,
     url,
     focus: fromModel(action.focus) || undefined,
     part: action.part,

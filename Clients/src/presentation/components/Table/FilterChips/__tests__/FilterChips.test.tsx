@@ -162,6 +162,43 @@ describe("FilterChips", () => {
     expect(screen.getByTestId("filter-chip-due")).toHaveTextContent("Due date: Past");
   });
 
+  it("a recent date column offers the classic filter's look-back ranges, counting past days", async () => {
+    const recentColumns: FilterColumn[] = columns.map((c) =>
+      c.id === "due" ? { ...c, label: "Occurred date", dateRange: "recent" as const } : c,
+    );
+    const { user, onFilterChange } = renderChips({ columns: recentColumns });
+    await user.click(screen.getByTestId("filter-chip-due"));
+
+    // Today (A) and five days ago (C) are in the last 7 days; in three days (B) is not.
+    // The same ranges as the classic filter.
+    expect(menuItems().map((i) => i.textContent)).toEqual([
+      "All",
+      "Today1",
+      "Since yesterday1",
+      "Last 7 days2",
+      "Last 2 weeks2",
+      "Last 30 days2",
+    ]);
+
+    await user.click(screen.getByTestId("filter-chip-option-due-in_last_7_days"));
+    expect(onFilterChange).toHaveBeenLastCalledWith(
+      [expect.objectContaining({ columnId: "due", operator: "in_last_7_days", value: "" })],
+      "and",
+    );
+    expect(screen.getByTestId("filter-chip-due")).toHaveTextContent("Occurred date: Last 7 days");
+  });
+
+  it("a restored 'last 2 weeks' condition shows on the recent date chip", () => {
+    const recentColumns: FilterColumn[] = columns.map((c) =>
+      c.id === "due" ? { ...c, label: "Occurred date", dateRange: "recent" as const } : c,
+    );
+    renderChips({
+      columns: recentColumns,
+      defaultConditions: [{ id: "c1", columnId: "due", operator: "in_last_2_weeks", value: "" }],
+    });
+    expect(screen.getByTestId("filter-chip-due")).toHaveTextContent("Occurred date: Last 2 weeks");
+  });
+
   it("Clear filters resets every chip", async () => {
     const { user, onFilterChange } = renderChips();
     await user.click(screen.getByTestId("filter-chip-status"));

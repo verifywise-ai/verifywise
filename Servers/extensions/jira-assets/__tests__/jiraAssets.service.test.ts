@@ -670,9 +670,7 @@ describe("removeMissingUseCases", () => {
     // Projects go through the core deletion path, never a bare DELETE.
     expect(sqlCalls("DELETE FROM projects")).toHaveLength(0);
     expect(mockDeleteProject).toHaveBeenCalledTimes(1);
-    expect(mockDeleteProject).toHaveBeenCalledWith(111, 5, FAKE_TX, {
-      enqueueAutomationAfterCommit: true,
-    });
+    expect(mockDeleteProject).toHaveBeenCalledWith(111, 5, FAKE_TX);
     expect(mockRecordDeletion).toHaveBeenCalledWith(111, 8, 5, FAKE_TX);
     expect(sqlCalls("DELETE FROM jira_assets_use_cases")[0][1]).toMatchObject({
       replacements: { organizationId: 5, linkIds: [12] },
@@ -1009,9 +1007,7 @@ describe("deleteUseCaseByProjectId", () => {
     });
     const [lockSql] = sqlCalls("SELECT id, project_id, missing_in_jira_since")[0];
     expect(lockSql).toContain("project_id IN (:ids)");
-    expect(mockDeleteProject).toHaveBeenCalledWith(111, 5, FAKE_TX, {
-      enqueueAutomationAfterCommit: true,
-    });
+    expect(mockDeleteProject).toHaveBeenCalledWith(111, 5, FAKE_TX);
     expect(mockRecordDeletion).toHaveBeenCalledWith(111, 8, 5, FAKE_TX);
     const [, completed] = sqlCalls("SET status = 'completed'")[0];
     expect(JSON.parse(completed.replacements.counts)).toMatchObject({ deleted: 1 });

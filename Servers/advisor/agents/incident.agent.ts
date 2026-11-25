@@ -6,6 +6,7 @@
  */
 
 import { createDomainAgent } from "./baseAgent";
+import { getAgentToolNames } from "./agentToolMap";
 
 export function registerIncidentAgent() {
   return createDomainAgent({
@@ -28,23 +29,7 @@ export function registerIncidentAgent() {
       "recovery",
       "lessons learned",
     ],
-    tools: [
-      // Read tools
-      "fetch_incidents",
-      "get_incident_by_id",
-      "get_incident_analytics",
-      "get_incident_changes_history",
-      "search_incidents",
-      "get_incident_timeline",
-      "get_incident_related_tasks",
-      "get_incident_impact_assessment",
-      // Write tools
-      "agent_create_incident",
-      "agent_update_incident",
-      "agent_delete_incident",
-      "agent_archive_incident",
-      "agent_update_incident_status",
-    ],
+    tools: getAgentToolNames("incident-agent"),
     systemPromptSuffix: `You are an incident management and response expert. When handling incidents:
 - Classify incidents by severity and impact
 - Guide through incident response phases: detect → contain → eradicate → recover → learn

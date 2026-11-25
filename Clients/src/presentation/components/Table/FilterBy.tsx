@@ -6,6 +6,7 @@ import Field from "../Inputs/Field";
 import { VWLink } from "../Link/VWLink";
 import { brand, status, palette as vwPalette, radiusPx } from "../../themes/palette";
 import { chartTheme } from "../../themes/chartTheme";
+import { NO_VALUE_FILTER_OPERATORS } from "../../../application/utils/filterConditions";
 
 // Column type determines available operators and value input type
 export type FilterColumnType = "select" | "text" | "date";
@@ -26,6 +27,12 @@ export interface FilterColumn {
    * lists every option without counts. The classic filter ignores it.
    */
   serverFiltered?: boolean;
+  /**
+   * Date columns only. "upcoming" (the default) offers "in N days" from today,
+   * for due dates. "recent" offers "in the last N days" up to today, for days
+   * that have already happened (an incident's occurred date).
+   */
+  dateRange?: "upcoming" | "recent";
 }
 
 export type FilterOperator =
@@ -40,6 +47,11 @@ export type FilterOperator =
   | "in_7_days"
   | "in_2_weeks"
   | "in_30_days"
+  // Recent date operators (dateRange: "recent")
+  | "in_last_1_day"
+  | "in_last_7_days"
+  | "in_last_2_weeks"
+  | "in_last_30_days"
   | "is_past"
   | "is_today";
 
@@ -87,32 +99,35 @@ const DATE_OPERATORS: Array<{ value: FilterOperator; label: string }> = [
   { value: "is_not_empty", label: "is not empty" },
 ];
 
-// All operators that don't require a value input
-const NO_VALUE_OPERATORS: FilterOperator[] = [
-  "is_empty",
-  "is_not_empty",
-  "in_1_day",
-  "in_7_days",
-  "in_2_weeks",
-  "in_30_days",
-  "is_past",
-  "is_today",
+// Operators for date columns whose days have already happened (dateRange: "recent")
+const RECENT_DATE_OPERATORS: Array<{ value: FilterOperator; label: string }> = [
+  { value: "is_today", label: "is today" },
+  { value: "in_last_1_day", label: "since yesterday" },
+  { value: "in_last_7_days", label: "in the last 7 days" },
+  { value: "in_last_2_weeks", label: "in the last 2 weeks" },
+  { value: "in_last_30_days", label: "in the last 30 days" },
+  { value: "is_empty", label: "is empty" },
+  { value: "is_not_empty", label: "is not empty" },
 ];
+
+// All operators that don't require a value input
+const NO_VALUE_OPERATORS: FilterOperator[] = NO_VALUE_FILTER_OPERATORS;
 
 // Check if operator requires a value
 const operatorRequiresValue = (operator: FilterOperator): boolean => {
   return !NO_VALUE_OPERATORS.includes(operator);
 };
 
-// Get operators based on column type
+// Get operators based on column type (and, for dates, whether they look ahead or back)
 const getOperatorsForColumnType = (
   type: FilterColumnType,
+  dateRange?: FilterColumn["dateRange"],
 ): Array<{ value: FilterOperator; label: string }> => {
   switch (type) {
     case "select":
       return SELECT_OPERATORS;
     case "date":
-      return DATE_OPERATORS;
+      return dateRange === "recent" ? RECENT_DATE_OPERATORS : DATE_OPERATORS;
     case "text":
     default:
       return TEXT_OPERATORS;
@@ -279,7 +294,7 @@ const FilterRow: React.FC<{
 }> = ({ condition, columns, isFirst, logic, onLogicChange, onChange, onRemove, showRemove }) => {
   const currentColumn = columns.find((col) => col.id === condition.columnId);
   const columnType = currentColumn?.type || "text";
-  const operators = getOperatorsForColumnType(columnType);
+  const operators = getOperatorsForColumnType(columnType, currentColumn?.dateRange);
   const showValueField = operatorRequiresValue(condition.operator);
 
   // Column dropdown items
@@ -300,7 +315,7 @@ const FilterRow: React.FC<{
     const newColumnId = e.target.value;
     const newColumn = columns.find((col) => col.id === newColumnId);
     const newType = newColumn?.type || "text";
-    const newOperators = getOperatorsForColumnType(newType);
+    const newOperators = getOperatorsForColumnType(newType, newColumn?.dateRange);
 
     // Reset operator to first available for new column type
     onChange({
@@ -405,7 +420,10 @@ export const FilterBy: React.FC<FilterByProps> = ({
   // Create initial condition
   const createInitialCondition = useCallback((): FilterCondition => {
     const firstColumn = columns[0];
-    const operators = getOperatorsForColumnType(firstColumn?.type || "text");
+    const operators = getOperatorsForColumnType(
+      firstColumn?.type || "text",
+      firstColumn?.dateRange,
+    );
     return {
       id: generateFilterId(),
       columnId: firstColumn?.id || "",

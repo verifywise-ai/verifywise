@@ -9,6 +9,7 @@ jest.mock("../../../utils/vendorResearch.utils", () => ({
   finishRunQuery: jest.fn(),
   getActiveRunQuery: jest.fn(),
   getLastRunCreatedAtQuery: jest.fn(),
+  getVendorResearchSettingsQuery: jest.fn(),
   withRunStartLockQuery: jest.fn(),
 }));
 // The real module opens a BullMQ queue as soon as it is imported.
@@ -33,6 +34,7 @@ import {
   finishRunQuery,
   getActiveRunQuery,
   getLastRunCreatedAtQuery,
+  getVendorResearchSettingsQuery,
   withRunStartLockQuery,
 } from "../../../utils/vendorResearch.utils";
 import { enqueueVendorResearch } from "../queue";
@@ -66,6 +68,13 @@ const CONFIGURED: VendorResearchConfig = {
   workerConcurrency: 5,
   headless: false,
   records: true,
+};
+
+const ORG_SETTINGS = {
+  researchKeyId: null,
+  analysisKeyId: null,
+  scanIntervalDays: null,
+  autoResearchOnCreate: true,
 };
 
 const VENDOR_ROW = { id: VENDOR, vendor_name: "Acme" } as IVendor;
@@ -129,6 +138,7 @@ beforeEach(() => {
   // The happy path: a vendor that exists, a key, no earlier run, room under the cap.
   asMock(getVendorByIdQuery).mockResolvedValue(VENDOR_ROW);
   asMock(getVendorResearchConfig).mockReturnValue(CONFIGURED);
+  asMock(getVendorResearchSettingsQuery).mockResolvedValue(ORG_SETTINGS);
   asMock(getLLMKeysQuery).mockResolvedValue([{ id: 1 }]);
   asMock(failStaleRunsQuery).mockResolvedValue(0);
   asMock(getActiveRunQuery).mockResolvedValue(null);
@@ -572,6 +582,16 @@ describe("triggerAutoResearch", () => {
       "automatic research is turned off",
     ],
     [
+      "automatic research turned off for the organization",
+      () =>
+        asMock(getVendorResearchSettingsQuery).mockResolvedValue({
+          ...ORG_SETTINGS,
+          autoResearchOnCreate: false,
+        }),
+      {},
+      "automatic research is turned off for the organization",
+    ],
+    [
       "a vendor that is not found",
       () => asMock(getVendorByIdQuery).mockResolvedValue(null),
       {},
@@ -619,8 +639,34 @@ describe("triggerAutoResearch", () => {
     await triggerAutoResearch({ ...autoArgs, isDemo: true });
     asMock(getVendorResearchConfig).mockReturnValue({ ...CONFIGURED, autoRun: false });
     await triggerAutoResearch(autoArgs);
+    asMock(getVendorResearchConfig).mockReturnValue(CONFIGURED);
+    asMock(getVendorResearchSettingsQuery).mockResolvedValue({
+      ...ORG_SETTINGS,
+      autoResearchOnCreate: false,
+    });
+    await triggerAutoResearch(autoArgs);
 
     expect(getVendorByIdQuery).not.toHaveBeenCalled();
+  });
+
+  // The deployment's switch comes first: with it off, the organization's setting is not read.
+  it("reads the organization's setting only when the deployment allows automatic research", async () => {
+    asMock(getVendorResearchConfig).mockReturnValue({ ...CONFIGURED, autoRun: false });
+    await triggerAutoResearch(autoArgs);
+    expect(getVendorResearchSettingsQuery).not.toHaveBeenCalled();
+
+    asMock(getVendorResearchConfig).mockReturnValue(CONFIGURED);
+    await triggerAutoResearch(autoArgs);
+    expect(getVendorResearchSettingsQuery).toHaveBeenCalledWith(ORG);
+  });
+
+  it("does not reject when the organization's setting cannot be read, and logs the error", async () => {
+    asMock(getVendorResearchSettingsQuery).mockRejectedValue(new Error("settings are gone"));
+
+    await expect(triggerAutoResearch(autoArgs)).resolves.toBeUndefined();
+
+    expect(logger.error).toHaveBeenCalledWith(expect.stringContaining("settings are gone"));
+    expectNothingStarted();
   });
 
   it("does not reject when something fails, and logs the error", async () => {

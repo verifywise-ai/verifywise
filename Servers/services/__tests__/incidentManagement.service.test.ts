@@ -112,6 +112,7 @@ describe("updateIncident (shared incident write path)", () => {
       status: Status.INVESTIGATING,
       approval_status: Approval.PENDING,
       approved_by: null,
+      approved_by_id: null,
       approval_date: null,
       approval_notes: null,
     });
@@ -130,7 +131,8 @@ describe("updateIncident (shared incident write path)", () => {
       mockTransaction,
       false,
     ]);
-    expect(changes).toHaveLength(written.length);
+    // The user ids (approved_by_id) are not tracked: their names are.
+    expect(changes).toHaveLength(written.filter((column) => column !== "approved_by_id").length);
     expect(changes).toEqual(
       expect.arrayContaining([
         { fieldName: "Status", oldValue: "Closed", newValue: "Investigating" },
@@ -251,6 +253,7 @@ describe("updateIncident (shared incident write path)", () => {
         status: Status.OPEN,
         approval_status: Approval.PENDING,
         approved_by: null,
+        approved_by_id: null,
         approval_date: null,
         approval_notes: null,
         updated_at: new Date("2026-10-09T09:00:00.000Z"),
@@ -415,7 +418,8 @@ describe("updateIncident — who may change what", () => {
       approval_notes: "Signed off",
       approved_by: "Rita Reviewer",
     });
-    expect(changed.approval_date).toBeInstanceOf(Date);
+    expect(changed.approval_date).toBe(new Date().toISOString().slice(0, 10));
+    expect(changed.approved_by_id).toBe(9);
     const lookup = query.mock.calls.find(([sql]: [string]) => sql.includes("AS full_name"));
     expect(lookup![1]).toMatchObject({ replacements: { userId: 9 }, transaction: mockTransaction });
   });
@@ -452,7 +456,7 @@ describe("updateIncident — who may change what", () => {
       const incident = openPending();
       incident.dataValues.approval_status = Approval.APPROVED;
       incident.dataValues.approved_by = "Rita Reviewer";
-      incident.dataValues.approval_date = new Date(2026, 9, 1) as any;
+      incident.dataValues.approval_date = "2026-10-01" as any;
       return incident;
     });
 
@@ -464,6 +468,7 @@ describe("updateIncident — who may change what", () => {
     expect(changed).toEqual({
       approval_status: Approval.NOT_REQUIRED,
       approved_by: null,
+      approved_by_id: null,
       approval_date: null,
     });
   });
@@ -529,7 +534,7 @@ describe("updateIncident — who may change what", () => {
 
     const [, changed] = mockUpdate.mock.calls[0];
     expect(Object.keys(changed).sort()).toEqual(
-      ["approval_date", "approval_status", "approved_by"].sort(),
+      ["approval_date", "approval_status", "approved_by", "approved_by_id"].sort(),
     );
   });
 
@@ -543,6 +548,7 @@ describe("updateIncident — who may change what", () => {
       status: Status.INVESTIGATING,
       approval_status: Approval.PENDING,
       approved_by: null,
+      approved_by_id: null,
       approval_date: null,
       approval_notes: null,
     });

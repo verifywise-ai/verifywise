@@ -46,13 +46,9 @@ vi.mock("../../../../application/hooks/useColumnVisibility", () => ({
   }),
 }));
 
-// Mock context
-vi.mock("../../../../application/contexts/VerifyWise.context", () => ({
-  VerifyWiseContext: {
-    _currentValue: { userRoleName: "Admin", userId: 1 },
-    Provider: ({ children }: any) => children,
-    Consumer: ({ children }: any) => children({ userRoleName: "Admin", userId: 1 }),
-  },
+// Mock auth hook (replaces legacy VerifyWiseContext)
+vi.mock("../../../../application/hooks/useAuth", () => ({
+  useAuth: () => ({ userRoleName: "Admin", userId: 1 }),
 }));
 
 // Mock events

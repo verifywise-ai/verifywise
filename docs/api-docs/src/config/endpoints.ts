@@ -1286,7 +1286,7 @@ export const aiIncidentEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/ai-incident-managements',
     summary: "Create New Incident",
-    description: "Needs incident.create. Required: ai_project, type, severity, occurred_date, date_detected, reporter and description (5 to 32,767 characters). status defaults to Open and approval_status to Pending when omitted. type, severity, status and approval_status must be one of their listed values; ai_project, reporter and model_system_version are at most 255 characters; dates are YYYY-MM-DD (or an ISO date-time), not later than today in UTC+14 (the furthest-ahead time zone, so today anywhere is accepted), and date_detected is on or after occurred_date. categories_of_harm is optional: a list (or a comma-separated string) of Health, Safety, Rights, Property, Environment. approved_by and approval_date are set by the server and ignored in the request. A caller without incident.approve always gets approval_status Pending with no approval_notes. A caller with incident.approve may send Approved or Rejected; the server then records the caller's name as approved_by and now as approval_date.",
+    description: "Needs incident.create. Required: ai_project, type, severity, occurred_date, date_detected, reporter (or reporter_id) and description (5 to 32,767 characters). status defaults to Open and approval_status to Pending when omitted. type, severity, status and approval_status must be one of their listed values; ai_project, reporter and model_system_version are at most 255 characters; dates are YYYY-MM-DD (or an ISO date-time), not later than today in UTC+14 (the furthest-ahead time zone, so today anywhere is accepted), and date_detected is on or after occurred_date. categories_of_harm is optional: a list (or a comma-separated string) of Health, Safety, Rights, Property, Environment. The reporter is required: a reporter_id (a user of your organization; the server writes their full name into reporter) or a non-empty reporter text. Dates are stored and returned as YYYY-MM-DD. approved_by, approved_by_id and approval_date are set by the server and ignored in the request. A caller without incident.approve always gets approval_status Pending with no approval_notes. A caller with incident.approve may send Approved or Rejected; the server then records the caller's name as approved_by, their id as approved_by_id and today (UTC) as approval_date.",
     requiresAuth: true,
     requestBody: {
       "ai_project": "string (required)",
@@ -1296,7 +1296,8 @@ export const aiIncidentEndpoints: Endpoint[] = [
       "approval_status": "Pending | Approved | Rejected | Not required (optional)",
       "occurred_date": "string (required)",
       "date_detected": "string (required)",
-      "reporter": "string (required)",
+      "reporter": "string (optional)",
+      "reporter_id": "integer (optional)",
       "model_system_version": "string (optional)",
       "description": "string (required)",
       "categories_of_harm": "array (optional)",
@@ -1331,7 +1332,7 @@ export const aiIncidentEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/ai-incident-managements/{id}',
     summary: "Update Incident By Id",
-    description: "Needs incident.edit or incident.approve, then per field: changing approval_status or approval_notes needs incident.approve, changing any other field (archived included) needs incident.edit. A field sent with its stored value is not a change. An archived incident takes only { \"archived\": false } (restore); any other change answers 409 (\"Restore this incident before editing it.\") and nothing is written. approved_by and approval_date are set by the server and ignored in the request: when approval_status changes to Approved or Rejected, approved_by is the caller's name and approval_date is now; when it changes to Pending or Not required, both are cleared. Changed fields follow the create rules (enums, lengths, dates; harm categories an update adds must be listed values, stored ones outside the list may stay); a required field cannot be set to null or an empty string, and the dates the incident ends up with must keep date_detected on or after occurred_date. Fields left out are not changed.",
+    description: "Needs incident.edit or incident.approve, then per field: changing approval_status or approval_notes needs incident.approve, changing any other field (archived included) needs incident.edit. A field sent with its stored value is not a change. An archived incident takes only { \"archived\": false } (restore); any other change answers 409 (\"Restore this incident before editing it.\") and nothing is written. approved_by, approved_by_id and approval_date are set by the server and ignored in the request: when approval_status changes to Approved or Rejected, approved_by is the caller's name, approved_by_id their id and approval_date today (UTC, YYYY-MM-DD); when it changes to Pending or Not required, all three are cleared. A changed reporter_id must be a user of your organization (400 INVALID_REFERENCE otherwise) and sets reporter to their full name; a changed reporter text without reporter_id clears reporter_id. Changed fields follow the create rules (enums, lengths, dates; harm categories an update adds must be listed values, stored ones outside the list may stay); a required field cannot be set to null or an empty string, and the dates the incident ends up with must keep date_detected on or after occurred_date. Fields left out are not changed.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -13803,6 +13804,28 @@ export const v1V1scheduledReportsEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Tasks endpoints
+export const v1V1tasksEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/tasks/linked/{entityType}/{entityId}',
+    summary: "List the tasks linked to an entity",
+    description: "The tasks linked to one entity (an incident, a vendor, ...) through task_entity_links that the user can see, with the visibility of GET /tasks. Archived tasks are left out. Not paginated.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'entityType', in: 'path', type: 'EntityType', required: true, description: "The entityType" },
+      { name: 'entityId', in: 'path', type: 'integer', required: true, description: "The entityId" },
+    ],
+    responses: [
+      { status: 200, description: "The linked tasks" },
+      { status: 400, description: "Invalid entity type or ID" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Tasks",
+  },
+];
+
 // v1: V1/Training endpoints
 export const v1V1trainingEndpoints: Endpoint[] = [
   {
@@ -14202,6 +14225,7 @@ export const vendorResearchEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/v1/vendor-research/config',
     summary: "Get Research Config",
+    description: "What the page needs to know to offer vendor research. Booleans only, never a key. autoRunAllowed is the deployment switch (VENDOR_RESEARCH_AUTO_RUN); autoRunEnabled is whether a new vendor of the organization is researched as soon as it is added, which needs both autoRunAllowed and the organization setting autoResearchOnCreate.",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -14222,11 +14246,26 @@ export const vendorResearchEndpoints: Endpoint[] = [
   },
   {
     method: 'GET',
-    path: '/v1/vendor-research/settings',
-    summary: "Get Research Settings",
+    path: '/v1/vendor-research/search-status',
+    summary: "Get Research Search Status",
+    description: "Which search a research run gets from each LLM key of the organization (anthropic: Claude's own web search; brave: Brave Search with the organization's Brave key, for a key with no search of its own when one is stored; gdelt: the news of the GDELT Project), the search of the default key (the newest; null without a key), whether the organization has a Brave Search key (braveConfigured; never the key), and whether the organization's latest finished runs of the last 30 days that say something about the news (up to 3) all got none. Names keys by id only. Admins only.",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
+      { status: 403, description: "Forbidden" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Research",
+  },
+  {
+    method: 'GET',
+    path: '/v1/vendor-research/settings',
+    summary: "Get Research Settings",
+    description: "The LLM keys the vendor research uses, the scheduled scan interval and whether a new vendor is researched as soon as it is added. Admins only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 403, description: "Forbidden" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "v1: Vendor Research",
@@ -14235,9 +14274,64 @@ export const vendorResearchEndpoints: Endpoint[] = [
     method: 'PUT',
     path: '/v1/vendor-research/settings',
     summary: "Save Research Settings",
+    description: "Stores the research settings of the organization. researchKeyId and analysisKeyId are required (an LLM key id or null for the default). scanIntervalDays and autoResearchOnCreate are optional: a body that leaves one out keeps the stored value.",
+    requiresAuth: true,
+    requestBody: {
+      "researchKeyId": "integer (required, nullable)",
+      "analysisKeyId": "integer (required, nullable)",
+      "scanIntervalDays": "7 | 14 | 30 |  (optional, nullable)",
+      "autoResearchOnCreate": "boolean (optional)",
+    },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "A key id, scanIntervalDays or autoResearchOnCreate is not valid" },
+      { status: 403, description: "Forbidden" },
+      { status: 404, description: "LLM key not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Research",
+  },
+  {
+    method: 'GET',
+    path: '/v1/vendor-research/search-key',
+    summary: "Get Research Search Key",
+    description: "Whether the organization stored a Brave Search API key for the vendor research, and its last four characters. The key itself is never returned. Admins only.",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
+      { status: 403, description: "Forbidden" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Research",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/vendor-research/search-key',
+    summary: "Save Research Search Key",
+    description: "Stores the organization's Brave Search API key, encrypted, after one test request to Brave. Spaces around the key are dropped. A key Brave refuses, or text that cannot be a key (10 to 200 printable characters, no spaces), is a 422 with code invalid_key. A check that could not be made is a 422 with code unreachable, unless skipCheck is true, which stores the key anyway. Admins only.",
+    requiresAuth: true,
+    requestBody: {
+      "key": "string (required)",
+      "skipCheck": "boolean (optional)",
+    },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "No key in the body" },
+      { status: 403, description: "Forbidden" },
+      { status: 422, description: "The key was not stored: Brave refused it (invalid_key) or could not be reached to check it (unreachable)" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Vendor Research",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/vendor-research/search-key',
+    summary: "Delete Research Search Key",
+    description: "Removes the organization's Brave Search API key; the vendor research goes back to its other searches. Admins only.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 403, description: "Forbidden" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "v1: Vendor Research",
@@ -14547,6 +14641,7 @@ export const allEndpoints = {
   v1V1reportRuns: v1V1reportRunsEndpoints,
   v1V1reportTemplates: v1V1reportTemplatesEndpoints,
   v1V1scheduledReports: v1V1scheduledReportsEndpoints,
+  v1V1tasks: v1V1tasksEndpoints,
   v1V1training: v1V1trainingEndpoints,
   v1V1useCaseLifecycle: v1V1useCaseLifecycleEndpoints,
   v1V1vendorRisks: v1V1vendorRisksEndpoints,

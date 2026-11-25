@@ -4,6 +4,7 @@
  * Following VerifyWise clean architecture patterns
  */
 
+import { formatIncidentDay } from "../../utils/validations/incidentManagementValidation.utils";
 import { background, brand, riskMark, status, text } from "../../tools/design-tokens/palette";
 import {
   ReportData,
@@ -1729,8 +1730,12 @@ export class ReportDataCollector {
       }
 
       const incidents = (await sequelize.query(
-        `SELECT aim.*
+        `SELECT aim.*,
+            NULLIF(TRIM(CONCAT_WS(' ', ru.name, ru.surname)), '') AS reporter_name
           FROM ai_incident_managements aim
+          LEFT JOIN users ru ON ru.id = aim.reporter_id
+            AND EXISTS (SELECT 1 FROM organization_members rom
+                         WHERE rom.user_id = ru.id AND rom.organization_id = aim.organization_id)
           WHERE ${scope} AND aim.archived IS NOT TRUE
           ORDER BY aim.created_at DESC`,
         { replacements, type: QueryTypes.SELECT },
@@ -1754,15 +1759,20 @@ export class ReportDataCollector {
           type: inc.type || "Unknown",
           severity: inc.severity || "Unknown",
           status: inc.status || "Unknown",
+          // date_detected is a DATE ("YYYY-MM-DD"): format that day itself,
+          // never its midnight in the server's time zone (a day early west
+          // of UTC).
           reportedDate: inc.date_detected
-            ? new Date(inc.date_detected).toLocaleDateString()
+            ? formatIncidentDay(inc.date_detected)
             : inc.created_at
               ? new Date(inc.created_at).toLocaleDateString()
               : undefined,
           resolvedDate: undefined,
           // `reporter` is who filed the incident. There is no assignee column,
           // and the filer is not the person accountable for the incident.
-          reporter: inc.reporter || undefined,
+          // The reporter user's current full name, else the stored text
+          // (Jira imports, older rows, a deleted user).
+          reporter: inc.reporter_name || inc.reporter || undefined,
         })),
       };
     } catch (error) {

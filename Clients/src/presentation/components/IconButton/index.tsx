@@ -41,6 +41,8 @@ const ARCHIVE_DELETE_PAIR_TYPES = ["task", "reportrun"];
 // The remove confirmation says "Delete {type}" by default, which reads badly
 // for camelCase type names — and is plain wrong where the item archives.
 const REMOVE_PROCEED_TEXT_BY_TYPE: Record<string, string> = {
+  incident: "Archive incident",
+  task: "Archive task",
   scheduledreport: "Delete report",
   reportrun: "Archive report",
   agent: "Delete agent",
@@ -99,7 +101,8 @@ function IconButton({
   const usesArchiveDeletePair = ARCHIVE_DELETE_PAIR_TYPES.includes(normalizedType ?? "");
   // The remove-family item archives (reversibly) for these types, so its
   // confirmation is a warning rather than a destructive delete.
-  const isArchiveRemoval = type === "Incident" || type === "Task" || normalizedType === "reportrun";
+  const isArchiveRemoval =
+    normalizedType === "incident" || normalizedType === "task" || normalizedType === "reportrun";
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [isOpenRemoveModal, setIsOpenRemoveModal] = useState(false);
   const [isOpenHardDeleteModal, setIsOpenHardDeleteModal] = useState(false);
@@ -707,11 +710,7 @@ function IconButton({
             )
           }
           cancelText="Cancel"
-          proceedText={
-            type === "Incident" || type === "Task"
-              ? `Archive ${type.toLowerCase()}`
-              : (REMOVE_PROCEED_TEXT_BY_TYPE[normalizedType ?? ""] ?? `Delete ${type}`)
-          }
+          proceedText={REMOVE_PROCEED_TEXT_BY_TYPE[normalizedType ?? ""] ?? `Delete ${type}`}
           onCancel={() => handleCancel()}
           onProceed={() =>
             checkForRisks && onDeleteWithRisks ? handleDeleteWithRiskCheck() : handleDelete()

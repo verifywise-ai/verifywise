@@ -7,6 +7,8 @@ import {
   FindingStatus,
   VendorResearchConfig,
   VendorResearchRun,
+  VendorResearchSearchKey,
+  VendorResearchSearchStatus,
   VendorResearchSettings,
   VendorRiskFinding,
 } from "../../domain/interfaces/i.vendorResearch";
@@ -52,8 +54,24 @@ export async function getVendorResearchSettings(): Promise<VendorResearchSetting
 }
 
 /**
- * Both fields are always sent (the server takes a whole choice, and `null` is a choice), and the
- * answer is what it kept. A key that is not the organization's is a 404.
+ * Which search each LLM key gets, and whether recent runs got no news. Admin only. A failure raises
+ * no toast: the window that reads it only leaves its warning out.
+ */
+export async function getVendorResearchSearchStatus(): Promise<VendorResearchSearchStatus> {
+  try {
+    const response = await apiServices.get<{ message: string; data: VendorResearchSearchStatus }>(
+      "/v1/vendor-research/search-status",
+      { suppressGlobalErrorToast: true },
+    );
+    return extractData<VendorResearchSearchStatus>(response);
+  } catch (error) {
+    throw toAPIError(error, "Failed to fetch the research search status");
+  }
+}
+
+/**
+ * Every field is sent (the server takes a whole choice, and `null` is a choice), and the answer is
+ * what it kept. A key that is not the organization's is a 404.
  */
 export async function saveVendorResearchSettings(
   settings: VendorResearchSettings,
@@ -66,6 +84,51 @@ export async function saveVendorResearchSettings(
     return extractData<VendorResearchSettings>(response);
   } catch (error) {
     throw toAPIError(error, "Failed to save the research settings");
+  }
+}
+
+/** Whether the organization has a Brave search key, and its last 4 characters. Admin only. */
+export async function getVendorResearchSearchKey(): Promise<VendorResearchSearchKey> {
+  try {
+    const response = await apiServices.get<{ message: string; data: VendorResearchSearchKey }>(
+      "/v1/vendor-research/search-key",
+    );
+    return extractData<VendorResearchSearchKey>(response);
+  } catch (error) {
+    throw toAPIError(error, "Failed to fetch the search key");
+  }
+}
+
+/**
+ * Stores the Brave search key after the server checked it with Brave. A refused key is a 422 whose
+ * `code` (`invalid_key` or `unreachable`, read with `readVendorResearchError`) the window words
+ * itself, so the global error toast is off. `skipCheck` saves a key Brave could not be reached to
+ * check; it never saves a key Brave rejected.
+ */
+export async function saveVendorResearchSearchKey(body: {
+  key: string;
+  skipCheck?: boolean;
+}): Promise<VendorResearchSearchKey> {
+  try {
+    const response = await apiServices.put<{ message: string; data: VendorResearchSearchKey }>(
+      "/v1/vendor-research/search-key",
+      body,
+      { suppressGlobalErrorToast: true },
+    );
+    return extractData<VendorResearchSearchKey>(response);
+  } catch (error) {
+    throw toAPIError(error, "Failed to save the search key");
+  }
+}
+
+export async function removeVendorResearchSearchKey(): Promise<VendorResearchSearchKey> {
+  try {
+    const response = await apiServices.delete<{ message: string; data: VendorResearchSearchKey }>(
+      "/v1/vendor-research/search-key",
+    );
+    return extractData<VendorResearchSearchKey>(response);
+  } catch (error) {
+    throw toAPIError(error, "Failed to remove the search key");
   }
 }
 
@@ -179,8 +242,8 @@ export async function dismissVendorRiskFinding(
 export interface VendorResearchErrorDetail {
   status?: number;
   /**
-   * `llm_key_missing` (409 on start), `cooldown` or `daily_cap` (429 on start). A 503 has no
-   * code: tell it by the status. A 409 on accept or dismiss carries a sentence, not a code.
+   * `llm_key_missing` (409 on start), `cooldown` or `daily_cap` (429 on start), `invalid_key` or
+   * `unreachable` (422 on saving the search key). A 503 has no code: tell it by the status. A 409 on accept or dismiss carries a sentence, not a code.
    */
   code?: string;
   /** The wait of a `cooldown`. */

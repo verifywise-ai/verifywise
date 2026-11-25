@@ -15,6 +15,8 @@ import {
   buildEvidencePack,
   isBlockedEntry,
   provenanceOf,
+  storedEvidenceOf,
+  transientUrlsOf,
 } from "../evidence";
 import { CONTEXT_ONLY_RECORD_SOURCES, MAX_RECORDS, RECORD_CATEGORY } from "../records/types";
 
@@ -1245,5 +1247,55 @@ describe("provenanceOf", () => {
     ];
 
     expect(buildEvidencePack(withProvenance)).toEqual(buildEvidencePack(plain));
+  });
+});
+
+describe("the stored copy of a pack with results whose text may not be kept", () => {
+  const BRAVE = "https://news.example.com/brave";
+  const OTHER = "https://news.example.com/other";
+  const PAGE = "https://news.example.com/page";
+
+  it("lists the results marked transient, and no page", () => {
+    const entries = [
+      entry(BRAVE, { transient: true }),
+      entry(OTHER),
+      pageEntry(PAGE),
+      // A page is never one, whatever it carries.
+      pageEntry("https://news.example.com/odd", { transient: true }),
+    ];
+
+    expect([...transientUrlsOf(entries)]).toEqual([BRAVE]);
+  });
+
+  it("keeps the id, category, kind, vendor mark and address of such a result, and nothing of its text or date", () => {
+    const pack = buildEvidencePack([
+      entry(BRAVE, { transient: true, publishedAt: "2026-02-03", onVendorSite: true }),
+      entry(OTHER, { publishedAt: "2026-02-04" }),
+      pageEntry(PAGE),
+    ]);
+
+    const stored = storedEvidenceOf(pack, new Set([BRAVE]));
+
+    expect(stored).toEqual([
+      {
+        id: pack[0].id,
+        category: "security_incidents",
+        kind: "result",
+        onVendorSite: true,
+        url: BRAVE,
+        title: "",
+        content: "",
+        publishedAt: null,
+      },
+      pack[1],
+      pack[2],
+    ]);
+    // The pack the model is shown is not changed.
+    expect(pack[0].title).toBe(`Title of ${BRAVE}`);
+  });
+
+  it("leaves a page alone even when its address is listed", () => {
+    const pack = buildEvidencePack([pageEntry(PAGE)]);
+    expect(storedEvidenceOf(pack, new Set([PAGE]))).toEqual(pack);
   });
 });

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { getAllTasks } from "../repository/task.repository";
-import type { ITask } from "../../domain/interfaces/i.task";
+import { getAllTasks, getTasksLinkedToEntity } from "../repository/task.repository";
+import type { EntityLinkType, ITask } from "../../domain/interfaces/i.task";
 
 export const taskQueryKeys = {
   all: ["tasks"] as const,
@@ -8,6 +8,17 @@ export const taskQueryKeys = {
   list: (filters: { includeArchived?: boolean }) => [...taskQueryKeys.lists(), filters] as const,
   details: () => [...taskQueryKeys.all, "detail"] as const,
   detail: (id: number | string) => [...taskQueryKeys.details(), id] as const,
+};
+
+/**
+ * Tasks linked to an entity. A root of its own, outside ["tasks"], so the
+ * optimistic list updaters of the task mutations (which patch every
+ * ["tasks"] list) never touch it: task writes invalidate it instead.
+ */
+export const linkedTaskQueryKeys = {
+  all: ["linkedTasks"] as const,
+  byEntity: (entityType: EntityLinkType, entityId: number) =>
+    [...linkedTaskQueryKeys.all, entityType, entityId] as const,
 };
 
 interface UseTasksOptions {
@@ -31,6 +42,19 @@ export function useTasks(options: UseTasksOptions = {}) {
       });
       return (response?.data?.tasks as ITask[]) || [];
     },
+    staleTime: 2 * 1000,
+  });
+}
+
+/**
+ * The tasks linked to one entity (an incident, a vendor, ...) that the user
+ * can see, archived tasks left out. Disabled without an entity id.
+ */
+export function useLinkedTasks(entityType: EntityLinkType, entityId: number | undefined) {
+  return useQuery({
+    queryKey: linkedTaskQueryKeys.byEntity(entityType, entityId ?? 0),
+    queryFn: ({ signal }) => getTasksLinkedToEntity(entityType, entityId as number, signal),
+    enabled: typeof entityId === "number" && entityId > 0,
     staleTime: 2 * 1000,
   });
 }

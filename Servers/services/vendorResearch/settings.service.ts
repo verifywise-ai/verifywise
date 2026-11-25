@@ -4,7 +4,8 @@
  * checked against the organization and the choice is stored in one transaction, and the check locks
  * the key rows until it ends, so that a key cannot be deleted between the check and the write that
  * names it. The scan interval is a number of days that the caller has checked, `null` for off, or
- * nothing to leave it as it is.
+ * nothing to leave it as it is; the automatic research of a new vendor is a boolean, or nothing to
+ * leave it as it is.
  */
 import { sequelize } from "../../database/db";
 import type {
@@ -22,9 +23,17 @@ export async function saveVendorResearchSettings(
     organizationId: number;
     userId: number;
     scanIntervalDays?: number | null;
+    autoResearchOnCreate?: boolean;
   },
 ): Promise<SaveSettingsResult> {
-  const { organizationId, userId, researchKeyId, analysisKeyId, scanIntervalDays } = input;
+  const {
+    organizationId,
+    userId,
+    researchKeyId,
+    analysisKeyId,
+    scanIntervalDays,
+    autoResearchOnCreate,
+  } = input;
 
   return sequelize.transaction(async (transaction) => {
     const named = new Set([researchKeyId, analysisKeyId]);
@@ -34,7 +43,14 @@ export async function saveVendorResearchSettings(
       }
     }
     const settings = await saveVendorResearchSettingsQuery(
-      { organizationId, userId, researchKeyId, analysisKeyId, scanIntervalDays },
+      {
+        organizationId,
+        userId,
+        researchKeyId,
+        analysisKeyId,
+        scanIntervalDays,
+        autoResearchOnCreate,
+      },
       transaction,
     );
     return { ok: true, settings } as const;

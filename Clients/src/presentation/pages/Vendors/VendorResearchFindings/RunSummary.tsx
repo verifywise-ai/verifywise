@@ -19,18 +19,20 @@ import {
 } from "../../../../application/utils/vendorResearchAlerts";
 import { uncheckedSentence } from "../../../../application/utils/vendorResearchPlainText";
 import {
+  attestationLines,
   coverageLines,
   describeCategoryLine,
   describeCategoryNote,
   describeProgress,
   describeRunError,
   formatResearchDate,
+  newsSearchUnavailable,
 } from "../../../../application/utils/vendorResearchText";
 import { fill } from "../../../../i18n/fill";
 import InlineError from "./InlineError";
 import { controlHeightSx } from "./styles";
 
-const quietTextSx = { ...textStyles.bodySmall, color: "text.tertiary" };
+const quietTextSx = { ...textStyles.body, color: "text.tertiary" };
 const detailHeadingSx = { ...textStyles.caption, color: "text.accent" };
 
 /**
@@ -51,7 +53,7 @@ function Gap({ children, quiet = false }: { children: ReactNode; quiet?: boolean
       <Box component="span" sx={{ display: "inline-flex", mt: "2px", flexShrink: 0 }}>
         <Icon size={14} aria-hidden="true" />
       </Box>
-      <Typography sx={{ ...textStyles.bodySmall, color: "inherit", overflowWrap: "anywhere" }}>
+      <Typography sx={{ ...textStyles.body, color: "inherit", overflowWrap: "anywhere" }}>
         {children}
       </Typography>
     </Stack>
@@ -99,6 +101,7 @@ export default function RunSummary({
   const { t, lang } = useTranslation();
   const start = useStartVendorResearch();
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [allListsOpen, setAllListsOpen] = useState(false);
 
   const run = latest.data;
   const active = run?.status === "queued" || run?.status === "running";
@@ -203,13 +206,16 @@ export default function RunSummary({
     // What a run of the vendor risk database checked; a run without it, or cached before it, has none.
     const coverage = run.coverage ? coverageLines(run.coverage, t, lang) : null;
     const unchecked = coverage === null ? null : uncheckedSentence(coverage.unchecked, t);
+    // A listing in the vendor's favour (FedRAMP, C2PA), shown under its category: never a risk.
+    const listings = attestationLines(run.coverage, t, lang);
     // What the run did, also when it failed. A run that did nothing has no line.
     const counted = run.searches_used + run.pages_read > 0;
-    // Claude's own search needs no credit, so it is named with what the run did. The GDELT Project
-    // is credited under the findings. `openai` is in the list of the table for an engine that no
-    // run uses yet, so it has no words either.
+    // Claude's own search and Brave Search need no credit, so they are named with what the run did.
+    // The GDELT Project is credited under the findings. `openai` is in the list of the table for an
+    // engine that no run uses yet, so it has no words either.
     const claudeSearch = run.search_engine === "anthropic";
-    const checkedSomething = coverage !== null || counted || claudeSearch;
+    const braveSearch = run.search_engine === "brave";
+    const checkedSomething = coverage !== null || counted || claudeSearch || braveSearch;
     const hasDetails = entries.length > 0 || checkedSomething;
 
     above = (
@@ -219,6 +225,9 @@ export default function RunSummary({
             <AlertCircle size={16} />
             <Typography sx={errorTextSx}>{describeRunError(run.error, t)}</Typography>
           </Box>
+        )}
+        {newsSearchUnavailable(entries) && (
+          <Gap>{t("News search was not available, so results may be incomplete.")}</Gap>
         )}
         {coverage?.off && <Gap quiet>Public databases turned off</Gap>}
         {unchecked !== null && <Gap>{unchecked}</Gap>}
@@ -253,11 +262,20 @@ export default function RunSummary({
             <Stack component="ul" sx={{ gap: "8px", m: 0, p: 0, listStyle: "none" }}>
               {entries.map((entry, index) => {
                 const note = describeCategoryNote(entry, t);
+                const listed = listings[entry.category] ?? [];
                 return (
                   <Box component="li" key={`${entry.category}-${index}`}>
                     <Typography sx={{ ...textStyles.body, color: "text.primary" }}>
-                      {describeCategoryLine(entry, t)}
+                      {describeCategoryLine(entry, t, { listed: listed.length > 0 })}
                     </Typography>
+                    {listed.map((line, lineIndex) => (
+                      <Typography
+                        key={lineIndex}
+                        sx={{ ...textStyles.body, color: "text.secondary" }}
+                      >
+                        {line}
+                      </Typography>
+                    ))}
                     {note?.kind === "fixed" && (
                       <Typography sx={quietTextSx}>{note.text}</Typography>
                     )}
@@ -289,11 +307,31 @@ export default function RunSummary({
                 {coverage.checked !== null && (
                   <Typography sx={quietTextSx}>{coverage.checked}</Typography>
                 )}
-                {coverage.none !== null && (
-                  <Typography sx={quietTextSx}>{coverage.none}</Typography>
+                {coverage.alsoChecked !== null && (
+                  <Typography sx={quietTextSx}>{coverage.alsoChecked}</Typography>
                 )}
                 {coverage.notChecked !== null && (
                   <Typography sx={quietTextSx}>{coverage.notChecked}</Typography>
+                )}
+                {coverage.asOf !== null && (
+                  <Typography sx={quietTextSx}>{coverage.asOf}</Typography>
+                )}
+                {/* Every list that held nothing, by name, only for a reader who asks. */}
+                {coverage.allLists !== null && (
+                  <Box>
+                    <VWLink
+                      onClick={() => setAllListsOpen((open) => !open)}
+                      ariaExpanded={allListsOpen}
+                      sx={{ fontSize: textStyles.body.fontSize }}
+                    >
+                      {allListsOpen ? t("Hide the lists") : t("Show all lists")}
+                    </VWLink>
+                    {allListsOpen && (
+                      <Typography sx={{ ...quietTextSx, overflowWrap: "anywhere" }}>
+                        {coverage.allLists}
+                      </Typography>
+                    )}
+                  </Box>
                 )}
                 <Typography sx={quietTextSx}>{coverage.cited}</Typography>
               </>
@@ -308,6 +346,9 @@ export default function RunSummary({
             )}
             {claudeSearch && (
               <Typography sx={quietTextSx}>{t("Searched with Claude web search")}</Typography>
+            )}
+            {braveSearch && (
+              <Typography sx={quietTextSx}>{t("Searched with Brave Search")}</Typography>
             )}
           </Stack>
         )}

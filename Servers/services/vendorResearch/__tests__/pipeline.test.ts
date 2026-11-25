@@ -9,6 +9,7 @@ jest.mock("../../../utils/vendorResearch.utils", () => ({
   getKnownSourceKeysQuery: jest.fn(),
   getSnapshotsQuery: jest.fn(),
   getVendorResearchSettingsQuery: jest.fn(),
+  getBraveKeyQuery: jest.fn(),
   rememberSourcesQuery: jest.fn(),
   saveSnapshotsQuery: jest.fn(),
   updateRunProgressQuery: jest.fn(),
@@ -48,6 +49,7 @@ jest.mock("../edgarFiler", () => {
   };
 });
 
+import { inspect } from "util";
 import { MockLanguageModelV4 } from "ai/test";
 import { createModelFromKey, resolveModelId } from "../../../advisor/llmModelFactory";
 import { sequelize } from "../../../database/db";
@@ -71,6 +73,7 @@ import { getVendorByIdQuery } from "../../../utils/vendor.utils";
 import { getVendorRisksByVendorIdQuery } from "../../../utils/vendorRisk.utils";
 import {
   finishRunQuery,
+  getBraveKeyQuery,
   getFindingsForVendorQuery,
   getKnownSourceKeysQuery,
   getSnapshotsQuery,
@@ -83,6 +86,7 @@ import {
   TIMED_OUT_ERROR,
   updateRunProgressQuery,
 } from "../../../utils/vendorResearch.utils";
+import { PageReadError } from "../../webResearch/readPage";
 import type { StopReason } from "../../webResearch/researchLoop";
 import type { SearchEngineId } from "../../webResearch/webSearch";
 import type { CallFailure, CallRecord, LedgerEntry } from "../../webResearch/webSession";
@@ -1486,7 +1490,7 @@ describe("runVendorResearch", () => {
       });
     });
 
-    it("records the prompt version vr-19", async () => {
+    it("records the prompt version vr-20", async () => {
       await run();
 
       expect(onlyFinish().input.promptVersion).toBe(CREDIBILITY_PROMPT_VERSION);
@@ -1495,8 +1499,8 @@ describe("runVendorResearch", () => {
       // sentence for a filing matched by name only. vr-18 says that a line of a change that begins
       // with the continued mark is a part of one long clause. vr-19 says that a line that begins with
       // two spaces continues the line before it, and that one that begins with the mark is quoted
-      // on its own.
-      expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-19");
+      // on its own. vr-20 writes the example action of the loop prompt in the schema's order.
+      expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-20");
       expect(generate.mock.calls[0][0].system).toBe(buildSystemPrompt(NOW));
     });
 
@@ -3411,6 +3415,88 @@ describe("runVendorResearch", () => {
     });
   });
 
+  // A run that may search with Brave can end during its research (its time limit, or a research
+  // that throws): its trace is saved then, and the model's thoughts in it may quote Brave's text.
+  describe("the trace of a run that may search with Brave and ends during its research", () => {
+    const BRAVE_THOUGHT = "BRAVE-SNIPPET-QUOTED-IN-A-THOUGHT";
+
+    beforeEach(() => {
+      resolveModel.mockResolvedValue({
+        model: MODEL,
+        modelId: MODEL_ID,
+        search: searchEngineModule.searchSpecOf(
+          { name: "OpenAI", url: "https://api.openai.com/v1/" },
+          "BSA-test-key-0000",
+        ),
+      });
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it("saves a trace with blank thoughts when the run times out", async () => {
+      research.mockImplementation(({ trace }) => {
+        trace?.step({
+          tool: "search",
+          outcome: "ok",
+          query: "Acme breach",
+          thought: BRAVE_THOUGHT,
+        });
+        return new Promise<ResearchResult>(() => undefined);
+      });
+
+      const result = await run({ runTimeLimitMs: 20 });
+
+      expect(result.outcome).toBe("failed");
+      const { error, trace } = onlyFinish().input;
+      expect(error).toBe(TIMED_OUT_ERROR);
+      expect(trace.steps).toEqual([expect.objectContaining({ tool: "search", thought: "" })]);
+      expect(JSON.stringify(trace)).not.toContain(BRAVE_THOUGHT);
+    });
+
+    it("saves a trace with blank thoughts when the research throws", async () => {
+      research.mockImplementation(async ({ trace }) => {
+        trace?.step({
+          tool: "search",
+          outcome: "ok",
+          query: "Acme breach",
+          thought: BRAVE_THOUGHT,
+        });
+        throw new Error("the web session broke");
+      });
+
+      const result = await run();
+
+      expect(result.outcome).toBe("failed");
+      const { error, trace } = onlyFinish().input;
+      expect(error).toBe("Unexpected error");
+      expect(trace.steps).toEqual([expect.objectContaining({ tool: "search", thought: "" })]);
+      expect(JSON.stringify(trace)).not.toContain(BRAVE_THOUGHT);
+    });
+
+    it("keeps the thoughts of a run that has no Brave key", async () => {
+      resolveModel.mockResolvedValue({
+        model: MODEL,
+        modelId: MODEL_ID,
+        search: { engine: "gdelt" },
+      });
+      research.mockImplementation(async ({ trace }) => {
+        trace?.step({
+          tool: "search",
+          outcome: "ok",
+          query: "Acme breach",
+          thought: BRAVE_THOUGHT,
+        });
+        throw new Error("the web session broke");
+      });
+
+      await run();
+
+      expect(JSON.stringify(onlyFinish().input.trace)).toContain(BRAVE_THOUGHT);
+    });
+  });
+
   describe("the trace", () => {
     const traceOf = (input: any) => input.trace;
 
@@ -4935,6 +5021,194 @@ describe("runVendorResearch", () => {
   });
 });
 
+describe("a run whose search results may not be kept (Brave Search)", () => {
+  /** Text only Brave returned: none of it may reach a stored value. */
+  const SENTINEL = "BRAVESENTINEL";
+  const BRAVE_BREACH: Entry = ledgerEntry({
+    category: "security_incidents",
+    url: "https://news.example.com/acme-breach",
+    title: `${SENTINEL} Acme confirms breach`,
+    content: `${SENTINEL} Acme confirmed on Monday that attackers copied customer records from a test system.`,
+    publishedAt: "2026-02-03",
+    transient: true,
+  });
+  const BRAVE_FINE: Entry = ledgerEntry({
+    category: "legal_regulatory",
+    url: "https://law.example.org/acme-fine",
+    title: `${SENTINEL} Regulator fines Acme`,
+    content: `${SENTINEL} The regulator fined Acme 2 million euros for late breach notices.`,
+    transient: true,
+  });
+  const FINE_QUOTE = "fined Acme 2 million euros";
+
+  const fineFinding = (): ModelFinding =>
+    breachFinding({
+      category: "legal_regulatory",
+      risk_description: "A regulator fined the vendor for late breach notices.",
+      impact_description: "The vendor may be slow to tell us of a breach.",
+      action_plan: "Ask the vendor how it notifies customers of a breach.",
+      rationale: "A fine for late notices says the process failed at least once.",
+      evidence: [{ source_id: "S2", quote: FINE_QUOTE }],
+    });
+  /** A candidate that cites no source of the pack and repeats Brave's text: validation turns it away. */
+  const strayFinding = (): ModelFinding =>
+    breachFinding({
+      risk_description: `${SENTINEL} copied from a snippet by the model.`,
+      evidence: [{ source_id: "S9", quote: "anything" }],
+    });
+
+  /** The breach page reads and holds the quote; the page of the fine cannot be read. */
+  const readPage = jest.fn();
+
+  beforeEach(() => {
+    // Set here: the top-level beforeEach resets every mock, its implementation included.
+    readPage.mockImplementation(async (url: string) => {
+      if (url === BRAVE_FINE.url) throw new PageReadError("blocked_by_site");
+      return {
+        url,
+        title: "Acme breach: what we know",
+        publishedAt: "2026-02-04",
+        text: `Acme confirmed that ${BREACH_QUOTE} from a test system last week.`,
+        links: [],
+      };
+    });
+    research.mockResolvedValue(
+      researched({
+        entries: [BRAVE_BREACH, BRAVE_FINE],
+        calls: [searched("security_incidents"), searched("legal_regulatory")],
+        readPage,
+        searchEngine: "brave",
+        transientText: true,
+      }),
+    );
+    generate.mockResolvedValue(answer([breachFinding(), fineFinding(), strayFinding()]));
+  });
+
+  it("shows the model Brave's text, and stores it nowhere: not the run, its evidence, findings or trace", async () => {
+    await run();
+
+    // The model was shown the text during the run, which the terms allow.
+    expect(JSON.stringify(generate.mock.calls)).toContain(SENTINEL);
+    // The test is only worth something if a validation rejection was recorded and findings stored.
+    const { input } = onlyFinish();
+    expect(input.status).toBe("completed");
+    expect(input.searchEngine).toBe("brave");
+    expect(input.trace.rejected.length).toBeGreaterThan(0);
+    expect(insertedFindings()).toHaveLength(2);
+
+    expect(JSON.stringify(asMock(finishRunQuery).mock.calls)).not.toContain(SENTINEL);
+    expect(JSON.stringify(asMock(insertFindingsQuery).mock.calls)).not.toContain(SENTINEL);
+    expect(JSON.stringify(asMock(updateRunProgressQuery).mock.calls)).not.toContain(SENTINEL);
+    expect(JSON.stringify(asMock(rememberSourcesQuery).mock.calls)).not.toContain(SENTINEL);
+    expect(loggedText()).not.toContain(SENTINEL);
+  });
+
+  it("stores each such result of the evidence by address only, with no title, text or date", async () => {
+    await run();
+
+    expect(onlyFinish().input.evidence).toEqual([
+      {
+        id: "S1",
+        category: "security_incidents",
+        kind: "result",
+        onVendorSite: false,
+        url: BRAVE_BREACH.url,
+        title: "",
+        content: "",
+        publishedAt: null,
+      },
+      {
+        id: "S2",
+        category: "legal_regulatory",
+        kind: "result",
+        onVendorSite: false,
+        url: BRAVE_FINE.url,
+        title: "",
+        content: "",
+        publishedAt: null,
+      },
+    ]);
+  });
+
+  it("keeps the quote a page holds with the page's own title and date, and withholds the one no page backs", async () => {
+    await run();
+
+    const [breach, fine] = insertedFindings();
+    expect(breach.sources).toEqual([
+      expect.objectContaining({
+        url: BRAVE_BREACH.url,
+        title: "Acme breach: what we know",
+        quote: BREACH_QUOTE,
+        published_at: "2026-02-04",
+      }),
+    ]);
+    expect(breach.sources[0]).not.toHaveProperty("quote_withheld");
+    expect(fine.sources).toEqual([
+      expect.objectContaining({
+        url: BRAVE_FINE.url,
+        title: "",
+        quote: "",
+        published_at: null,
+        quote_withheld: true,
+      }),
+    ]);
+    // The page that could not be read leaves the finding as one that rests on a snippet.
+    expect(fine.snippet_only).toBe(true);
+  });
+
+  it("stores the text of the rejected candidates empty", async () => {
+    await run();
+
+    const { rejected } = onlyFinish().input.trace;
+    expect(rejected.length).toBeGreaterThan(0);
+    for (const entry of rejected) expect(entry.text ?? "").toBe("");
+  });
+
+  it("withholds the rejected text when Brave's results reached the model but none is in the ledger", async () => {
+    research.mockResolvedValue(
+      researched({ readPage, searchEngine: "gdelt", transientText: true }),
+    );
+    generate.mockResolvedValue(answer([strayFinding()]));
+
+    await run();
+
+    const { trace } = onlyFinish().input;
+    expect(trace.rejected.length).toBeGreaterThan(0);
+    expect(JSON.stringify(trace)).not.toContain(SENTINEL);
+  });
+
+  it("keeps the rejected text of a run that saw no such result", async () => {
+    research.mockResolvedValue(researched({ readPage }));
+    generate.mockResolvedValue(answer([strayFinding()]));
+
+    await run();
+
+    expect(JSON.stringify(onlyFinish().input.trace.rejected)).toContain(SENTINEL);
+  });
+
+  it("withholds every such source when the research hands on no page reader", async () => {
+    research.mockResolvedValue(
+      researched({
+        entries: [BRAVE_BREACH, BRAVE_FINE],
+        calls: [searched("security_incidents"), searched("legal_regulatory")],
+        searchEngine: "brave",
+        transientText: true,
+      }),
+    );
+
+    await run();
+
+    const sources = insertedFindings().flatMap((finding) => finding.sources);
+    expect(sources).toHaveLength(2);
+    for (const source of sources) {
+      expect(source).toEqual(
+        expect.objectContaining({ title: "", quote: "", published_at: null, quote_withheld: true }),
+      );
+    }
+    expect(JSON.stringify(asMock(insertFindingsQuery).mock.calls)).not.toContain(SENTINEL);
+  });
+});
+
 describe("resolveOrgModel", () => {
   const keyRow = (overrides: Record<string, unknown> = {}) => ({
     id: 2,
@@ -5006,7 +5280,9 @@ describe("resolveOrgModel", () => {
     });
 
     it("is told from the name and the address of the key alone: the key itself does not go in", async () => {
-      const told = jest.spyOn(searchEngineModule, "searchEngineOf");
+      // The spec is built by `searchSpecOf` (which asks `searchEngineOf` inside its module), from the
+      // row's name and address and the organization's Brave key, none here.
+      const told = jest.spyOn(searchEngineModule, "searchSpecOf");
       try {
         asMock(getLLMKeysWithKeyQuery).mockResolvedValue([
           keyRow({ name: "Anthropic", url: CLAUDE_URL, key: "sk-ant-secret", model: "claude-x" }),
@@ -5017,11 +5293,86 @@ describe("resolveOrgModel", () => {
         await resolveOrgModel(ORG);
 
         expect(told).toHaveBeenCalledTimes(1);
-        expect(told).toHaveBeenCalledWith({ name: "Anthropic", url: CLAUDE_URL });
+        expect(told).toHaveBeenCalledWith({ name: "Anthropic", url: CLAUDE_URL }, null);
         expect(loggedText()).not.toContain("sk-ant-secret");
       } finally {
         told.mockRestore();
       }
+    });
+
+    describe("with the organization's Brave key", () => {
+      const BRAVE_KEY = "BSAbravesecretkey1234";
+
+      it("searches with Brave for a key with no search of its own, and reads the key of this organization", async () => {
+        asMock(getLLMKeysWithKeyQuery).mockResolvedValue([keyRow()]);
+        asMock(getBraveKeyQuery).mockResolvedValue(BRAVE_KEY);
+        asMock(createModelFromKey).mockReturnValue(MODEL);
+        asMock(resolveModelId).mockReturnValue("gpt-x");
+
+        const resolved = await resolveOrgModel(ORG);
+
+        expect(getBraveKeyQuery).toHaveBeenCalledWith(ORG);
+        expect(resolved?.search?.engine).toBe("brave");
+        expect(resolved?.search?.braveKey).toBe(BRAVE_KEY);
+      });
+
+      it("keeps Claude's search for a key of Anthropic, with Brave behind it", async () => {
+        asMock(getLLMKeysWithKeyQuery).mockResolvedValue([
+          keyRow({ name: "Anthropic", url: CLAUDE_URL, model: "claude-x" }),
+        ]);
+        asMock(getBraveKeyQuery).mockResolvedValue(BRAVE_KEY);
+        asMock(createModelFromKey).mockReturnValue(MODEL);
+        asMock(resolveModelId).mockReturnValue("claude-x");
+
+        const resolved = await resolveOrgModel(ORG);
+
+        expect(resolved?.search?.engine).toBe("anthropic");
+        expect(resolved?.search?.braveKey).toBe(BRAVE_KEY);
+      });
+
+      it("never puts the key where a copy or a log of the result would show it", async () => {
+        asMock(getLLMKeysWithKeyQuery).mockResolvedValue([keyRow()]);
+        asMock(getBraveKeyQuery).mockResolvedValue(BRAVE_KEY);
+        asMock(createModelFromKey).mockReturnValue(MODEL);
+        asMock(resolveModelId).mockReturnValue("gpt-x");
+
+        const resolved = await resolveOrgModel(ORG);
+
+        expect(JSON.stringify(resolved)).not.toContain(BRAVE_KEY);
+        expect(inspect(resolved, { depth: 10 })).not.toContain(BRAVE_KEY);
+        expect(loggedText()).not.toContain(BRAVE_KEY);
+      });
+
+      it.each([
+        ["none", null],
+        ["an empty one", ""],
+      ])("searches GDELT with %s", async (_label, stored) => {
+        asMock(getLLMKeysWithKeyQuery).mockResolvedValue([keyRow()]);
+        asMock(getBraveKeyQuery).mockResolvedValue(stored);
+        asMock(createModelFromKey).mockReturnValue(MODEL);
+        asMock(resolveModelId).mockReturnValue("gpt-x");
+
+        const resolved = await resolveOrgModel(ORG);
+
+        expect(resolved?.search?.engine).toBe("gdelt");
+        expect(resolved?.search?.braveKey).toBeUndefined();
+      });
+
+      it("goes on without Brave when the key cannot be read, and logs only the name of the error", async () => {
+        asMock(getLLMKeysWithKeyQuery).mockResolvedValue([keyRow()]);
+        asMock(getBraveKeyQuery).mockRejectedValue(
+          Object.assign(new Error("connect ECONNREFUSED 10.9.8.7"), { name: "ConnectionError" }),
+        );
+        asMock(createModelFromKey).mockReturnValue(MODEL);
+        asMock(resolveModelId).mockReturnValue("gpt-x");
+
+        const resolved = await resolveOrgModel(ORG);
+
+        expect(resolved?.search).toEqual({ engine: "gdelt" });
+        expect(logger.warn).toHaveBeenCalledTimes(1);
+        expect(loggedText()).toContain("ConnectionError");
+        expect(loggedText()).not.toContain("10.9.8.7");
+      });
     });
   });
 

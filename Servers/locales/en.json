@@ -19,6 +19,7 @@
   "{field} must be a valid date (YYYY-MM-DD)": "{field} must be a valid date (YYYY-MM-DD)",
   "{field} must be one of: {values}": "{field} must be one of: {values}",
   "{field} must be true or false": "{field} must be true or false",
+  "{field} must be a user id": "{field} must be a user id",
   "date_detected cannot be earlier than occurred_date": "date_detected cannot be earlier than occurred_date",
   "{key} must be a whole number from {min} to {max}": "{key} must be a whole number from {min} to {max}",
   "{label} — \"{metric}\" = {value} breached its monitoring threshold.": "{label} — \"{metric}\" = {value} breached its monitoring threshold.",
@@ -575,6 +576,7 @@
   "Incident deleted successfully": "Incident deleted successfully",
   "Incident not found": "Incident not found",
   "Restore this incident before editing it.": "Restore this incident before editing it.",
+  "Restore this incident before linking it to a task.": "Restore this incident before linking it to a task.",
   "Linked incidents must be a list of incident ids.": "Linked incidents must be a list of incident ids.",
   "Some linked incidents do not exist in your organization.": "Some linked incidents do not exist in your organization.",
   "Incorrect CAPTCHA answer": "Incorrect CAPTCHA answer",
@@ -1196,6 +1198,7 @@
   "Scan of {repository} needs attention: {reasons}": "Scan of {repository} needs attention: {reasons}",
   "Scan was cancelled": "Scan was cancelled",
   "scanIntervalDays must be 7, 14, 30 or null": "scanIntervalDays must be 7, 14, 30 or null",
+  "autoResearchOnCreate must be true or false": "autoResearchOnCreate must be true or false",
   "Scenario not found": "Scenario not found",
   "Scenario not found or cannot be deleted": "Scenario not found or cannot be deleted",
   "Scenario not found or cannot be modified": "Scenario not found or cannot be modified",
@@ -1667,6 +1670,9 @@
   "A private analysis would replace another user's analysis of this file": "A private analysis would replace another user's analysis of this file",
   "Incident creation validation failed": "Incident creation validation failed",
   "{field} does not reference an entity in your organization": "{field} does not reference an entity in your organization",
+  "Enter a Brave Search API key.": "Enter a Brave Search API key.",
+  "Brave did not accept this key. Check that you copied all of it.": "Brave did not accept this key. Check that you copied all of it.",
+  "Could not reach Brave to check this key.": "Could not reach Brave to check this key.",
   "Could not reach {provider} to check this key.": "Could not reach {provider} to check this key.",
   "the endpoint": "the endpoint",
   "This Anthropic key is not tied to a workspace. Create the key inside a workspace in the Anthropic Console, or enter the workspace ID.": "This Anthropic key is not tied to a workspace. Create the key inside a workspace in the Anthropic Console, or enter the workspace ID.",
@@ -1682,5 +1688,6 @@
   "Critical incident: {reference}": "Critical incident: {reference}",
   "Minor": "Minor",
   "Serious": "Serious",
-  "Very serious": "Very serious"
+  "Very serious": "Very serious",
+  "key must be a non-empty string": "key must be a non-empty string"
 }

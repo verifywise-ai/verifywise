@@ -70,6 +70,7 @@ describe("GET /api/v1/vendor-research/settings", () => {
       researchKeyId: null,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
   });
 
@@ -86,6 +87,7 @@ describe("GET /api/v1/vendor-research/settings", () => {
       researchKeyId: research,
       analysisKeyId: analysis,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
     expect(res.text).not.toContain("sk-SENTINEL");
   });
@@ -117,6 +119,7 @@ describe("PUT /api/v1/vendor-research/settings", () => {
       researchKeyId: research,
       analysisKeyId: analysis,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
     expect(await rowOf(owner.orgId)).toMatchObject({
       organization_id: owner.orgId,
@@ -139,6 +142,7 @@ describe("PUT /api/v1/vendor-research/settings", () => {
       researchKeyId: second,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
 
     const reset = await owner.request
@@ -149,11 +153,13 @@ describe("PUT /api/v1/vendor-research/settings", () => {
       researchKeyId: null,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
     expect(await getVendorResearchSettingsQuery(owner.orgId)).toEqual({
       researchKeyId: null,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
   });
 
@@ -172,6 +178,7 @@ describe("PUT /api/v1/vendor-research/settings", () => {
       researchKeyId: own,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
   });
 
@@ -244,6 +251,7 @@ describe("how often the scan researches a vendor again", () => {
       researchKeyId: key,
       analysisKeyId: null,
       scanIntervalDays: days,
+      autoResearchOnCreate: true,
     });
     expect(await rowOf(owner.orgId)).toMatchObject({ scan_interval_days: days });
     expect((await owner.request.get(SETTINGS)).body.data).toEqual(res.body.data);
@@ -261,6 +269,7 @@ describe("how often the scan researches a vendor again", () => {
       researchKeyId: null,
       analysisKeyId: null,
       scanIntervalDays: 7,
+      autoResearchOnCreate: true,
     });
   });
 
@@ -280,6 +289,7 @@ describe("how often the scan researches a vendor again", () => {
       researchKeyId: null,
       analysisKeyId: null,
       scanIntervalDays: 14,
+      autoResearchOnCreate: true,
     });
 
     const off = await owner.request
@@ -289,6 +299,7 @@ describe("how often the scan researches a vendor again", () => {
       researchKeyId: null,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
     expect(await rowOf(owner.orgId)).toMatchObject({ scan_interval_days: null });
   });
@@ -374,6 +385,7 @@ describe("what a run is built with", () => {
       researchKeyId: null,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
     expect((await resolveOrgModel(owner.orgId))?.modelId).toBe("newest-model");
   });
@@ -382,6 +394,51 @@ describe("what a run is built with", () => {
     const { owner } = await seedTwoTenantContexts(1);
 
     expect(await resolveOrgModel(owner.orgId)).toBeNull();
+  });
+});
+
+describe("automatic research of a new vendor", () => {
+  it("is on for an organization that has chosen nothing", async () => {
+    const { owner } = await seedTwoTenantContexts(1);
+
+    expect((await owner.request.get(SETTINGS)).body.data.autoResearchOnCreate).toBe(true);
+  });
+
+  // A page that does not know the setting sends the keys only: it must not turn it back on.
+  it("is turned off, and kept when the body does not name it", async () => {
+    const { owner } = await seedTwoTenantContexts(1);
+
+    const off = await owner.request
+      .put(SETTINGS)
+      .send({ researchKeyId: null, analysisKeyId: null, autoResearchOnCreate: false });
+    expect(off.status).toBe(200);
+    expect(off.body.data.autoResearchOnCreate).toBe(false);
+    expect(await rowOf(owner.orgId)).toMatchObject({ auto_research_on_create: false });
+
+    const keysOnly = await owner.request
+      .put(SETTINGS)
+      .send({ researchKeyId: null, analysisKeyId: null });
+    expect(keysOnly.body.data.autoResearchOnCreate).toBe(false);
+
+    const on = await owner.request
+      .put(SETTINGS)
+      .send({ researchKeyId: null, analysisKeyId: null, autoResearchOnCreate: true });
+    expect(on.body.data.autoResearchOnCreate).toBe(true);
+  });
+
+  it.each([
+    ["text", "false"],
+    ["a number", 0],
+    ["null", null],
+  ])("answers 400 for %s and writes nothing", async (_label, value) => {
+    const { owner } = await seedTwoTenantContexts(1);
+
+    const res = await owner.request
+      .put(SETTINGS)
+      .send({ researchKeyId: null, analysisKeyId: null, autoResearchOnCreate: value });
+
+    expect(res.status).toBe(400);
+    expect(await rowOf(owner.orgId)).toBeUndefined();
   });
 });
 

@@ -3714,3 +3714,82 @@ describe("createWebSession", () => {
     });
   });
 });
+
+describe("createWebSession: a result whose text may not be kept (Brave Search)", () => {
+  const NEWS_DATE = "2031-01-02T00:00:00.000Z";
+  const transient = (url: string): SearchResult => ({
+    ...result(url, NEWS_DATE),
+    transient: true,
+  });
+
+  it("marks the ledger entry of such a result, and no other", async () => {
+    const kept = transient("https://news.example/a");
+    const other = result("https://news.example/b");
+    const { session } = setup({ answers: [[kept, other]] });
+
+    await session.search("Acme breach", "news", "security_incidents");
+
+    expect(session.snapshot().ledger).toEqual([
+      { ...resultEntry("security_incidents", kept), transient: true },
+      resultEntry("security_incidents", other),
+    ]);
+  });
+
+  it("keeps nothing of the result when its page is read: the page's own title and date, and no mark", async () => {
+    const kept = transient("https://news.example/a");
+    const { session, readPage } = setup({ answers: [[kept]] });
+    readPage.mockResolvedValueOnce(
+      page(kept.url, {
+        title: "The page's own title",
+        publishedAt: "2031-01-05T00:00:00.000Z",
+        text: "Acme confirmed the breach.",
+      }),
+    );
+    await session.search("Acme breach", "news", "security_incidents");
+
+    await session.read(kept.url, "security_incidents");
+
+    expect(session.snapshot().ledger).toEqual([
+      {
+        category: "security_incidents",
+        kind: "page",
+        onVendorSite: false,
+        url: kept.url,
+        title: "The page's own title",
+        content: "Acme confirmed the breach.",
+        publishedAt: "2031-01-05T00:00:00.000Z",
+      },
+    ]);
+  });
+
+  it("names a page with no title after its host, and gives it no date when it has none of its own", async () => {
+    const kept = transient("https://news.example/a");
+    const { session, readPage } = setup({ answers: [[kept]] });
+    readPage.mockResolvedValueOnce(
+      page(kept.url, { title: "  ", publishedAt: null, text: "Acme confirmed the breach." }),
+    );
+    await session.search("Acme breach", "news", "security_incidents");
+
+    await session.read(kept.url, "security_incidents");
+
+    const [entry] = session.snapshot().ledger;
+    expect(entry.title).toBe("news.example");
+    expect(entry.publishedAt).toBeNull();
+    expect(entry).not.toHaveProperty("transient");
+    expect(JSON.stringify(entry)).not.toContain(kept.title);
+    expect(JSON.stringify(entry)).not.toContain(kept.snippet);
+  });
+
+  it("still keeps the title of a result that may be kept when its page is read", async () => {
+    const kept = result("https://news.example/a", NEWS_DATE);
+    const { session, readPage } = setup({ answers: [[kept]] });
+    readPage.mockResolvedValueOnce(page(kept.url, { publishedAt: null }));
+    await session.search("Acme breach", "news", "security_incidents");
+
+    await session.read(kept.url, "security_incidents");
+
+    const [entry] = session.snapshot().ledger;
+    expect(entry.title).toBe(kept.title);
+    expect(entry.publishedAt).toBe(NEWS_DATE);
+  });
+});

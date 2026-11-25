@@ -19,9 +19,13 @@ export interface IAIIncidentManagement {
   type: IncidentType;
   severity: Severity;
   status: AIIncidentManagementStatus;
+  /** "YYYY-MM-DD" on the way out; a Date is accepted on the way in (its UTC day). */
   occurred_date: Date | string;
   date_detected: Date | string;
+  /** Reporter's name: the reporter_id user's full name, or free text (Jira, older rows). */
   reporter: string;
+  /** FK to users: the reporter, when picked from the organization's users. */
+  reporter_id?: number | null;
   categories_of_harm: string[]; // Array of strings
   affected_persons_groups?: string;
   description: string;
@@ -34,7 +38,9 @@ export interface IAIIncidentManagement {
   is_demo?: boolean;
   approval_status: AIIncidentManagementApprovalStatus;
   approved_by?: string;
-  approval_date?: Date | string;
+  /** FK to users: who recorded the approval decision. Set by the server. */
+  approved_by_id?: number | null;
+  approval_date?: Date | string | null;
   approval_notes?: string;
   created_at?: Date;
   updated_at?: Date;

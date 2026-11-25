@@ -7,12 +7,17 @@ jest.mock("../../utils/llmKey.utils", () => ({ getLLMKeysQuery: jest.fn() }));
 jest.mock("../../utils/vendorResearch.utils", () => ({
   STALE_RUN_MINUTES: 15,
   failStaleRunsQuery: jest.fn(),
+  getBraveKeyQuery: jest.fn(),
   getDecisionCountsQuery: jest.fn(),
   getLatestRunQuery: jest.fn(),
   getRunTraceQuery: jest.fn(),
   getVendorResearchSettingsQuery: jest.fn(),
   listFindingsQuery: jest.fn(),
+  listRecentRunSummariesQuery: jest.fn(),
+  saveBraveKeyQuery: jest.fn(),
 }));
+// The check would call Brave.
+jest.mock("../../services/vendorResearch/braveKeyCheck", () => ({ checkBraveKey: jest.fn() }));
 // The real module opens a BullMQ queue when it is loaded.
 jest.mock("../../services/vendorResearch/trigger", () => ({ startVendorResearch: jest.fn() }));
 jest.mock("../../services/vendorResearch/settings.service", () => ({
@@ -34,13 +39,17 @@ jest.mock("../../utils/i18n.utils", () => ({
 
 import {
   acceptVendorRiskFinding,
+  deleteResearchSearchKey,
   dismissVendorRiskFinding,
   getDecisionStats,
   getLatestVendorResearch,
   getResearchConfig,
+  getResearchSearchKey,
+  getResearchSearchStatus,
   getResearchSettings,
   getVendorResearchRunTrace,
   listVendorRiskFindings,
+  saveResearchSearchKey,
   saveResearchSettings,
   startVendorResearchRun,
 } from "../vendorResearch.ctrl";
@@ -48,12 +57,17 @@ import { getVendorByIdQuery } from "../../utils/vendor.utils";
 import { getLLMKeysQuery } from "../../utils/llmKey.utils";
 import {
   failStaleRunsQuery,
+  getBraveKeyQuery,
   getDecisionCountsQuery,
   getLatestRunQuery,
   getRunTraceQuery,
   getVendorResearchSettingsQuery,
   listFindingsQuery,
+  listRecentRunSummariesQuery,
+  saveBraveKeyQuery,
 } from "../../utils/vendorResearch.utils";
+import { checkBraveKey } from "../../services/vendorResearch/braveKeyCheck";
+import { logFailure, logProcessing, logSuccess } from "../../utils/logger/logHelper";
 import { saveVendorResearchSettings } from "../../services/vendorResearch/settings.service";
 import { credibilityRationale, LEGACY_NOTE } from "../../services/vendorResearch/credibilityText";
 import { createTraceRecorder } from "../../services/vendorResearch/trace";
@@ -81,6 +95,9 @@ const mockGetDecisionCountsQuery = getDecisionCountsQuery as jest.MockedFunction
   typeof getDecisionCountsQuery
 >;
 const mockListFindingsQuery = listFindingsQuery as jest.MockedFunction<typeof listFindingsQuery>;
+const mockRecentSummaries = listRecentRunSummariesQuery as jest.MockedFunction<
+  typeof listRecentRunSummariesQuery
+>;
 const mockGetSettingsQuery = getVendorResearchSettingsQuery as jest.MockedFunction<
   typeof getVendorResearchSettingsQuery
 >;
@@ -90,6 +107,9 @@ const mockSaveSettings = saveVendorResearchSettings as jest.MockedFunction<
 const mockStartVendorResearch = startVendorResearch as jest.MockedFunction<
   typeof startVendorResearch
 >;
+const mockGetBraveKey = getBraveKeyQuery as jest.MockedFunction<typeof getBraveKeyQuery>;
+const mockSaveBraveKey = saveBraveKeyQuery as jest.MockedFunction<typeof saveBraveKeyQuery>;
+const mockCheckBraveKey = checkBraveKey as jest.MockedFunction<typeof checkBraveKey>;
 const mockAcceptFinding = acceptFinding as jest.MockedFunction<typeof acceptFinding>;
 const mockDismissFinding = dismissFinding as jest.MockedFunction<typeof dismissFinding>;
 
@@ -276,14 +296,22 @@ beforeEach(() => {
   mockGetLatestRunQuery.mockResolvedValue(null);
   mockGetRunTraceQuery.mockResolvedValue(null);
   mockGetDecisionCountsQuery.mockResolvedValue([]);
+  mockRecentSummaries.mockResolvedValue([]);
+  mockGetBraveKey.mockResolvedValue(null);
   mockGetSettingsQuery.mockResolvedValue({
     researchKeyId: null,
     analysisKeyId: null,
     scanIntervalDays: null,
+    autoResearchOnCreate: true,
   });
   mockSaveSettings.mockResolvedValue({
     ok: true,
-    settings: { researchKeyId: null, analysisKeyId: null, scanIntervalDays: null },
+    settings: {
+      researchKeyId: null,
+      analysisKeyId: null,
+      scanIntervalDays: null,
+      autoResearchOnCreate: true,
+    },
   });
   mockListFindingsQuery.mockResolvedValue({ rows: [], total: 0 });
   mockStartVendorResearch.mockResolvedValue({ ok: true, run: RUN, alreadyRunning: false });
@@ -708,7 +736,7 @@ describe("getResearchConfig", () => {
     expect(res.status).toHaveBeenCalledWith(200);
     expect(bodyOf(res)).toEqual({
       message: "OK",
-      data: { hasLlmKey: true, autoRunEnabled: true },
+      data: { hasLlmKey: true, autoRunAllowed: true, autoRunEnabled: true },
     });
     // The key of the organization is not in anything that was sent.
     expect(sentOf(res)).not.toContain("sk-SENTINEL-2d9b");
@@ -720,7 +748,30 @@ describe("getResearchConfig", () => {
 
     await getResearchConfig(createMockReq(), res);
 
-    expect(bodyOf(res).data).toEqual({ hasLlmKey: false, autoRunEnabled: false });
+    expect(bodyOf(res).data).toEqual({
+      hasLlmKey: false,
+      autoRunAllowed: false,
+      autoRunEnabled: false,
+    });
+  });
+
+  it("answers that research does not start by itself when the organization turned it off", async () => {
+    mockGetSettingsQuery.mockResolvedValue({
+      researchKeyId: null,
+      analysisKeyId: null,
+      scanIntervalDays: null,
+      autoResearchOnCreate: false,
+    });
+    const res = createMockRes();
+
+    await getResearchConfig(createMockReq(), res);
+
+    expect(mockGetSettingsQuery).toHaveBeenCalledWith(ORG);
+    expect(bodyOf(res).data).toEqual({
+      hasLlmKey: false,
+      autoRunAllowed: true,
+      autoRunEnabled: false,
+    });
   });
 
   it("answers 500 when the query throws", async () => {
@@ -733,12 +784,89 @@ describe("getResearchConfig", () => {
   });
 });
 
+describe("getResearchSearchStatus", () => {
+  const noNews = [
+    {
+      category: "security_incidents",
+      outcome: "search_failed",
+      note: "The search was not available",
+    },
+    {
+      category: "legal_regulatory",
+      outcome: "search_failed",
+      note: "The search was not available",
+    },
+  ];
+
+  it("answers the search of each key and of the newest one, and never a key or an address", async () => {
+    mockGetLLMKeysQuery.mockResolvedValue([
+      { id: 7, name: "OpenRouter", url: "https://openrouter.ai/api/v1", key: "sk-SENTINEL-77a1" },
+      { id: 3, name: "Anthropic", url: null, key: "sk-ant-SENTINEL-3c" },
+    ] as any);
+    const res = createMockRes();
+
+    await getResearchSearchStatus(createMockReq(), res);
+
+    expect(mockRecentSummaries).toHaveBeenCalledWith(ORG, 10, 30);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(bodyOf(res).data).toEqual({
+      engines: { default: "gdelt", byKey: { 7: "gdelt", 3: "anthropic" } },
+      recentRunsFoundNoNews: false,
+      braveConfigured: false,
+    });
+    expect(sentOf(res)).not.toContain("SENTINEL");
+    expect(sentOf(res)).not.toContain("openrouter.ai");
+  });
+
+  it("answers Brave for a key with no search of its own when the organization has a Brave key, and never the Brave key", async () => {
+    mockGetLLMKeysQuery.mockResolvedValue([
+      { id: 7, name: "OpenRouter", url: "https://openrouter.ai/api/v1", key: "sk-SENTINEL-77a1" },
+      { id: 3, name: "Anthropic", url: null, key: "sk-ant-SENTINEL-3c" },
+    ] as any);
+    mockGetBraveKey.mockResolvedValueOnce("BSA-SENTINEL-brave-key");
+    const res = createMockRes();
+
+    await getResearchSearchStatus(createMockReq(), res);
+
+    expect(mockGetBraveKey).toHaveBeenCalledWith(ORG);
+    expect(bodyOf(res).data).toEqual({
+      engines: { default: "brave", byKey: { 7: "brave", 3: "anthropic" } },
+      recentRunsFoundNoNews: false,
+      braveConfigured: true,
+    });
+    expect(sentOf(res)).not.toContain("SENTINEL");
+  });
+
+  it("answers that recent runs found no news when their news searches all failed", async () => {
+    mockRecentSummaries.mockResolvedValue([noNews, noNews]);
+    const res = createMockRes();
+
+    await getResearchSearchStatus(createMockReq(), res);
+
+    expect(bodyOf(res).data).toEqual({
+      engines: { default: null, byKey: {} },
+      recentRunsFoundNoNews: true,
+      braveConfigured: false,
+    });
+  });
+
+  it("answers 500 when a query throws", async () => {
+    mockRecentSummaries.mockRejectedValue(new Error("DB failure"));
+    const res = createMockRes();
+
+    await getResearchSearchStatus(createMockReq(), res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+  });
+});
+
 describe("getResearchSettings", () => {
   it("answers which keys the organization chose, by id", async () => {
     mockGetSettingsQuery.mockResolvedValue({
       researchKeyId: 4,
       analysisKeyId: 9,
       scanIntervalDays: 14,
+      autoResearchOnCreate: true,
     });
     const res = createMockRes();
 
@@ -748,7 +876,12 @@ describe("getResearchSettings", () => {
     expect(res.status).toHaveBeenCalledWith(200);
     expect(bodyOf(res)).toEqual({
       message: "OK",
-      data: { researchKeyId: 4, analysisKeyId: 9, scanIntervalDays: 14 },
+      data: {
+        researchKeyId: 4,
+        analysisKeyId: 9,
+        scanIntervalDays: 14,
+        autoResearchOnCreate: true,
+      },
     });
   });
 
@@ -761,6 +894,7 @@ describe("getResearchSettings", () => {
       researchKeyId: null,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
   });
 
@@ -780,7 +914,12 @@ describe("saveResearchSettings", () => {
   it("saves the two choices for the organization, as the user who made them", async () => {
     mockSaveSettings.mockResolvedValue({
       ok: true,
-      settings: { researchKeyId: 4, analysisKeyId: 9, scanIntervalDays: null },
+      settings: {
+        researchKeyId: 4,
+        analysisKeyId: 9,
+        scanIntervalDays: null,
+        autoResearchOnCreate: true,
+      },
     });
     const res = createMockRes();
 
@@ -795,7 +934,12 @@ describe("saveResearchSettings", () => {
     expect(res.status).toHaveBeenCalledWith(200);
     expect(bodyOf(res)).toEqual({
       message: "OK",
-      data: { researchKeyId: 4, analysisKeyId: 9, scanIntervalDays: null },
+      data: {
+        researchKeyId: 4,
+        analysisKeyId: 9,
+        scanIntervalDays: null,
+        autoResearchOnCreate: true,
+      },
     });
   });
 
@@ -814,7 +958,12 @@ describe("saveResearchSettings", () => {
     const savedWith = (scanIntervalDays: number | null) =>
       mockSaveSettings.mockResolvedValue({
         ok: true,
-        settings: { researchKeyId: null, analysisKeyId: null, scanIntervalDays },
+        settings: {
+          researchKeyId: null,
+          analysisKeyId: null,
+          scanIntervalDays,
+          autoResearchOnCreate: true,
+        },
       });
 
     it.each([7, 14, 30])(
@@ -836,6 +985,7 @@ describe("saveResearchSettings", () => {
           researchKeyId: null,
           analysisKeyId: null,
           scanIntervalDays: days,
+          autoResearchOnCreate: true,
         });
       },
     );
@@ -881,6 +1031,47 @@ describe("saveResearchSettings", () => {
       );
 
       expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockSaveSettings).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("whether a new vendor is researched as soon as it is added", () => {
+    it.each([true, false])("passes %s on to the save", async (value) => {
+      const res = createMockRes();
+
+      await saveResearchSettings(
+        putReq({ researchKeyId: null, analysisKeyId: null, autoResearchOnCreate: value }),
+        res,
+      );
+
+      expect(mockSaveSettings.mock.calls[0][0].autoResearchOnCreate).toBe(value);
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it("passes nothing on when the body does not name it, so that the save keeps what is there", async () => {
+      const res = createMockRes();
+
+      await saveResearchSettings(putReq({ researchKeyId: null, analysisKeyId: null }), res);
+
+      expect(mockSaveSettings.mock.calls[0][0].autoResearchOnCreate).toBeUndefined();
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it.each([
+      ["null", null],
+      ["text", "true"],
+      ["a number", 1],
+      ["a list", [true]],
+    ])("refuses %s with 400, before it asks anything", async (_label, value) => {
+      const res = createMockRes();
+
+      await saveResearchSettings(
+        putReq({ researchKeyId: null, analysisKeyId: null, autoResearchOnCreate: value }),
+        res,
+      );
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(bodyOf(res).data).toBe("autoResearchOnCreate must be true or false");
       expect(mockSaveSettings).not.toHaveBeenCalled();
     });
   });
@@ -1487,4 +1678,188 @@ describe("dismissVendorRiskFinding", () => {
       expect(bodyOf(res)).toEqual(body);
     },
   );
+});
+
+describe("Brave search key", () => {
+  /** A key that must never leave the server: not in a response, not in a log line. */
+  const KEY = "BSA-sentinel-key-7f3c9e21";
+  const sentEverywhere = (res: MockRes) =>
+    JSON.stringify([
+      res.set.mock.calls,
+      res.json.mock.calls,
+      (logProcessing as jest.Mock).mock.calls,
+      (logSuccess as jest.Mock).mock.calls,
+      (logFailure as jest.Mock).mock.calls,
+    ]);
+  const expectNoKey = (res: MockRes) => {
+    const sent = sentEverywhere(res);
+    expect(sent).not.toContain(KEY);
+    expect(sent).not.toContain("sentinel-key");
+  };
+  const putReq = (body: unknown) => createMockReq({ body });
+
+  describe("getResearchSearchKey", () => {
+    it("says a key is stored and gives its last four characters only", async () => {
+      mockGetBraveKey.mockResolvedValue(KEY);
+      const res = createMockRes();
+
+      await getResearchSearchKey(createMockReq(), res);
+
+      expect(mockGetBraveKey).toHaveBeenCalledWith(ORG);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(bodyOf(res)).toEqual({
+        message: "OK",
+        data: { provider: "brave", configured: true, last4: "9e21" },
+      });
+      expectNoKey(res);
+    });
+
+    it("says no key is stored", async () => {
+      mockGetBraveKey.mockResolvedValue(null);
+      const res = createMockRes();
+
+      await getResearchSearchKey(createMockReq(), res);
+
+      expect(bodyOf(res).data).toEqual({ provider: "brave", configured: false, last4: null });
+    });
+
+    it("answers 500 when the key cannot be read", async () => {
+      mockGetBraveKey.mockRejectedValueOnce(new Error("db down"));
+      const res = createMockRes();
+
+      await getResearchSearchKey(createMockReq(), res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe("saveResearchSearchKey", () => {
+    it("checks the key, stores it for the organization as the user, and answers its end", async () => {
+      mockCheckBraveKey.mockResolvedValue({ ok: true });
+      const res = createMockRes();
+
+      await saveResearchSearchKey(putReq({ key: KEY }), res);
+
+      expect(mockCheckBraveKey).toHaveBeenCalledWith(KEY);
+      expect(mockSaveBraveKey).toHaveBeenCalledWith(ORG, KEY, USER);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(bodyOf(res)).toEqual({ message: "OK", data: { configured: true, last4: "9e21" } });
+      expectNoKey(res);
+    });
+
+    it("drops the spaces and line breaks around a pasted key", async () => {
+      mockCheckBraveKey.mockResolvedValue({ ok: true });
+      const res = createMockRes();
+
+      await saveResearchSearchKey(putReq({ key: `  ${KEY}\n` }), res);
+
+      expect(mockCheckBraveKey).toHaveBeenCalledWith(KEY);
+      expect(mockSaveBraveKey).toHaveBeenCalledWith(ORG, KEY, USER);
+    });
+
+    it.each([
+      ["no body", undefined],
+      ["an array", [KEY]],
+      ["no key", {}],
+      ["a number", { key: 12345678901 }],
+      ["an empty key", { key: "   " }],
+    ])("refuses %s with a 400 and checks nothing", async (_label, body) => {
+      const res = createMockRes();
+
+      await saveResearchSearchKey(putReq(body), res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(bodyOf(res)).toEqual({
+        message: "Bad Request",
+        data: "Enter a Brave Search API key.",
+      });
+      expect(mockCheckBraveKey).not.toHaveBeenCalled();
+      expect(mockSaveBraveKey).not.toHaveBeenCalled();
+    });
+
+    it("refuses a key Brave does not accept with a 422, even when the check is skipped", async () => {
+      mockCheckBraveKey.mockResolvedValue({ ok: false, code: "invalid_key" });
+      const res = createMockRes();
+
+      await saveResearchSearchKey(putReq({ key: KEY, skipCheck: true }), res);
+
+      expect(res.status).toHaveBeenCalledWith(422);
+      expect(bodyOf(res)).toEqual({
+        message: "Unprocessable Entity",
+        data: {
+          message: "Brave did not accept this key. Check that you copied all of it.",
+          code: "invalid_key",
+        },
+      });
+      expect(mockSaveBraveKey).not.toHaveBeenCalled();
+      expectNoKey(res);
+    });
+
+    it("refuses a key it could not check with a 422 that names the cause", async () => {
+      mockCheckBraveKey.mockResolvedValue({ ok: false, code: "unreachable" });
+      const res = createMockRes();
+
+      await saveResearchSearchKey(putReq({ key: KEY }), res);
+
+      expect(res.status).toHaveBeenCalledWith(422);
+      expect(bodyOf(res).data).toEqual({
+        message: "Could not reach Brave to check this key.",
+        code: "unreachable",
+      });
+      expect(mockSaveBraveKey).not.toHaveBeenCalled();
+    });
+
+    it("stores a key it could not check when the body says skipCheck: true", async () => {
+      mockCheckBraveKey.mockResolvedValue({ ok: false, code: "unreachable" });
+      const res = createMockRes();
+
+      await saveResearchSearchKey(putReq({ key: KEY, skipCheck: true }), res);
+
+      expect(mockSaveBraveKey).toHaveBeenCalledWith(ORG, KEY, USER);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(bodyOf(res).data).toEqual({ configured: true, last4: "9e21" });
+    });
+
+    it("does not take a skipCheck that is not true", async () => {
+      mockCheckBraveKey.mockResolvedValue({ ok: false, code: "unreachable" });
+      const res = createMockRes();
+
+      await saveResearchSearchKey(putReq({ key: KEY, skipCheck: "true" }), res);
+
+      expect(res.status).toHaveBeenCalledWith(422);
+      expect(mockSaveBraveKey).not.toHaveBeenCalled();
+    });
+
+    it("answers 500 when the key cannot be stored, without the key", async () => {
+      mockCheckBraveKey.mockResolvedValue({ ok: true });
+      mockSaveBraveKey.mockRejectedValueOnce(new Error("db down"));
+      const res = createMockRes();
+
+      await saveResearchSearchKey(putReq({ key: KEY }), res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expectNoKey(res);
+    });
+  });
+
+  describe("deleteResearchSearchKey", () => {
+    it("clears the organization's key as the user", async () => {
+      const res = createMockRes();
+
+      await deleteResearchSearchKey(createMockReq(), res);
+
+      expect(mockSaveBraveKey).toHaveBeenCalledWith(ORG, null, USER);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(bodyOf(res)).toEqual({ message: "OK", data: { configured: false, last4: null } });
+    });
+
+    it("answers 500 when the key cannot be cleared", async () => {
+      mockSaveBraveKey.mockRejectedValueOnce(new Error("db down"));
+      const res = createMockRes();
+
+      await deleteResearchSearchKey(createMockReq(), res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
+  });
 });

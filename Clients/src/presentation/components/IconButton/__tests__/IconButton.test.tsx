@@ -1,13 +1,13 @@
 import { vi } from "vitest";
 
 vi.mock("../../Dialogs/ConfirmationModal", () => ({
-  default: ({ isOpen, onCancel, onProceed, cancelText, proceedText }: any) =>
+  default: ({ isOpen, onCancel, onProceed, cancelText, proceedText, proceedButtonColor }: any) =>
     isOpen ? (
       <div data-testid="confirmation-modal">
         <button data-testid="cancel-btn" onClick={onCancel}>
           {cancelText}
         </button>
-        <button data-testid="proceed-btn" onClick={onProceed}>
+        <button data-testid="proceed-btn" data-color={proceedButtonColor} onClick={onProceed}>
           {proceedText}
         </button>
       </div>
@@ -343,6 +343,21 @@ describe("IconButton", () => {
     expect(screen.getByText("Archive task")).toBeInTheDocument();
     expect(screen.getByText("Delete permanently")).toBeInTheDocument();
   });
+
+  it.each([
+    ["task", "Archive task"],
+    ["incident", "Archive incident"],
+    ["Incident", "Archive incident"],
+  ])(
+    "confirms archiving a %s as a reversible warning, not a delete",
+    async (type, archiveLabel) => {
+      await renderWithMenuOpen({ type, warningTitle: "Archive?", warningMessage: "Sure?" });
+      await userEvent.click(screen.getByText(archiveLabel));
+      const proceed = screen.getByTestId("proceed-btn");
+      expect(proceed).toHaveAttribute("data-color", "warning");
+      expect(proceed).toHaveTextContent(archiveLabel);
+    },
+  );
 
   it("renders archived task with Restore and Delete items", async () => {
     await renderWithMenuOpen({

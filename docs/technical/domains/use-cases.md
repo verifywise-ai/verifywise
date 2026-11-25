@@ -540,6 +540,8 @@ An update is diffed against what the UPDATE stored (`writtenValues` of its `RETU
 | `project_updated` | Update | Email, Slack, custom |
 | `project_deleted` | Delete | Email, Slack, custom |
 
+`project_added`, `project_updated` and `project_deleted` run every action of every active automation of the trigger; an automation that existed before that change keeps only the event's first action until it is edited and saved (`legacy_first_action_only`). See [Automations → Dispatch of entity events](../infrastructure/automations.md#dispatch-of-entity-events).
+
 ### Available Variables
 
 Automations can use these template variables:

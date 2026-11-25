@@ -46,11 +46,13 @@ describe("vendor_research_settings tenant isolation", () => {
       researchKeyId: key,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
     expect((await owner.request.get(SETTINGS)).body.data).toEqual({
       researchKeyId: key,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
 
     // The other organization has chosen nothing, and sees nothing of the owner's choice.
@@ -58,6 +60,7 @@ describe("vendor_research_settings tenant isolation", () => {
       researchKeyId: null,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
     const res = await attacker.request.get(SETTINGS);
     expect(res.status).toBe(200);
@@ -65,6 +68,7 @@ describe("vendor_research_settings tenant isolation", () => {
       researchKeyId: null,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
     expect(res.text).not.toContain(String(key) + ",");
   });
@@ -84,11 +88,13 @@ describe("vendor_research_settings tenant isolation", () => {
       researchKeyId: ownerKey,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
     expect(await getVendorResearchSettingsQuery(attacker.orgId)).toEqual({
       researchKeyId: attackerKey,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
 
     // Resetting its own choice leaves the owner's alone.
@@ -97,6 +103,7 @@ describe("vendor_research_settings tenant isolation", () => {
       researchKeyId: ownerKey,
       analysisKeyId: null,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
   });
 
@@ -141,6 +148,7 @@ describe("vendor_research_settings tenant isolation", () => {
       researchKeyId: null,
       analysisKeyId: attackerKey,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
     expect(await getVendorResearchSettingsQuery(attacker.orgId)).toEqual(stored);
   });

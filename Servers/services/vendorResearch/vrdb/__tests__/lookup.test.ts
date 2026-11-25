@@ -23,6 +23,13 @@ jest.mock("../../../../utils/vrdb.utils", () => ({
 jest.mock("../queue", () => ({
   enqueueRelabel: (...args: unknown[]) => mockEnqueueRelabel(...args),
 }));
+// What the release ships changes with each bundling; the lookup's tests pin the active lists, so
+// the shipped manifest is not read here unless a test says otherwise (see "the shipped bundles").
+const mockShippedBundleIds = jest.fn((): ReadonlySet<string> | null => null);
+jest.mock("../bundle", () => ({
+  ...jest.requireActual("../bundle"),
+  shippedBundleIds: () => mockShippedBundleIds(),
+}));
 
 import {
   RESEARCH_CATEGORIES,
@@ -3398,5 +3405,197 @@ describe("databaseReadThroughStore", () => {
     await expect(Promise.race([saved, stalled])).resolves.toEqual({ statusChanged: 1 });
     await settled();
     expect(mockEnqueueRelabel).toHaveBeenCalledWith("nvd");
+  });
+});
+
+describe("the shipped bundles: a list the release ships no bundle of is not in the coverage", () => {
+  const COPIED = new Date("2026-10-29T09:30:00Z");
+  /** The lists of legal_regulatory that a release ships, as a manifest names them; no eu_dg_comp. */
+  const SHIPPED = new Set<VrdbSourceId>([
+    "ofac",
+    "uk_sanctions",
+    "eu_fsf",
+    "csl",
+    "canada_sema",
+    "uk_ofsi",
+    "ftc_penalties",
+    "uk_cma",
+    "ftc_competition",
+    "co_sic_penalties",
+    "nhtsa_recalls",
+    "uk_mhra",
+    "nhtsa_odi",
+  ]);
+  const LEGAL: readonly ResearchCategory[] = ["legal_regulatory"];
+
+  afterEach(() => mockShippedBundleIds.mockReturnValue(null));
+
+  it("leaves a list with no bundle out of the coverage: neither checked nor failed, so no warning", () => {
+    const result = offer([], { researchable: LEGAL, bundled: SHIPPED });
+
+    expect(coverageOf(result, "eu_dg_comp")).toBeUndefined();
+    expect(result.outcome.coverage.filter((entry) => entry.outcome === "failed")).toEqual(
+      // Shipped but never loaded here: a gap, and still said.
+      expect.not.arrayContaining([expect.objectContaining({ id: "eu_dg_comp" })]),
+    );
+  });
+
+  it("keeps a shipped list that has no copy as failed, and a shipped list that is out of date as stale", () => {
+    const result = offer([], {
+      researchable: LEGAL,
+      bundled: SHIPPED,
+      states: [
+        ...ALL_SYNCED.filter((entry) => entry.id !== "ofac"),
+        state("ofac", null),
+        state("csl", new Date("2026-08-01T00:00:00Z")),
+      ],
+    });
+
+    expect(coverageOf(result, "ofac")).toMatchObject({ outcome: "failed", checked: false });
+    expect(coverageOf(result, "csl")).toMatchObject({
+      outcome: "none",
+      checked: true,
+      stale: true,
+    });
+  });
+
+  it("keeps the read-through sources, which no bundle carries", () => {
+    const result = offer([], { researchable: BOTH, bundled: SHIPPED });
+
+    expect(coverageOf(result, "nvd")).toBeDefined();
+    expect(coverageOf(result, "sec")).toBeDefined();
+  });
+
+  it("keeps every active list when the manifest could not be read (today's behaviour)", () => {
+    const result = offer([], { researchable: LEGAL, bundled: null });
+
+    expect(coverageOf(result, "eu_dg_comp")).toMatchObject({ outcome: "failed", checked: false });
+  });
+
+  it("leaves the list out when the records are off too", () => {
+    const result = offer([], { researchable: LEGAL, bundled: SHIPPED, enabled: false });
+
+    expect(coverageOf(result, "eu_dg_comp")).toBeUndefined();
+    expect(coverageOf(result, "ofac")).toMatchObject({ outcome: "off" });
+  });
+
+  it("the lookup reads the shipped manifest by default, and neither asks nor covers a list it lacks", async () => {
+    mockShippedBundleIds.mockReturnValue(SHIPPED);
+    const store = fakeStore([], [...ALL_SYNCED, state("csl", COPIED)]);
+    const lookup = createVrdbLookup({ store, organizationId: 1, vendorId: 2, enabled: true });
+
+    const outcome = await lookup({ ...lookupInput(), researchable: LEGAL });
+
+    expect(store.sourceStates.mock.calls[0][0]).not.toContain("eu_dg_comp");
+    expect(store.findRecords.mock.calls[0][1]).not.toContain("eu_dg_comp");
+    expect(outcome.coverage.map((entry) => entry.id)).not.toContain("eu_dg_comp");
+    expect(outcome.coverage.map((entry) => entry.id)).toContain("ftc_penalties");
+  });
+
+  it("an explicit `bundled` wins over the manifest", async () => {
+    mockShippedBundleIds.mockReturnValue(SHIPPED);
+    const store = fakeStore();
+    const lookup = createVrdbLookup({
+      store,
+      organizationId: 1,
+      vendorId: 2,
+      enabled: true,
+      bundled: null,
+    });
+
+    const outcome = await lookup({ ...lookupInput(), researchable: LEGAL });
+
+    expect(outcome.coverage.map((entry) => entry.id)).toContain("eu_dg_comp");
+  });
+});
+
+describe("offerRecords: the attestations of a list that attests (FedRAMP, C2PA)", () => {
+  const COPIED = new Date("2026-10-29T09:30:00Z");
+  const CERTIFIED: readonly ResearchCategory[] = ["certifications"];
+  /** The text the FedRAMP connector writes for a provider, as a record of the copy holds it. */
+  const FEDRAMP_SUMMARY =
+    "FedRAMP Marketplace (github.com/FedRAMP), a register or status list. Provider: Acme Analytics, Inc. GSA's FedRAMP Marketplace data lists 1 cloud offering of it: 1 FedRAMP Authorized. Listed: \"Acme Data Platform\" (FR2023666173), FedRAMP Authorized since 2024-09-09, High impact, Agency authorisation, used by 1 agency. A marketplace listing is an authorisation status, not a security assurance; the authorising agency's own authorisation may have expired. Not endorsed by GSA or FedRAMP; adapted by VerifyWise.";
+  const fedrampRow = (summary = FEDRAMP_SUMMARY) =>
+    row({
+      sourceId: "fedramp",
+      sourceRecordId: "acmeanalytics",
+      recordType: "cloud_authorization_status",
+      summary,
+      publishedAt: "2024-09-09",
+    });
+  const offerCertified = (rows: VrdbRow[]) =>
+    offer(rows, {
+      researchable: CERTIFIED,
+      states: [...ALL_SYNCED, state("fedramp", COPIED), state("c2pa_conforming", COPIED)],
+    });
+
+  it("says what a FedRAMP record attests, with the strength of the match and the day of the copy", () => {
+    const result = offerCertified([fedrampRow()]);
+
+    expect(coverageOf(result, "fedramp")).toMatchObject({
+      outcome: "found",
+      weak: 1,
+      attestations: [
+        {
+          status: "fedramp_authorized",
+          impact: "High",
+          since: "2024-09-09",
+          count: 1,
+          strength: "weak",
+          as_of: "2026-10-29",
+        },
+      ],
+    });
+  });
+
+  it("never calls a provider authorised that the record lists only as in process", () => {
+    const summary = FEDRAMP_SUMMARY.replace(
+      '1 FedRAMP Authorized. Listed: "Acme Data Platform" (FR2023666173), FedRAMP Authorized since 2024-09-09, High impact',
+      '1 FedRAMP In Process. Listed: "Acme Data Platform" (FR2023666173), FedRAMP In Process since 2025-02-01, Moderate impact',
+    );
+    const result = offerCertified([fedrampRow(summary)]);
+
+    expect(coverageOf(result, "fedramp")?.attestations).toEqual([
+      expect.objectContaining({
+        status: "fedramp_in_process",
+        impact: "Moderate",
+        since: "2025-02-01",
+      }),
+    ]);
+  });
+
+  it("gives no status for a text it cannot read, rather than a guess", () => {
+    const result = offerCertified([fedrampRow("Some other text.")]);
+
+    expect(coverageOf(result, "fedramp")?.attestations).toEqual([
+      expect.objectContaining({ status: null, impact: null, since: null, count: 0 }),
+    ]);
+  });
+
+  it("says what a C2PA record attests", () => {
+    const c2pa = row({
+      sourceId: "c2pa_conforming",
+      sourceRecordId: "acme",
+      recordType: "c2pa_conformance",
+      summary:
+        "C2PA Conforming Products List (github.com/c2pa-org), a register or status list. Applicant as written: Acme Analytics. Conformant products: 2 (1 generator, 1 validator), the newest conformed on 2026-11-09. Products: A, B.",
+      publishedAt: "2026-11-09",
+    });
+    const result = offerCertified([c2pa]);
+
+    expect(coverageOf(result, "c2pa_conforming")?.attestations).toEqual([
+      expect.objectContaining({ status: "c2pa_conforming", since: "2026-11-09", count: 2 }),
+    ]);
+  });
+
+  it("puts no attestations on a list that does not attest, nor on one that matched nothing", () => {
+    const result = offer([row({ sourceId: "ofac" })], {
+      researchable: ["legal_regulatory", "certifications"],
+      states: [...ALL_SYNCED, state("fedramp", COPIED)],
+    });
+
+    expect(coverageOf(result, "ofac")).not.toHaveProperty("attestations");
+    expect(coverageOf(result, "fedramp")).toMatchObject({ outcome: "none" });
+    expect(coverageOf(result, "fedramp")).not.toHaveProperty("attestations");
   });
 });

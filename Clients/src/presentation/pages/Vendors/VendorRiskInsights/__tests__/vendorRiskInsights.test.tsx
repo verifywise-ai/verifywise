@@ -287,7 +287,7 @@ describe("while the risks are being read", () => {
     renderInsights({ loading: true });
 
     await open("Blast radius");
-    expect(await screen.findByText("Vendors with reach")).toBeInTheDocument();
+    expect(await screen.findByText("Vendors with linked project risks")).toBeInTheDocument();
 
     await open("Framework coverage");
     expect(
@@ -358,9 +358,9 @@ describe("blast radius section", () => {
     await open("Blast radius");
 
     const tile = (label: string) => screen.getByText(label).nextElementSibling?.textContent;
-    expect(await screen.findByText("Vendors with reach")).toBeInTheDocument();
-    expect(tile("Vendors with reach")).toBe("1");
-    expect(tile("Vendor risks with no children")).toBe("2");
+    expect(await screen.findByText("Vendors with linked project risks")).toBeInTheDocument();
+    expect(tile("Vendors with linked project risks")).toBe("1");
+    expect(tile("Vendor risks not linked yet")).toBe("2");
 
     const rows = screen.getAllByRole("row").slice(1);
     expect(within(rows[0]).getByText("Acme Cloud")).toBeInTheDocument();
@@ -410,6 +410,9 @@ describe("blast radius section", () => {
     expect(
       await screen.findByText(/No project risk inherits from a vendor risk yet/),
     ).toBeInTheDocument();
+    // With nothing linked or suggested, the tiles and the table would only repeat zeros.
+    expect(screen.queryByText("Vendors with linked project risks")).not.toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
   it("says so when there are no vendor risks", async () => {

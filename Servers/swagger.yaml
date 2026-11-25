@@ -3695,12 +3695,23 @@ components:
           $ref: '#/components/schemas/IncidentStatus'
         occurred_date:
           type: string
-          format: date-time
+          format: date
+          description: 'Calendar day, YYYY-MM-DD.'
         date_detected:
           type: string
-          format: date-time
+          format: date
+          description: 'Calendar day, YYYY-MM-DD.'
         reporter:
           type: string
+          description: 'Reporter name: the reporter_id user''s full name when one is set, else free text (Jira imports, incidents created before reporter_id).'
+        reporter_id:
+          type: integer
+          nullable: true
+          description: 'The reporter (a user of the organization), or null.'
+        reporter_name:
+          type: string
+          nullable: true
+          description: 'The reporter_id user''s current full name, or null. Fall back to reporter.'
         categories_of_harm:
           type: array
           items:
@@ -3731,10 +3742,20 @@ components:
         approved_by:
           type: string
           nullable: true
+          description: 'Name of the user who recorded the approval decision (set by the server).'
+        approved_by_id:
+          type: integer
+          nullable: true
+          description: 'The user who recorded the approval decision (set by the server), or null.'
+        approved_by_name:
+          type: string
+          nullable: true
+          description: 'The approved_by_id user''s current full name, or null. Fall back to approved_by.'
         approval_date:
           type: string
-          format: date-time
+          format: date
           nullable: true
+          description: 'Day the approval decision was recorded (UTC), YYYY-MM-DD. Set by the server.'
         approval_notes:
           type: string
           nullable: true
@@ -3753,7 +3774,6 @@ components:
         - status
         - occurred_date
         - date_detected
-        - reporter
         - approval_status
         - categories_of_harm
         - description
@@ -3769,16 +3789,24 @@ components:
           $ref: '#/components/schemas/IncidentStatus'
         occurred_date:
           type: string
-          format: date-time
+          format: date
+          description: 'YYYY-MM-DD (an ISO date-time is accepted; its date part is used).'
         date_detected:
           type: string
-          format: date-time
+          format: date
+          description: 'YYYY-MM-DD (an ISO date-time is accepted; its date part is used).'
         reporter:
           type: string
+          description: 'Reporter name. Required on create unless reporter_id is sent; ignored when reporter_id is sent (the server writes that user''s full name).'
+        reporter_id:
+          type: integer
+          nullable: true
+          description: 'The reporter, a user of your organization (400 INVALID_REFERENCE otherwise).'
         approval_status:
           $ref: '#/components/schemas/IncidentApprovalStatus'
         approved_by:
           type: string
+          description: 'Ignored: set by the server.'
         categories_of_harm:
           oneOf:
             -
@@ -3811,7 +3839,8 @@ components:
           default: false
         approval_date:
           type: string
-          format: date-time
+          format: date
+          description: 'Ignored: set by the server.'
         approval_notes:
           type: string
     UpdateIncidentRequest:
@@ -3828,16 +3857,24 @@ components:
           $ref: '#/components/schemas/IncidentStatus'
         occurred_date:
           type: string
-          format: date-time
+          format: date
+          description: 'YYYY-MM-DD (an ISO date-time is accepted; its date part is used).'
         date_detected:
           type: string
-          format: date-time
+          format: date
+          description: 'YYYY-MM-DD (an ISO date-time is accepted; its date part is used).'
         reporter:
           type: string
+          description: 'Reporter name. Required on create unless reporter_id is sent; ignored when reporter_id is sent (the server writes that user''s full name).'
+        reporter_id:
+          type: integer
+          nullable: true
+          description: 'The reporter, a user of your organization (400 INVALID_REFERENCE otherwise).'
         approval_status:
           $ref: '#/components/schemas/IncidentApprovalStatus'
         approved_by:
           type: string
+          description: 'Ignored: set by the server.'
         categories_of_harm:
           oneOf:
             -
@@ -3867,7 +3904,8 @@ components:
           type: boolean
         approval_date:
           type: string
-          format: date-time
+          format: date
+          description: 'Ignored: set by the server.'
         approval_notes:
           type: string
     Framework:
@@ -6180,6 +6218,7 @@ components:
         - vendor
         - model
         - policy
+        - incident
         - nist_subcategory
         - iso42001_subclause
         - iso42001_annexcategory
@@ -8060,6 +8099,8 @@ tags:
     name: 'v1: V1/Report Templates'
   -
     name: 'v1: V1/Scheduled Reports'
+  -
+    name: 'v1: V1/Tasks'
   -
     name: 'v1: V1/Training'
   -
@@ -20443,7 +20484,7 @@ paths:
       tags:
         - Incidents
       summary: 'Create New Incident'
-      description: 'Needs incident.create. Required: ai_project, type, severity, occurred_date, date_detected, reporter and description (5 to 32,767 characters). status defaults to Open and approval_status to Pending when omitted. type, severity, status and approval_status must be one of their listed values; ai_project, reporter and model_system_version are at most 255 characters; dates are YYYY-MM-DD (or an ISO date-time), not later than today in UTC+14 (the furthest-ahead time zone, so today anywhere is accepted), and date_detected is on or after occurred_date. categories_of_harm is optional: a list (or a comma-separated string) of Health, Safety, Rights, Property, Environment. approved_by and approval_date are set by the server and ignored in the request. A caller without incident.approve always gets approval_status Pending with no approval_notes. A caller with incident.approve may send Approved or Rejected; the server then records the caller''s name as approved_by and now as approval_date.'
+      description: 'Needs incident.create. Required: ai_project, type, severity, occurred_date, date_detected, reporter (or reporter_id) and description (5 to 32,767 characters). status defaults to Open and approval_status to Pending when omitted. type, severity, status and approval_status must be one of their listed values; ai_project, reporter and model_system_version are at most 255 characters; dates are YYYY-MM-DD (or an ISO date-time), not later than today in UTC+14 (the furthest-ahead time zone, so today anywhere is accepted), and date_detected is on or after occurred_date. categories_of_harm is optional: a list (or a comma-separated string) of Health, Safety, Rights, Property, Environment. The reporter is required: a reporter_id (a user of your organization; the server writes their full name into reporter) or a non-empty reporter text. Dates are stored and returned as YYYY-MM-DD. approved_by, approved_by_id and approval_date are set by the server and ignored in the request. A caller without incident.approve always gets approval_status Pending with no approval_notes. A caller with incident.approve may send Approved or Rejected; the server then records the caller''s name as approved_by, their id as approved_by_id and today (UTC) as approval_date.'
       operationId: createNewIncident
       security:
         -
@@ -20459,7 +20500,6 @@ paths:
                 - severity
                 - occurred_date
                 - date_detected
-                - reporter
                 - description
               properties:
                 ai_project:
@@ -20488,6 +20528,10 @@ paths:
                 reporter:
                   type: string
                   maxLength: 255
+                  description: 'Required unless reporter_id is sent.'
+                reporter_id:
+                  type: integer
+                  description: 'A user of your organization; the server writes their full name into reporter.'
                 model_system_version:
                   type: string
                   maxLength: 255
@@ -20540,7 +20584,7 @@ paths:
       tags:
         - Incidents
       summary: 'Update Incident By Id'
-      description: 'Needs incident.edit or incident.approve, then per field: changing approval_status or approval_notes needs incident.approve, changing any other field (archived included) needs incident.edit. A field sent with its stored value is not a change. An archived incident takes only { "archived": false } (restore); any other change answers 409 ("Restore this incident before editing it.") and nothing is written. approved_by and approval_date are set by the server and ignored in the request: when approval_status changes to Approved or Rejected, approved_by is the caller''s name and approval_date is now; when it changes to Pending or Not required, both are cleared. Changed fields follow the create rules (enums, lengths, dates; harm categories an update adds must be listed values, stored ones outside the list may stay); a required field cannot be set to null or an empty string, and the dates the incident ends up with must keep date_detected on or after occurred_date. Fields left out are not changed.'
+      description: 'Needs incident.edit or incident.approve, then per field: changing approval_status or approval_notes needs incident.approve, changing any other field (archived included) needs incident.edit. A field sent with its stored value is not a change. An archived incident takes only { "archived": false } (restore); any other change answers 409 ("Restore this incident before editing it.") and nothing is written. approved_by, approved_by_id and approval_date are set by the server and ignored in the request: when approval_status changes to Approved or Rejected, approved_by is the caller''s name, approved_by_id their id and approval_date today (UTC, YYYY-MM-DD); when it changes to Pending or Not required, all three are cleared. A changed reporter_id must be a user of your organization (400 INVALID_REFERENCE otherwise) and sets reporter to their full name; a changed reporter text without reporter_id clears reporter_id. Changed fields follow the create rules (enums, lengths, dates; harm categories an update adds must be listed values, stored ones outside the list may stay); a required field cannot be set to null or an empty string, and the dates the incident ends up with must keep date_detected on or after occurred_date. Fields left out are not changed.'
       operationId: updateIncidentById
       security:
         -
@@ -29901,9 +29945,17 @@ paths:
   /v1/vendor-research/config:
     get:
       summary: 'Get Research Config'
+      description: 'What the page needs to know to offer vendor research. Booleans only, never a key. autoRunAllowed is the deployment switch (VENDOR_RESEARCH_AUTO_RUN); autoRunEnabled is whether a new vendor of the organization is researched as soon as it is added, which needs both autoRunAllowed and the organization setting autoResearchOnCreate.'
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {hasLlmKey: {type: boolean}, autoRunAllowed: {type: boolean}, autoRunEnabled: {type: boolean}}}
         '500':
           description: 'Internal server error'
       tags:
@@ -29926,12 +29978,46 @@ paths:
       security:
         -
           bearerAuth: []
-  /v1/vendor-research/settings:
+  /v1/vendor-research/search-status:
     get:
-      summary: 'Get Research Settings'
+      summary: 'Get Research Search Status'
+      description: 'Which search a research run gets from each LLM key of the organization (anthropic: Claude''s own web search; brave: Brave Search with the organization''s Brave key, for a key with no search of its own when one is stored; gdelt: the news of the GDELT Project), the search of the default key (the newest; null without a key), whether the organization has a Brave Search key (braveConfigured; never the key), and whether the organization''s latest finished runs of the last 30 days that say something about the news (up to 3) all got none. Names keys by id only. Admins only.'
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {engines: {type: object, properties: {default: {type: string, nullable: true, enum: [anthropic, brave, gdelt, null]}, byKey: {type: object, additionalProperties: {type: string, enum: [anthropic, brave, gdelt]}}}}, recentRunsFoundNoNews: {type: boolean}, braveConfigured: {type: boolean}}}
+        '403':
+          description: Forbidden
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Research'
+      operationId: getResearchSearchStatus
+      security:
+        -
+          bearerAuth: []
+  /v1/vendor-research/settings:
+    get:
+      summary: 'Get Research Settings'
+      description: 'The LLM keys the vendor research uses, the scheduled scan interval and whether a new vendor is researched as soon as it is added. Admins only.'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {researchKeyId: {type: integer, nullable: true}, analysisKeyId: {type: integer, nullable: true}, scanIntervalDays: {type: integer, nullable: true, enum: [7, 14, 30, null]}, autoResearchOnCreate: {type: boolean, description: 'Research a new vendor as soon as it is added. True when the organization has not chosen.'}}}
+        '403':
+          description: Forbidden
         '500':
           description: 'Internal server error'
       tags:
@@ -29942,14 +30028,146 @@ paths:
           bearerAuth: []
     put:
       summary: 'Save Research Settings'
+      description: 'Stores the research settings of the organization. researchKeyId and analysisKeyId are required (an LLM key id or null for the default). scanIntervalDays and autoResearchOnCreate are optional: a body that leaves one out keeps the stored value.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - researchKeyId
+                - analysisKeyId
+              properties:
+                researchKeyId:
+                  type: integer
+                  nullable: true
+                analysisKeyId:
+                  type: integer
+                  nullable: true
+                scanIntervalDays:
+                  type: integer
+                  nullable: true
+                  enum: [7, 14, 30, null]
+                autoResearchOnCreate:
+                  type: boolean
       responses:
         '200':
           description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {researchKeyId: {type: integer, nullable: true}, analysisKeyId: {type: integer, nullable: true}, scanIntervalDays: {type: integer, nullable: true, enum: [7, 14, 30, null]}, autoResearchOnCreate: {type: boolean, description: 'Research a new vendor as soon as it is added. True when the organization has not chosen.'}}}
+        '400':
+          description: 'A key id, scanIntervalDays or autoResearchOnCreate is not valid'
+        '403':
+          description: Forbidden
+        '404':
+          description: 'LLM key not found'
         '500':
           description: 'Internal server error'
       tags:
         - 'v1: Vendor Research'
       operationId: saveResearchSettings
+      security:
+        -
+          bearerAuth: []
+  /v1/vendor-research/search-key:
+    get:
+      summary: 'Get Research Search Key'
+      description: 'Whether the organization stored a Brave Search API key for the vendor research, and its last four characters. The key itself is never returned. Admins only.'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {provider: {type: string, enum: [brave]}, configured: {type: boolean}, last4: {type: string, nullable: true, description: 'The last four characters of the stored key; null when none is stored. The key itself is never returned.'}}}
+        '403':
+          description: Forbidden
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Research'
+      operationId: getResearchSearchKey
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Save Research Search Key'
+      description: 'Stores the organization''s Brave Search API key, encrypted, after one test request to Brave. Spaces around the key are dropped. A key Brave refuses, or text that cannot be a key (10 to 200 printable characters, no spaces), is a 422 with code invalid_key. A check that could not be made is a 422 with code unreachable, unless skipCheck is true, which stores the key anyway. Admins only.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - key
+              properties:
+                key:
+                  type: string
+                  description: 'The Brave Search API key.'
+                skipCheck:
+                  type: boolean
+                  description: 'Store the key when Brave could not be reached to check it. A key Brave refuses is never stored.'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {configured: {type: boolean}, last4: {type: string, nullable: true, description: 'The last four characters of the stored key; null when none is stored. The key itself is never returned.'}}}
+        '400':
+          description: 'No key in the body'
+        '403':
+          description: Forbidden
+        '422':
+          description: 'The key was not stored: Brave refused it (invalid_key) or could not be reached to check it (unreachable)'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {message: {type: string}, code: {type: string, enum: [invalid_key, unreachable]}}}
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Research'
+      operationId: saveResearchSearchKey
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Research Search Key'
+      description: 'Removes the organization''s Brave Search API key; the vendor research goes back to its other searches. Admins only.'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {configured: {type: boolean}, last4: {type: string, nullable: true, description: 'The last four characters of the stored key; null when none is stored. The key itself is never returned.'}}}
+        '403':
+          description: Forbidden
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Vendor Research'
+      operationId: deleteResearchSearchKey
       security:
         -
           bearerAuth: []
@@ -30116,6 +30334,39 @@ paths:
       tags:
         - 'v1: V1/Llm Keys'
       operationId: updateLLMKeyV1
+      security:
+        -
+          bearerAuth: []
+  '/v1/tasks/linked/{entityType}/{entityId}':
+    get:
+      summary: 'List the tasks linked to an entity'
+      description: 'The tasks linked to one entity (an incident, a vendor, ...) through task_entity_links that the user can see, with the visibility of GET /tasks. Archived tasks are left out. Not paginated.'
+      parameters:
+        -
+          name: entityType
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/EntityType'
+        -
+          name: entityId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: 'The linked tasks'
+        '400':
+          description: 'Invalid entity type or ID'
+        '401':
+          description: Unauthorized
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Tasks'
+      operationId: getTasksLinkedToEntity
       security:
         -
           bearerAuth: []

@@ -16,15 +16,30 @@
  * news through GDELT like the keys that have no search at all.
  *
  * Only a name and an address are read. The key itself never comes in here, so it cannot leave.
+ *
+ * An organization can also store a Brave Search key (see utils/vendorResearch.utils.ts). A key
+ * that would search GDELT then searches with Brave (`brave`), and GDELT stays behind it; a key of
+ * Anthropic keeps Claude's search, with Brave behind it before GDELT (see `createRunSearch`). The
+ * Brave key goes into the `SearchSpec` of the run only, as a property that is not enumerable, so
+ * that a log line, a JSON copy or a trace that takes the spec whole never holds it.
  */
 import { detectProvider } from "../../advisor/llmModelFactory";
 
-/** The engines a key can have: Claude's own web search, or the news of the GDELT Project. */
-export type SearchEngineChoice = "anthropic" | "gdelt";
+/**
+ * The engines a run can search with: Claude's own web search, Brave Search with the organization's
+ * key, or the news of the GDELT Project.
+ */
+export type SearchEngineChoice = "anthropic" | "brave" | "gdelt";
 
 /** How a run searches. The pipeline hands it to the researcher, which builds the engine of the run. */
 export interface SearchSpec {
   readonly engine: SearchEngineChoice;
+  /**
+   * The organization's Brave Search key: the engine of `brave`, and the fallback of `anthropic`
+   * before GDELT. Absent when the organization has none. Never logged, traced or stored; built by
+   * `searchSpecOf`, it is not enumerable, so `JSON.stringify` and a log of the spec leave it out.
+   */
+  readonly braveKey?: string;
 }
 
 /** The only host whose API runs Claude's search tool. */
@@ -63,4 +78,43 @@ export function searchEngineOf(row: KeyRowForSearch): SearchEngineChoice {
   return detectProvider(name) === "Anthropic" && pointsAtAnthropic(row?.url)
     ? "anthropic"
     : "gdelt";
+}
+
+/**
+ * The engine of a research key once the organization's Brave key is counted: a key that would
+ * search GDELT searches with Brave when the organization has a Brave key; a key of Anthropic keeps
+ * Claude's search (Brave is then its fallback, which the spec carries). It never throws.
+ */
+export function searchEngineWith(
+  row: KeyRowForSearch,
+  braveConfigured: boolean,
+): SearchEngineChoice {
+  const own = searchEngineOf(row);
+  return own === "gdelt" && braveConfigured ? "brave" : own;
+}
+
+/**
+ * The search of a run, from the row of its research key and the organization's Brave key (null or
+ * empty for none). The Brave key is put on the spec as a property that is not enumerable (see
+ * `SearchSpec.braveKey`); it is left off an engine that cannot use it.
+ */
+export function searchSpecOf(row: KeyRowForSearch, braveKey: string | null): SearchSpec {
+  const usable = typeof braveKey === "string" && braveKey !== "" ? braveKey : null;
+  const spec: { engine: SearchEngineChoice; braveKey?: string } = {
+    engine: searchEngineWith(row, usable !== null),
+  };
+  if (usable !== null) {
+    Object.defineProperty(spec, "braveKey", { value: usable, enumerable: false });
+  }
+  return spec;
+}
+
+/**
+ * The spec without Brave: a run whose search answers are recorded to a file (the evaluation's
+ * `--record`) must not search with Brave, whose answers may not be kept. A `brave` spec becomes
+ * the news of GDELT, and an `anthropic` one loses its Brave fallback.
+ */
+export function withoutBrave(spec: SearchSpec | undefined): SearchSpec | undefined {
+  if (spec === undefined) return undefined;
+  return { engine: spec.engine === "brave" ? "gdelt" : spec.engine };
 }

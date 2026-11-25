@@ -1,4 +1,4 @@
-import { FC, useState, useRef, useEffect, useContext } from "react";
+import { FC, useState, useRef, useEffect } from "react";
 import {
   Box,
   Divider,
@@ -14,6 +14,7 @@ import {
   MenuItem,
   Drawer,
 } from "@mui/material";
+import { useSelector } from "react-redux";
 import { useTheme } from "@mui/material";
 import { useNavigate, useLocation } from "react-router";
 import {
@@ -41,7 +42,6 @@ import { SIDEBAR_ROW_HEIGHT } from "./sidebarRowHeight";
 import { chartTheme } from "../../themes/chartTheme";
 import Avatar from "../Avatar/VWAvatar";
 import { brand, text, background, palette as vwPalette, radiusPx } from "../../themes/palette";
-import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import { storageService } from "../../../infrastructure/storage";
 import { ROLES } from "../../../application/constants/roles";
 import useLogout from "../../../application/hooks/useLogout";
@@ -50,6 +50,8 @@ import { User } from "../../../domain/types/User";
 import { useProfilePhotoFetch } from "../../../application/hooks/useProfilePhotoFetch";
 import { useActiveModule } from "../../../application/hooks/useActiveModule";
 import { useAuth } from "../../../application/hooks/useAuth";
+import useUsers from "../../../application/hooks/useUsers";
+import { selectPhotoRefreshCounter } from "../../../application/redux/ui/uiSlice";
 import ReadyToSubscribeBox from "../ReadyToSubscribeBox/ReadyToSubscribeBox";
 import { useUserGuideSidebarContext } from "../UserGuide/UserGuideSidebarContext";
 
@@ -166,7 +168,9 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
   const { openTab: openHelperTab } = useUserGuideSidebarContext();
   const managementItems =
     activeModule === "super-admin" ? SUPER_ADMIN_MANAGEMENT_ITEMS : MANAGEMENT_ITEMS;
-  const { userId, users, photoRefreshFlag } = useContext(VerifyWiseContext);
+  const { userId, isSuperAdmin } = useAuth();
+  const { users } = useUsers();
+  const photoRefreshCounter = useSelector(selectPhotoRefreshCounter);
   const [selfUser, setSelfUser] = useState<User | null>(null);
 
   // Fetch current user directly when not in the org users list (e.g., super-admin)
@@ -209,7 +213,6 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
   const user: User =
     selfUser || (users ? users.find((u: User) => u.id === userId) : null) || DEFAULT_USER;
 
-  const { isSuperAdmin } = useAuth();
   const baseRoleName = ROLES[user.roleId as keyof typeof ROLES];
   // Pure SuperAdmin (no base role) → just "Super Admin".
   // Elected SuperAdmin (has base role) → "Admin (Super Admin)".
@@ -244,7 +247,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
       cancel = true;
       if (previousUrl) URL.revokeObjectURL(previousUrl);
     };
-  }, [userId, fetchProfilePhotoAsBlobUrl, photoRefreshFlag]);
+  }, [userId, fetchProfilePhotoAsBlobUrl, photoRefreshCounter]);
 
   const userAvator: User_Avatar = {
     firstname: user.name,

@@ -18,6 +18,12 @@ vi.mock(
       typeof import("../../../../../application/repository/vendorResearch.repository")
     >()),
     getVendorResearchSettings: vi.fn(),
+    // No line about the search: what these tests read is elsewhere.
+    getVendorResearchSearchStatus: vi.fn(async () => ({
+      engines: { default: null, byKey: {} },
+      recentRunsFoundNoNews: false,
+      braveConfigured: false,
+    })),
     saveVendorResearchSettings: vi.fn(),
   }),
 );
@@ -60,6 +66,7 @@ beforeEach(() => {
     researchKeyId: 20,
     analysisKeyId: 10,
     scanIntervalDays: null,
+    autoResearchOnCreate: true,
   });
   mocks.save.mockImplementation(async (settings) => settings);
 });
@@ -109,6 +116,7 @@ describe("research settings with a list of keys that could not be read", () => {
       researchKeyId: 20,
       analysisKeyId: 10,
       scanIntervalDays: null,
+      autoResearchOnCreate: true,
     });
   });
 });

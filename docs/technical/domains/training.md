@@ -221,6 +221,8 @@ Report sections:
 | `training_updated` | Training modified |
 | `training_deleted` | Training deleted |
 
+`training_added`, `training_updated` and `training_deleted` run every action of every active automation of the trigger; an automation that existed before that change keeps only the event's first action until it is edited and saved (`legacy_first_action_only`). See [Automations → Dispatch of entity events](../infrastructure/automations.md#dispatch-of-entity-events).
+
 ### Template Variables
 
 For training notifications:

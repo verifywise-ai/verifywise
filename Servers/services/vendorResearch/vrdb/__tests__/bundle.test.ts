@@ -20,6 +20,7 @@ import {
   hashOfBytes,
   readBundle,
   readManifest,
+  shippedBundleIds,
   writeBundle,
   writeManifest,
 } from "../bundle";
@@ -331,5 +332,69 @@ describe("bundleDir", () => {
     expect(fs.existsSync(path.join(dir, "kev.json.gz"))).toBe(true);
     expect(readBundle("kev").bundle.records).toHaveLength(1);
     expect(readManifest().lists).toHaveLength(1);
+  });
+});
+
+describe("shippedBundleIds", () => {
+  const freshDir = () => fs.mkdtempSync(path.join(os.tmpdir(), "vrdb-shipped-"));
+
+  it("names the lists of the manifest", () => {
+    const at = freshDir();
+    fs.writeFileSync(
+      path.join(at, MANIFEST_FILE),
+      JSON.stringify({ format: BUNDLE_FORMAT, lists: [{ sourceId: "kev" }, { sourceId: "ofac" }] }),
+    );
+    expect(shippedBundleIds(at)).toEqual(new Set(["kev", "ofac"]));
+  });
+
+  it("ignores an id it does not know", () => {
+    const at = freshDir();
+    fs.writeFileSync(
+      path.join(at, MANIFEST_FILE),
+      JSON.stringify({ format: BUNDLE_FORMAT, lists: [{ sourceId: "kev" }, { sourceId: "nope" }] }),
+    );
+    expect(shippedBundleIds(at)).toEqual(new Set(["kev"]));
+  });
+
+  it("is null with no manifest, an unreadable one, another format or no list, so every list stays covered", () => {
+    expect(shippedBundleIds(freshDir())).toBeNull();
+    const broken = freshDir();
+    fs.writeFileSync(path.join(broken, MANIFEST_FILE), "{");
+    expect(shippedBundleIds(broken)).toBeNull();
+    const other = freshDir();
+    fs.writeFileSync(path.join(other, MANIFEST_FILE), JSON.stringify({ format: 99, lists: [] }));
+    expect(shippedBundleIds(other)).toBeNull();
+    const empty = freshDir();
+    fs.writeFileSync(
+      path.join(empty, MANIFEST_FILE),
+      JSON.stringify({ format: BUNDLE_FORMAT, lists: [] }),
+    );
+    expect(shippedBundleIds(empty)).toBeNull();
+  });
+
+  it("does not keep a missing manifest: one written later is read", () => {
+    const at = freshDir();
+    expect(shippedBundleIds(at)).toBeNull();
+    fs.writeFileSync(
+      path.join(at, MANIFEST_FILE),
+      JSON.stringify({ format: BUNDLE_FORMAT, lists: [{ sourceId: "kev" }] }),
+    );
+    expect(shippedBundleIds(at)).toEqual(new Set(["kev"]));
+  });
+
+  it("keeps a manifest that was read", () => {
+    const at = freshDir();
+    const file = path.join(at, MANIFEST_FILE);
+    fs.writeFileSync(file, JSON.stringify({ format: BUNDLE_FORMAT, lists: [{ sourceId: "kev" }] }));
+    expect(shippedBundleIds(at)).toEqual(new Set(["kev"]));
+    fs.rmSync(file);
+    expect(shippedBundleIds(at)).toEqual(new Set(["kev"]));
+  });
+
+  it("the release's own manifest ships no bundle of the EU competition cases, whose connector is broken upstream", () => {
+    const shipped = shippedBundleIds(path.resolve(__dirname, "../../../../data/vrdb"));
+    expect(shipped).not.toBeNull();
+    expect(shipped?.has("kev")).toBe(true);
+    expect(shipped?.has("eu_dg_comp")).toBe(false);
   });
 });

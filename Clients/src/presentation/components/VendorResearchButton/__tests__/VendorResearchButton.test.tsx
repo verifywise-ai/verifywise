@@ -91,7 +91,7 @@ describe("who sees the button", () => {
 
 describe("when research is not set up", () => {
   it("is disabled, and says research is not set up, when the organization has no LLM key", async () => {
-    await renderWithSettings({ hasLlmKey: false, autoRunEnabled: true });
+    await renderWithSettings({ hasLlmKey: false, autoRunAllowed: true, autoRunEnabled: true });
 
     const button = researchButton();
     expect(button).toBeDisabled();
@@ -104,7 +104,7 @@ describe("when research is not set up", () => {
   it.each([true, false])(
     "is enabled with an LLM key alone, with the automatic runs on or off (%s)",
     async (autoRunEnabled) => {
-      await renderWithSettings({ hasLlmKey: true, autoRunEnabled });
+      await renderWithSettings({ hasLlmKey: true, autoRunAllowed: true, autoRunEnabled });
 
       expect(researchButton()).toBeEnabled();
       await userEvent.hover(researchButton());

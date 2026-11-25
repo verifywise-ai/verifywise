@@ -8,7 +8,7 @@ import {
   Stack,
   Tooltip,
 } from "@mui/material";
-import { AlertTriangle, Archive, FileWarning, ClipboardList, Bell } from "lucide-react";
+import { AlertTriangle, Archive, FileWarning, ClipboardList, Bell, SearchX } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import CustomizableSkeleton from "../../components/Skeletons";
@@ -21,6 +21,7 @@ import { AIIncidentManagementModel } from "../../../domain/models/Common/inciden
 import { IncidentTableProps } from "../../types/interfaces/i.table";
 import { incidentRowHover, incidentTableRowDeletingStyle } from "./style";
 import CustomIconButton from "../../components/IconButton";
+import { CustomizableButton } from "../../components/button/customizable-button";
 import JiraIssueChip from "../../components/JiraIssueChip";
 import { useStandardTable } from "../../../application/hooks/useStandardTable";
 import type { StandardColumn } from "../../../domain/types/standardTable";
@@ -28,6 +29,7 @@ import StandardTableHead from "../../components/Table/StandardTableHead";
 import StandardTablePagination from "../../components/Table/StandardTablePagination";
 import { TableEmptyStateLayout } from "../../components/Table/TableEmptyStateLayout";
 import { palette } from "../../themes/palette";
+import { toDateOnlyString } from "../../tools/isoDateToString";
 
 dayjs.extend(utc);
 
@@ -35,7 +37,7 @@ const cellStyle = singleTheme.tableStyles.primary.body.cell;
 
 const TABLE_COLUMNS: StandardColumn[] = [
   { id: "incident_id", label: "INCIDENT ID", sortable: true },
-  { id: "ai_project", label: "AI PROJECT", sortable: true },
+  { id: "ai_project", label: "USE CASE", sortable: true },
   { id: "model_inventory_name", label: "AFFECTED MODEL", sortable: true },
   { id: "assignee_name", label: "OWNER", sortable: true },
   { id: "type", label: "TYPE", sortable: true },
@@ -69,6 +71,8 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
   onRestore,
   archiveView = "active",
   hasArchivedIncidents = false,
+  isFiltered = false,
+  onClearFilters,
   canEdit = true,
   canApprove = false,
   paginated = true,
@@ -125,12 +129,13 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
           bValue = b.status?.toLowerCase() || "";
           break;
         case "occurred_date":
-          aValue = a.occurred_date ? new Date(a.occurred_date).getTime() : 0;
-          bValue = b.occurred_date ? new Date(b.occurred_date).getTime() : 0;
+          // "YYYY-MM-DD" strings sort as dates.
+          aValue = toDateOnlyString(a.occurred_date);
+          bValue = toDateOnlyString(b.occurred_date);
           break;
         case "approved_by":
-          aValue = a.approved_by?.toLowerCase() || "";
-          bValue = b.approved_by?.toLowerCase() || "";
+          aValue = AIIncidentManagementModel.approverLabel(a).toLowerCase();
+          bValue = AIIncidentManagementModel.approverLabel(b).toLowerCase();
           break;
         default:
           return 0;
@@ -286,7 +291,10 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                           sortConfig.key === "occurred_date" ? "background.surface" : "inherit",
                       }}
                     >
-                      {incident.occurred_date ? formatDate(incident.occurred_date) : "-"}
+                      {/* The calendar day itself: never a UTC midnight shown in local time. */}
+                      {toDateOnlyString(incident.occurred_date)
+                        ? formatDate(toDateOnlyString(incident.occurred_date))
+                        : "-"}
                     </TableCell>
                   )}
                   {isVisible("approved_by") && (
@@ -297,7 +305,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                           sortConfig.key === "approved_by" ? "background.surface" : "inherit",
                       }}
                     >
-                      <TooltipCell value={incident.approved_by} />
+                      <TooltipCell value={AIIncidentManagementModel.approverLabel(incident)} />
                     </TableCell>
                   )}
                   {isVisible("actions") && (
@@ -306,7 +314,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                         ...cellStyle,
                       }}
                     >
-                      <Stack direction="row" spacing={1}>
+                      <Stack direction="row" gap="2px">
                         <CustomIconButton
                           id={incident.id}
                           type="Incident"
@@ -350,12 +358,13 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
       sortConfig.key,
       visibleTableColumns.length,
       formatDate,
+      jiraLinks,
     ],
   );
 
   if (isLoading) {
     return (
-      <Stack spacing={2}>
+      <Stack>
         <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
       </Stack>
     );
@@ -379,6 +388,46 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
         }
       >
         <EmptyState icon={Archive} message="No archived incidents." />
+      </TableEmptyStateLayout>
+    );
+  }
+
+  const emptyHeader = (
+    <StandardTableHead columns={visibleTableColumns} sortConfig={sortConfig} onSort={handleSort} />
+  );
+
+  // A search, status card or filter hides every row: say so, not "none yet".
+  if ((!sortedRows || sortedRows.length === 0) && isFiltered) {
+    return (
+      <TableEmptyStateLayout header={emptyHeader}>
+        <EmptyState icon={SearchX} message="No incidents match these filters.">
+          {onClearFilters && (
+            <Stack alignItems="center">
+              <CustomizableButton
+                variant="outlined"
+                text="Clear filters"
+                onClick={onClearFilters}
+                testId="incidents-clear-filters"
+              />
+            </Stack>
+          )}
+        </EmptyState>
+      </TableEmptyStateLayout>
+    );
+  }
+
+  // Every incident is archived and the view shows active ones only.
+  if (
+    (!sortedRows || sortedRows.length === 0) &&
+    archiveView === "active" &&
+    hasArchivedIncidents
+  ) {
+    return (
+      <TableEmptyStateLayout header={emptyHeader}>
+        <EmptyState
+          icon={Archive}
+          message="No active incidents. Archived incidents are in the Archived only view."
+        />
       </TableEmptyStateLayout>
     );
   }

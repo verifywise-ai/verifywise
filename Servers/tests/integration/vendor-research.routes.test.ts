@@ -365,7 +365,11 @@ describe("POST /api/v1/vendors/:id/research", () => {
     expect(latest.body.data).toMatchObject({ id: started.body.data.run.id, status: "queued" });
     const config = await owner.request.get("/api/v1/vendor-research/config");
     expect(config.status).toBe(200);
-    expect(config.body.data).toEqual({ hasLlmKey: true, autoRunEnabled: true });
+    expect(config.body.data).toEqual({
+      hasLlmKey: true,
+      autoRunAllowed: true,
+      autoRunEnabled: true,
+    });
     const findings = await owner.request.get("/api/v1/vendor-risk-findings");
     expect(findings.status).toBe(200);
     expect(findings.body.data).toEqual({ rows: [], total: 0 });
@@ -711,10 +715,18 @@ describe("GET /api/v1/vendor-research/config", () => {
     const attackerConfig = await attacker.request.get("/api/v1/vendor-research/config");
 
     expect(ownerConfig.status).toBe(200);
-    expect(ownerConfig.body.data).toEqual({ hasLlmKey: true, autoRunEnabled: true });
+    expect(ownerConfig.body.data).toEqual({
+      hasLlmKey: true,
+      autoRunAllowed: true,
+      autoRunEnabled: true,
+    });
     // Only the owner's organization has a key.
     expect(attackerConfig.status).toBe(200);
-    expect(attackerConfig.body.data).toEqual({ hasLlmKey: false, autoRunEnabled: true });
+    expect(attackerConfig.body.data).toEqual({
+      hasLlmKey: false,
+      autoRunAllowed: true,
+      autoRunEnabled: true,
+    });
     for (const res of [ownerConfig, attackerConfig]) {
       expect(res.text).not.toContain(FAKE_LLM_KEY);
     }

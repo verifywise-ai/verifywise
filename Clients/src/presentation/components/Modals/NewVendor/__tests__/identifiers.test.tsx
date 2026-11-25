@@ -73,7 +73,9 @@ const vendor = (identifiers: Identifiers = {}) =>
     ...identifiers,
   });
 
-const CAPTION = "Turns a match by name into a match by identifier.";
+const HEADING = "Identifiers (optional)";
+const CAPTION =
+  "Research uses them to find this exact company, such as its SEC filings and its LEI record, instead of matching by name.";
 
 function open(existing: VendorModel) {
   renderWithProviders(
@@ -86,8 +88,15 @@ function open(existing: VendorModel) {
   );
 }
 
-const group = (name = "Identifiers") => screen.getByRole("group", { name });
-const field = (name: RegExp) => within(group()).getByLabelText(name);
+const group = (name = HEADING) => screen.getByRole("group", { name });
+/** The section's open/close button; its name starts with the heading. */
+const toggle = () =>
+  screen.getByRole("button", { name: (accessibleName) => accessibleName.startsWith(HEADING) });
+/** A field of the section, which is opened first when it is closed (a vendor with none). */
+const field = (name: RegExp) => {
+  if (toggle().getAttribute("aria-expanded") === "false") fireEvent.click(toggle());
+  return within(group()).getByLabelText(name);
+};
 const save = () => userEvent.click(screen.getByRole("button", { name: /^save$/i }));
 const saved = () => updateVendor.mock.calls[0][0].data;
 
@@ -269,6 +278,55 @@ describe("NewVendor: the identifiers of the vendor", () => {
     });
   });
 
+  it("a new vendor starts with the section closed, and its button opens it", async () => {
+    renderWithProviders(<AddNewVendor isOpen={true} setIsOpen={vi.fn()} onSuccess={vi.fn()} />);
+
+    expect(toggle()).toHaveAttribute("aria-expanded", "false");
+    // The closed fields stay in the page, hidden, so that the button's aria-controls names them.
+    const controlled = document.getElementById(toggle().getAttribute("aria-controls") ?? "");
+    expect(controlled).not.toBeNull();
+    expect(controlled).not.toBeVisible();
+    expect(screen.getByLabelText(/^lei/i)).not.toBeVisible();
+    await userEvent.click(toggle());
+    expect(toggle()).toHaveAttribute("aria-expanded", "true");
+    expect(within(group()).getByLabelText(/^lei/i)).toBeVisible();
+    await userEvent.click(toggle());
+    expect(toggle()).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByLabelText(/^lei/i)).not.toBeVisible();
+  });
+
+  it("an invalid identifier keeps the section open while it is corrected", async () => {
+    open(vendor());
+
+    await userEvent.type(field(/^lei/i), "TOO-SHORT");
+    await save();
+
+    expect(await screen.findByText(/^LEI /)).toBeVisible();
+    // Typing clears the error; the section stays open, the field under the cursor with it.
+    await userEvent.type(screen.getByLabelText(/^lei/i), "X");
+    expect(toggle()).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByLabelText(/^lei/i)).toBeVisible();
+    expect(screen.getByLabelText(/^lei/i)).toHaveFocus();
+  });
+
+  it("a failed save opens the closed section on an invalid identifier and focuses it", async () => {
+    open(vendor());
+
+    await userEvent.type(field(/^lei/i), "TOO-SHORT");
+    await userEvent.click(toggle());
+    expect(toggle()).toHaveAttribute("aria-expanded", "false");
+    await save();
+
+    await waitFor(() => expect(toggle()).toHaveAttribute("aria-expanded", "true"));
+    expect(screen.getByLabelText(/^lei/i)).toBeVisible();
+    await waitFor(() => expect(screen.getByLabelText(/^lei/i)).toHaveFocus());
+    expect(updateVendor).not.toHaveBeenCalled();
+    // Typing clears the error; the section that the save opened stays open.
+    await userEvent.type(screen.getByLabelText(/^lei/i), "X");
+    expect(toggle()).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByLabelText(/^lei/i)).toBeVisible();
+  });
+
   describe("in the person's language", () => {
     afterAll(() => setLanguage("en"));
 
@@ -276,7 +334,7 @@ describe("NewVendor: the identifiers of the vendor", () => {
       await setLanguage("de");
       open(vendor({ country: "CH" }));
 
-      const german = await screen.findByRole("group", { name: tr("de", "Identifiers") });
+      const german = await screen.findByRole("group", { name: tr("de", HEADING) });
       expect(within(german).getByText("Schweiz")).toBeInTheDocument();
       for (const text of [CAPTION, "Country", "Registration number", "SEC CIK"]) {
         expect(within(german).getByText(tr("de", text))).toBeInTheDocument();

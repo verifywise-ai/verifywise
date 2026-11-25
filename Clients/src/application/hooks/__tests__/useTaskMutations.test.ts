@@ -3,7 +3,7 @@ import { renderHook, act, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import { useCreateTask, useUpdateTask, useArchiveTask } from "../useTaskMutations";
-import { taskQueryKeys } from "../useTasks";
+import { linkedTaskQueryKeys, taskQueryKeys } from "../useTasks";
 import { TaskStatus, TaskPriority } from "../../../domain/enums/task.enum";
 import type { ITask } from "../../../domain/interfaces/i.task";
 
@@ -298,5 +298,68 @@ describe("useArchiveTask", () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(queryClient.getQueryData<ITask[]>(keyDefault)).toEqual(original);
     expect(mockShowAlert).toHaveBeenCalled();
+  });
+});
+
+describe("lists of tasks linked to an entity", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  const linkedKey = linkedTaskQueryKeys.byEntity("incident", 12);
+
+  it("sit outside the task list keys, so no list updater can reach them", () => {
+    expect(linkedKey[0]).not.toBe(taskQueryKeys.all[0]);
+  });
+
+  it("are left as they are by an unrelated create, then refetched", async () => {
+    const linked = [makeTask(7, { title: "Linked to INC-12" })];
+    mockCreateTask.mockResolvedValue({ message: "Created", data: makeTask(42) } as never);
+    const { queryClient, wrapper } = createWrapper();
+    queryClient.setQueryData<ITask[]>(taskQueryKeys.list({}), [makeTask(1)]);
+    queryClient.setQueryData<ITask[]>(linkedKey, linked);
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const { result } = renderHook(() => useCreateTask(), { wrapper });
+    act(() => {
+      result.current.mutate({ body: { title: "Unrelated" } });
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(queryClient.getQueryData<ITask[]>(linkedKey)).toEqual(linked);
+    expect(invalidatedKeys(invalidateSpy)).toContainEqual(linkedTaskQueryKeys.all);
+  });
+
+  it("are not patched by an update that drops the link, and are refetched", async () => {
+    const linked = [makeTask(7, { title: "Linked to INC-12" })];
+    mockUpdateTask.mockResolvedValue({
+      message: "OK",
+      data: makeTask(7, { title: "Renamed" }),
+    } as never);
+    const { queryClient, wrapper } = createWrapper();
+    queryClient.setQueryData<ITask[]>(linkedKey, linked);
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const { result } = renderHook(() => useUpdateTask(), { wrapper });
+    act(() => {
+      result.current.mutate({ id: 7, body: { title: "Renamed", entity_links: [] } });
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(queryClient.getQueryData<ITask[]>(linkedKey)).toEqual(linked);
+    expect(invalidatedKeys(invalidateSpy)).toContainEqual(linkedTaskQueryKeys.all);
+  });
+
+  it("are refetched after an archive", async () => {
+    mockDeleteTask.mockResolvedValue({ message: "OK", data: makeTask(7) } as never);
+    const { queryClient, wrapper } = createWrapper();
+    queryClient.setQueryData<ITask[]>(linkedKey, [makeTask(7)]);
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const { result } = renderHook(() => useArchiveTask(), { wrapper });
+    act(() => {
+      result.current.mutate({ id: 7 });
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(invalidatedKeys(invalidateSpy)).toContainEqual(linkedTaskQueryKeys.all);
   });
 });

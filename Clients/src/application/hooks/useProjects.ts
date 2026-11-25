@@ -25,8 +25,10 @@ export const projectQueryKeys = {
 export const useProjects = ({ enabled = true }: { enabled?: boolean } = {}) => {
   const query = useQuery({
     queryKey: projectQueryKeys.list(),
-    queryFn: async (): Promise<Project[]> => {
-      const response = await getAllProjects();
+    // The signal makes each fetch its own request (no sharing of an older one in flight), so a
+    // refetch after a change can never answer with data from before it.
+    queryFn: async ({ signal }): Promise<Project[]> => {
+      const response = await getAllProjects({ signal });
       return response?.data || [];
     },
     staleTime: 5 * 60 * 1000, // 5 minutes

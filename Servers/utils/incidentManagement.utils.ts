@@ -1,37 +1,48 @@
 import { sequelize } from "../database/db";
 import { QueryTypes, Transaction } from "sequelize";
 import { AIIncidentManagementModel } from "../domain.layer/models/incidentManagement/incidemtManagement.model";
-import { TenantAutomationActionModel } from "../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
 import {
   buildIncidentReplacements,
   buildIncidentUpdateReplacements,
 } from "./automation/incident.automation.utils";
-import { replaceTemplateVariables } from "./automation/automation.utils";
-import logger from "./logger/fileLogger";
+import { runEventAutomations } from "./automation/automationActions.utils";
 import { findUsersNotInOrganization } from "./user.utils";
-import { enqueueAutomationAction } from "../services/automations/automationProducer";
 import {
   assertValidIncidentDescription,
   CALLER_APPROVAL_FIELDS,
   INCIDENT_DATE_COLUMNS,
   INCIDENT_FK_COLUMNS,
   isSameIncidentValue,
+  toIncidentDateValue,
 } from "./validations/incidentManagementValidation.utils";
 
 /**
  * Base SELECT for incident queries. LEFT JOINs resolve the issue #4583
- * foreign keys (model_inventory_id / project_id / assignee_id) into
- * display names for API consumers. CONCAT_WS skips NULL parts.
+ * foreign keys (model_inventory_id / project_id / assignee_id) and the
+ * reporter / approver users into display names for API consumers.
+ * CONCAT_WS skips NULL parts. reporter_name / approved_by_name are the
+ * user's name only while they are a member of the incident's organization
+ * (as Wise Search matches them); they are null when the id is null (older
+ * rows, Jira imports, a deleted user) or the user has left: readers fall back
+ * to the reporter / approved_by text.
  */
 const INCIDENT_SELECT = `
   SELECT i.*,
     CONCAT_WS(' ', mi.provider, mi.model) AS model_inventory_name,
     p.project_title AS project_title,
-    CONCAT_WS(' ', u.name, u.surname) AS assignee_name
+    CONCAT_WS(' ', u.name, u.surname) AS assignee_name,
+    NULLIF(TRIM(CONCAT_WS(' ', ru.name, ru.surname)), '') AS reporter_name,
+    NULLIF(TRIM(CONCAT_WS(' ', au.name, au.surname)), '') AS approved_by_name
   FROM ai_incident_managements i
   LEFT JOIN model_inventories mi ON mi.id = i.model_inventory_id
   LEFT JOIN projects p ON p.id = i.project_id
-  LEFT JOIN users u ON u.id = i.assignee_id`;
+  LEFT JOIN users u ON u.id = i.assignee_id
+  LEFT JOIN users ru ON ru.id = i.reporter_id
+    AND EXISTS (SELECT 1 FROM organization_members rom
+                 WHERE rom.user_id = ru.id AND rom.organization_id = i.organization_id)
+  LEFT JOIN users au ON au.id = i.approved_by_id
+    AND EXISTS (SELECT 1 FROM organization_members aom
+                 WHERE aom.user_id = au.id AND aom.organization_id = i.organization_id)`;
 
 /** Optional server-side filters for the incident list (issue #4583). */
 export interface IncidentListFilters {
@@ -112,14 +123,14 @@ export const createNewIncidentQuery = async (
     const result = await sequelize.query(
       `INSERT INTO ai_incident_managements (
         organization_id, ai_project, model_inventory_id, project_id, assignee_id, type,
-        severity, status, occurred_date, date_detected, reporter, approval_status,
-        approved_by, categories_of_harm, affected_persons_groups, description, relationship_causality,
+        severity, status, occurred_date, date_detected, reporter, reporter_id, approval_status,
+        approved_by, approved_by_id, categories_of_harm, affected_persons_groups, description, relationship_causality,
         immediate_mitigations, planned_corrective_actions, model_system_version, interim_report, approval_date, approval_notes,
         created_at, updated_at, archived, is_demo
       ) VALUES (
         :organization_id, :ai_project, :model_inventory_id, :project_id, :assignee_id, :type,
-        :severity, :status, :occurred_date, :date_detected, :reporter, :approval_status,
-        :approved_by, :categories_of_harm, :affected_persons_groups, :description, :relationship_causality,
+        :severity, :status, :occurred_date, :date_detected, :reporter, :reporter_id, :approval_status,
+        :approved_by, :approved_by_id, :categories_of_harm, :affected_persons_groups, :description, :relationship_causality,
         :immediate_mitigations, :planned_corrective_actions, :model_system_version, :interim_report, :approval_date, :approval_notes,
         :created_at, :updated_at, :archived, :is_demo
       ) RETURNING *`,
@@ -133,11 +144,14 @@ export const createNewIncidentQuery = async (
           type: incident.type,
           severity: incident.severity,
           status: incident.status,
-          occurred_date: incident.occurred_date ? incident.occurred_date : null,
-          date_detected: incident.date_detected ? incident.date_detected : null,
+          // DATE columns: always "YYYY-MM-DD" (a Date is its UTC day).
+          occurred_date: toIncidentDateValue(incident.occurred_date),
+          date_detected: toIncidentDateValue(incident.date_detected),
           reporter: incident.reporter ?? null,
+          reporter_id: toIncidentReferenceValue(incident.reporter_id),
           approval_status: incident.approval_status ?? null,
           approved_by: incident.approved_by ?? null,
+          approved_by_id: toIncidentReferenceValue(incident.approved_by_id),
           categories_of_harm: JSON.stringify(incident.categories_of_harm || []),
           affected_persons_groups: incident.affected_persons_groups ?? null,
           description: incident.description ?? null,
@@ -146,7 +160,7 @@ export const createNewIncidentQuery = async (
           planned_corrective_actions: incident.planned_corrective_actions ?? null,
           model_system_version: incident.model_system_version ?? null,
           interim_report: incident.interim_report ?? false,
-          approval_date: incident.approval_date ? incident.approval_date : null,
+          approval_date: toIncidentDateValue(incident.approval_date),
           approval_notes: incident.approval_notes ?? null,
           created_at,
           updated_at: created_at,
@@ -159,52 +173,15 @@ export const createNewIncidentQuery = async (
       },
     );
     const createdIncident = result[0];
-    const automations = (await sequelize.query(
-      `SELECT
-              pat.key AS trigger_key,
-              paa.key AS action_key,
-              a.id AS automation_id,
-              aa.*
-            FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'incident_added' AND a.is_active ORDER BY aa."order" ASC;`,
-      { replacements: { organizationId }, transaction },
-    )) as [
-      (TenantAutomationActionModel & {
-        trigger_key: string;
-        action_key: string;
-        automation_id: number;
-      })[],
-      number,
-    ];
-    if (automations[0].length > 0) {
-      const automation = automations[0][0];
-      if (automation["trigger_key"] === "incident_added") {
-        const params = automation.params!;
-
-        // Build replacements
-        const replacements = buildIncidentReplacements({
-          ...createdIncident.dataValues,
-        });
-
-        // Replace variables in subject and body
-        const processedParams = {
-          ...params,
-          subject: replaceTemplateVariables(params.subject || "", replacements),
-          body: replaceTemplateVariables(params.body || "", replacements),
-          automation_id: automation.automation_id,
-        };
-
-        // After commit: a rolled-back create (an import that failed later in
-        // its transaction) must not send an "incident added" email.
-        transaction.afterCommit(() => {
-          enqueueAutomationAction(automation.action_key, {
-            ...processedParams,
-            organizationId,
-          }).catch((error) => logger.error(`[incident] incident_added enqueue failed: ${error}`));
-        });
-      } else {
-        console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-      }
-    }
+    // Every action of every active automation; one flagged legacy keeps only the
+    // event's first. After commit: a rolled-back create (an import that failed
+    // later in its transaction) must not send an "incident added" email.
+    await runEventAutomations(
+      organizationId,
+      "incident_added",
+      () => buildIncidentReplacements({ ...createdIncident.dataValues }),
+      { transaction, logContext: `incident_added, incident ${createdIncident.id}` },
+    );
     return createdIncident;
   } catch (error) {
     console.error("Error creating new incident:", error);
@@ -224,8 +201,10 @@ export const UPDATABLE_INCIDENT_COLUMNS = [
   "occurred_date",
   "date_detected",
   "reporter",
+  "reporter_id",
   "approval_status",
   "approved_by",
+  "approved_by_id",
   "categories_of_harm",
   "affected_persons_groups",
   "description",
@@ -256,7 +235,7 @@ export const toIncidentReferenceValue = (value: unknown): unknown =>
 const toColumnValue = (column: IncidentColumn, value: unknown): unknown => {
   if (column === "archived") return Boolean(value);
   if (INCIDENT_FK_COLUMNS.has(column)) return toIncidentReferenceValue(value);
-  if (INCIDENT_DATE_COLUMNS.has(column) && value === "") return null;
+  if (INCIDENT_DATE_COLUMNS.has(column)) return toIncidentDateValue(value);
   return value ?? null;
 };
 
@@ -301,6 +280,28 @@ export const incidentWriteNeeds = (
 };
 
 /**
+ * The full name ("name surname") of a member of the organization, `User #<id>`
+ * (as change history does) when they have no name, or null when the user is
+ * not a member of the organization. Used to check a reporter_id and to write
+ * the reporter / approver text columns from a user id.
+ */
+export const getIncidentMemberName = async (
+  userId: number,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<string | null> => {
+  const rows = (await sequelize.query(
+    `SELECT NULLIF(TRIM(CONCAT_WS(' ', u.name, u.surname)), '') AS full_name
+       FROM users u
+       JOIN organization_members om ON om.user_id = u.id AND om.organization_id = :organizationId
+      WHERE u.id = :userId`,
+    { replacements: { userId, organizationId }, type: QueryTypes.SELECT, transaction },
+  )) as Array<{ full_name: string | null }>;
+  if (rows.length === 0) return null;
+  return rows[0].full_name ?? `User #${userId}`;
+};
+
+/**
  * The name recorded as an incident's approver: the acting user's
  * "name surname", as the incident list shows owners. Falls back to
  * `User #<id>` (as change history does) when the user has no name.
@@ -309,16 +310,8 @@ export const getIncidentApproverName = async (
   userId: number,
   organizationId: number,
   transaction?: Transaction,
-): Promise<string> => {
-  const rows = (await sequelize.query(
-    `SELECT NULLIF(TRIM(CONCAT_WS(' ', u.name, u.surname)), '') AS full_name
-       FROM users u
-       JOIN organization_members om ON om.user_id = u.id AND om.organization_id = :organizationId
-      WHERE u.id = :userId`,
-    { replacements: { userId, organizationId }, type: QueryTypes.SELECT, transaction },
-  )) as Array<{ full_name: string | null }>;
-  return rows[0]?.full_name ?? `User #${userId}`;
-};
+): Promise<string> =>
+  (await getIncidentMemberName(userId, organizationId, transaction)) ?? `User #${userId}`;
 
 /**
  * Writes `changed` (from diffIncidentColumns) plus updated_at and returns
@@ -367,50 +360,22 @@ export const updateIncidentByIdQuery = async (
 };
 
 /**
- * Enqueues the organization's active `incident_updated` automation for an
- * update from `oldIncident` to `newIncident`. Call it only after the update
+ * Enqueues every action of the organization's active `incident_updated`
+ * automations (an automation flagged legacy keeps only the event's first) for
+ * an update from `oldIncident` to `newIncident`. Call it only after the update
  * has committed, so an action is never sent for a change that rolled back.
  */
 export const enqueueIncidentUpdatedAutomations = async (
   organizationId: number,
   oldIncident: AIIncidentManagementModel,
   newIncident: AIIncidentManagementModel,
-) => {
-  const automations = (await sequelize.query(
-    `SELECT
-            pat.key AS trigger_key,
-            paa.key AS action_key,
-            a.id AS automation_id,
-            aa.*
-          FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'incident_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId } },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length === 0) return;
-
-  const automation = automations[0][0];
-  if (automation["trigger_key"] !== "incident_updated") {
-    console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    return;
-  }
-  const params = automation.params!;
-  const replacements = buildIncidentUpdateReplacements(oldIncident, {
-    ...newIncident.dataValues,
-  });
-  await enqueueAutomationAction(automation.action_key, {
-    ...params,
-    subject: replaceTemplateVariables(params.subject || "", replacements),
-    body: replaceTemplateVariables(params.body || "", replacements),
-    automation_id: automation.automation_id,
+) =>
+  runEventAutomations(
     organizationId,
-  });
-};
+    "incident_updated",
+    () => buildIncidentUpdateReplacements(oldIncident, { ...newIncident.dataValues }),
+    { logContext: `incident_updated, incident ${newIncident.id}` },
+  );
 
 /**
  * Deletes an incident and returns the deleted row, or null when there is no
@@ -447,44 +412,23 @@ export const deleteIncidentByIdQuery = async (
     // "incident deleted" email.
     if (!deletedIncident) return null;
 
-    const automations = (await sequelize.query(
-      `SELECT
-              pat.key AS trigger_key,
-              paa.key AS action_key,
-              a.id AS automation_id,
-              aa.*
-            FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'incident_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
-      { replacements: { organizationId }, transaction },
-    )) as [
-      (TenantAutomationActionModel & {
-        trigger_key: string;
-        action_key: string;
-        automation_id: number;
-      })[],
-      number,
-    ];
-    if (automations[0].length > 0) {
-      const automation = automations[0][0];
-      if (automation["trigger_key"] === "incident_deleted") {
-        const params = automation.params!;
-        const replacements = buildIncidentReplacements({ ...deletedIncident });
-        const processedParams = {
-          ...params,
-          subject: replaceTemplateVariables(params.subject || "", replacements),
-          body: replaceTemplateVariables(params.body || "", replacements),
-          automation_id: automation.automation_id,
-        };
-        // After commit: a delete that rolls back must not send "incident deleted".
-        transaction.afterCommit(() => {
-          enqueueAutomationAction(automation.action_key, {
-            ...processedParams,
-            organizationId,
-          }).catch((error) => logger.error(`[incident] incident_deleted enqueue failed: ${error}`));
-        });
-      } else {
-        console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-      }
-    }
+    // Task links point at the incident by type and id, with no foreign key
+    // to cascade: remove them with the incident, as vendors and policies do.
+    await sequelize.query(
+      `DELETE FROM task_entity_links
+        WHERE organization_id = :organizationId AND entity_type = 'incident' AND entity_id = :id`,
+      { replacements: { organizationId, id }, transaction },
+    );
+
+    // Every action of every active automation; one flagged legacy keeps only the
+    // event's first. After commit: a delete that rolls back must not send
+    // "incident deleted".
+    await runEventAutomations(
+      organizationId,
+      "incident_deleted",
+      () => buildIncidentReplacements({ ...deletedIncident }),
+      { transaction, logContext: `incident_deleted, incident ${id}` },
+    );
     return deletedIncident;
   } catch (error) {
     console.error("Error deleting incident:", error);

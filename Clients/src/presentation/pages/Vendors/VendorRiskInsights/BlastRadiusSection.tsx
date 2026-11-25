@@ -46,6 +46,7 @@ export default function BlastRadiusSection() {
       inheriting: data.vendors.reduce((sum, v) => sum + v.inheriting_risks, 0),
       useCases: useCases.size,
       unlinked: data.risks.filter((r) => r.children === 0).length,
+      suggested: data.vendors.reduce((sum, v) => sum + v.suggested, 0),
     };
   }, [data]);
 
@@ -64,7 +65,7 @@ export default function BlastRadiusSection() {
       },
       {
         id: "vendorRisks",
-        label: "Vendor risks with children",
+        label: "Vendor risks linked",
         sortable: true,
         sortValue: (v) => v.linked_vendor_risks,
         cellSx: numericCellSx,
@@ -93,7 +94,7 @@ export default function BlastRadiusSection() {
       },
       {
         id: "suggested",
-        label: "Suggested",
+        label: "Suggested links",
         sortable: true,
         sortValue: (v) => v.suggested,
         cellSx: numericCellSx,
@@ -129,11 +130,23 @@ export default function BlastRadiusSection() {
     return <Typography sx={captionSx}>No vendor risks yet.</Typography>;
   }
 
+  const nothingLinked = (
+    <Box sx={infoAlertSx} role="status">
+      <Info size={16} />
+      <Typography sx={alertTextSx}>
+        No project risk inherits from a vendor risk yet. Open a vendor risk and link the project
+        risks it applies to from its Linked risks tab.
+      </Typography>
+    </Box>
+  );
+  // Nothing linked and nothing suggested: the tiles and the table would only repeat zeros.
+  if (totals.inheriting === 0 && totals.suggested === 0) return nothingLinked;
+
   return (
     <>
       <Box sx={summaryGridSx}>
         <Box sx={summaryTileSx}>
-          <Typography sx={summaryLabelSx}>Vendors with reach</Typography>
+          <Typography sx={summaryLabelSx}>Vendors with linked project risks</Typography>
           <Typography sx={summaryValueSx}>{totals.vendorsWithReach.toLocaleString()}</Typography>
         </Box>
         <Box sx={summaryTileSx}>
@@ -145,20 +158,12 @@ export default function BlastRadiusSection() {
           <Typography sx={summaryValueSx}>{totals.useCases.toLocaleString()}</Typography>
         </Box>
         <Box sx={summaryTileSx}>
-          <Typography sx={summaryLabelSx}>Vendor risks with no children</Typography>
+          <Typography sx={summaryLabelSx}>Vendor risks not linked yet</Typography>
           <Typography sx={summaryValueSx}>{totals.unlinked.toLocaleString()}</Typography>
         </Box>
       </Box>
 
-      {totals.inheriting === 0 && (
-        <Box sx={infoAlertSx} role="status">
-          <Info size={16} />
-          <Typography sx={alertTextSx}>
-            No project risk inherits from a vendor risk yet. Open a vendor risk and link the project
-            risks it applies to from its Linked risks tab.
-          </Typography>
-        </Box>
-      )}
+      {totals.inheriting === 0 && nothingLinked}
 
       <ReportTable
         columns={columns}

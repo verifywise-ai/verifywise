@@ -8,6 +8,12 @@ const mockEnqueue = jest.fn<(...args: any[]) => Promise<void>>();
 jest.mock("../../services/automations/automationProducer", () => ({
   enqueueAutomationAction: (...args: any[]) => mockEnqueue(...args),
 }));
+jest.mock("../logger/fileLogger", () => ({
+  __esModule: true,
+  default: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
+  logStructured: jest.fn(),
+  logStructuredError: jest.fn(),
+}));
 jest.mock("../history/modelInventoryHistory.utils", () => ({
   recordSnapshotIfChanged: jest.fn(async () => undefined),
 }));
@@ -28,12 +34,17 @@ import {
   updateModelInventoryByIdQuery,
 } from "../modelInventory.utils";
 
-const automation = {
-  trigger_key: "",
-  action_key: "send_email",
-  automation_id: 3,
-  params: { subject: "s", body: "b" },
-};
+const actionRow = (automationId: number, order: number, legacy = false) => ({
+  automation_id: automationId,
+  action_key: order === 1 ? "send_email" : "send_slack",
+  params: { subject: `${automationId}-${order}`, body: "b" },
+  order,
+  legacy_first_action_only: legacy,
+});
+/** The action rows every model trigger lookup answers with. */
+let automationRows = [actionRow(3, 1)];
+const subjects = () => mockEnqueue.mock.calls.map(([, data]) => (data as any).subject);
+const settle = () => new Promise((resolve) => setImmediate(resolve));
 const row = (values: Record<string, unknown> = {}) => ({
   id: 50,
   model: "M",
@@ -56,9 +67,9 @@ beforeEach(() => {
   mockQuery.mockReset();
   mockEnqueue.mockReset();
   mockEnqueue.mockResolvedValue(undefined);
+  automationRows = [actionRow(3, 1)];
   mockQuery.mockImplementation(async (sql: string) => {
-    const trigger = /pat\.key = '(\w+)'/.exec(sql)?.[1];
-    if (trigger) return [[{ ...automation, trigger_key: trigger }], 1];
+    if (/FROM automation_triggers/.test(sql)) return automationRows;
     if (/INSERT INTO model_inventories\b/.test(sql)) return [row()];
     if (/^\s*SELECT \* FROM model_inventories/.test(sql)) return [row()];
     if (/UPDATE model_inventories/.test(sql)) return [[row()], 1];
@@ -130,5 +141,56 @@ describe("updateModelInventoryByIdQuery with the caller's locked row", () => {
       ),
     );
     expect(reads).toHaveLength(0);
+  });
+});
+
+describe("model automations run every action", () => {
+  const events: Array<[string, (tx: any) => Promise<unknown>]> = [
+    ["model_added", (tx) => createNewModelInventoryQuery(row() as any, 1, [], [], tx)],
+    [
+      "model_updated",
+      (tx) =>
+        updateModelInventoryByIdQuery(
+          50,
+          row({ status: "Approved" }) as any,
+          [],
+          [],
+          false,
+          false,
+          1,
+          tx,
+        ),
+    ],
+    ["model_deleted", (tx) => deleteModelInventoryByIdQuery(50, false, 1, tx)],
+  ];
+
+  it.each(events)("%s: every action of every active automation, in order", async (key, run) => {
+    automationRows = [actionRow(3, 1), actionRow(3, 2), actionRow(8, 1)];
+    const tx = fakeTx();
+    await run(tx);
+    const lookup = mockQuery.mock.calls.find(([sql]) => /FROM automation_triggers/.test(sql));
+    expect(lookup?.[1]).toMatchObject({ replacements: { organizationId: 1, triggerKey: key } });
+    tx.commit();
+    await settle();
+    expect(subjects()).toEqual(["3-1", "3-2", "8-1"]);
+  });
+
+  it.each(events)("%s: a legacy-flagged automation keeps the event's first", async (_key, run) => {
+    automationRows = [actionRow(3, 1, true), actionRow(3, 2, true), actionRow(8, 1)];
+    const tx = fakeTx();
+    await run(tx);
+    tx.commit();
+    await settle();
+    expect(subjects()).toEqual(["3-1", "8-1"]);
+  });
+
+  it("one failed enqueue never stops the next", async () => {
+    automationRows = [actionRow(3, 1), actionRow(3, 2)];
+    mockEnqueue.mockRejectedValueOnce(new Error("queue down"));
+    const tx = fakeTx();
+    await createNewModelInventoryQuery(row() as any, 1, [], [], tx as any);
+    tx.commit();
+    await settle();
+    expect(subjects()).toEqual(["3-1", "3-2"]);
   });
 });

@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useCallback, ChangeEvent, useContext } from "react";
+import React, { useRef, useState, useEffect, useCallback, ChangeEvent } from "react";
 import {
   Box,
   CircularProgress,
@@ -8,6 +8,7 @@ import {
   Button as MUIButton,
 } from "@mui/material";
 import { useTheme } from "@mui/material";
+import { useDispatch } from "react-redux";
 import Field from "../../../components/Inputs/Field";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
 // Subpath import: avoids bundling the full `validator` package (~85 KiB gz).
@@ -30,9 +31,10 @@ import {
   deleteUserProfilePhoto,
 } from "../../../../application/repository/user.repository";
 import { useAuth } from "../../../../application/hooks/useAuth";
+import useUsers from "../../../../application/hooks/useUsers";
+import { bumpPhotoRefresh } from "../../../../application/redux/ui/uiSlice";
 import { useProfilePhotoFetch } from "../../../../application/hooks/useProfilePhotoFetch";
 import Avatar from "../../../components/Avatar/VWAvatar";
-import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
 import { palette, radiusPx } from "../../../themes/palette";
 
 /**
@@ -75,7 +77,8 @@ const ProfileForm: React.FC = () => {
   const theme = useTheme();
   const initialStateRef = useRef({ firstname: "", lastname: "", email: "" });
 
-  const { refreshUsers } = useContext(VerifyWiseContext);
+  const { refreshUsers } = useUsers();
+  const dispatch = useDispatch();
 
   const isModified =
     firstname !== initialStateRef.current.firstname ||
@@ -367,8 +370,6 @@ const ProfileForm: React.FC = () => {
     }
   }, [selectedImagePreview]);
 
-  const { setPhotoRefreshFlag } = useContext(VerifyWiseContext);
-
   // Handle Image file selection and upload
   const handleImageChange = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -409,7 +410,7 @@ const ProfileForm: React.FC = () => {
             if (imageUrl && imageUrl.startsWith("blob:")) {
               URL.revokeObjectURL(imageUrl);
             }
-            setPhotoRefreshFlag((prev) => !prev);
+            dispatch(bumpPhotoRefresh());
             setImageUrl(photoUrl);
             setImageLoadError(false);
           }
@@ -455,7 +456,7 @@ const ProfileForm: React.FC = () => {
         setImageUrl(null);
         setImageLoadError(false); // Reset error state
         clearImagePreview();
-        setPhotoRefreshFlag((prev) => !prev);
+        dispatch(bumpPhotoRefresh());
         setIsRemoveImageModalOpen(false);
         showAlert("success", "Image Removed", "Profile photo removed successfully");
       } else {

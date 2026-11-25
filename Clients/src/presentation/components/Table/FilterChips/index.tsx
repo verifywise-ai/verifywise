@@ -54,6 +54,22 @@ const DATE_OPTIONS: ChipMenuOption[] = [
   { key: "is_past", operator: "is_past", value: "", label: "Past" },
 ];
 
+/**
+ * Date options for a column whose days have already happened (dateRange:
+ * "recent"): the same ranges as the classic filter, so a condition set in
+ * either look shows in the other.
+ */
+const RECENT_DATE_OPTIONS: ChipMenuOption[] = [
+  { key: "is_today", operator: "is_today", value: "", label: "Today" },
+  { key: "in_last_1_day", operator: "in_last_1_day", value: "", label: "Since yesterday" },
+  { key: "in_last_7_days", operator: "in_last_7_days", value: "", label: "Last 7 days" },
+  { key: "in_last_2_weeks", operator: "in_last_2_weeks", value: "", label: "Last 2 weeks" },
+  { key: "in_last_30_days", operator: "in_last_30_days", value: "", label: "Last 30 days" },
+];
+
+const dateOptionsFor = (column: FilterColumn) =>
+  column.dateRange === "recent" ? RECENT_DATE_OPTIONS : DATE_OPTIONS;
+
 const isChipColumn = (column: FilterColumn) => column.type === "select" || column.type === "date";
 
 /** Whether a row passes every selection except the one on `skipColumnId`. */
@@ -72,7 +88,7 @@ function passesOtherSelections<T>(
 
 /** Every option a column's menu can offer, before counting. */
 function optionsFor(column: FilterColumn): ChipMenuOption[] {
-  if (column.type === "date") return DATE_OPTIONS;
+  if (column.type === "date") return dateOptionsFor(column);
   return (column.options ?? []).map((option) => ({
     key: option.value,
     operator: "is" as const,
@@ -95,7 +111,7 @@ function selectionsFromConditions(
     if (!column || !isChipColumn(column)) continue;
     const fits =
       column.type === "date"
-        ? DATE_OPTIONS.some((o) => o.operator === condition.operator)
+        ? dateOptionsFor(column).some((o) => o.operator === condition.operator)
         : condition.operator === "is" && condition.value !== "";
     if (fits) result[column.id] = { operator: condition.operator, value: condition.value };
   }

@@ -16,6 +16,7 @@ import {
 } from "../../../../domain.layer/interfaces/i.vendorResearch";
 import { MAX_RECORDS, RECORD_CATEGORY } from "../../records/types";
 import { classifyRecord, recordMatchOf } from "../../sourceRegistry/classify";
+import { ATTESTATION_READERS } from "../attestations";
 import * as gatesModule from "../gates";
 import {
   AIID_PERMISSION_GRANTED,
@@ -34,6 +35,7 @@ import {
   activeMirrors,
   activeReadThroughs,
   activeVrdbSources,
+  coveredSources,
   cveCopyrightOf,
   isMirror,
   isStale,
@@ -359,6 +361,7 @@ const NEW_SHEETS = [
     operator: "the US General Services Administration (FedRAMP)",
     listName: "FedRAMP Marketplace data",
     category: "certifications",
+    attests: true,
     missingStatus: "delisted",
     documentationUrl: "https://github.com/FedRAMP/marketplace-fedramp-gov-data",
     licence:
@@ -385,6 +388,7 @@ const NEW_SHEETS = [
     operator: "the Coalition for Content Provenance and Authenticity (C2PA)",
     listName: "C2PA Conforming Products List",
     category: "certifications",
+    attests: true,
     missingStatus: "withdrawn",
     documentationUrl: "https://github.com/c2pa-org/conformance-public",
     licence:
@@ -1383,5 +1387,38 @@ describe("the VRDB sources", () => {
       expect(isStale(definition, ago(5, 59), now)).toBe(false);
       expect(isStale(definition, ago(6, 1), now)).toBe(true);
     });
+  });
+});
+
+describe("the lists that attest", () => {
+  it("are the two certification lists, and each has a reader of its records", () => {
+    const attesting = VRDB_SOURCES.filter((source) => source.attests === true).map(
+      (source) => source.id,
+    );
+    expect(attesting).toEqual(["fedramp", "c2pa_conforming"]);
+    expect(Object.keys(ATTESTATION_READERS).sort()).toEqual([...attesting].sort());
+  });
+});
+
+describe("coveredSources", () => {
+  it("drops a bundled list the release ships no bundle of, and keeps the read-through sources", () => {
+    const shipped = new Set(
+      activeVrdbSources()
+        .filter((source) => source.mode === "mirror" && source.id !== "eu_dg_comp")
+        .map((source) => source.id),
+    );
+    const ids = coveredSources(shipped).map((source) => source.id);
+    expect(ids).not.toContain("eu_dg_comp");
+    expect(ids).toContain("nvd");
+    expect(ids).toContain("gleif");
+    expect(ids).toEqual(
+      activeVrdbSources()
+        .map((source) => source.id)
+        .filter((id) => id !== "eu_dg_comp"),
+    );
+  });
+
+  it("keeps every active list when the shipped lists are unknown", () => {
+    expect(coveredSources(null)).toEqual(activeVrdbSources());
   });
 });

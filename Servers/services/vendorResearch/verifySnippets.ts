@@ -30,6 +30,11 @@
  *   nothing was found against it, but nobody has seen the page either, and the person who reads the
  *   finding is told so.
  *
+ * A source that is a search result whose text may not be kept (Brave Search; `transientUrls`) is
+ * stored by address only, unless its page was read here and holds its quote: the quote is then the
+ * publisher's text, and is kept with the page's own title and date (see `withholdSearchText`).
+ * This holds for every finding that cites one, checked or not.
+ *
  * Only the findings that stay are checked (at most MAX_PER_RUN, see validation.ts), so the check
  * costs at most two reads for each. It uses the page reader of the run, which keeps to robots.txt
  * and the rules of the guarded fetch, and a deadline of VERIFY_TIMEOUT_MS for all the reads. It
@@ -38,13 +43,16 @@
  */
 import {
   type EvidenceSource,
+  type FindingSource,
   type NewFinding,
   SOURCE_CATEGORIES,
 } from "../../domain.layer/interfaces/i.vendorResearch";
 import { isOnDomain } from "../webResearch/publicUrl";
 import { PageReadError, type PageReader } from "../webResearch/readPage";
+import { MAX_TITLE_CHARS, cleanPublishedAt } from "./evidence";
 import { classifySource } from "./sourceRegistry/classify";
 import type { ResearchTarget } from "./target";
+import { cleanText, cutAtCodePoint } from "./text";
 import type { TraceRecorder } from "./trace";
 import { normaliseForQuote } from "./validation";
 
@@ -92,6 +100,12 @@ export interface VerifyInput {
   signal?: AbortSignal;
   /** Told about each page that is read. */
   trace?: TraceRecorder;
+  /**
+   * The addresses of the pack's search results whose text may not be kept (Brave Search, see
+   * evidence.ts `transientUrlsOf`). A finding's source among them is stored by address only unless
+   * a page read here holds its quote (see `withholdSearchText`). None when absent.
+   */
+  transientUrls?: ReadonlySet<string>;
 }
 
 /**
@@ -99,7 +113,15 @@ export interface VerifyInput {
  * not be read.
  */
 type Read =
-  | { ok: true; text: string; answeredUrl: string; ms: number }
+  | {
+      ok: true;
+      text: string;
+      answeredUrl: string;
+      /** The page's own title and date, as the reader found them. */
+      title: string;
+      publishedAt: string | null;
+      ms: number;
+    }
   | { ok: false; reason: string; ms: number };
 
 /** The reason in the trace of a page that answered from another site than the one cited. */
@@ -237,7 +259,14 @@ export async function checkSnippetFindings(input: VerifyInput): Promise<SnippetC
         const startedAt = Date.now();
         try {
           const page = await readPage(url, signal);
-          return { ok: true, text: page.text, answeredUrl: page.url, ms: Date.now() - startedAt };
+          return {
+            ok: true,
+            text: page.text,
+            answeredUrl: page.url,
+            title: typeof page.title === "string" ? page.title : "",
+            publishedAt: typeof page.publishedAt === "string" ? page.publishedAt : null,
+            ms: Date.now() - startedAt,
+          };
         } catch (error) {
           // The reason is from a closed set; what else a reader throws is not repeated.
           const reason = error instanceof PageReadError ? error.reason : "unreachable";
@@ -295,7 +324,65 @@ export async function checkSnippetFindings(input: VerifyInput): Promise<SnippetC
     return { finding: { ...finding, snippet_only: true }, verdict: { outcome: "unread" } };
   };
 
-  return Promise.all(input.findings.map(check));
+  const checks = await Promise.all(input.findings.map(check));
+  const transientUrls = input.transientUrls ?? new Set<string>();
+  if (transientUrls.size === 0) return checks;
+
+  // Every read has settled: each check awaited its own. A quote is kept only from a page that was
+  // read here, on the cited site, and that holds it.
+  const settled = new Map<string, Read>();
+  for (const [url, started] of reads) settled.set(url, await started);
+  const confirmed = (citation: FindingSource): ConfirmedPage | null => {
+    const page = settled.get(citation.url);
+    if (page === undefined || !page.ok) return null;
+    if (!answeredOnCitedSite(citation.url, page.answeredUrl, target, ownDomains)) return null;
+    if (!quoteIsOnPage(citation.quote, page.text)) return null;
+    return { title: page.title, publishedAt: page.publishedAt };
+  };
+  return checks.map(({ finding, verdict }) => ({
+    finding: withholdSearchText(finding, transientUrls, confirmed),
+    verdict,
+  }));
+}
+
+/** What a page that was read and holds a quote says of itself: its own title and date. */
+export interface ConfirmedPage {
+  title: string;
+  publishedAt: string | null;
+}
+
+/**
+ * The finding with its sources as they may be stored. A source whose address is one of
+ * `transientUrls` (a search result of Brave Search, whose text may not be kept) is:
+ * - kept with its quote when `confirmed` gives the page that was read and holds the quote: the
+ *   quote is then the publisher's own text, the title the page's own (or the host of its address,
+ *   when it has none) and the date the page's own or none;
+ * - otherwise stored by address only: no title, no quote and no date, and `quote_withheld`.
+ * Every other source is kept as it is. The finding is not changed: one with a source cut is a copy.
+ */
+export function withholdSearchText(
+  finding: NewFinding,
+  transientUrls: ReadonlySet<string>,
+  confirmed: (citation: FindingSource) => ConfirmedPage | null = () => null,
+): NewFinding {
+  if (!finding.sources.some((citation) => transientUrls.has(citation.url))) return finding;
+  return {
+    ...finding,
+    sources: finding.sources.map((citation): FindingSource => {
+      if (!transientUrls.has(citation.url)) return citation;
+      const { quote_withheld: _withheld, ...rest } = citation;
+      const page = confirmed(citation);
+      if (page !== null) {
+        const title = cutAtCodePoint(cleanText(page.title), MAX_TITLE_CHARS);
+        return {
+          ...rest,
+          title: title === "" ? (hostOf(citation.url) ?? "") : title,
+          published_at: cleanPublishedAt(page.publishedAt),
+        };
+      }
+      return { ...rest, title: "", quote: "", published_at: null, quote_withheld: true };
+    }),
+  };
 }
 
 /**

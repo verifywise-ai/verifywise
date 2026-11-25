@@ -1,4 +1,6 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { ComponentVisible } from "../../interfaces/ComponentVisible";
+import { InputValues } from "../../interfaces/appStates";
 
 export type AppModule =
   "main" | "evals" | "ai-detection" | "shadow-ai" | "ai-gateway" | "ai-trust-index" | "super-admin";
@@ -14,6 +16,25 @@ interface UiState {
    * ui slice is not persisted.
    */
   setup?: { modalOpen: boolean };
+  /**
+   * Tour-trigger visibility flags, migrated from the legacy VerifyWiseContext.
+   * Set by page/component mounts; read by Home/ComplianceTracker to fire the
+   * product tour once the relevant sections have rendered.
+   */
+  componentsVisible: ComponentVisible;
+  /**
+   * Cross-component "row selected for edit" shuttle, migrated from the legacy
+   * VerifyWiseContext. Risk/policy tables write the clicked row here; the
+   * AddNewRiskForm hook reads it to prefill the edit form.
+   */
+  inputValues: InputValues;
+  /**
+   * Monotonic counter replacing the legacy VerifyWiseContext boolean
+   * `photoRefreshFlag`. Profile photo upload/remove bumps it; avatar
+   * components (SidebarFooter, AdvisorChat CustomMessage) use it as an
+   * effect dependency to refetch the photo blob.
+   */
+  photoRefreshCounter: number;
 }
 
 const initialState: UiState = {
@@ -26,6 +47,14 @@ const initialState: UiState = {
   modelInventory: {
     statusFilter: "all",
   },
+  componentsVisible: {
+    home: false,
+    sidebar: false,
+    projectFrameworks: false,
+    compliance: false,
+  },
+  inputValues: {},
+  photoRefreshCounter: 0,
 };
 
 const uiSlice = createSlice({
@@ -57,6 +86,18 @@ const uiSlice = createSlice({
         state.appModule.active = action.payload;
       }
     },
+    setComponentVisibility: (
+      state,
+      action: PayloadAction<{ component: keyof ComponentVisible; value: boolean }>,
+    ) => {
+      state.componentsVisible[action.payload.component] = action.payload.value;
+    },
+    setInputValues: (state, action: PayloadAction<InputValues>) => {
+      state.inputValues = action.payload;
+    },
+    bumpPhotoRefresh: (state) => {
+      state.photoRefreshCounter += 1;
+    },
   },
 });
 
@@ -68,8 +109,28 @@ export const {
   setModelInventoryStatusFilter,
   setActiveModule,
   setSetupModalOpen,
+  setComponentVisibility,
+  setInputValues,
+  bumpPhotoRefresh,
 } = uiSlice.actions;
 
 /** True while the first-login setup modal is on screen. */
 export const selectSetupModalOpen = (state: { ui?: UiState }): boolean =>
   state.ui?.setup?.modalOpen === true;
+
+/** Tour-trigger visibility flags (migrated from VerifyWiseContext). */
+export const selectComponentsVisible = (state: { ui?: UiState }): ComponentVisible =>
+  state.ui?.componentsVisible ?? {
+    home: false,
+    sidebar: false,
+    projectFrameworks: false,
+    compliance: false,
+  };
+
+/** Row-selected-for-edit shuttle (migrated from VerifyWiseContext). */
+export const selectInputValues = (state: { ui?: UiState }): InputValues =>
+  state.ui?.inputValues ?? {};
+
+/** Profile-photo refresh signal (migrated from VerifyWiseContext). */
+export const selectPhotoRefreshCounter = (state: { ui?: UiState }): number =>
+  state.ui?.photoRefreshCounter ?? 0;

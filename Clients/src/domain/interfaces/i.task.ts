@@ -4,6 +4,7 @@ export type EntityLinkType =
   | "vendor"
   | "model"
   | "policy"
+  | "incident"
   | "nist_subcategory"
   | "iso42001_subclause"
   | "iso42001_annexcategory"

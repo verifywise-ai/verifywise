@@ -25,6 +25,12 @@ interface SourceBase {
   documentationUrl: string;
   /** The gate that keeps the list off until a person opens it; none: always on. */
   gate?: VrdbGate;
+  /**
+   * True for a list whose entry attests something in the vendor's favour (an authorisation, a
+   * conformance), not a risk: a run that matches it says so in the coverage (`attestations` of the
+   * list's row, attestations.ts) and the screen shows it under the list's category.
+   */
+  attests?: true;
 }
 
 /** A list the release ships as a bundle (bundle.ts), which the worker loads at start. */
@@ -548,6 +554,7 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     operator: "the US General Services Administration (FedRAMP)",
     listName: "FedRAMP Marketplace data",
     category: "certifications",
+    attests: true,
     mode: "mirror",
     licence:
       "None published; a work of the US General Services Administration (17 U.S.C. §105) in GSA's FedRAMP/marketplace-fedramp-gov-data repository: only GSA's status fields are copied (provider, offering, status and its date, impact level, authorisation type, agency count, UEI); the host of each offering's website is used as a match key only and never shown; logos, provider descriptions and contact data are not copied; decided on delegation on 2026-11-10 (Q48)",
@@ -576,6 +583,7 @@ export const VRDB_SOURCES: readonly VrdbSourceDefinition[] = [
     operator: "the Coalition for Content Provenance and Authenticity (C2PA)",
     listName: "C2PA Conforming Products List",
     category: "certifications",
+    attests: true,
     mode: "mirror",
     licence:
       "CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/): the c2pa-org/conformance-public repository's LICENSE; the C2PA name and marks are not licensed and are used only to name the source",
@@ -606,6 +614,23 @@ export const activeVrdbSources = (
   gates: Readonly<Record<VrdbGate, boolean>> = VRDB_GATES,
 ): VrdbSourceDefinition[] =>
   VRDB_SOURCES.filter((source) => source.gate === undefined || gates[source.gate]);
+
+/**
+ * The lists a run's coverage holds, given the lists the release ships a bundle of (`bundled`;
+ * bundle.ts, `shippedBundleIds`): every active list but a bundled list (a mirror) of which the
+ * release ships no bundle. Such a list is never loaded in this deployment, so it is neither checked
+ * nor not checked: it is not looked up, has no row in the coverage and raises no warning. A list
+ * that is shipped but failed to load, or whose copy is out of date, stays (`failed` or stale). With
+ * `bundled` null (no readable manifest) every active list stays. The single rule of what a run
+ * covers: the lookup and its coverage both take it (lookup.ts).
+ */
+export const coveredSources = (
+  bundled: ReadonlySet<VrdbSourceId> | null,
+  gates?: Readonly<Record<VrdbGate, boolean>>,
+): VrdbSourceDefinition[] =>
+  activeVrdbSources(gates).filter(
+    (source) => source.mode !== "mirror" || bundled === null || bundled.has(source.id),
+  );
 
 /** True for a list the job copies. */
 export const isMirror = (source: VrdbSourceDefinition): source is MirrorSource =>
