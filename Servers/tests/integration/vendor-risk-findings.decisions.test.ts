@@ -27,6 +27,7 @@ import { automationQueue } from "../../services/automations/automationProducer";
 import { DISMISS_REASONS, type NewFinding } from "../../domain.layer/interfaces/i.vendorResearch";
 import * as researchUtils from "../../utils/vendorResearch.utils";
 import { createRunQuery, insertFindingsQuery } from "../../utils/vendorResearch.utils";
+import { frontendBaseUrl } from "../../utils/frontendUrl.utils";
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -279,7 +280,7 @@ describe("POST /api/v1/vendor-risk-findings/:id/accept", () => {
       "SELECT name, surname FROM users WHERE id = :id",
       { id: owner.userId },
     );
-    const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const baseUrl = frontendBaseUrl();
 
     const res = await owner.request.post(acceptUrl(finding.id));
 

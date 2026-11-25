@@ -20,6 +20,7 @@ import {
 import { sequelize } from "../database/db";
 import { aiUsageEvent } from "../utils/shadowAiUsage.utils";
 import logger from "../utils/logger/fileLogger";
+import { frontendBaseUrl } from "../utils/frontendUrl.utils";
 
 const TRIGGER_LABELS: Record<ShadowAiTriggerType, string> = {
   new_tool_detected: "New AI tool detected",
@@ -105,7 +106,7 @@ async function sendRuleAlert(
       trigger_type: triggerLabel,
       tool_name: context.toolName || "Unknown",
       fired_at: new Date(firedAt).toLocaleString(),
-      action_url: `${process.env.FRONTEND_URL || ""}/shadow-ai/rules`,
+      action_url: `${frontendBaseUrl()}/shadow-ai/rules`,
     },
   };
 

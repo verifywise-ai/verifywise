@@ -7,7 +7,6 @@ import {
 import { notifyApprovalStepOverdueEscalation } from "../../../inAppNotification.service";
 import { getAllOrganizationsQuery } from "../../../../utils/organization.utils";
 import logger from "../../../../utils/logger/fileLogger";
-import { frontendBaseUrl } from "../../../../utils/frontendUrl.utils";
 
 jest.mock("../../../../utils/approvalRequest.utils", () => ({
   getOverdueApprovalStepsQuery: jest.fn(),
@@ -31,7 +30,16 @@ const mockNotify = notifyApprovalStepOverdueEscalation as jest.Mock;
 const mockOrgs = getAllOrganizationsQuery as jest.Mock;
 const mockLogger = logger as unknown as { info: jest.Mock; error: jest.Mock };
 
-const BASE_URL = frontendBaseUrl();
+// A fixed address, so the expected links do not come from the helper under test.
+const BASE_URL = "https://vw.test";
+const ORIGINAL_FRONTEND_URL = process.env.FRONTEND_URL;
+beforeAll(() => {
+  process.env.FRONTEND_URL = BASE_URL;
+});
+afterAll(() => {
+  if (ORIGINAL_FRONTEND_URL === undefined) delete process.env.FRONTEND_URL;
+  else process.env.FRONTEND_URL = ORIGINAL_FRONTEND_URL;
+});
 
 const overdueRow = (overrides: Partial<OverdueApprovalStepRow> = {}): OverdueApprovalStepRow => ({
   request_step_id: 101,

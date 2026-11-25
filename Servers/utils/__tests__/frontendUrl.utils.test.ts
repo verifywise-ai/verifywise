@@ -24,6 +24,11 @@ describe("frontendBaseUrl", () => {
     expect(frontendBaseUrl()).toBe("http://localhost:5173");
   });
 
+  it("drops trailing slashes", () => {
+    process.env.FRONTEND_URL = "https://vw.example.com//";
+    expect(frontendBaseUrl()).toBe("https://vw.example.com");
+  });
+
   it("reads FRONTEND_URL at call time", () => {
     process.env.FRONTEND_URL = "https://first.example.com";
     expect(frontendBaseUrl()).toBe("https://first.example.com");

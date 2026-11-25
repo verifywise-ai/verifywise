@@ -7,7 +7,7 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
   default: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
 }));
 
-import { buildNotificationData } from "../pmmScheduler";
+import { buildEscalationData, buildNotificationData } from "../pmmScheduler";
 
 describe("buildNotificationData monitoring_link", () => {
   const original = process.env.FRONTEND_URL;
@@ -37,6 +37,20 @@ describe("buildNotificationData monitoring_link", () => {
     const data = buildNotificationData(cycle, { project_id: 12 }, "Acme");
     expect(data.monitoring_link).toBe(
       "http://localhost:5173/project-view?projectId=12&tab=monitoring",
+    );
+  });
+
+  it("opens the cycle's questionnaire when the cycle has an id", () => {
+    process.env.FRONTEND_URL = "https://vw.example.com";
+    const data = buildNotificationData({ ...cycle, id: 9 }, { project_id: 12 }, "Acme");
+    expect(data.monitoring_link).toBe("https://vw.example.com/monitoring/cycle/9");
+  });
+
+  it("sends the escalation contact to the use case's monitoring tab", () => {
+    process.env.FRONTEND_URL = "https://vw.example.com";
+    const data = buildEscalationData({ ...cycle, id: 9 }, { project_id: 12 }, "Acme");
+    expect(data.monitoring_link).toBe(
+      "https://vw.example.com/project-view?projectId=12&tab=monitoring",
     );
   });
 });

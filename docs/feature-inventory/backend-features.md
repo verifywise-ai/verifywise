@@ -1906,7 +1906,7 @@ The backend mounts **116 route modules** (including 7 extension routers). Each s
       });
 
       // Data to be replaced in the template
-      const url = `${frontEndUrl}/set-new-password?${new URLSearchParams({ token }).toString()}`;
+      const url = `${frontendBaseUrl()}/set-new-password?${new URLSearchParams({ token }).toString()}`;
 
       const data = { name: name, email, url };
 
