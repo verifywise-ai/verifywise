@@ -72,6 +72,8 @@ export default function PromptsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   const [form, setForm] = useState({ name: "", slug: "", description: "" });
 
@@ -139,14 +141,31 @@ export default function PromptsPage() {
     }
   };
 
+  const openDeleteModal = (target: { id: number; name: string }) => {
+    setDeleteError(null);
+    setDeleteTarget(target);
+  };
+
+  const closeDeleteModal = () => {
+    // The request can't be called back; closing now would look like a cancel.
+    if (isDeleting) return;
+    setDeleteTarget(null);
+    setDeleteError(null);
+  };
+
   const handleDelete = async () => {
-    if (!deleteTarget) return;
+    if (!deleteTarget || isDeleting) return;
+    setIsDeleting(true);
+    setDeleteError(null);
     try {
       await apiServices.delete(`/ai-gateway/prompts/${deleteTarget.id}`);
       setPrompts((prev) => prev.filter((p) => p.id !== deleteTarget.id));
       setDeleteTarget(null);
     } catch {
-      /* silently handle */
+      // Keep the modal open so the user sees the prompt was not deleted.
+      setDeleteError("Could not delete the prompt. Try again.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -195,18 +214,26 @@ export default function PromptsPage() {
   const deleteModal = (
     <StandardModal
       isOpen={!!deleteTarget}
-      onClose={() => setDeleteTarget(null)}
+      onClose={closeDeleteModal}
       title="Delete prompt"
       description={`Are you sure you want to delete "${deleteTarget?.name || ""}"?`}
       onSubmit={handleDelete}
       submitButtonText="Delete"
       submitButtonColor={palette.status.error.text}
+      isSubmitting={isDeleting}
       maxWidth="480px"
     >
-      <Typography fontSize={13}>
-        All versions will be removed and any endpoints using this prompt will be unlinked. This
-        action cannot be undone.
-      </Typography>
+      <Stack spacing="12px">
+        <Typography fontSize={13}>
+          All versions will be removed and any endpoints using this prompt will be unlinked. This
+          action cannot be undone.
+        </Typography>
+        {deleteError && (
+          <Typography role="alert" color="error" fontSize={13}>
+            {deleteError}
+          </Typography>
+        )}
+      </Stack>
     </StandardModal>
   );
 
@@ -358,7 +385,7 @@ export default function PromptsPage() {
                       size="small"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setDeleteTarget({ id: p.id, name: p.name });
+                        openDeleteModal({ id: p.id, name: p.name });
                       }}
                       sx={{ color: "text.secondary" }}
                     >

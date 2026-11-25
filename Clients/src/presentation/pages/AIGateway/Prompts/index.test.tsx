@@ -241,6 +241,37 @@ describe("AIGateway - Prompts", () => {
     });
   });
 
+  it("keeps the prompt and shows an error when the delete fails", async () => {
+    mockLoad([makePrompt()]);
+    mockDelete.mockRejectedValue(new Error("403"));
+    renderWithProviders(<PromptsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Support agent")).toBeInTheDocument();
+    });
+
+    const trashButton = screen
+      .getAllByRole("button")
+      .find((b) => b.querySelector("svg.lucide-trash-2")) as HTMLButtonElement;
+    fireEvent.click(trashButton);
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Could not delete the prompt. Try again.",
+    );
+    // The modal stays open and the prompt stays in the list.
+    expect(screen.getByRole("heading", { name: "Delete prompt" })).toBeInTheDocument();
+    expect(screen.getAllByText("Support agent").length).toBeGreaterThan(0);
+
+    // Closing and reopening clears the old error.
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: "Delete prompt" })).not.toBeInTheDocument();
+    });
+    fireEvent.click(trashButton);
+    expect(screen.queryByText("Could not delete the prompt. Try again.")).not.toBeInTheDocument();
+  });
+
   it("shows pagination controls when there are more than 5 prompts", async () => {
     // Default rows-per-page (from getPaginationRowCount's fallback) is 10.
     const many = Array.from({ length: 15 }, (_, i) =>
