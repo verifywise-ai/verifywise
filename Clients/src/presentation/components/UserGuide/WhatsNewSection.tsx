@@ -15,11 +15,11 @@ const CHANGELOG: ChangelogEntry[] = [
     date: "November 25, 2026",
     title: "Vendor research, framework requirements in reports and use case approvals",
     summary:
-      "VerifyWise can now research a vendor on the open web and suggest risks for you to accept. Reports cover the requirements of the 24 bundled frameworks. You can attach an approval workflow to an existing use case and resubmit one that was rejected. Tasks can link to incidents, and LLM keys are checked with their provider before they are saved.",
+      "VerifyWise can now research a vendor on the open web and suggest risks for you to accept. Reports can include the requirements of the 24 bundled frameworks. You can attach an approval workflow to an existing use case and resubmit one that was rejected. Tasks can link to incidents, and LLM keys are checked with their provider before they are saved.",
     items: [
       "Vendor research: research a vendor on the open web with your organization's LLM key, by hand, when the vendor is created or on a schedule. Findings are suggested risks, and nothing reaches the vendor risk register until someone accepts one",
-      "Vendor risk database: research also draws on 31 official lists that ship with each release, such as sanctions lists, known exploited vulnerabilities, AI incidents and recalls. Each finding carries a credibility label based on its sources",
-      "Brave Search: with a Brave Search API key added, vendor research searches the web and news through Brave",
+      "Vendor risk database: research also draws on 31 public lists, most of them official, that come with each release, such as sanctions lists, known exploited vulnerabilities, AI incident records or recalls. Each finding carries a credibility label based on its sources",
+      "Brave Search: add a Brave Search API key for vendor research. It searches the web and news through Brave when the research key is not an Anthropic key, and falls back to Brave when it is",
       "Vendors page: research findings and insights have tabs of their own",
       "Framework requirements in reports: a report on a use case with a bundled framework (such as SOC 2, GDPR or HIPAA) lists each requirement with its status, owner, due date, evidence and linked risks",
       "Use case approvals: attach or change an approval workflow on an existing use case from its Overview, and resubmit a rejected use case for approval. A resubmission is never auto-approved, even when the workflow allows it",
