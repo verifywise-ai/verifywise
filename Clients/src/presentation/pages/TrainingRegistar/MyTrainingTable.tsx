@@ -109,7 +109,6 @@ const MyTrainingTable: FC = () => {
                     <TableCell sx={CELL_SX}>
                       <CustomizableButton
                         variant="outlined"
-                        size="small"
                         text={assignment.completed_at === null ? "Mark complete" : "Reopen"}
                         onClick={() => handleToggle(assignment)}
                         isDisabled={isBusy}

@@ -486,16 +486,11 @@ export default function VendorResearchFindings({
             <CheckCircle2 size={16} />
             <Typography sx={alertTextSx}>Risk added to the register.</Typography>
             <Stack direction="row" sx={{ ml: "auto", alignItems: "center", gap: "4px" }}>
-              <CustomizableButton
-                size="small"
-                variant="text"
-                onClick={() => onOpenRisk(lastAcceptedRiskId)}
-              >
+              <CustomizableButton variant="text" onClick={() => onOpenRisk(lastAcceptedRiskId)}>
                 Open risk
               </CustomizableButton>
               <CustomizableButton
                 iconOnly
-                size="small"
                 variant="text"
                 ariaLabel="Close"
                 icon={<X size={16} />}

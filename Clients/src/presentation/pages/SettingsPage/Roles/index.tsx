@@ -315,7 +315,7 @@ const RolesTab: React.FC = () => {
             sx={{ "flexWrap": "wrap", "& .MuiToggleButton-root": { textTransform: "none" } }}
           >
             {customRoles.map((role) => (
-              <ToggleButton key={role.id} value={role.id} sx={{ height: "30px" }}>
+              <ToggleButton key={role.id} value={role.id} sx={{ height: "34px" }}>
                 {role.name}
               </ToggleButton>
             ))}
@@ -453,7 +453,7 @@ const RolesTab: React.FC = () => {
                                   sx={{
                                     "& .MuiToggleButton-root": {
                                       textTransform: "none",
-                                      height: "30px",
+                                      height: "34px",
                                     },
                                   }}
                                 >

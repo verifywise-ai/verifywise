@@ -1800,17 +1800,17 @@ describe("accepting a finding", () => {
     expect(screen.queryByText("Risk added to the register.")).not.toBeInTheDocument();
   });
 
-  it("gives the buttons of the notice the small button height of 28px", async () => {
+  it("gives the buttons of the notice the house control height of 34px", async () => {
     acceptsAndLeavesOnlyTheSecond();
     renderSection();
     await screen.findByText(FIRST);
     await accept(FIRST);
     const notice = within(noticeOf(await screen.findByText("Risk added to the register.")));
 
-    expect(notice.getByRole("button", { name: "Open risk" })).toHaveStyle({ height: "28px" });
+    expect(notice.getByRole("button", { name: "Open risk" })).toHaveStyle({ height: "34px" });
     expect(notice.getByRole("button", { name: "Close" })).toHaveStyle({
-      height: "28px",
-      width: "28px",
+      height: "34px",
+      width: "34px",
     });
   });
 

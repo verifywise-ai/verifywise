@@ -331,7 +331,6 @@ const TrainingAssignmentsModal: FC<TrainingAssignmentsModalProps> = ({
                           <Stack direction="row" sx={{ gap: "8px" }}>
                             <CustomizableButton
                               variant="outlined"
-                              size="small"
                               text={isCompleted ? "Reopen" : "Mark complete"}
                               onClick={() => handleToggleComplete(assignment)}
                               isDisabled={isBusy}
@@ -339,7 +338,6 @@ const TrainingAssignmentsModal: FC<TrainingAssignmentsModalProps> = ({
                             />
                             <CustomizableButton
                               variant="text"
-                              size="small"
                               text="Remove"
                               onClick={() => setAssignmentToRemove(assignment)}
                               isDisabled={isBusy}

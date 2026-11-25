@@ -20,11 +20,11 @@ describe("InlineError", () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
-  it("gives Retry the small button height of 28px", () => {
+  it("gives Retry the house control height of 34px", () => {
     renderWithProviders(
       <InlineError message="Could not load the latest research run." onRetry={vi.fn()} />,
     );
 
-    expect(screen.getByRole("button", { name: "Retry" })).toHaveStyle({ height: "28px" });
+    expect(screen.getByRole("button", { name: "Retry" })).toHaveStyle({ height: "34px" });
   });
 });

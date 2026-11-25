@@ -92,7 +92,6 @@ const AssignmentsCell: React.FC<AssignmentsCellProps> = ({
     <Stack direction="row" sx={{ gap: "8px", alignItems: "center" }}>
       <CustomizableButton
         variant="text"
-        size="small"
         text={buttonText}
         // A row click opens the edit modal, so this click must stop here.
         onClick={(event) => {

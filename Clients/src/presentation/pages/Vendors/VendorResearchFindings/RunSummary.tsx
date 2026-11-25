@@ -151,7 +151,7 @@ export default function RunSummary({
       />
     );
   } else if (latest.isPending) {
-    status = <CustomizableSkeleton variant="rounded" width="100%" height={30} />;
+    status = <CustomizableSkeleton variant="rounded" width="100%" height={34} />;
   } else if (!run) {
     status = (
       <Typography sx={{ ...textStyles.body, color: "text.tertiary" }}>
@@ -167,7 +167,7 @@ export default function RunSummary({
         <Typography sx={{ ...textStyles.body, color: "text.secondary" }}>
           Still running. Check back later.
         </Typography>
-        <CustomizableButton size="small" variant="text" onClick={() => latest.restartPolling()}>
+        <CustomizableButton variant="text" onClick={() => latest.restartPolling()}>
           Check again
         </CustomizableButton>
       </Stack>

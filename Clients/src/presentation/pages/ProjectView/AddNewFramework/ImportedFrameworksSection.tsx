@@ -154,7 +154,6 @@ const ImportedFrameworksSection: React.FC<ImportedFrameworksSectionProps> = ({
                     <CustomizableButton
                       variant="outlined"
                       color="error"
-                      size="small"
                       text="Remove"
                       ariaLabel={`Remove ${fw.name}`}
                       isDisabled={isBusy}
@@ -164,7 +163,6 @@ const ImportedFrameworksSection: React.FC<ImportedFrameworksSectionProps> = ({
                   ) : (
                     <CustomizableButton
                       variant="contained"
-                      size="small"
                       text="Add"
                       ariaLabel={`Add ${fw.name}`}
                       isDisabled={isBusy}

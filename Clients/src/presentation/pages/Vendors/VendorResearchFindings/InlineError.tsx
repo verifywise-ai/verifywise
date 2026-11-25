@@ -19,7 +19,7 @@ export default function InlineError({ message, onRetry }: InlineErrorProps) {
       <AlertCircle size={16} />
       <Typography sx={errorTextSx}>{message}</Typography>
       <Box sx={{ ml: "auto" }}>
-        <CustomizableButton size="small" variant="text" onClick={onRetry}>
+        <CustomizableButton variant="text" onClick={onRetry}>
           Retry
         </CustomizableButton>
       </Box>
