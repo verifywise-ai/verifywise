@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 import { Pencil } from "lucide-react";
 import StandardModal from "../../../../components/Modals/StandardModal";
@@ -15,7 +15,10 @@ import {
   lifecycleValueSx,
 } from "../../../../components/LifecycleTabs/lifecyclePanelStyles";
 import { useAuth } from "../../../../../application/hooks/useAuth";
-import { canManageLifecycle } from "../../../../../application/utils/useCaseLifecycle";
+import {
+  canManageLifecycle,
+  hasUseCaseWriteAccess,
+} from "../../../../../application/utils/useCaseLifecycle";
 import { useCan } from "../../../../../application/hooks/useCan";
 import {
   useUseCaseLifecycleActions,
@@ -28,7 +31,10 @@ import {
 import { useTranslation } from "../../../../../application/hooks/useTranslation";
 import { LifecycleStage } from "../../../../../domain/enums/lifecycleStage.enum";
 import { Project } from "../../../../../domain/types/Project";
-import { getApiValidationMessage } from "../../../../../application/utils/apiErrorReason";
+import {
+  getApiValidationMessage,
+  getClientErrorReason,
+} from "../../../../../application/utils/apiErrorReason";
 import { fontSize } from "../../../../themes/typography";
 
 /**
@@ -87,7 +93,7 @@ const UseCaseLifecyclePanel = ({
   onChanged?: () => void;
 }) => {
   const { userRoleName, userId } = useAuth();
-  const { goLive, retire, confirm, setDepartment, setApprovalWorkflow } =
+  const { goLive, retire, confirm, setDepartment, setApprovalWorkflow, resubmitApproval } =
     useUseCaseLifecycleActions(project.id);
   const { data: summary } = useUseCaseLifecycleSummary();
   const { data: workflows } = useUseCaseApprovalWorkflows();
@@ -99,6 +105,15 @@ const UseCaseLifecyclePanel = ({
   const [workflowOpen, setWorkflowOpen] = useState(false);
   const [workflowDraft, setWorkflowDraft] = useState(0);
   const [workflowError, setWorkflowError] = useState<string | null>(null);
+  const [resubmitOpen, setResubmitOpen] = useState(false);
+  const [resubmitError, setResubmitError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setToast(null), 3000);
+    return () => clearTimeout(timer);
+  }, [toast]);
 
   // Same per-org permission matrix the server checks (custom roles included);
   // the built-in role rule only stands in until the list has loaded.
@@ -152,6 +167,26 @@ const UseCaseLifecyclePanel = ({
         : savedWorkflow
           ? { text: savedWorkflow.label, noTranslate: savedWorkflow.noTranslate }
           : { text: attached.workflow_title ?? "", noTranslate: true };
+  // A rejected use case goes back for approval under the same workflow
+  // (POST /v1/projects/:id/resubmit-approval), gated like the server:
+  // useCase.edit plus write access to this use case. No approval workflow
+  // admin is needed since the workflow stays. An archived or missing
+  // workflow can't review it; an admin changes it first.
+  const canResubmit =
+    attachedLoaded &&
+    // canManage only rules out Auditors here, since useCase.edit is held.
+    canManage &&
+    canEditUseCases &&
+    hasUseCaseWriteAccess(userRoleName, userId, project.owner, project.members) &&
+    approvalStatus === "rejected" &&
+    !!currentWorkflowId &&
+    attached.workflow_is_active === true;
+  // As the server does it: only a planned use case moves to In review. A
+  // resubmission is never auto-approved, since a person rejected it.
+  const resubmitNotes: string[] = [];
+  if (stage === LifecycleStage.PLANNED) {
+    resubmitNotes.push("It moves to In review until the request is approved or rejected.");
+  }
   const workflowNotes = workflowChangeNotes({
     selected: workflowDraft,
     current: Number(currentWorkflowId),
@@ -183,6 +218,19 @@ const UseCaseLifecyclePanel = ({
     }
   };
 
+  const resubmit = async () => {
+    setResubmitError(null);
+    try {
+      await resubmitApproval.mutateAsync();
+      setResubmitOpen(false);
+      setToast("The use case was sent for approval.");
+      onChanged?.();
+    } catch (err) {
+      // The server's reason for a refusal (409, 400, 403); never a 5xx's.
+      setResubmitError(getClientErrorReason(err) || "The use case could not be resubmitted.");
+    }
+  };
+
   const saveDepartment = async () => {
     setError(null);
     try {
@@ -209,12 +257,15 @@ const UseCaseLifecyclePanel = ({
           // pending or rejected (audit decision 2). A rejected use case whose
           // workflow an admin cleared stays rejected until a new approval.
           // Only an approval workflow admin may attach one to a rejected use case.
+          // With a usable workflow attached, whoever may resubmit is told to.
           approvalStatus === "rejected"
             ? attachedLoaded && !currentWorkflowId
               ? isWorkflowAdmin
                 ? "Its last approval request was rejected. Attach an approval workflow and get it approved before marking it as live."
                 : "Its last approval request was rejected. An approval workflow admin needs to attach a workflow and get it approved before it can go live."
-              : "Approve this use case before marking it as live. Its last approval request was rejected."
+              : canResubmit
+                ? "Its last approval request was rejected. Resubmit it for approval and get it approved before marking it as live."
+                : "Approve this use case before marking it as live. Its last approval request was rejected."
             : approvalStatus === "pending"
               ? "Approve this use case before marking it as live."
               : undefined
@@ -223,7 +274,9 @@ const UseCaseLifecyclePanel = ({
         retire={retire}
         confirm={confirm}
         onChanged={onChanged}
-        isBusy={setDepartment.isPending || setApprovalWorkflow.isPending}
+        isBusy={
+          setDepartment.isPending || setApprovalWorkflow.isPending || resubmitApproval.isPending
+        }
         copy={{
           staleMessage:
             "Nobody has confirmed this use case is still live within the check interval set for your organization. Confirm it, or retire it if it is no longer in use.",
@@ -284,6 +337,17 @@ const UseCaseLifecyclePanel = ({
                 )}
                 {approvalStatus === "rejected" && (
                   <StatusBadge label="Rejected" variant="error" size="small" uppercase={false} />
+                )}
+                {canResubmit && (
+                  <VWLink
+                    testId="lifecycle-workflow-resubmit"
+                    onClick={() => {
+                      setResubmitError(null);
+                      setResubmitOpen(true);
+                    }}
+                  >
+                    Resubmit for approval
+                  </VWLink>
                 )}
                 {canChangeWorkflow && (
                   <VWLink testId="lifecycle-workflow-action" onClick={openWorkflow}>
@@ -359,6 +423,34 @@ const UseCaseLifecyclePanel = ({
           {workflowError && <Alert variant="error" body={workflowError} inline />}
         </Stack>
       </StandardModal>
+
+      <StandardModal
+        isOpen={resubmitOpen}
+        onClose={() => setResubmitOpen(false)}
+        title="Resubmit for approval"
+        description={t("Send this use case for approval again with {workflow}?").replace(
+          "{workflow}",
+          () => attached?.workflow_title ?? "",
+        )}
+        submitButtonText="Resubmit"
+        isSubmitting={resubmitApproval.isPending}
+        onSubmit={() => void resubmit()}
+      >
+        <Stack sx={{ gap: "16px" }}>
+          {resubmitNotes.length > 0 && (
+            <Stack sx={{ gap: "4px" }} data-testid="lifecycle-resubmit-notes">
+              {resubmitNotes.map((note) => (
+                <Typography key={note} sx={{ fontSize: fontSize.base, color: "text.secondary" }}>
+                  {note}
+                </Typography>
+              ))}
+            </Stack>
+          )}
+          {resubmitError && <Alert variant="error" body={resubmitError} inline />}
+        </Stack>
+      </StandardModal>
+
+      {toast && <Alert variant="success" body={toast} isToast onClick={() => setToast(null)} />}
     </>
   );
 };

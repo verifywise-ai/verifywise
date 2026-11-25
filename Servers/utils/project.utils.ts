@@ -1004,6 +1004,51 @@ export const lockUseCaseWorkflowQuery = async (
   return { approval_workflow_id: id == null ? null : Number(id) };
 };
 
+/** The use case fields an approval request is opened from (request name, entity data). */
+export interface UseCaseApprovalSnapshot {
+  id: number;
+  project_title: string;
+  owner: number | null;
+  ai_risk_classification: string | null;
+  approval_workflow_id: number | null;
+}
+
+/**
+ * The fields createUseCaseApprovalRequest reads, inside the caller's
+ * transaction: after lockUseCaseWorkflowQuery they are read under that row
+ * lock, on the transaction's connection, so they are current and no second
+ * pool connection is taken while the lock is held. Null when the use case is
+ * not in the organization.
+ */
+export const getUseCaseApprovalSnapshotQuery = async (
+  projectId: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<UseCaseApprovalSnapshot | null> => {
+  const rows = (await sequelize.query(
+    `SELECT id, project_title, owner, ai_risk_classification, approval_workflow_id
+       FROM projects
+      WHERE id = :id AND organization_id = :organizationId`,
+    { replacements: { id: projectId, organizationId }, type: QueryTypes.SELECT, transaction },
+  )) as Array<{
+    id: number | string;
+    project_title: string;
+    owner: number | string | null;
+    ai_risk_classification: string | null;
+    approval_workflow_id: number | string | null;
+  }>;
+  if (rows.length === 0) return null;
+  const row = rows[0];
+  return {
+    id: Number(row.id),
+    project_title: row.project_title,
+    owner: row.owner == null ? null : Number(row.owner),
+    ai_risk_classification: row.ai_risk_classification,
+    approval_workflow_id:
+      row.approval_workflow_id == null ? null : Number(row.approval_workflow_id),
+  };
+};
+
 /** A use case's approval workflow, as GET /api/v1/projects/:id/approval-workflow returns it. */
 export interface UseCaseApprovalWorkflowRow {
   approval_workflow_id: number | null;

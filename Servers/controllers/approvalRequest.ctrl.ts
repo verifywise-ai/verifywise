@@ -684,16 +684,22 @@ export async function rejectRequest(req: Request, res: Response): Promise<any> {
             ? `${requester.name} ${requester.surname}`.trim()
             : "User";
 
-          // A rejected policy links to the policy, where the requester sees
-          // the comment and can edit and resubmit. Other entities keep the
-          // approval-workflows link.
-          const policyId =
-            notificationInfo.entityType === "policy" && notificationInfo.entityId
-              ? notificationInfo.entityId
-              : null;
-          const requestUrl = policyId
-            ? `${baseUrl}${buildEntityUrl(NotificationEntityType.POLICY, policyId)}`
-            : `${baseUrl}/approval-workflows`;
+          // A rejected policy or use case links to that item, where the
+          // requester sees the outcome and can resubmit it (a policy after
+          // editing, a use case with "Resubmit for approval"). Other entities
+          // keep the approval-workflows link.
+          const linkedEntityId = notificationInfo.entityId ?? null;
+          const linkedEntity = !linkedEntityId
+            ? null
+            : notificationInfo.entityType === "policy"
+              ? NotificationEntityType.POLICY
+              : notificationInfo.entityType === "use_case"
+                ? NotificationEntityType.USE_CASE
+                : null;
+          const requestUrl =
+            linkedEntity && linkedEntityId
+              ? `${baseUrl}${buildEntityUrl(linkedEntity, linkedEntityId)}`
+              : `${baseUrl}/approval-workflows`;
 
           // Send rejection notification
           await sendInAppNotification(
@@ -703,10 +709,12 @@ export async function rejectRequest(req: Request, res: Response): Promise<any> {
               type: NotificationType.APPROVAL_REJECTED,
               title: "Approval request rejected",
               message: `${rejectorName} rejected your approval request: ${notificationInfo.requestName}`,
-              entity_type: policyId
-                ? NotificationEntityType.POLICY
-                : NotificationEntityType.USE_CASE,
-              entity_id: policyId ?? requestId,
+              // Other entities name no entity: labelling them a use case with
+              // the request's id pointed at an unrelated use case. The
+              // column's enum does not cover every approval entity type, so
+              // they are left empty rather than mapped.
+              entity_type: linkedEntity ?? undefined,
+              entity_id: linkedEntity && linkedEntityId ? linkedEntityId : undefined,
               entity_name: notificationInfo.requestName,
               action_url: requestUrl,
             },

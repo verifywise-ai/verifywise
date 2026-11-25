@@ -173,6 +173,15 @@ export const de: Record<string, string> = {
     "Beim Speichern wird der Genehmigungsablauf von diesem Anwendungsfall entfernt.",
   "The pending approval request is withdrawn.":
     "Die ausstehende Freigabeanfrage wird zurückgezogen.",
+  "Resubmit for approval": "Erneut zur Freigabe einreichen",
+  "Resubmit": "Erneut einreichen",
+  "Send this use case for approval again with {workflow}?":
+    "Diesen Anwendungsfall erneut mit {workflow} zur Freigabe senden?",
+  "Its last approval request was rejected. Resubmit it for approval and get it approved before marking it as live.":
+    "Seine letzte Freigabeanfrage wurde abgelehnt. Reichen Sie ihn erneut zur Freigabe ein und lassen Sie ihn freigeben, bevor Sie ihn als live markieren.",
+  "The use case was sent for approval.": "Der Anwendungsfall wurde zur Freigabe gesendet.",
+  "The use case could not be resubmitted.":
+    "Der Anwendungsfall konnte nicht erneut eingereicht werden.",
 };
 
 export const fr: Record<string, string> = {
@@ -349,6 +358,14 @@ export const fr: Record<string, string> = {
   "Saving removes the approval workflow from this use case.":
     "L'enregistrement retire le flux d'approbation de ce cas d'usage.",
   "The pending approval request is withdrawn.": "La demande d'approbation en attente est retirée.",
+  "Resubmit for approval": "Soumettre de nouveau pour approbation",
+  "Resubmit": "Soumettre de nouveau",
+  "Send this use case for approval again with {workflow}?":
+    "Envoyer de nouveau ce cas d'usage en approbation avec {workflow} ?",
+  "Its last approval request was rejected. Resubmit it for approval and get it approved before marking it as live.":
+    "Sa dernière demande d'approbation a été refusée. Soumettez-le de nouveau pour approbation et faites-le approuver avant de le marquer comme en service.",
+  "The use case was sent for approval.": "Le cas d'usage a été envoyé en approbation.",
+  "The use case could not be resubmitted.": "Le cas d'usage n'a pas pu être soumis de nouveau.",
 };
 
 export const es: Record<string, string> = {
@@ -520,4 +537,12 @@ export const es: Record<string, string> = {
   "Saving removes the approval workflow from this use case.":
     "Al guardar, se quita el flujo de aprobación de este caso de uso.",
   "The pending approval request is withdrawn.": "La solicitud de aprobación pendiente se retira.",
+  "Resubmit for approval": "Volver a enviar a aprobación",
+  "Resubmit": "Volver a enviar",
+  "Send this use case for approval again with {workflow}?":
+    "¿Enviar de nuevo este caso de uso a aprobación con {workflow}?",
+  "Its last approval request was rejected. Resubmit it for approval and get it approved before marking it as live.":
+    "Su última solicitud de aprobación fue rechazada. Vuelva a enviarlo a aprobación y obtenga la aprobación antes de marcarlo como en producción.",
+  "The use case was sent for approval.": "El caso de uso se envió a aprobación.",
+  "The use case could not be resubmitted.": "No se pudo volver a enviar el caso de uso.",
 };

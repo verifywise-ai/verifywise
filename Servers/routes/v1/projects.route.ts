@@ -15,6 +15,7 @@ import {
   deleteProjectByIdV1,
   getRisksLinkedOnlyToProject,
   getUseCaseApprovalWorkflow,
+  resubmitUseCaseApproval,
   updateProjectById,
 } from "../../controllers/project.ctrl";
 import { STATUS_CODE } from "../../utils/statusCode.utils";
@@ -74,6 +75,20 @@ router.get(
   validateProjectIdParam,
   requireProjectAccess("id", "params"),
   getUseCaseApprovalWorkflow,
+);
+
+// Send a rejected use case for approval again under its attached workflow.
+// New, so it starts here. Same gate as editing the use case (useCase.edit
+// plus write access to this use case); unlike changing the workflow while
+// the request is rejected, it needs no approval workflow admin, since the
+// workflow stays the same.
+router.post(
+  "/:id/resubmit-approval",
+  authenticateJWT,
+  authorize("useCase.edit"),
+  validateProjectIdParam,
+  requireProjectAccess("id", "params", "write"),
+  resubmitUseCaseApproval,
 );
 
 const ARCHIVE_FLAG = "archive_risks_linked_only_here";

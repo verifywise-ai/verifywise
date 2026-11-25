@@ -94,6 +94,11 @@ export const getUsableUseCaseWorkflow = async (
  * when the workflow cannot review a use case; see getUsableUseCaseWorkflow.
  * Pass `usable` when the caller already checked the workflow in this
  * transaction; it is used only when it is the use case's workflow.
+ *
+ * `allowAutoApprove: false` skips the workflow's risk-based auto-approval, so
+ * the request always waits for an approver. A resubmission after a rejection
+ * passes it: a person rejected the use case, so a person reviews it again,
+ * even if its risk classification was lowered to the auto-approve level since.
  */
 export const createUseCaseApprovalRequest = async (
   project: ProjectModel,
@@ -101,6 +106,7 @@ export const createUseCaseApprovalRequest = async (
   organizationId: number,
   transaction: Transaction,
   usable?: UsableUseCaseWorkflow | null,
+  { allowAutoApprove = true }: { allowAutoApprove?: boolean } = {},
 ): Promise<UseCaseApprovalRequestResult | null> => {
   if (!project.approval_workflow_id || !project.id) {
     logStructured(
@@ -142,14 +148,16 @@ export const createUseCaseApprovalRequest = async (
 
   // Risk-based auto-approval, evaluated from the project row (never the
   // client payload), inside the project-creation transaction
-  const autoApproval = await tryAutoApproveRequestQuery(
-    request.id!,
-    workflow,
-    "use_case",
-    project.id,
-    organizationId,
-    transaction,
-  );
+  const autoApproval: Awaited<ReturnType<typeof tryAutoApproveRequestQuery>> = allowAutoApprove
+    ? await tryAutoApproveRequestQuery(
+        request.id!,
+        workflow,
+        "use_case",
+        project.id,
+        organizationId,
+        transaction,
+      )
+    : { autoApproved: false };
 
   if (autoApproval.autoApproved) {
     request.setDataValue("status", ApprovalRequestStatus.APPROVED);

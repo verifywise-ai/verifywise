@@ -631,6 +631,8 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       framework: "Frameworks",
       monitored_regulations_and_standards: "Monitored regulations and standards",
       approval_workflow_id: "Approval workflow",
+      // Recorded by resubmitUseCaseApproval (controllers/project.ctrl.ts).
+      approval_status: "Approval status",
       // Lifecycle (#5187); recorded by controllers/useCaseLifecycle.ctrl.ts.
       lifecycle_stage: "Lifecycle stage",
       go_live_date: "Go-live date",

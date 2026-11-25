@@ -9,6 +9,7 @@ import {
   countSubControlsByProjectId,
   getAllProjectsQuery,
   getProjectByIdQuery,
+  getUseCaseApprovalSnapshotQuery,
   getUseCaseApprovalWorkflowQuery,
   lockUseCaseWorkflowQuery,
   updateProjectByIdQuery,
@@ -29,6 +30,7 @@ import {
   BusinessLogicException,
 } from "../domain.layer/exceptions/custom.exception";
 import { recordMultipleFieldChanges } from "../utils/useCaseChangeHistory.utils";
+import { recordEntityChange } from "../utils/changeHistory.base.utils";
 import {
   hasPendingApprovalQuery,
   getApprovalStatusQuery,
@@ -851,6 +853,195 @@ export async function getUseCaseApprovalWorkflow(req: Request, res: Response): P
       organizationId: req.organizationId!,
     });
 
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * POST /api/v1/projects/:id/resubmit-approval: send a rejected use case for
+ * approval again under the workflow already attached to it. Saving the same
+ * workflow is a no-op and, while the request is rejected, only an approval
+ * workflow admin may change it, so without this a rejected use case could
+ * never be reviewed again.
+ *
+ * The use case row is locked first, so two resubmits at once cannot both open
+ * a request: the second waits, then sees the first one's pending request (409).
+ * The request is opened as attaching a workflow opens it
+ * (createUseCaseApprovalRequest: planned moves to in review), and the step 1
+ * approvers get the same notice once the transaction commits. It is never
+ * auto-approved: a person rejected the use case, so a person reviews it
+ * again. Otherwise an owner could lower the risk classification to the
+ * workflow's auto-approve level and resubmit past the rejection.
+ */
+export async function resubmitUseCaseApproval(req: Request, res: Response): Promise<any> {
+  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const organizationId = req.organizationId!;
+  const userId = req.userId!;
+  const log = { functionName: "resubmitUseCaseApproval", fileName: "project.ctrl.ts" };
+
+  logProcessing({
+    description: `starting resubmitUseCaseApproval for project ID ${projectId}`,
+    ...log,
+    userId,
+    organizationId,
+  });
+
+  const transaction = await sequelize.transaction();
+  // Set once the transaction is committed or rolled back, so the catch below
+  // never rolls it back a second time (that throws, and the request hangs).
+  let finished = false;
+  const rollback = async () => {
+    if (finished) return;
+    finished = true;
+    await transaction.rollback();
+  };
+  const refuse = async (status: 400 | 404 | 409, message: string | object, reason: string) => {
+    await rollback();
+    await logFailure({
+      eventType: "Update",
+      description: `Resubmit refused on use case ${projectId}: ${reason}`,
+      ...log,
+      error: new Error(reason),
+      userId,
+      organizationId,
+    });
+    return res.status(status).json(STATUS_CODE[status](message));
+  };
+
+  try {
+    const locked = await lockUseCaseWorkflowQuery(projectId, organizationId, transaction);
+    // Read under the lock, on the transaction's connection.
+    const project = locked
+      ? await getUseCaseApprovalSnapshotQuery(projectId, organizationId, transaction)
+      : null;
+    if (!locked || !project) {
+      return refuse(404, {}, "not found");
+    }
+
+    const approvalStatus = await getApprovalStatusQuery(
+      projectId,
+      "use_case",
+      organizationId,
+      transaction,
+    );
+    if (approvalStatus === "pending") {
+      return refuse(
+        409,
+        req.t!("This use case is already waiting for approval"),
+        "approval already pending",
+      );
+    }
+    if (approvalStatus !== "rejected") {
+      return refuse(
+        409,
+        req.t!("Only a rejected use case can be resubmitted for approval"),
+        "latest approval is not rejected",
+      );
+    }
+
+    const workflowId = locked.approval_workflow_id;
+    if (!workflowId) {
+      return refuse(
+        400,
+        req.t!("This use case has no approval workflow. Attach one to send it for approval."),
+        "no workflow attached",
+      );
+    }
+
+    let usable: UsableUseCaseWorkflow;
+    try {
+      usable = await getUsableUseCaseWorkflow(workflowId, organizationId, transaction);
+    } catch (error) {
+      if (!(error instanceof ValidationException)) throw error;
+      return refuse(
+        400,
+        req.t!(
+          "{reason}. Ask an approval workflow admin to change this use case's approval workflow.",
+          { reason: translateError(req, error) },
+        ),
+        `workflow ${workflowId} unusable: ${error.message}`,
+      );
+    }
+
+    const useCase = {
+      ...project,
+      id: projectId,
+      approval_workflow_id: workflowId,
+    } as unknown as ProjectModel;
+    const approval = await createUseCaseApprovalRequest(
+      useCase,
+      userId,
+      organizationId,
+      transaction,
+      usable,
+      { allowAutoApprove: false },
+    );
+    if (!approval) {
+      // Unreachable with a workflow attached; never commit without a request.
+      throw new Error(`No approval request opened for use case ${projectId}`);
+    }
+
+    // The resubmission is part of the use case's record, as the lifecycle
+    // move it causes already is.
+    await recordEntityChange(
+      "use_case",
+      projectId,
+      "updated",
+      userId,
+      organizationId,
+      "approval_status",
+      "Rejected",
+      "Pending",
+      transaction,
+    );
+
+    finished = true;
+    await transaction.commit();
+
+    // The same notice as attaching a workflow: the step 1 approvers.
+    notifyUseCaseApprovalOutcome(useCase, approval, userId, organizationId, "Update", log);
+
+    await logSuccess({
+      eventType: "Update",
+      description: `Resubmitted use case ${projectId} for approval (request ${approval.request.id})`,
+      ...log,
+      userId,
+      organizationId,
+    });
+
+    return res.status(201).json(
+      STATUS_CODE[201]({
+        approval_request_id: approval.request.id,
+        // Never auto-approved (see above); the fields keep the contract.
+        status: "pending",
+        auto_approved: false,
+      }),
+    );
+  } catch (error) {
+    await rollback();
+
+    // Raised by opening the request (createApprovalRequestQuery); the
+    // workflow itself was checked above.
+    if (error instanceof ValidationException) {
+      await logFailure({
+        eventType: "Update",
+        description: `Resubmit failed validation: ${error.message}`,
+        ...log,
+        error,
+        userId,
+        organizationId,
+      });
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+    }
+
+    await logFailure({
+      eventType: "Update",
+      description: `Failed to resubmit use case ${projectId} for approval`,
+      ...log,
+      error: error as Error,
+      userId,
+      organizationId,
+    });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

@@ -89,6 +89,33 @@ export async function getUseCaseApprovalWorkflow({
   return response.data.data;
 }
 
+/**
+ * POST /api/v1/projects/:id/resubmit-approval's answer. A resubmission is
+ * never auto-approved, so `status` is "pending" and `auto_approved` false.
+ */
+export interface UseCaseResubmitResult {
+  approval_request_id: number;
+  status: "pending";
+  auto_approved: false;
+}
+
+/**
+ * Send a rejected use case for approval again under its attached workflow.
+ * The caller shows the error inline, so the global error toast is skipped.
+ */
+export async function resubmitUseCaseApproval({
+  id,
+}: {
+  id: number;
+}): Promise<UseCaseResubmitResult> {
+  const response = await apiServices.post<{ data: UseCaseResubmitResult }>(
+    `/v1/projects/${id}/resubmit-approval`,
+    {},
+    { suppressGlobalErrorToast: true },
+  );
+  return response.data.data;
+}
+
 export interface DeleteUseCaseResult {
   deleted: boolean;
   /** The risks the delete archived (none unless archiving was asked for). */

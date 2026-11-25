@@ -319,7 +319,9 @@ POST /approval-workflows
 
 1. Current step → Rejected
 2. Request → Rejected
-3. Notification sent to requestor
+3. Notification sent to requestor. For a policy or a use case it links to that item, where the
+   requester can resubmit it; other entities link to the approval workflows page and name no
+   entity on the notification.
 
 **When Approval Occurs (requires_all_approvers = true):**
 
@@ -348,6 +350,7 @@ logged and never blocks the in-app notification.
 | Request created manually                  | Step 1 approvers                                 | `createApprovalRequest` (`approvalRequest.ctrl.ts`)                               |
 | Use case created with a workflow          | Step 1 approvers                                 | `notifyUseCaseApprovalRequested` (`services/projects/approvalRequest.service.ts`) |
 | Workflow attached to an existing use case | Step 1 approvers                                 | same helper, from `updateProjectById`                                             |
+| Rejected use case resubmitted             | Step 1 approvers                                 | same helper, from `resubmitUseCaseApproval`                                       |
 | Step completed, request advances          | Next step's approvers, plus the requester        | `approveRequest` (`approvalRequest.ctrl.ts`)                                      |
 | Request auto-approved on creation         | The requester only — there is nothing to approve | `notifyApprovalAutoApproved`                                                      |
 | Request rejected / fully approved         | The requester                                    | `rejectRequest` / `approveRequest`                                                |
@@ -379,7 +382,12 @@ workflow:
 While a use case's request is pending or rejected, only holders of `approvalWorkflow.admin` may
 clear or replace its workflow (403 for anyone else); the requester withdraws through the withdraw
 route. Clearing it never attaches the frameworks of a rejected use case, and a rejected use case
-cannot go live. Details: [Use cases](./use-cases.md#changing-the-approval-workflow).
+cannot go live. Anyone who may edit a rejected use case can send it for review again under the same
+workflow with `POST /api/v1/projects/:id/resubmit-approval`. A resubmission is never
+auto-approved, whatever the workflow's auto-approve level: a person rejected it, so a person
+reviews it again. Details:
+[Use cases](./use-cases.md#changing-the-approval-workflow) and
+[Resubmitting a rejected use case](./use-cases.md#resubmitting-a-rejected-use-case).
 
 ## Policy requests
 
