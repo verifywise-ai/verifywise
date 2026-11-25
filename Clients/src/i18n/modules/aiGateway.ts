@@ -79,6 +79,13 @@ export const de: Record<string, string> = {
   "Delete endpoint": "Endpunkt löschen",
   "Delete prompt": "Prompt löschen",
   "Delete dataset": "Datensatz löschen",
+  "Delete this dataset and its test cases?": "Diesen Datensatz und seine Testfälle löschen?",
+  "Could not save the dataset. Try again.":
+    "Der Datensatz konnte nicht gespeichert werden. Versuchen Sie es erneut.",
+  "Could not delete the dataset. Try again.":
+    "Der Datensatz konnte nicht gelöscht werden. Versuchen Sie es erneut.",
+  "Could not load the datasets. Try again.":
+    "Die Datensätze konnten nicht geladen werden. Versuchen Sie es erneut.",
   "This cannot be undone.": "Dies kann nicht rückgängig gemacht werden.",
   "Denied": "Abgelehnt",
   "Dismiss suggestion": "Vorschlag verwerfen",
@@ -717,6 +724,13 @@ export const fr: Record<string, string> = {
   "Delete endpoint": "Supprimer le point de terminaison",
   "Delete prompt": "Supprimer le prompt",
   "Delete dataset": "Supprimer le jeu de données",
+  "Delete this dataset and its test cases?": "Supprimer ce jeu de données et ses cas de test ?",
+  "Could not save the dataset. Try again.":
+    "Impossible d'enregistrer le jeu de données. Réessayez.",
+  "Could not delete the dataset. Try again.":
+    "Impossible de supprimer le jeu de données. Réessayez.",
+  "Could not load the datasets. Try again.":
+    "Impossible de charger les jeux de données. Réessayez.",
   "This cannot be undone.": "Cette action est irréversible.",
   "Denied": "Refusé",
   "Dismiss suggestion": "Ignorer la suggestion",
@@ -1360,6 +1374,14 @@ export const es: Record<string, string> = {
   "Delete endpoint": "Eliminar endpoint",
   "Delete prompt": "Eliminar prompt",
   "Delete dataset": "Eliminar conjunto de datos",
+  "Delete this dataset and its test cases?":
+    "¿Eliminar este conjunto de datos y sus casos de prueba?",
+  "Could not save the dataset. Try again.":
+    "No se pudo guardar el conjunto de datos. Inténtelo de nuevo.",
+  "Could not delete the dataset. Try again.":
+    "No se pudo eliminar el conjunto de datos. Inténtelo de nuevo.",
+  "Could not load the datasets. Try again.":
+    "No se pudieron cargar los conjuntos de datos. Inténtelo de nuevo.",
   "This cannot be undone.": "Esta acción no se puede deshacer.",
   "Denied": "Denegado",
   "Dismiss suggestion": "Descartar sugerencia",

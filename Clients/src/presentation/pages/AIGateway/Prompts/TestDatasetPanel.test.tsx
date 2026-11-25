@@ -165,7 +165,8 @@ describe("TestDatasetPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: /Delete/ }));
 
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText('Delete "Regression suite" and its test cases?')).toBeVisible();
+    expect(within(dialog).getByText("Delete this dataset and its test cases?")).toBeVisible();
+    expect(within(dialog).getByText("Regression suite")).toBeVisible();
     expect(mockDelete).not.toHaveBeenCalled();
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
@@ -224,6 +225,77 @@ describe("TestDatasetPanel", () => {
     fireEvent.click(screen.getByRole("option", { name: "Regression suite" }));
 
     expect(screen.queryByText("Could not save the dataset. Try again.")).not.toBeInTheDocument();
+  });
+
+  it("can't be cancelled while the delete is in flight", async () => {
+    let finishDelete: (value: unknown) => void = () => {};
+    mockDelete.mockReturnValue(new Promise((resolve) => (finishDelete = resolve)));
+    await openRegressionSuite();
+
+    fireEvent.click(screen.getByRole("button", { name: /Delete/ }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Delete" }));
+    await waitFor(() => expect(mockDelete).toHaveBeenCalled());
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    finishDelete({ data: {} });
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getByLabelText("Name")).toHaveValue("New dataset");
+  });
+
+  it("dismisses the error with its close button", async () => {
+    mockPost.mockRejectedValue(new Error("Server error"));
+    renderWithProviders(<TestDatasetPanel {...baseProps} />);
+    await waitFor(() => expect(mockGet).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByText("Save dataset"));
+    await screen.findByText("Could not save the dataset. Try again.");
+
+    fireEvent.click(screen.getByRole("button", { name: "Close notification" }));
+
+    expect(screen.queryByText("Could not save the dataset. Try again.")).not.toBeInTheDocument();
+  });
+
+  it("says so when the datasets can't be loaded", async () => {
+    mockGet.mockRejectedValue(new Error("Server error"));
+    renderWithProviders(<TestDatasetPanel {...baseProps} />);
+
+    expect(await screen.findByText("Could not load the datasets. Try again.")).toBeVisible();
+  });
+
+  it("reloads instead of staying on new when a save returns no dataset", async () => {
+    mockPost.mockResolvedValue({ data: {} });
+    renderWithProviders(<TestDatasetPanel {...baseProps} />);
+    await waitFor(() => expect(mockGet).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(screen.getByText("Save dataset"));
+
+    expect(await screen.findByText("Could not save the dataset. Try again.")).toBeVisible();
+    expect(mockGet).toHaveBeenCalledTimes(2);
+  });
+
+  it("stops a running Run all when its dataset is deleted", async () => {
+    let finishRun: (value: unknown) => void = () => {};
+    mockStreamPromptTest.mockReturnValue(new Promise((resolve) => (finishRun = resolve)));
+    mockDelete.mockResolvedValue({ data: {} });
+    await openRegressionSuite();
+
+    fireEvent.click(screen.getByText("Run all"));
+    await waitFor(() => expect(mockStreamPromptTest).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole("button", { name: /Delete/ }));
+    fireEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Delete" }),
+    );
+    await waitFor(() => expect(screen.getByLabelText("Name")).toHaveValue("New dataset"));
+
+    finishRun({ content: "Late result", tokens: 1, cost: 0, latency: 5 });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(screen.queryByText("Late result")).not.toBeInTheDocument();
+    expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
   });
 
   it("runs all test cases and displays streamed results", async () => {
