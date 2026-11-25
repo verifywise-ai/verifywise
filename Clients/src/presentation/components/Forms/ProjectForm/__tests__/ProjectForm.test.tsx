@@ -52,7 +52,16 @@ vi.mock("../../../../../application/repository/project.repository", () => ({
   updateProject: vi.fn().mockResolvedValue({}),
 }));
 vi.mock("../../../../../application/repository/approvalWorkflow.repository", () => ({
-  getAllApprovalWorkflows: vi.fn().mockResolvedValue({ data: [] }),
+  getApprovalWorkflowsByEntityType: vi.fn().mockResolvedValue([]),
+  saveApprovalWorkflow: vi.fn(),
+}));
+const permissionsResult = vi.hoisted(() => ({
+  permissions: [] as string[],
+  isLoading: false,
+  error: null,
+}));
+vi.mock("../../../../../application/hooks/useMyPermissions", () => ({
+  useMyPermissions: () => permissionsResult,
 }));
 
 import { act, fireEvent, screen, within } from "@testing-library/react";
@@ -62,9 +71,32 @@ import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import { ProjectForm } from "../index";
 
 describe("ProjectForm", () => {
+  beforeEach(() => {
+    permissionsResult.permissions = [];
+  });
+
   it("renders without crashing", () => {
     renderWithProviders(<ProjectForm onClose={vi.fn()} />);
     expect(document.body).toBeTruthy();
+  });
+
+  it("lets an approval workflow admin create a workflow from the create form", async () => {
+    permissionsResult.permissions = ["approvalWorkflow.admin"];
+    renderWithProviders(<ProjectForm onClose={vi.fn()} />);
+    expect(screen.getByTestId("use-case-workflow-create")).toHaveTextContent("Create workflow");
+    // The create form links to no other page: the workflow is made in place.
+    expect(screen.queryByTestId("use-case-workflow-manage")).toBeNull();
+    expect(await screen.findByTestId("use-case-workflow-empty")).toHaveTextContent(
+      "No approval workflows for use cases yet.",
+    );
+  });
+
+  it("asks anyone else to get an Admin to create one", async () => {
+    renderWithProviders(<ProjectForm onClose={vi.fn()} />);
+    expect(screen.queryByTestId("use-case-workflow-create")).toBeNull();
+    expect(await screen.findByTestId("use-case-workflow-empty")).toHaveTextContent(
+      "No approval workflows for use cases yet. Ask an Admin to create one.",
+    );
   });
 });
 
