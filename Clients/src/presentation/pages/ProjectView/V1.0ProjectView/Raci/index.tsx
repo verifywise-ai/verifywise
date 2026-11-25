@@ -157,7 +157,6 @@ const Raci: FC<RaciProps> = ({ projectId }) => {
               startIcon={<UserPlus size={16} strokeWidth={1.5} />}
               onClick={() => setAddModalOpen(true)}
               testId="button-raci-add-person"
-              sx={{ height: "30px", minHeight: "30px" }}
             />
           )}
           <ExportMenu

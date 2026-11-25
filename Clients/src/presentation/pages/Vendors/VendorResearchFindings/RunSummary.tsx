@@ -30,7 +30,6 @@ import {
 } from "../../../../application/utils/vendorResearchText";
 import { fill } from "../../../../i18n/fill";
 import InlineError from "./InlineError";
-import { controlHeightSx } from "./styles";
 
 const quietTextSx = { ...textStyles.body, color: "text.tertiary" };
 const detailHeadingSx = { ...textStyles.caption, color: "text.accent" };
@@ -124,7 +123,6 @@ export default function RunSummary({
       variant="outlined"
       isDisabled={startDisabled}
       onClick={() => void handleStart()}
-      sx={controlHeightSx}
     >
       Research again
     </CustomizableButton>
@@ -153,7 +151,7 @@ export default function RunSummary({
       />
     );
   } else if (latest.isPending) {
-    status = <CustomizableSkeleton variant="rounded" width="100%" height={30} />;
+    status = <CustomizableSkeleton variant="rounded" width="100%" height={34} />;
   } else if (!run) {
     status = (
       <Typography sx={{ ...textStyles.body, color: "text.tertiary" }}>
@@ -169,12 +167,7 @@ export default function RunSummary({
         <Typography sx={{ ...textStyles.body, color: "text.secondary" }}>
           Still running. Check back later.
         </Typography>
-        <CustomizableButton
-          size="small"
-          variant="text"
-          sx={controlHeightSx}
-          onClick={() => latest.restartPolling()}
-        >
+        <CustomizableButton variant="text" onClick={() => latest.restartPolling()}>
           Check again
         </CustomizableButton>
       </Stack>

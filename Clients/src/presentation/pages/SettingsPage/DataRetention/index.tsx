@@ -59,7 +59,6 @@ export default function DataRetention() {
             variant="outlined"
             text={t("Try again")}
             onClick={() => refetch()}
-            sx={{ height: "30px" }}
             testId="retention-retry"
           />
         </Stack>
@@ -85,7 +84,6 @@ export default function DataRetention() {
         variant="outlined"
         text={t("Edit")}
         onClick={() => setEditing(row)}
-        sx={{ height: "30px" }}
         testId={`retention-edit-${row.key}`}
         ariaLabel={fill(t("Edit retention: {name}"), { name: t(ROW_TITLES[row.key].title) })}
       />

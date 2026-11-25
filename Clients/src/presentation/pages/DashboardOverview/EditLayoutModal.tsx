@@ -86,7 +86,6 @@ const EditLayoutModal = ({
             text="Reset to default"
             variant="outlined"
             onClick={() => setDraft(defaults)}
-            sx={{ height: "30px" }}
           />
         </Stack>
         <Box role="list">

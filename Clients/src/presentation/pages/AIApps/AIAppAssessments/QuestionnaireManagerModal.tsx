@@ -19,7 +19,6 @@ import {
 } from "../../../../application/hooks/useAiAppBulk";
 import { errorMessage } from "../../../../application/repository/aiAppBulk.repository";
 import type { IAiAppQuestionnaire } from "../../../../domain/interfaces/i.aiAppBulk";
-import { controlButtonSx } from "../style";
 import { SELECT_MIN_WIDTH } from "../../../components/Inputs/Select/constants";
 
 interface DraftQuestion {
@@ -291,7 +290,6 @@ export default function QuestionnaireManagerModal({ onClose }: { onClose: () => 
                   startIcon={<Plus size={16} strokeWidth={1.5} />}
                   onClick={addQuestion}
                   testId="ai-app-question-add"
-                  sx={controlButtonSx}
                 />
               </Box>
             </>
@@ -304,7 +302,6 @@ export default function QuestionnaireManagerModal({ onClose }: { onClose: () => 
                   startIcon={<Plus size={16} strokeWidth={1.5} />}
                   onClick={startCreate}
                   testId="ai-app-questionnaire-new"
-                  sx={controlButtonSx}
                 />
               </Box>
               <Stack sx={{ border: `1px solid ${palette.border.dark}`, borderRadius: radiusPx.sm }}>

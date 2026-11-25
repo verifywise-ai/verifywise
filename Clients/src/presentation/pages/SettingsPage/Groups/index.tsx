@@ -232,7 +232,7 @@ const GroupsPage: React.FC = () => {
             icon={<PlusIcon size={16} strokeWidth={1.5} />}
             onClick={openCreate}
             testId="groups-new-group"
-            sx={{ height: "30px", gap: "8px", flexShrink: 0 }}
+            sx={{ gap: "8px", flexShrink: 0 }}
           />
         )}
       </Box>

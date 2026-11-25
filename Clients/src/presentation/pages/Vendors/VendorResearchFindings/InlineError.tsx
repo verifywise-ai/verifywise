@@ -2,7 +2,6 @@ import { Box, Typography } from "@mui/material";
 import { AlertCircle } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { errorAlertSx, errorTextSx } from "../../RiskInheritanceGraph/DismissalAnalytics/styles";
-import { controlHeightSx } from "./styles";
 
 interface InlineErrorProps {
   /** What could not be loaded, as a sentence. A literal in the caller, so that it is translated. */
@@ -20,7 +19,7 @@ export default function InlineError({ message, onRetry }: InlineErrorProps) {
       <AlertCircle size={16} />
       <Typography sx={errorTextSx}>{message}</Typography>
       <Box sx={{ ml: "auto" }}>
-        <CustomizableButton size="small" variant="text" onClick={onRetry} sx={controlHeightSx}>
+        <CustomizableButton variant="text" onClick={onRetry}>
           Retry
         </CustomizableButton>
       </Box>

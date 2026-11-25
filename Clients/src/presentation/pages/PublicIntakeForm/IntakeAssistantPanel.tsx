@@ -189,7 +189,6 @@ export function IntakeAssistantPanel({
             isDisabled={ai.blockedBy !== null}
             onClick={ai.onCheck}
             testId="assistant-ai-check"
-            sx={{ height: "30px", minHeight: "30px" }}
           />
           {/* Always rendered, empty when there is nothing to say, so screen readers announce each result. */}
           <Typography
