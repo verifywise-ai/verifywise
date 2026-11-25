@@ -132,6 +132,48 @@ describe("notifyApprovalComplete", () => {
       2,
     );
   });
+
+  it("names a file a file and links the request, never a use case with the file's id", async () => {
+    await notifyApprovalComplete(
+      2,
+      3,
+      { id: 7, name: "File Approval: a.pdf", totalSteps: 1 },
+      "https://app.test",
+      "file",
+      12,
+    );
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "File fully approved",
+        entity_type: NotificationEntityType.FILE,
+        entity_id: undefined,
+        action_url: "/approval-workflows?request=7",
+      }),
+      2,
+    );
+  });
+
+  it("names no entity for other types and links the request", async () => {
+    await notifyApprovalComplete(
+      2,
+      3,
+      { id: 7, name: "Dataset: claims", totalSteps: 1 },
+      "https://app.test",
+      "dataset",
+      12,
+    );
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Request fully approved",
+        entity_type: undefined,
+        entity_id: undefined,
+        action_url: "/approval-workflows?request=7",
+      }),
+      2,
+    );
+  });
 });
 
 describe("notifyApprovalRequested", () => {

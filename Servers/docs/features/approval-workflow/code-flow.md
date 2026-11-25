@@ -374,16 +374,20 @@ controllers/approvalRequest.ctrl.ts:approveRequest
 │
 └─→ if (notificationInfo.type === 'requester_approved') {
     │
-    └─→ notifyRequesterApproved(tenantId, 1, 14, "Use Case: Q1 Campaign")
+    └─→ notifyApprovalComplete(organizationId, 1,
+          { id: 14, name: "Use Case: Q1 Campaign", totalSteps },
+          baseUrl, "use_case", 58)
+        │   // 14 is the request id, 58 the use case
         │
-        └─→ sendNotification(tenantId, 1, {
-              title: "Request Approved",
-              message: "Your request has been approved",
+        └─→ sendInAppNotification(organizationId, {
               type: "approval_complete",
-              entityId: 14
-            })
+              title: "Use case fully approved",
+              entity_type: "use_case",
+              entity_id: 58,
+              action_url: "/project-view?projectId=58"
+            }, true, { template: APPROVAL_COMPLETE, ... })
             │
-            └─→ Publish to Redis for User 1 (Alice)
+            └─→ Store, publish to Redis for User 1 (Alice), send email
 ```
 
 ### Frontend Flow for Requester

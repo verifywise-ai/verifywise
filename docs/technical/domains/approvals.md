@@ -438,22 +438,29 @@ Notifications for policy requests carry `entity_type` POLICY and the policy id:
 
 ## Notification links
 
-Every approval notice (in-app `action_url` and the email button) links to the
-request's own item when the app has a page for it, and to the request
-otherwise. `utils/approvalLinks.utils.ts` holds both rules:
+Approval notices (in-app `action_url` and the email button) are built from
+two helpers in `utils/approvalLinks.utils.ts`:
 `approvalLinkedEntity(entity_type, entity_id)` returns the use case or policy
-(null for anything else), and `approvalRequestPath(requestId)` gives
-`/approval-workflows?request=:id`, which opens the approvals modal in whichever
-tab lists the request. There is no `/approval-requests/:id` page.
+the request is about (null for anything else), and
+`approvalRequestPath(requestId)` gives `/approval-workflows?request=:id`, which
+opens the approvals modal in whichever tab lists the request. There is no
+`/approval-requests/:id` or `/use-cases/:id` page.
 
-- An approval request id is never stored as a notice's `entity_id`: a notice
-  without a linked item leaves `entity_id` empty (a fully approved notice keeps
-  its label type, such as AI action, with no id).
+| Notice | Use case | Policy | Other entities |
+| --- | --- | --- | --- |
+| Approver asked to decide (any step) | use case page | request | request |
+| Step N approved, rejected (to the requester) | use case page | policy editor | request |
+| Fully approved | use case page | policy editor (`/policies` without an id) | model, risk, vendor: their list page; anything else: request |
+| Auto-approved (use cases only) | use case page | — | — |
+| File upload approver; rejection when a file or policy is deleted | — | request | request |
+
+- An approval request id is never stored as a notice's `entity_id`. A notice
+  without a linked item leaves `entity_id` empty; fully approved notices keep a
+  label type (file, AI action, model, risk, vendor) with no id, and any other
+  type names no entity ("Request fully approved").
 - Notifiers that take a `useCase.id` argument (`notifyApprovalRequested`,
   `notifyApprovalComplete`, `notifyApprovalAutoApproved`) receive the request
   id there; the item comes separately (`entity`, `entityId`, `useCaseId`).
-- File approval notices (file upload, and the rejection sent when a file or
-  policy with a pending request is deleted) link to the request.
 
 ## Deleting an entity with a pending request
 

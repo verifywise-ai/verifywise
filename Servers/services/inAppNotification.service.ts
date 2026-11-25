@@ -881,7 +881,7 @@ export const notifyApprovalComplete = async (
   // approval workflow, just add a row here.
   const labelFor = (
     et?: string,
-  ): { label: string; entity: NotificationEntityType; url: string; entityId?: number } => {
+  ): { label: string; entity?: NotificationEntityType; url: string; entityId?: number } => {
     switch (et) {
       case "policy":
         if (entityId) {
@@ -922,8 +922,14 @@ export const notifyApprovalComplete = async (
           entity: NotificationEntityType.VENDOR,
           url: `/vendors`,
         };
+      case "file":
+        return {
+          label: "File",
+          entity: NotificationEntityType.FILE,
+          url: approvalRequestPath(useCase.id),
+        };
       case "use_case":
-      default:
+      case undefined:
         // useCase.id is the request id: link the use case itself when its id
         // is known, otherwise the request.
         if (entityId) {
@@ -939,6 +945,10 @@ export const notifyApprovalComplete = async (
           entity: NotificationEntityType.USE_CASE,
           url: approvalRequestPath(useCase.id),
         };
+      default:
+        // Any other entity: its id says nothing about a use case, so the
+        // notice names no entity and opens the request.
+        return { label: "Request", url: approvalRequestPath(useCase.id) };
     }
   };
 
