@@ -421,8 +421,9 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
         </Box>
       </Stack>
 
-      {/* Third row: owner, review date, model */}
-      <Stack direction="row" spacing={6}>
+      {/* Third row: owner, review date, model. min-width 0 lets each column
+          shrink, so a long model name is cut instead of widening the row. */}
+      <Stack direction="row" spacing={6} sx={{ "& > *": { minWidth: 0 } }}>
         <Box sx={{ flex: 1 }}>
           <SelectComponent
             id="owner"

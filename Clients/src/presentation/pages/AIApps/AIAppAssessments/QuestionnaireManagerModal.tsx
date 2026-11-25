@@ -19,7 +19,7 @@ import {
 } from "../../../../application/hooks/useAiAppBulk";
 import { errorMessage } from "../../../../application/repository/aiAppBulk.repository";
 import type { IAiAppQuestionnaire } from "../../../../domain/interfaces/i.aiAppBulk";
-import { controlButtonSx, controlFieldSx, controlSelectSx } from "../style";
+import { controlButtonSx, controlFieldSx } from "../style";
 
 interface DraftQuestion {
   /** Stable while reordering; the server assigns the real key on save. */
@@ -267,7 +267,9 @@ export default function QuestionnaireManagerModal({ onClose }: { onClose: () => 
                         }
                         items={WEIGHT_OPTIONS}
                         dataTestId={`ai-app-question-weight-${index}`}
-                        sx={{ ...controlSelectSx, width: 100 }}
+                        // The select's own minimum width is 125px; a narrower column
+                        // let it overflow the card. Default height matches the Label field.
+                        sx={{ width: "125px", flexShrink: 0 }}
                       />
                     </Stack>
                     <Field
