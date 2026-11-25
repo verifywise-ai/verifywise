@@ -320,7 +320,8 @@ POST /approval-workflows
 1. Current step → Rejected
 2. Request → Rejected
 3. Notification sent to requestor. For a policy or a use case it links to that item, where the
-   requester can resubmit it; other entities link to the approval workflows page.
+   requester can resubmit it; other entities link to the approval workflows page and name no
+   entity on the notification.
 
 **When Approval Occurs (requires_all_approvers = true):**
 
@@ -382,7 +383,9 @@ While a use case's request is pending or rejected, only holders of `approvalWork
 clear or replace its workflow (403 for anyone else); the requester withdraws through the withdraw
 route. Clearing it never attaches the frameworks of a rejected use case, and a rejected use case
 cannot go live. Anyone who may edit a rejected use case can send it for review again under the same
-workflow with `POST /api/v1/projects/:id/resubmit-approval`. Details:
+workflow with `POST /api/v1/projects/:id/resubmit-approval`. A resubmission is never
+auto-approved, whatever the workflow's auto-approve level: a person rejected it, so a person
+reviews it again. Details:
 [Use cases](./use-cases.md#changing-the-approval-workflow) and
 [Resubmitting a rejected use case](./use-cases.md#resubmitting-a-rejected-use-case).
 

@@ -180,7 +180,6 @@ export const de: Record<string, string> = {
   "Its last approval request was rejected. Resubmit it for approval and get it approved before marking it as live.":
     "Seine letzte Freigabeanfrage wurde abgelehnt. Reichen Sie ihn erneut zur Freigabe ein und lassen Sie ihn freigeben, bevor Sie ihn als live markieren.",
   "The use case was sent for approval.": "Der Anwendungsfall wurde zur Freigabe gesendet.",
-  "The use case was approved automatically.": "Der Anwendungsfall wurde automatisch freigegeben.",
   "The use case could not be resubmitted.":
     "Der Anwendungsfall konnte nicht erneut eingereicht werden.",
 };
@@ -366,7 +365,6 @@ export const fr: Record<string, string> = {
   "Its last approval request was rejected. Resubmit it for approval and get it approved before marking it as live.":
     "Sa dernière demande d'approbation a été refusée. Soumettez-le de nouveau pour approbation et faites-le approuver avant de le marquer comme en service.",
   "The use case was sent for approval.": "Le cas d'usage a été envoyé en approbation.",
-  "The use case was approved automatically.": "Le cas d'usage a été approuvé automatiquement.",
   "The use case could not be resubmitted.": "Le cas d'usage n'a pas pu être soumis de nouveau.",
 };
 
@@ -546,6 +544,5 @@ export const es: Record<string, string> = {
   "Its last approval request was rejected. Resubmit it for approval and get it approved before marking it as live.":
     "Su última solicitud de aprobación fue rechazada. Vuelva a enviarlo a aprobación y obtenga la aprobación antes de marcarlo como en producción.",
   "The use case was sent for approval.": "El caso de uso se envió a aprobación.",
-  "The use case was approved automatically.": "El caso de uso se aprobó automáticamente.",
   "The use case could not be resubmitted.": "No se pudo volver a enviar el caso de uso.",
 };

@@ -89,12 +89,14 @@ export async function getUseCaseApprovalWorkflow({
   return response.data.data;
 }
 
-/** POST /api/v1/projects/:id/resubmit-approval's answer. */
+/**
+ * POST /api/v1/projects/:id/resubmit-approval's answer. A resubmission is
+ * never auto-approved, so `status` is "pending" and `auto_approved` false.
+ */
 export interface UseCaseResubmitResult {
   approval_request_id: number;
-  /** "approved" when the workflow approved the request automatically. */
-  status: "pending" | "approved";
-  auto_approved: boolean;
+  status: "pending";
+  auto_approved: false;
 }
 
 /**

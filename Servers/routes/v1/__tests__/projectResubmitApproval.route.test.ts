@@ -27,11 +27,17 @@ jest.mock("../../../utils/project.utils", () => ({
   getProjectAccessQuery: jest.fn(async () => "allowed"),
   getProjectReadAccessQuery: jest.fn(async () => "allowed"),
   lockUseCaseWorkflowQuery: jest.fn(),
-  getProjectByIdQuery: jest.fn(),
+  getUseCaseApprovalSnapshotQuery: jest.fn(),
 }));
 jest.mock("../../../utils/approvalRequest.utils", () => ({
   ...jest.requireActual("../../../utils/approvalRequest.utils"),
   getApprovalStatusQuery: jest.fn(),
+  createApprovalRequestQuery: jest.fn(),
+  tryAutoApproveRequestQuery: jest.fn(),
+}));
+jest.mock("../../../utils/lifecycle.utils", () => ({
+  ...jest.requireActual("../../../utils/lifecycle.utils"),
+  moveUseCaseIntoReview: jest.fn(async () => true),
 }));
 jest.mock("../../../services/projects/approvalRequest.service", () => ({
   ...jest.requireActual("../../../services/projects/approvalRequest.service"),
@@ -56,11 +62,17 @@ import routes from "../projects.route";
 import { sequelize } from "../../../database/db";
 import {
   getProjectAccessQuery,
-  getProjectByIdQuery,
   getProjectReadAccessQuery,
+  getUseCaseApprovalSnapshotQuery,
   lockUseCaseWorkflowQuery,
 } from "../../../utils/project.utils";
-import { getApprovalStatusQuery } from "../../../utils/approvalRequest.utils";
+import {
+  createApprovalRequestQuery,
+  getApprovalStatusQuery,
+  tryAutoApproveRequestQuery,
+} from "../../../utils/approvalRequest.utils";
+import { moveUseCaseIntoReview } from "../../../utils/lifecycle.utils";
+import { logFailure } from "../../../utils/logger/logHelper";
 import {
   createUseCaseApprovalRequest,
   getUsableUseCaseWorkflow,
@@ -72,7 +84,7 @@ import { ValidationException } from "../../../domain.layer/exceptions/custom.exc
 const accessQuery = getProjectAccessQuery as jest.Mock;
 const readAccessQuery = getProjectReadAccessQuery as jest.Mock;
 const lockQuery = lockUseCaseWorkflowQuery as jest.Mock;
-const projectQuery = getProjectByIdQuery as jest.Mock;
+const projectQuery = getUseCaseApprovalSnapshotQuery as jest.Mock;
 const statusQuery = getApprovalStatusQuery as jest.Mock;
 const usableWorkflow = getUsableUseCaseWorkflow as jest.Mock;
 const createRequest = createUseCaseApprovalRequest as jest.Mock;
@@ -96,7 +108,7 @@ const PROJECT = {
   id: 12,
   project_title: "Support chatbot",
   owner: 3,
-  ai_risk_classification: "limited risk",
+  ai_risk_classification: "Limited risk",
   approval_workflow_id: 4,
 };
 const USABLE = { workflow: { id: 4, workflow_title: "Model risk review" }, steps: [] };
@@ -108,6 +120,8 @@ describe("POST /api/v1/projects/:id/resubmit-approval", () => {
     accessQuery.mockResolvedValue("allowed");
     readAccessQuery.mockResolvedValue("allowed");
     lockQuery.mockResolvedValue({ approval_workflow_id: 4 });
+    (logFailure as jest.Mock).mockImplementation(async () => undefined);
+    notifyOutcome.mockImplementation(() => undefined);
     projectQuery.mockResolvedValue(PROJECT);
     statusQuery.mockResolvedValue("rejected");
     usableWorkflow.mockResolvedValue(USABLE);
@@ -239,7 +253,10 @@ describe("POST /api/v1/projects/:id/resubmit-approval", () => {
       42,
       transaction,
       USABLE,
+      { allowAutoApprove: false },
     );
+    // Read under the lock, on the same transaction.
+    expect(projectQuery).toHaveBeenCalledWith(12, 42, transaction);
     expect(recordChange).toHaveBeenCalledWith(
       "use_case",
       12,
@@ -267,22 +284,43 @@ describe("POST /api/v1/projects/:id/resubmit-approval", () => {
     );
   });
 
-  it("reports an auto-approved resubmission", async () => {
-    createRequest.mockResolvedValue({
-      request: { id: 78, request_name: "Use Case: Support chatbot" },
-      autoApproved: true,
-      riskLevel: "limited risk",
-      threshold: "limited risk",
-      workflowTitle: "Model risk review",
-      steps: [],
+  // A person rejected it, so a person reviews it again: lowering the risk
+  // classification to the workflow's auto-approve level must not get it
+  // approved past the rejection. Runs the real createUseCaseApprovalRequest.
+  it("never auto-approves, even with an auto-approve workflow and a low-risk use case", async () => {
+    const actual = jest.requireActual(
+      "../../../services/projects/approvalRequest.service",
+    ) as typeof import("../../../services/projects/approvalRequest.service");
+    createRequest.mockImplementation(actual.createUseCaseApprovalRequest as any);
+    projectQuery.mockResolvedValue({ ...PROJECT, ai_risk_classification: "Minimal risk" });
+    const autoApproveWorkflow = {
+      workflow: { id: 4, workflow_title: "Fast track", auto_approve_max_risk: "Limited risk" },
+      steps: [{ step_number: 1, getDataValue: () => [{ approver_id: 5 }] }],
+    };
+    usableWorkflow.mockResolvedValue(autoApproveWorkflow);
+    (createApprovalRequestQuery as jest.Mock).mockResolvedValue({
+      id: 79,
+      request_name: "Use Case: Support chatbot",
+      setDataValue: jest.fn(),
     });
+    (tryAutoApproveRequestQuery as jest.Mock).mockResolvedValue({ autoApproved: true });
+
     const res = await post();
+
     expect(res.status).toBe(201);
     expect(res.body.data).toEqual({
-      approval_request_id: 78,
-      status: "approved",
-      auto_approved: true,
+      approval_request_id: 79,
+      status: "pending",
+      auto_approved: false,
     });
+    expect(tryAutoApproveRequestQuery).not.toHaveBeenCalled();
+    expect(createApprovalRequestQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "Pending", entity_id: 12 }),
+      autoApproveWorkflow.steps,
+      42,
+      transaction,
+    );
+    expect(moveUseCaseIntoReview).toHaveBeenCalledWith(42, 12, 9, transaction);
     expect(recordChange).toHaveBeenCalledWith(
       "use_case",
       12,
@@ -291,9 +329,27 @@ describe("POST /api/v1/projects/:id/resubmit-approval", () => {
       42,
       "approval_status",
       "Rejected",
-      "Approved",
+      "Pending",
       transaction,
     );
+  });
+
+  it("rolls back once when a refusal's logging throws", async () => {
+    statusQuery.mockResolvedValue("pending");
+    (logFailure as jest.Mock).mockRejectedValueOnce(new Error("log down"));
+    const res = await post();
+    expect(res.status).toBe(500);
+    expect(transaction.rollback).toHaveBeenCalledTimes(1);
+  });
+
+  it("never rolls back a committed resubmission when a later step throws", async () => {
+    notifyOutcome.mockImplementation(() => {
+      throw new Error("notifier down");
+    });
+    const res = await post();
+    expect(transaction.commit).toHaveBeenCalledTimes(1);
+    expect(transaction.rollback).not.toHaveBeenCalled();
+    expect(res.status).toBe(500);
   });
 
   it("rolls back and answers 500 when opening the request fails", async () => {

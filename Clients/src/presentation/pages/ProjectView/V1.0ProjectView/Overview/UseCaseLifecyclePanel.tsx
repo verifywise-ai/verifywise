@@ -15,7 +15,10 @@ import {
   lifecycleValueSx,
 } from "../../../../components/LifecycleTabs/lifecyclePanelStyles";
 import { useAuth } from "../../../../../application/hooks/useAuth";
-import { canManageLifecycle } from "../../../../../application/utils/useCaseLifecycle";
+import {
+  canManageLifecycle,
+  hasUseCaseWriteAccess,
+} from "../../../../../application/utils/useCaseLifecycle";
 import { useCan } from "../../../../../application/hooks/useCan";
 import {
   useUseCaseLifecycleActions,
@@ -28,7 +31,10 @@ import {
 import { useTranslation } from "../../../../../application/hooks/useTranslation";
 import { LifecycleStage } from "../../../../../domain/enums/lifecycleStage.enum";
 import { Project } from "../../../../../domain/types/Project";
-import { getApiValidationMessage } from "../../../../../application/utils/apiErrorReason";
+import {
+  getApiValidationMessage,
+  getClientErrorReason,
+} from "../../../../../application/utils/apiErrorReason";
 import { fontSize } from "../../../../themes/typography";
 
 /**
@@ -162,27 +168,24 @@ const UseCaseLifecyclePanel = ({
           ? { text: savedWorkflow.label, noTranslate: savedWorkflow.noTranslate }
           : { text: attached.workflow_title ?? "", noTranslate: true };
   // A rejected use case goes back for approval under the same workflow
-  // (POST /v1/projects/:id/resubmit-approval). Same gate as attaching one,
-  // but no approval workflow admin is needed since the workflow stays. An
-  // archived or missing workflow can't review it; an admin changes it first.
+  // (POST /v1/projects/:id/resubmit-approval), gated like the server:
+  // useCase.edit plus write access to this use case. No approval workflow
+  // admin is needed since the workflow stays. An archived or missing
+  // workflow can't review it; an admin changes it first.
   const canResubmit =
     attachedLoaded &&
-    canEditWorkflow &&
+    // canManage only rules out Auditors here, since useCase.edit is held.
+    canManage &&
+    canEditUseCases &&
+    hasUseCaseWriteAccess(userRoleName, userId, project.owner, project.members) &&
     approvalStatus === "rejected" &&
     !!currentWorkflowId &&
     attached.workflow_is_active === true;
-  // As the server does it (createUseCaseApprovalRequest): only a planned use
-  // case moves to In review, and an auto-approve level may approve it at once.
+  // As the server does it: only a planned use case moves to In review. A
+  // resubmission is never auto-approved, since a person rejected it.
   const resubmitNotes: string[] = [];
   if (stage === LifecycleStage.PLANNED) {
     resubmitNotes.push("It moves to In review until the request is approved or rejected.");
-  }
-  if (
-    workflows?.find((workflow) => workflow._id === Number(currentWorkflowId))?.autoApproveMaxRisk
-  ) {
-    resubmitNotes.push(
-      "If its risk classification is at or below the workflow's auto-approve level, it is approved at once.",
-    );
   }
   const workflowNotes = workflowChangeNotes({
     selected: workflowDraft,
@@ -218,18 +221,13 @@ const UseCaseLifecyclePanel = ({
   const resubmit = async () => {
     setResubmitError(null);
     try {
-      const result = await resubmitApproval.mutateAsync();
+      await resubmitApproval.mutateAsync();
       setResubmitOpen(false);
-      setToast(
-        result.auto_approved
-          ? "The use case was approved automatically."
-          : "The use case was sent for approval.",
-      );
+      setToast("The use case was sent for approval.");
       onChanged?.();
     } catch (err) {
-      setResubmitError(
-        (err as { message?: string })?.message || "The use case could not be resubmitted.",
-      );
+      // The server's reason for a refusal (409, 400, 403); never a 5xx's.
+      setResubmitError(getClientErrorReason(err) || "The use case could not be resubmitted.");
     }
   };
 
@@ -442,7 +440,7 @@ const UseCaseLifecyclePanel = ({
           {resubmitNotes.length > 0 && (
             <Stack sx={{ gap: "4px" }} data-testid="lifecycle-resubmit-notes">
               {resubmitNotes.map((note) => (
-                <Typography key={note} sx={{ fontSize: 13, color: "text.secondary" }}>
+                <Typography key={note} sx={{ fontSize: fontSize.base, color: "text.secondary" }}>
                   {note}
                 </Typography>
               ))}

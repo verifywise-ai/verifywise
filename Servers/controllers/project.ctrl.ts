@@ -9,6 +9,7 @@ import {
   countSubControlsByProjectId,
   getAllProjectsQuery,
   getProjectByIdQuery,
+  getUseCaseApprovalSnapshotQuery,
   getUseCaseApprovalWorkflowQuery,
   lockUseCaseWorkflowQuery,
   updateProjectByIdQuery,
@@ -865,10 +866,12 @@ export async function getUseCaseApprovalWorkflow(req: Request, res: Response): P
  *
  * The use case row is locked first, so two resubmits at once cannot both open
  * a request: the second waits, then sees the first one's pending request (409).
- * The request is opened exactly as attaching a workflow opens it
- * (createUseCaseApprovalRequest: planned moves to in review, and the
- * workflow's auto-approval applies), and the step 1 approvers get the same
- * notice once the transaction commits.
+ * The request is opened as attaching a workflow opens it
+ * (createUseCaseApprovalRequest: planned moves to in review), and the step 1
+ * approvers get the same notice once the transaction commits. It is never
+ * auto-approved: a person rejected the use case, so a person reviews it
+ * again. Otherwise an owner could lower the risk classification to the
+ * workflow's auto-approve level and resubmit past the rejection.
  */
 export async function resubmitUseCaseApproval(req: Request, res: Response): Promise<any> {
   const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
@@ -884,8 +887,16 @@ export async function resubmitUseCaseApproval(req: Request, res: Response): Prom
   });
 
   const transaction = await sequelize.transaction();
-  const refuse = async (status: 400 | 404 | 409, message: string | object, reason: string) => {
+  // Set once the transaction is committed or rolled back, so the catch below
+  // never rolls it back a second time (that throws, and the request hangs).
+  let finished = false;
+  const rollback = async () => {
+    if (finished) return;
+    finished = true;
     await transaction.rollback();
+  };
+  const refuse = async (status: 400 | 404 | 409, message: string | object, reason: string) => {
+    await rollback();
     await logFailure({
       eventType: "Update",
       description: `Resubmit refused on use case ${projectId}: ${reason}`,
@@ -899,7 +910,10 @@ export async function resubmitUseCaseApproval(req: Request, res: Response): Prom
 
   try {
     const locked = await lockUseCaseWorkflowQuery(projectId, organizationId, transaction);
-    const project = locked ? await getProjectByIdQuery(projectId, organizationId) : null;
+    // Read under the lock, on the transaction's connection.
+    const project = locked
+      ? await getUseCaseApprovalSnapshotQuery(projectId, organizationId, transaction)
+      : null;
     if (!locked || !project) {
       return refuse(404, {}, "not found");
     }
@@ -960,6 +974,7 @@ export async function resubmitUseCaseApproval(req: Request, res: Response): Prom
       organizationId,
       transaction,
       usable,
+      { allowAutoApprove: false },
     );
     if (!approval) {
       // Unreachable with a workflow attached; never commit without a request.
@@ -976,21 +991,19 @@ export async function resubmitUseCaseApproval(req: Request, res: Response): Prom
       organizationId,
       "approval_status",
       "Rejected",
-      approval.autoApproved ? "Approved" : "Pending",
+      "Pending",
       transaction,
     );
 
+    finished = true;
     await transaction.commit();
 
-    // The same notice as attaching a workflow: the step 1 approvers, or the
-    // requester when the workflow approved it automatically.
+    // The same notice as attaching a workflow: the step 1 approvers.
     notifyUseCaseApprovalOutcome(useCase, approval, userId, organizationId, "Update", log);
 
     await logSuccess({
       eventType: "Update",
-      description: `Resubmitted use case ${projectId} for approval (request ${approval.request.id}${
-        approval.autoApproved ? ", auto-approved" : ""
-      })`,
+      description: `Resubmitted use case ${projectId} for approval (request ${approval.request.id})`,
       ...log,
       userId,
       organizationId,
@@ -999,15 +1012,16 @@ export async function resubmitUseCaseApproval(req: Request, res: Response): Prom
     return res.status(201).json(
       STATUS_CODE[201]({
         approval_request_id: approval.request.id,
-        status: approval.autoApproved ? "approved" : "pending",
-        auto_approved: approval.autoApproved,
+        // Never auto-approved (see above); the fields keep the contract.
+        status: "pending",
+        auto_approved: false,
       }),
     );
   } catch (error) {
-    await transaction.rollback();
+    await rollback();
 
-    // Raised by opening the request (createApprovalRequestQuery and the
-    // auto-approval check); the workflow itself was checked above.
+    // Raised by opening the request (createApprovalRequestQuery); the
+    // workflow itself was checked above.
     if (error instanceof ValidationException) {
       await logFailure({
         eventType: "Update",

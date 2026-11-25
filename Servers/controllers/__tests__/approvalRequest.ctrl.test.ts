@@ -1236,11 +1236,13 @@ describe("approvalRequest.ctrl", () => {
       await rejectRequest(req as Request, res as Response);
       await new Promise((resolve) => setImmediate(resolve));
 
+      // Not labelled a use case with the request's id (9), which named an
+      // unrelated use case.
       expect(mockSendInAppNotification).toHaveBeenCalledWith(
         1,
         expect.objectContaining({
-          entity_type: "use_case",
-          entity_id: 9,
+          entity_type: undefined,
+          entity_id: undefined,
           action_url: expect.stringContaining("/approval-workflows"),
         }),
         true,

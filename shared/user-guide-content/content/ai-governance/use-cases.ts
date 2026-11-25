@@ -324,11 +324,11 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'When a use case\'s approval request is rejected, the requester is notified, and the notification opens the use case. Make the changes the approvers asked for, then choose **Resubmit for approval** next to the **Approval workflow** field on the Overview tab and confirm. A new request goes to the same workflow\'s approvers, and a planned use case moves to In review until the request is approved or rejected. If the workflow has an auto-approve risk level and the use case\'s risk classification is at or below it, the request is approved at once.',
+      text: 'When a use case\'s approval request is rejected, the requester is notified, and the notification opens the use case. Make the changes the approvers asked for, then choose **Resubmit for approval** next to the **Approval workflow** field on the Overview tab and confirm. A new request goes to the same workflow\'s approvers, and a planned use case moves to In review until the request is approved or rejected. A resubmitted use case is never approved automatically, even if the workflow has an auto-approve risk level: a person rejected it, so a person reviews it again.',
     },
     {
       type: 'paragraph',
-      text: 'Anyone who can edit the use case can resubmit it. You do not need to manage approval workflows, because the workflow stays the same. The option appears only after a rejection and only while the workflow is still active. If the workflow has been archived, or can no longer review use cases, ask someone who manages approval workflows to change it. The resubmission shows up in the use case\'s history.',
+      text: 'Anyone who can edit the use case and works on it (its owner, a team member, or an Admin) can resubmit it. You do not need to manage approval workflows, because the workflow stays the same. The option appears only after a rejection and only while the workflow is still active. If the workflow has been archived, or can no longer review use cases, ask someone who manages approval workflows to change it. The resubmission shows up in the use case\'s history.',
     },
     {
       type: 'heading',

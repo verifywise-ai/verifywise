@@ -657,12 +657,9 @@ describe("UseCaseLifecyclePanel resubmit for approval", () => {
     await waitFor(() => expect(mockGetAttached).toHaveBeenCalledTimes(2));
   });
 
-  it("notes the auto-approve level and says when it was approved at once", async () => {
-    mockResubmit.mockResolvedValue({
-      approval_request_id: 32,
-      status: "approved",
-      auto_approved: true,
-    });
+  // A person rejected it, so the server never auto-approves a resubmission;
+  // the dialog makes no such promise, even for an auto-approve workflow.
+  it("never mentions auto-approval, even for an auto-approve workflow", async () => {
     renderWithProviders(
       <UseCaseLifecyclePanel
         project={project({
@@ -673,22 +670,20 @@ describe("UseCaseLifecyclePanel resubmit for approval", () => {
       />,
     );
     const dialog = await resubmitDialog();
-    expect(
-      within(dialog).getByText(
-        "If its risk classification is at or below the workflow's auto-approve level, it is approved at once.",
-      ),
-    ).toBeInTheDocument();
+    expect(within(dialog).queryByText(/auto-approve level/)).toBeNull();
     // Only a planned use case moves to In review.
     expect(within(dialog).queryByText(/It moves to In review/)).toBeNull();
+    expect(within(dialog).queryByTestId("lifecycle-resubmit-notes")).toBeNull();
     fireEvent.click(within(dialog).getByRole("button", { name: "Resubmit" }));
-    expect(await screen.findByText("The use case was approved automatically.")).toBeInTheDocument();
+    expect(await screen.findByText("The use case was sent for approval.")).toBeInTheDocument();
   });
 
   it("shows the server's refusal in the modal", async () => {
-    mockResubmit.mockRejectedValue({
-      message:
-        "Every step of the selected approval workflow needs an approver. Ask an approval workflow admin to change this use case's approval workflow.",
-    });
+    const reason =
+      "Every step of the selected approval workflow needs an approver. Ask an approval workflow admin to change this use case's approval workflow.";
+    mockResubmit.mockRejectedValue(
+      new CustomException(reason, 400, { message: "Bad Request", data: reason }),
+    );
     renderWithProviders(
       <UseCaseLifecyclePanel
         project={project({ approval_workflow_id: 3, approval_status: "rejected" })}
@@ -754,6 +749,46 @@ describe("UseCaseLifecyclePanel resubmit for approval", () => {
     renderWithProviders(
       <UseCaseLifecyclePanel
         project={project({ approval_workflow_id: 3, approval_status: "rejected" })}
+      />,
+    );
+    expect(await screen.findByText("Model risk review")).toBeInTheDocument();
+    expect(screen.queryByTestId("lifecycle-workflow-resubmit")).toBeNull();
+  });
+
+  // The server allows useCase.edit plus write access: members, not only the
+  // owner.
+  it("offers it to a member with useCase.edit who does not own the use case", async () => {
+    mockUserId = 2;
+    renderWithProviders(
+      <UseCaseLifecyclePanel
+        project={project({
+          approval_workflow_id: 3,
+          approval_status: "rejected",
+          members: ["2"],
+        })}
+      />,
+    );
+    expect(await screen.findByTestId("lifecycle-workflow-resubmit")).toBeInTheDocument();
+  });
+
+  it("offers it to an Admin who is neither owner nor member", async () => {
+    mockRole = "Admin";
+    mockUserId = 2;
+    renderWithProviders(
+      <UseCaseLifecyclePanel
+        project={project({ approval_workflow_id: 3, approval_status: "rejected", members: [] })}
+      />,
+    );
+    expect(await screen.findByTestId("lifecycle-workflow-resubmit")).toBeInTheDocument();
+  });
+
+  // Task assignees and workflow approvers can open the use case but only read
+  // it; the server answers 403 to their resubmit.
+  it("does not offer it to an editor without write access to this use case", async () => {
+    mockUserId = 2;
+    renderWithProviders(
+      <UseCaseLifecyclePanel
+        project={project({ approval_workflow_id: 3, approval_status: "rejected", members: [] })}
       />,
     );
     expect(await screen.findByText("Model risk review")).toBeInTheDocument();

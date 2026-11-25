@@ -709,8 +709,12 @@ export async function rejectRequest(req: Request, res: Response): Promise<any> {
               type: NotificationType.APPROVAL_REJECTED,
               title: "Approval request rejected",
               message: `${rejectorName} rejected your approval request: ${notificationInfo.requestName}`,
-              entity_type: linkedEntity ?? NotificationEntityType.USE_CASE,
-              entity_id: linkedEntity && linkedEntityId ? linkedEntityId : requestId,
+              // Other entities name no entity: labelling them a use case with
+              // the request's id pointed at an unrelated use case. The
+              // column's enum does not cover every approval entity type, so
+              // they are left empty rather than mapped.
+              entity_type: linkedEntity ?? undefined,
+              entity_id: linkedEntity && linkedEntityId ? linkedEntityId : undefined,
               entity_name: notificationInfo.requestName,
               action_url: requestUrl,
             },

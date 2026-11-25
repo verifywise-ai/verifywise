@@ -30409,7 +30409,7 @@ paths:
   '/v1/projects/{id}/resubmit-approval':
     post:
       summary: 'Resubmit a rejected use case for approval'
-      description: 'Sends a use case whose latest approval request was rejected for approval again, under the approval workflow already attached to it. Opens a new pending request exactly as attaching a workflow does: a planned use case moves to in review, the step 1 approvers are notified, and the workflow''s risk-based auto-approval applies (the request is then approved at once). The use case row is locked for the duration, so two resubmits at once open one request; the second answers 409. Requires useCase.edit and write access to the use case; no approval workflow admin is needed, since the workflow does not change. To use another workflow, an approval workflow admin changes it with PATCH /api/v1/projects/{id}.'
+      description: 'Sends a use case whose latest approval request was rejected for approval again, under the approval workflow already attached to it. Opens a new pending request as attaching a workflow does: a planned use case moves to in review and the step 1 approvers are notified. It is never auto-approved, whatever the workflow''s auto-approve level: a person rejected the use case, so a person reviews it again. The use case row is locked for the duration, so two resubmits at once open one request; the second answers 409. Requires useCase.edit and write access to the use case; no approval workflow admin is needed, since the workflow does not change. To use another workflow, an approval workflow admin changes it with PATCH /api/v1/projects/{id}.'
       parameters:
         -
           name: id
@@ -30427,7 +30427,7 @@ paths:
                 type: object
                 properties:
                   message: {type: string}
-                  data: {type: object, properties: {approval_request_id: {type: integer}, status: {type: string, enum: [pending, approved], description: 'approved when the workflow auto-approved the request'}, auto_approved: {type: boolean}}}
+                  data: {type: object, properties: {approval_request_id: {type: integer}, status: {type: string, enum: [pending], description: 'Always pending: a resubmission is never auto-approved'}, auto_approved: {type: boolean, description: 'Always false'}}}
         '400':
           description: 'The id is not a positive integer, no workflow is attached, or the attached workflow can no longer review a use case (archived, no steps, a step without approvers)'
         '401':
