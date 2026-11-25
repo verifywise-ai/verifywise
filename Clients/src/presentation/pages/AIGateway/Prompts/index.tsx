@@ -31,7 +31,7 @@ import StandardModal from "../../../components/Modals/StandardModal";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import TablePaginationActions from "../../../components/TablePagination";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
-import { getGatewayErrorText } from "../../../../application/utils/apiErrorReason";
+import { getGatewayErrorText, isClientError } from "../../../../application/utils/apiErrorReason";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import {
   getPaginationRowCount,
@@ -157,13 +157,24 @@ export default function PromptsPage() {
     if (!deleteTarget || isDeleting) return;
     setIsDeleting(true);
     setDeleteError(null);
+    const removeFromList = () => {
+      const remaining = prompts.length - 1;
+      setPrompts((prev) => prev.filter((p) => p.id !== deleteTarget.id));
+      // Deleting the last row on the last page would leave an empty page.
+      setPage((p) => Math.min(p, Math.max(0, Math.ceil(remaining / rowsPerPage) - 1)));
+      setDeleteTarget(null);
+    };
     try {
       await apiServices.delete(`/ai-gateway/prompts/${deleteTarget.id}`);
-      setPrompts((prev) => prev.filter((p) => p.id !== deleteTarget.id));
-      setDeleteTarget(null);
-    } catch {
+      removeFromList();
+    } catch (err) {
+      if (isClientError(err) && err.status === 404) {
+        // Already deleted elsewhere: retrying could never succeed.
+        removeFromList();
+        return;
+      }
       // Keep the modal open so the user sees the prompt was not deleted.
-      setDeleteError("Could not delete the prompt. Try again.");
+      setDeleteError(getGatewayErrorText(err, "Could not delete the prompt. Try again."));
     } finally {
       setIsDeleting(false);
     }
