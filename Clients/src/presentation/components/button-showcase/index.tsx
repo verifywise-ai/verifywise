@@ -377,7 +377,7 @@ function ButtonShowcase() {
                 >
                   30px
                 </Box>
-                <Typography variant="caption">Dashboard</Typography>
+                <Typography variant="caption">Old dashboard</Typography>
               </Box>
               <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
                 <Box

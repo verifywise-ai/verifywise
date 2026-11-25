@@ -141,6 +141,8 @@ const generateFilterId = (): string => {
 
 // Shared width for WHERE badge and AND/OR toggle (68px + 30% = ~88px)
 const LOGIC_CONTROL_WIDTH = "88px";
+// Shared height for WHERE badge and AND/OR toggle: the house control height
+const LOGIC_CONTROL_HEIGHT = "34px";
 
 // Narrow AND/OR Toggle Component for filter rows
 const LogicToggle: React.FC<{
@@ -155,7 +157,7 @@ const LogicToggle: React.FC<{
         borderColor: "divider",
         borderRadius: radiusPx.sm,
         overflow: "hidden",
-        height: "34px",
+        height: LOGIC_CONTROL_HEIGHT,
         bgcolor: "action.hover",
         padding: "2px",
         gap: "2px",
@@ -236,7 +238,7 @@ const WhereBadge: React.FC = () => (
       display: "inline-flex",
       alignItems: "center",
       justifyContent: "center",
-      height: "34px",
+      height: LOGIC_CONTROL_HEIGHT,
       width: LOGIC_CONTROL_WIDTH,
       borderRadius: radiusPx.sm,
       backgroundColor: vwPalette.background.hover,

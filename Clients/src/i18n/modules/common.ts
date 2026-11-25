@@ -2014,7 +2014,8 @@ export const de: Record<string, string> = {
     "Erstellen Sie eine Regel, um Benachrichtigungen zu erhalten, wenn bestimmte Schatten-KI-Aktivitäten erkannt werden. Wählen Sie einen Auslöser-Typ und das System benachrichtigt Sie, sobald die Bedingung erfüllt ist.",
   'Create your first automation to get started. Click on the "Create new automation" button above':
     'Erstellen Sie Ihre erste Automatisierung, um loszulegen. Klicken Sie oben auf die Schaltfläche "Neue Automatisierung erstellen"',
-  "Dashboard Action Buttons (30px)": "Dashboard-Aktionsschaltflächen (30px)",
+  "Dashboard Action Buttons (34px)": "Dashboard-Aktionsschaltflächen (34px)",
+  "Old dashboard": "Altes Dashboard",
   "Dataset contains personally identifiable information (PII)":
     "Datensatz enthält personenbezogene Daten (PII)",
   "Delete risks too": "Risiken ebenfalls löschen",
@@ -6706,7 +6707,8 @@ export const fr: Record<string, string> = {
     "Créez une règle pour recevoir des alertes lorsqu'une activité Shadow AI spécifique est détectée. Choisissez un type de déclencheur et le système vous notifiera lorsque la condition est remplie.",
   'Create your first automation to get started. Click on the "Create new automation" button above':
     'Créez votre première automatisation pour commencer. Cliquez sur le bouton "Créer une nouvelle automatisation" ci-dessus',
-  "Dashboard Action Buttons (30px)": "Boutons d'action du tableau de bord (30px)",
+  "Dashboard Action Buttons (34px)": "Boutons d'action du tableau de bord (34px)",
+  "Old dashboard": "Ancien tableau de bord",
   "Dataset contains personally identifiable information (PII)":
     "Le jeu de données contient des informations personnelles identifiables (PII)",
   "Delete risks too": "Supprimer aussi les risques",
@@ -11387,7 +11389,8 @@ export const es: Record<string, string> = {
     "Cree una regla para recibir alertas cuando se detecte una actividad concreta de IA en la sombra. Elija un tipo de desencadenante y el sistema le notificará cuando se cumpla la condición.",
   'Create your first automation to get started. Click on the "Create new automation" button above':
     "Cree su primera automatización para empezar. Haga clic en el botón «Crear nueva automatización» de arriba",
-  "Dashboard Action Buttons (30px)": "Botones de acción del panel (30px)",
+  "Dashboard Action Buttons (34px)": "Botones de acción del panel (34px)",
+  "Old dashboard": "Panel antiguo",
   "Dataset contains personally identifiable information (PII)":
     "El conjunto de datos contiene información de identificación personal (PII)",
   "Delete risks too": "Eliminar también los riesgos",

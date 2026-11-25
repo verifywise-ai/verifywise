@@ -290,11 +290,7 @@ The `theme.spacing(...)` calls in the style patterns below are on the same
 
 ### Inputs
 
-| Size   | Height | Usage            |
-| ------ | ------ | ---------------- |
-| Small  | 32px   | Compact forms    |
-| Medium | 40px   | Default          |
-| Large  | 48px   | Prominent inputs |
+`Field`, `Select` and `SearchBox` render at 34px, the same as a medium button. Use their default height; don't set another one per page.
 
 ### Cards
 
@@ -598,7 +594,7 @@ import { cardMixins, typographyMixins } from "../themes/mixins";
 1. **Use theme values** - Always reference theme tokens instead of hardcoded values
 2. **Prefer sx prop** - Use MUI's sx prop over inline styles or styled-components
 3. **Consistent spacing** - Follow the spacing scale for predictable layouts
-4. **Standard sizes** - Use predefined component sizes (button: 34px, inputs: 40px)
+4. **Standard sizes** - Use predefined component sizes (buttons and inputs: 34px)
 5. **Border radius 4px** - Maintain consistent corner radius across components
 6. **No shadows** - Most components have no shadow; use sparingly for elevation
 7. **Disabled ripple** - Interactive elements don't show ripple effects
