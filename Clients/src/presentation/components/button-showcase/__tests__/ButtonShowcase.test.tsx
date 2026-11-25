@@ -37,7 +37,7 @@ describe("ButtonShowcase", () => {
     renderWithProviders(<ButtonShowcase />);
     expect(screen.getByText("Primary Buttons (Before Standardization)")).toBeInTheDocument();
     expect(screen.getByText("Multi-Select Components")).toBeInTheDocument();
-    expect(screen.getByText("Dashboard Action Buttons (30px)")).toBeInTheDocument();
+    expect(screen.getByText("Dashboard Action Buttons (34px)")).toBeInTheDocument();
     expect(screen.getByText("View Toggle Component")).toBeInTheDocument();
     expect(screen.getByText("Icon Buttons")).toBeInTheDocument();
     expect(screen.getByText("Secondary & Utility Buttons")).toBeInTheDocument();

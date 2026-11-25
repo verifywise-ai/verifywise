@@ -31,7 +31,7 @@ export function CalculatedFieldDisplay({
         aria-labelledby={labelId}
         data-testid={`calculated-${field.id}`}
         sx={{
-          minHeight: "30px",
+          minHeight: "34px",
           display: "flex",
           alignItems: "center",
           px: "12px",
