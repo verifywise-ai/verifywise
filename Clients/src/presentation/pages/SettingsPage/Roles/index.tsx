@@ -248,7 +248,7 @@ const RolesTab: React.FC = () => {
       icon={<Plus {...ICON_PROPS} />}
       onClick={openCreate}
       testId="roles-new-role"
-      sx={{ height: "30px", gap: "8px", flexShrink: 0 }}
+      sx={{ gap: "8px", flexShrink: 0 }}
     />
   );
 
@@ -368,7 +368,7 @@ const RolesTab: React.FC = () => {
                       setFormError(null);
                       setForm({ mode: "edit", role: selectedRole });
                     }}
-                    sx={{ height: "30px", gap: "8px" }}
+                    sx={{ gap: "8px" }}
                   />
                   <CustomizableButton
                     variant="outlined"
@@ -378,7 +378,7 @@ const RolesTab: React.FC = () => {
                     ariaLabel={`Delete ${selectedRole.name}`}
                     testId="roles-delete-role"
                     onClick={() => openDelete(selectedRole)}
-                    sx={{ height: "30px", gap: "8px" }}
+                    sx={{ gap: "8px" }}
                   />
                 </Box>
               </Box>

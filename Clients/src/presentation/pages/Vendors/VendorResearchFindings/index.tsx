@@ -53,7 +53,6 @@ import { parseVendorId } from "./parseVendorId";
 import ResearchCredits from "./ResearchCredits";
 import ResearchSettingsModal from "./ResearchSettingsModal";
 import RunSummary from "./RunSummary";
-import { controlHeightSx, iconControlSx } from "./styles";
 import { radiusPx } from "../../../themes/palette";
 
 /** The URL parameter a notification link uses to open the section on one vendor. */
@@ -490,7 +489,6 @@ export default function VendorResearchFindings({
               <CustomizableButton
                 size="small"
                 variant="text"
-                sx={controlHeightSx}
                 onClick={() => onOpenRisk(lastAcceptedRiskId)}
               >
                 Open risk
@@ -499,7 +497,6 @@ export default function VendorResearchFindings({
                 iconOnly
                 size="small"
                 variant="text"
-                sx={iconControlSx}
                 ariaLabel="Close"
                 icon={<X size={16} />}
                 onClick={() => setLastAcceptedRiskId(null)}
@@ -537,7 +534,6 @@ export default function VendorResearchFindings({
                 variant="outlined"
                 startIcon={<Settings2 size={16} />}
                 onClick={() => setSettingsOpen(true)}
-                sx={controlHeightSx}
               >
                 Research settings
               </CustomizableButton>
@@ -613,7 +609,6 @@ export default function VendorResearchFindings({
           <Box>
             <CustomizableButton
               variant="outlined"
-              sx={controlHeightSx}
               // Busy while any read of the list is on its way: a next page asked for during
               // a refresh would be read from the old pages against the new list.
               loading={findings.isFetching}

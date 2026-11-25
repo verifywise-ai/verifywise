@@ -38,14 +38,6 @@ export const MAX_SHADOW_AI_RETENTION_DAYS = 3650;
 
 const INDEFINITE = "";
 
-// The house Field and Select stylesheets pin their height to 34px with
-// selectors of specificity (0,2,1) and (0,3,0); repeating "&" raises these past both.
-const FIELD_HEIGHT_SX = { "&&& .MuiInputBase-root": { height: "30px" } };
-const SELECT_HEIGHT_SX = {
-  "width": "100%",
-  "&&& .MuiSelect-select": { height: "30px", minHeight: "30px", boxSizing: "border-box" },
-};
-
 const SHADOW_AI_FIELDS = {
   shadow_ai_events: "retention_events_days",
   shadow_ai_daily_rollups: "retention_daily_rollups_days",
@@ -347,7 +339,7 @@ export default function EditRetentionModal({ row, rows, onClose }: EditRetention
               items={auditItems}
               value={value}
               onChange={(event) => setValue(String(event.target.value))}
-              sx={SELECT_HEIGHT_SX}
+              sx={{ width: "100%" }}
             />
           )}
           {isGateway && (
@@ -358,7 +350,6 @@ export default function EditRetentionModal({ row, rows, onClose }: EditRetention
                 value={value}
                 onChange={(event) => setValue(event.target.value)}
                 error={error}
-                sx={FIELD_HEIGHT_SX}
               />
               <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <Toggle
@@ -405,7 +396,6 @@ export default function EditRetentionModal({ row, rows, onClose }: EditRetention
                   value={value}
                   onChange={(event) => setValue(event.target.value)}
                   error={error}
-                  sx={FIELD_HEIGHT_SX}
                   helperText={fill(t("From {min} to {max} days."), {
                     min: row.minDays ?? MIN_GATEWAY_RETENTION_DAYS,
                     max: MAX_GATEWAY_RETENTION_DAYS,
@@ -421,7 +411,6 @@ export default function EditRetentionModal({ row, rows, onClose }: EditRetention
               value={value}
               onChange={(event) => setValue(event.target.value)}
               error={error}
-              sx={FIELD_HEIGHT_SX}
               helperText={fill(t("At least {min} months."), { min: MIN_MRM_RETENTION_MONTHS })}
             />
           )}
@@ -433,7 +422,7 @@ export default function EditRetentionModal({ row, rows, onClose }: EditRetention
               value={value}
               onChange={(event) => setValue(String(event.target.value))}
               placeholder={t("No default")}
-              sx={SELECT_HEIGHT_SX}
+              sx={{ width: "100%" }}
             />
           )}
           {row.key in SHADOW_AI_FIELDS && (
@@ -443,7 +432,6 @@ export default function EditRetentionModal({ row, rows, onClose }: EditRetention
               value={value}
               onChange={(event) => setValue(event.target.value)}
               error={error}
-              sx={FIELD_HEIGHT_SX}
               helperText={fill(t("Leave empty or enter 0 to keep indefinitely. Maximum {max}."), {
                 max: MAX_SHADOW_AI_RETENTION_DAYS,
               })}

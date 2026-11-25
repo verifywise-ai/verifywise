@@ -306,7 +306,7 @@ describe("Edit retention modal", () => {
     await waitFor(() => expect(mockUpdateAudit).toHaveBeenCalledWith(12));
   });
 
-  it("renders modal fields and selects at 30px, beating the house 34px stylesheets", async () => {
+  it("renders modal fields and selects at the house height of 34px", async () => {
     // jsdom does not load the components' CSS files, so inject them as written.
     const style = document.createElement("style");
     const dir = resolve(__dirname, "../../../../components/Inputs");
@@ -317,12 +317,12 @@ describe("Edit retention modal", () => {
     try {
       await open("mrm_metrics");
       const input = screen.getByLabelText(/Keep for \(months\)/);
-      expect(getComputedStyle(input.closest(".MuiInputBase-root") as Element).height).toBe("30px");
+      expect(getComputedStyle(input.closest(".MuiInputBase-root") as Element).height).toBe("34px");
       fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
       fireEvent.click(await screen.findByTestId("retention-edit-audit_records"));
       const select = screen.getAllByRole("combobox")[0];
-      expect(getComputedStyle(select).height).toBe("30px");
+      expect(getComputedStyle(select).height).toBe("34px");
     } finally {
       style.remove();
     }

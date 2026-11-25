@@ -25,14 +25,7 @@ import { useBulkSelection } from "../../../application/hooks/useBulkSelection";
 import { useFetchAiAppIds } from "../../../application/hooks/useAiAppBulk";
 import { useTranslation } from "../../../application/hooks/useTranslation";
 import { fill } from "../../../i18n/fill";
-import {
-  mainStackStyle,
-  toolbarStyle,
-  filterRowStyle,
-  controlButtonSx,
-  controlSearchSx,
-  controlSelectSx,
-} from "./style";
+import { mainStackStyle, toolbarStyle, filterRowStyle } from "./style";
 import { STATUS_FILTER_OPTIONS } from "./utils";
 import { MAX_BULK_ROWS } from "./bulkUtils";
 import LifecycleTabs from "../../components/LifecycleTabs";
@@ -297,14 +290,14 @@ export default function AIApps() {
               placeholder="Search AI apps"
               value={searchTerm}
               onChange={(value) => setSearchTerm(value)}
-              sx={{ ...controlSearchSx, width: 260 }}
+              sx={{ width: 260 }}
             />
             <Select
               id="ai-apps-status-filter"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as AiAppStatus | "all")}
               items={[...STATUS_FILTER_OPTIONS]}
-              sx={{ ...controlSelectSx, width: 160 }}
+              sx={{ width: 160 }}
             />
           </Box>
           <Box sx={filterRowStyle}>
@@ -314,7 +307,6 @@ export default function AIApps() {
               startIcon={<ClipboardCheck size={16} strokeWidth={1.5} />}
               onClick={() => navigate("/ai-apps/assessments")}
               testId="ai-apps-assessments-link"
-              sx={controlButtonSx}
             />
             <CustomizableButton
               text="Import"
@@ -323,7 +315,6 @@ export default function AIApps() {
               onClick={() => setIsImportOpen(true)}
               disabled={!canEdit}
               testId="ai-apps-import-button"
-              sx={controlButtonSx}
             />
             <CustomizableButton
               text="New AI app"
@@ -331,7 +322,6 @@ export default function AIApps() {
               startIcon={<Plus size={16} strokeWidth={1.5} />}
               onClick={handleNewApp}
               disabled={isCreatingDisabled}
-              sx={controlButtonSx}
             />
           </Box>
         </Box>

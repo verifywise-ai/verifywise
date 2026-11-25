@@ -100,7 +100,7 @@ const AssignmentsCell: React.FC<AssignmentsCellProps> = ({
           onOpen();
         }}
         testId={`button-training-assignments-${trainingId}`}
-        sx={{ height: "30px", minHeight: "30px", whiteSpace: "nowrap" }}
+        sx={{ whiteSpace: "nowrap" }}
       />
       {summary && summary.overdue > 0 && (
         <Typography sx={{ fontSize: "13px", color: "status.error.text", whiteSpace: "nowrap" }}>

@@ -345,7 +345,6 @@ const IntegratedDashboard: React.FC = () => {
                 variant="outlined"
                 startIcon={<LayoutGrid size={16} strokeWidth={1.5} />}
                 onClick={() => setIsEditingLayout(true)}
-                sx={{ height: "30px" }}
               />
             )}
             {dashboardTab === "overview" && (

@@ -159,7 +159,7 @@ const ImportedFrameworksSection: React.FC<ImportedFrameworksSectionProps> = ({
                       ariaLabel={`Remove ${fw.name}`}
                       isDisabled={isBusy}
                       onClick={() => setToRemove({ linkId, name: fw.name })}
-                      sx={{ minWidth: "100px", height: "30px" }}
+                      sx={{ minWidth: "100px" }}
                     />
                   ) : (
                     <CustomizableButton
@@ -169,7 +169,7 @@ const ImportedFrameworksSection: React.FC<ImportedFrameworksSectionProps> = ({
                       ariaLabel={`Add ${fw.name}`}
                       isDisabled={isBusy}
                       onClick={() => handleAdd(fw)}
-                      sx={{ minWidth: "100px", height: "30px" }}
+                      sx={{ minWidth: "100px" }}
                     />
                   )}
                 </Box>

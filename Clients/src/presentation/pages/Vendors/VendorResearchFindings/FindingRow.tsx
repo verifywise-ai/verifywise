@@ -25,7 +25,6 @@ import type {
   StoredCredibilityBasis,
   VendorRiskFinding,
 } from "../../../../domain/interfaces/i.vendorResearch";
-import { controlHeightSx } from "./styles";
 
 /** The decision being sent for a row: "accept" is the save of the preview form. */
 export type RowAction = "accept" | "dismiss";
@@ -340,7 +339,6 @@ export default function FindingRow({
               isDisabled={disabled}
               ariaDescribedBy={riskId}
               onClick={() => onDismiss(finding)}
-              sx={controlHeightSx}
             >
               Dismiss
             </CustomizableButton>
@@ -349,7 +347,6 @@ export default function FindingRow({
               isDisabled={disabled}
               ariaDescribedBy={riskId}
               onClick={() => onPreview(finding)}
-              sx={controlHeightSx}
             >
               Preview suggested risk
             </CustomizableButton>

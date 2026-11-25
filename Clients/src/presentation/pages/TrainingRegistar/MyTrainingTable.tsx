@@ -114,7 +114,6 @@ const MyTrainingTable: FC = () => {
                         onClick={() => handleToggle(assignment)}
                         isDisabled={isBusy}
                         testId={`button-my-training-toggle-${assignment.id}`}
-                        sx={{ height: "30px", minHeight: "30px" }}
                       />
                     </TableCell>
                   </TableRow>

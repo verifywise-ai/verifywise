@@ -21,7 +21,6 @@ import {
   RiskScoreChip,
 } from "../AIAppAssessments/AssessmentDisplay";
 import AssessmentAnswerModal from "../AIAppAssessments/AssessmentAnswerModal";
-import { controlButtonSx } from "../style";
 
 export default function AIAppAssessmentHistory({ appId }: { appId: number }) {
   const { t } = useTranslation();
@@ -100,7 +99,6 @@ export default function AIAppAssessmentHistory({ appId }: { appId: number }) {
                       variant="outlined"
                       onClick={() => setAnswering(assessment)}
                       testId={`ai-app-history-answer-${assessment.id}`}
-                      sx={controlButtonSx}
                     />
                   )}
                 </Stack>
