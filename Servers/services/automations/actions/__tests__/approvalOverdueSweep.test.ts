@@ -7,6 +7,7 @@ import {
 import { notifyApprovalStepOverdueEscalation } from "../../../inAppNotification.service";
 import { getAllOrganizationsQuery } from "../../../../utils/organization.utils";
 import logger from "../../../../utils/logger/fileLogger";
+import { frontendBaseUrl } from "../../../../utils/frontendUrl.utils";
 
 jest.mock("../../../../utils/approvalRequest.utils", () => ({
   getOverdueApprovalStepsQuery: jest.fn(),
@@ -30,7 +31,7 @@ const mockNotify = notifyApprovalStepOverdueEscalation as jest.Mock;
 const mockOrgs = getAllOrganizationsQuery as jest.Mock;
 const mockLogger = logger as unknown as { info: jest.Mock; error: jest.Mock };
 
-const BASE_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+const BASE_URL = frontendBaseUrl();
 
 const overdueRow = (overrides: Partial<OverdueApprovalStepRow> = {}): OverdueApprovalStepRow => ({
   request_step_id: 101,

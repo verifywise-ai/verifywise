@@ -14,13 +14,13 @@ import { compileMjmlToHtml } from "../../../tools/mjmlCompiler";
 import { emailColorTokens } from "../../../tools/emailColors";
 import logger from "../../../utils/logger/fileLogger";
 import { escapeHtml } from "../../../utils/sanitization.utils";
+import { frontendBaseUrl } from "../../../utils/frontendUrl.utils";
 
-const FRONTEND = process.env.FRONTEND_URL ?? "http://localhost:5173";
 // Deep links surfaced in the digest. The module link lands on Browse (the bare
 // /ai-trust-index path redirects there); tracked and settings are direct.
-const MODULE_URL = FRONTEND + "/ai-trust-index/browse";
-const TRACKED_URL = FRONTEND + "/ai-trust-index/tracked";
-const SETTINGS_URL = FRONTEND + "/ai-trust-index/settings";
+const MODULE_PATH = "/ai-trust-index/browse";
+const TRACKED_PATH = "/ai-trust-index/tracked";
+const SETTINGS_PATH = "/ai-trust-index/settings";
 
 // A single row in a digest section: the human app name (falls back to the slug
 // when no name resolved) and, for changed apps, what moved. Removed apps carry
@@ -152,9 +152,9 @@ async function renderDigest(orgChanged: DigestItem[], orgRemoved: DigestItem[]):
   return compileMjmlToHtml(template, {
     changedSectionHtml: changedSectionHtml(orgChanged),
     removedSectionHtml: removedSectionHtml(orgRemoved),
-    moduleUrl: MODULE_URL,
-    trackedUrl: TRACKED_URL,
-    settingsUrl: SETTINGS_URL,
+    moduleUrl: frontendBaseUrl() + MODULE_PATH,
+    trackedUrl: frontendBaseUrl() + TRACKED_PATH,
+    settingsUrl: frontendBaseUrl() + SETTINGS_PATH,
   });
 }
 

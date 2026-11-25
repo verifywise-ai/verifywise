@@ -5,6 +5,7 @@ import {
 } from "../../../utils/approvalRequest.utils";
 import { notifyApprovalStepOverdueEscalation } from "../../inAppNotification.service";
 import logger, { logStructured } from "../../../utils/logger/fileLogger";
+import { frontendBaseUrl } from "../../../utils/frontendUrl.utils";
 
 /**
  * Approval SLA escalation — hourly sweep.
@@ -32,7 +33,7 @@ export interface ApprovalOverdueSweepSummary {
 export async function runApprovalOverdueSweep(
   organizationId: number,
 ): Promise<ApprovalOverdueSweepSummary> {
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  const baseUrl = frontendBaseUrl();
   const rows = await getOverdueApprovalStepsQuery(organizationId);
   let escalated = 0;
 

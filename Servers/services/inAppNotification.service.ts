@@ -22,6 +22,7 @@ import { deadlineNoticeKey } from "../utils/deadline.utils";
 import { formatReviewDate } from "../utils/policyReviewDate.utils";
 import { incidentPagePath } from "../utils/incidentLinks.utils";
 import { approvalLinkedEntity, approvalRequestPath } from "../utils/approvalLinks.utils";
+import { frontendBaseUrl } from "../utils/frontendUrl.utils";
 
 /**
  * Build a frontend-compatible URL for a given entity type and id.
@@ -1852,7 +1853,7 @@ export const notifyAiAppAssessmentsAssigned = async (
     action_url: actionUrl,
   });
 
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const baseUrl = frontendBaseUrl();
   notificationService
     .sendEmailWithTemplate(owner.email, title, EMAIL_TEMPLATES.AI_APP_ASSESSMENTS_ASSIGNED, {
       summary_title: title,

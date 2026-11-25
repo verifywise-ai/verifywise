@@ -16,6 +16,7 @@ import {
   VENDOR_REVIEW_OPEN_CONDITION,
 } from "../homeQueue/sources/vendorReviews.source";
 import type { IVendor } from "../../domain.layer/interfaces/i.vendor";
+import { frontendBaseUrl } from "../../utils/frontendUrl.utils";
 
 /** One action of an active `vendor_review_date_approaching` automation. */
 export interface ReminderActionRow {
@@ -106,7 +107,7 @@ const byAutomation = (rows: ReminderActionRow[]): ReminderActionRow[][] => {
 export async function sendVendorReviewDateNotification(): Promise<void> {
   const organizations = await getAllOrganizationsQuery();
   const today = utcToday();
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  const baseUrl = frontendBaseUrl();
 
   for (const org of organizations) {
     const organizationId = org.id!;

@@ -28,6 +28,7 @@ import { createNewTaskQuery } from "../../utils/task.utils";
 import { createTaskEntityLinkQuery, incidentLinkName } from "../../utils/taskEntityLink.utils";
 import { recordEntityCreation } from "../../utils/changeHistory.base.utils";
 import { incidentPagePath } from "../../utils/incidentLinks.utils";
+import { frontendBaseUrl } from "../../utils/frontendUrl.utils";
 import { TaskPriority } from "../../domain.layer/enums/task-priority.enum";
 import { TaskStatus } from "../../domain.layer/enums/task-status.enum";
 import { ADMIN_ROLE_ID } from "../../constants/roles";
@@ -61,8 +62,6 @@ export interface ResponseIncident {
   ownerName: string | null;
   archived: boolean;
 }
-
-const frontendUrl = (): string => process.env.FRONTEND_URL || "http://localhost:5173";
 
 /**
  * Loads one incident by id in the organization, or null when it does not
@@ -292,7 +291,7 @@ export async function createRemediationTask(
       `Incident ${incident.reference} in "${incident.useCase}" was rated ${incident.severity}` +
       (incident.type ? ` (${incident.type})` : "") +
       `. Investigate it, contain the harm and record the mitigations and corrective actions on ` +
-      `the incident: ${frontendUrl()}${incidentPagePath(incident.id)}\n\n` +
+      `the incident: ${frontendBaseUrl()}${incidentPagePath(incident.id)}\n\n` +
       `Created by the critical incident response workflow.`;
     const task = await createNewTaskQuery(
       {
@@ -375,7 +374,7 @@ export async function createRemediationTask(
           priority: TaskPriority.HIGH,
         },
         assignerName,
-        frontendUrl(),
+        frontendBaseUrl(),
       );
     } catch (error) {
       logger.error(
@@ -433,7 +432,12 @@ export async function notifyAdminsOfCriticalIncident(
   for (const adminId of admins) {
     built.set(
       adminId,
-      await buildCriticalIncidentEscalation(adminId, incident, ctx.workflowRunId, frontendUrl()),
+      await buildCriticalIncidentEscalation(
+        adminId,
+        incident,
+        ctx.workflowRunId,
+        frontendBaseUrl(),
+      ),
     );
   }
 

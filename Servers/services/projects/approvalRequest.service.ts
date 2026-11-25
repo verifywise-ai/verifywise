@@ -15,6 +15,7 @@ import { getUserByIdQuery } from "../../utils/user.utils";
 import { moveUseCaseIntoReview } from "../../utils/lifecycle.utils";
 import { notifyApprovalRequested } from "../inAppNotification.service";
 import { logStructured } from "../../utils/logger/fileLogger";
+import { frontendBaseUrl } from "../../utils/frontendUrl.utils";
 
 export interface UseCaseApprovalRequestResult {
   request: ApprovalRequestModel;
@@ -224,7 +225,7 @@ export const notifyUseCaseApprovalRequested = async (
 
   const requester = await getUserByIdQuery(requestedBy, null, organizationId);
   const requesterName = requester ? `${requester.name} ${requester.surname}`.trim() : "Someone";
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  const baseUrl = frontendBaseUrl();
 
   await Promise.all(
     approvers.map((approver) =>

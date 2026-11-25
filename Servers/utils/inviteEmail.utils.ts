@@ -1,7 +1,7 @@
 import path from "path";
 import fs from "fs/promises";
 import { generateInviteTokenUntil } from "./jwt.utils";
-import { frontEndUrl } from "../config/constants";
+import { frontendBaseUrl } from "./frontendUrl.utils";
 import { sendEmail } from "../services/emailService";
 import { translate } from "./i18n.utils";
 import { getUserByEmailQuery } from "./user.utils";
@@ -122,9 +122,11 @@ export const sendInviteEmail = async (params: InviteEmailParams): Promise<Invite
 
   // Chosen when the email is sent, so a resend follows the address's current
   // state: an account by now gets the join link instead of the sign-up link.
-  const link = `${frontEndUrl}/${recipient.hasAccount ? "join" : "user-reg"}?${new URLSearchParams({
-    token,
-  }).toString()}`;
+  const link = `${frontendBaseUrl()}/${recipient.hasAccount ? "join" : "user-reg"}?${new URLSearchParams(
+    {
+      token,
+    },
+  ).toString()}`;
 
   try {
     const templatePath = path.resolve(__dirname, "../templates/account-creation-email.mjml");

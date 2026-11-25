@@ -14,8 +14,7 @@ import { EMAIL_TEMPLATES } from "../../constants/emailTemplates";
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
 import logger from "../../utils/logger/fileLogger";
-
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+import { frontendBaseUrl } from "../../utils/frontendUrl.utils";
 
 /** Agent Control agent key enforcement modes, as shown to people. */
 const ENFORCEMENT_MODE_LABELS: Record<string, string> = {
@@ -64,7 +63,7 @@ export async function notifyBudgetWarning(
           title: "AI Gateway budget warning",
           message: `Spend has reached ${spendPct}% of the $${Number(budget.monthly_limit_usd).toFixed(2)} monthly limit.`,
           entity_type: NotificationEntityType.AI_GATEWAY,
-          action_url: `${FRONTEND_URL}/ai-gateway/settings`,
+          action_url: `${frontendBaseUrl()}/ai-gateway/settings`,
         },
         true,
         {
@@ -80,7 +79,7 @@ export async function notifyBudgetWarning(
               ? "Enabled (requests will be rejected)"
               : "Disabled (requests continue)",
             total_requests: "—",
-            gateway_url: `${FRONTEND_URL}/ai-gateway/analytics`,
+            gateway_url: `${frontendBaseUrl()}/ai-gateway/analytics`,
           },
         },
       ).catch((err) => logger.error(`Failed to send budget warning to admin ${admin.id}:`, err)),
@@ -110,7 +109,7 @@ export async function notifyBudgetExhausted(
           title: "AI Gateway budget exhausted",
           message: `Monthly budget of $${Number(budget.monthly_limit_usd).toFixed(2)} is exhausted. All requests are being rejected.`,
           entity_type: NotificationEntityType.AI_GATEWAY,
-          action_url: `${FRONTEND_URL}/ai-gateway/settings`,
+          action_url: `${frontendBaseUrl()}/ai-gateway/settings`,
         },
         true,
         {
@@ -120,7 +119,7 @@ export async function notifyBudgetExhausted(
             recipient_name: admin.name,
             current_spend: Number(budget.current_spend_usd).toFixed(2),
             monthly_limit: Number(budget.monthly_limit_usd).toFixed(2),
-            settings_url: `${FRONTEND_URL}/ai-gateway/settings`,
+            settings_url: `${frontendBaseUrl()}/ai-gateway/settings`,
           },
         },
       ).catch((err) => logger.error(`Failed to send budget exhausted to admin ${admin.id}:`, err)),
@@ -153,7 +152,7 @@ export async function notifyGuardrailSpike(
           title: "Guardrail activity spike",
           message: `${stats.blocked_count} blocked and ${stats.masked_count} masked requests in the last hour.`,
           entity_type: NotificationEntityType.AI_GATEWAY,
-          action_url: `${FRONTEND_URL}/ai-gateway/guardrails`,
+          action_url: `${frontendBaseUrl()}/ai-gateway/guardrails`,
         },
         true,
         {
@@ -166,7 +165,7 @@ export async function notifyGuardrailSpike(
             pii_count: String(stats.pii_count),
             content_filter_count: String(stats.content_filter_count),
             active_rules: String(stats.active_rules),
-            guardrails_url: `${FRONTEND_URL}/ai-gateway/guardrails`,
+            guardrails_url: `${frontendBaseUrl()}/ai-gateway/guardrails`,
           },
         },
       ).catch((err) => logger.error(`Failed to send guardrail spike to admin ${admin.id}:`, err)),
@@ -195,7 +194,7 @@ export async function notifyVirtualKeyBudgetExhausted(
           title: "Virtual key budget exhausted",
           message: `Virtual key "${keyName}" has exhausted its $${limit.toFixed(2)} budget. Requests using this key are now rejected.`,
           entity_type: NotificationEntityType.AI_GATEWAY,
-          action_url: `${FRONTEND_URL}/ai-gateway/virtual-keys`,
+          action_url: `${frontendBaseUrl()}/ai-gateway/virtual-keys`,
         },
         true,
         {
@@ -206,7 +205,7 @@ export async function notifyVirtualKeyBudgetExhausted(
             key_name: keyName,
             current_spend: spend.toFixed(4),
             monthly_limit: limit.toFixed(2),
-            settings_url: `${FRONTEND_URL}/ai-gateway/virtual-keys`,
+            settings_url: `${frontendBaseUrl()}/ai-gateway/virtual-keys`,
           },
         },
       ).catch((err) =>
@@ -242,7 +241,7 @@ export async function notifyApprovalPending(
         title: "Tool call waiting for approval",
         message: `${keyLabel} requested "${approval.tool_name}" and is waiting for your approval.`,
         entity_type: NotificationEntityType.AI_GATEWAY,
-        action_url: `${FRONTEND_URL}/ai-gateway/mcp/approvals`,
+        action_url: `${frontendBaseUrl()}/ai-gateway/mcp/approvals`,
       }).catch((err) =>
         logger.error(`Failed to send approval-pending notice to admin ${admin.id}:`, err),
       ),
@@ -266,7 +265,7 @@ export async function notifyConfigChange(
     entityName?: string; // e.g., "prod-gpt4o" or "Block credit cards"
     action?: string; // "created" | "updated" | "deleted" | "revoked" | "approved" | ... | "enforcement_mode_changed"
     detail?: string; // e.g., "Provider: openai"
-    actionUrl?: string; // link to the relevant page; a path ("/ai-gateway/...") is prefixed with FRONTEND_URL
+    actionUrl?: string; // link to the relevant page; a path ("/ai-gateway/...") is prefixed with the frontend address
     actionLabel?: string; // button text e.g., "View endpoints"
     oldMode?: string; // enforcement_mode_changed only: "enforce" | "monitor"
     newMode?: string; // enforcement_mode_changed only: "enforce" | "monitor"
@@ -334,7 +333,7 @@ export async function notifyConfigChange(
   // Wording for the title and email subject ("Agent key mode changed").
   const actionText = action === "enforcement_mode_changed" ? "mode changed" : action;
   const rawUrl = event?.actionUrl || "/ai-gateway";
-  const actionUrl = rawUrl.startsWith("/") ? `${FRONTEND_URL}${rawUrl}` : rawUrl;
+  const actionUrl = rawUrl.startsWith("/") ? `${frontendBaseUrl()}${rawUrl}` : rawUrl;
   const actionLabel = event?.actionLabel || "Open AI Gateway";
   // The gateway marks the changes worth an email (keys revoked, monitor only
   // switched, guardrails removed, ...); everything else is in-app only.

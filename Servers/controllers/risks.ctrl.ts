@@ -53,6 +53,7 @@ import {
   notifyNewRiskApprover,
   notifyRiskAssignee,
 } from "../services/riskApproverNotification.service";
+import { frontendBaseUrl } from "../utils/frontendUrl.utils";
 
 type AssignedRisk = Pick<IRisk, "id" | "risk_owner" | "risk_name" | "risk_description">;
 
@@ -69,7 +70,7 @@ async function notifyNewRiskOwners(
   risks: AssignedRisk[],
 ): Promise<void> {
   if (risks.length === 0) return;
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  const baseUrl = frontendBaseUrl();
   const assignerName = await getUserNameById(assignerUserId, organizationId);
 
   const byOwner = new Map<number, AssignedRisk[]>();

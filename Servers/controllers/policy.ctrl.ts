@@ -58,6 +58,7 @@ import {
   assertPolicyUpdateAllowed,
   policyFieldsWritten,
 } from "../utils/policyStatus.utils";
+import { frontendBaseUrl } from "../utils/frontendUrl.utils";
 
 /**
  * Only a reviewer assigned to the policy, or an Admin, may approve or reject
@@ -498,7 +499,7 @@ export class PolicyController {
       await transaction.commit();
 
       // Send notifications to each reviewer
-      const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+      const baseUrl = frontendBaseUrl();
       const requesterUser = (await sequelize.query(
         `SELECT name, surname FROM users WHERE id = :userId`,
         { replacements: { userId }, type: QueryTypes.SELECT },
@@ -583,7 +584,7 @@ export class PolicyController {
       await transaction.commit();
 
       // Notify the policy author
-      const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+      const baseUrl = frontendBaseUrl();
       const reviewerUser = (await sequelize.query(
         `SELECT name, surname FROM users WHERE id = :reviewerId`,
         { replacements: { reviewerId }, type: QueryTypes.SELECT },
@@ -668,7 +669,7 @@ export class PolicyController {
       await transaction.commit();
 
       // Notify the policy author
-      const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+      const baseUrl = frontendBaseUrl();
       const reviewerUser = (await sequelize.query(
         `SELECT name, surname FROM users WHERE id = :reviewerId`,
         { replacements: { reviewerId }, type: QueryTypes.SELECT },

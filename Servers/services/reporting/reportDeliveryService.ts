@@ -3,6 +3,7 @@ import path from "path";
 import { uploadFile } from "../../utils/fileUpload.utils";
 import { sendAutomationEmail } from "../emailService";
 import { compileMjmlToHtml } from "../../tools/mjmlCompiler";
+import { frontendBaseUrl } from "../../utils/frontendUrl.utils";
 
 export interface DeliveryArtifact {
   content: Buffer;
@@ -81,7 +82,7 @@ export async function deliverReport(delivery: any, artifact: DeliveryArtifact, c
       // One email carries both channels: a link when sendEmailLink is on, the
       // file itself when attachFile is on. Two enabled channels must not mean
       // two emails to the same people.
-      const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+      const baseUrl = frontendBaseUrl();
       const downloadUrl = canLinkToDownload
         ? `${baseUrl}/api/reporting/runs/${ctx.runId}/download`
         : "";

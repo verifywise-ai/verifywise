@@ -17,6 +17,7 @@ import {
 } from "../../../inAppNotification.service";
 import { sendDeadlineDueSoonSlackNotification } from "../../../slack/deadlineDueSoonNotification";
 import { getAllOrganizationsQuery } from "../../../../utils/organization.utils";
+import { frontendBaseUrl } from "../../../../utils/frontendUrl.utils";
 
 jest.mock("../../../../utils/deadline.utils", () => ({
   getRisksApproachingDeadlineQuery: jest.fn(),
@@ -48,7 +49,7 @@ const mockEmailModelRisk = notifyModelRiskDueSoon as jest.Mock;
 const mockSlack = sendDeadlineDueSoonSlackNotification as jest.Mock;
 const mockOrgs = getAllOrganizationsQuery as jest.Mock;
 
-const BASE_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+const BASE_URL = frontendBaseUrl();
 const DAY = 86400000;
 
 const riskRow = (overrides: Partial<DeadlineEscalationRow> = {}): DeadlineEscalationRow => ({

@@ -17,6 +17,7 @@ import {
   notifyUserAssignedMany,
 } from "./inAppNotification.service";
 import logger from "../utils/logger/fileLogger";
+import { frontendBaseUrl } from "../utils/frontendUrl.utils";
 
 type NotifiedRisk = Pick<IRisk, "id" | "risk_name" | "risk_description">;
 
@@ -52,7 +53,7 @@ export async function notifyRiskAssignee(
   assigneeId: number,
   roleType: Extract<AssignmentRoleType, "Risk Owner" | "Risk Approver">,
 ): Promise<void> {
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  const baseUrl = frontendBaseUrl();
   const assignerName = await getUserNameById(assignerUserId, organizationId);
   const projectTitles = await getProjectTitlesByRiskIdsQuery([risk.id!], organizationId);
   await notifyUserAssigned(
@@ -109,7 +110,7 @@ export async function notifyRiskApprovers(
   }
   if (byApprover.size === 0) return;
 
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  const baseUrl = frontendBaseUrl();
   let assignerName: string | undefined;
   for (const [approverId, approverRisks] of byApprover) {
     try {

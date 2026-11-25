@@ -29,6 +29,7 @@ import { getApprovalStatusQuery, hasPendingApprovalQuery } from "../../utils/app
 import { requireOrganization } from "../scope";
 import { resolveUseCaseFrameworks } from "../frameworks";
 import { result, type ToolDef } from "../tool";
+import { frontendBaseUrl } from "../../utils/frontendUrl.utils";
 
 /**
  * Geography ids, mirroring the list the console offers (see
@@ -86,7 +87,7 @@ async function notifyOwnerAssigned(
         entityUrl: `/project-view?projectId=${useCase.id}`,
       },
       assignerName,
-      process.env.FRONTEND_URL || "http://localhost:3000",
+      frontendBaseUrl(),
       { description: useCase.description },
     );
   } catch (error) {

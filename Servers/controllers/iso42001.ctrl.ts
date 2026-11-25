@@ -37,6 +37,7 @@ import logger from "../utils/logger/fileLogger";
 
 import { translateError } from "../utils/i18n.utils";
 import { toId } from "../utils/validations/validation.utils";
+import { frontendBaseUrl } from "../utils/frontendUrl.utils";
 // Helper function to get user name
 async function getUserNameById(userId: number): Promise<string> {
   const result = await sequelize.query<{ name: string; surname: string }>(
@@ -62,7 +63,7 @@ async function notifyIso42001Assignment(
   // Only notify if assigned to a new user
   if (newUserId && newUserId !== oldUserId) {
     const assignerName = await getUserNameById(req.userId!);
-    const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const baseUrl = frontendBaseUrl();
 
     let urlPath: string;
     let parentType: string | undefined;

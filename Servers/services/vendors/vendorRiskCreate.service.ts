@@ -16,6 +16,7 @@ import { enqueueVendorRiskLinkRecompute } from "../automations/automationProduce
 import { notifyUserAssigned } from "../inAppNotification.service";
 import { notifyVendorRiskCandidates } from "../riskLinks/vendorCandidates";
 import { isUserOfOrganization } from "../vendorResearch/assignee";
+import { frontendBaseUrl } from "../../utils/frontendUrl.utils";
 
 /**
  * Creating a vendor risk inside a transaction the caller owns: the accept of a research finding,
@@ -172,7 +173,7 @@ async function notifyActionOwner(
   organizationId: number,
 ): Promise<void> {
   const assignerName = userId ? await getUserNameById(userId) : UNKNOWN_ASSIGNER;
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const baseUrl = frontendBaseUrl();
 
   // Get vendor name for context
   let vendorName: string | undefined;

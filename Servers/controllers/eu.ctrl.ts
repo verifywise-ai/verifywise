@@ -36,6 +36,7 @@ import logger from "../utils/logger/fileLogger";
 import { hasPendingApprovalQuery } from "../utils/approvalRequest.utils";
 
 import { translateError } from "../utils/i18n.utils";
+import { frontendBaseUrl } from "../utils/frontendUrl.utils";
 // Helper function to get user name
 async function getUserNameById(userId: number): Promise<string> {
   const result = await sequelize.query<{ name: string; surname: string }>(
@@ -59,7 +60,7 @@ async function notifyEuAiActControlAssignment(
   if (!newUserId || newUserId === oldUserId) return;
 
   const assignerName = await getUserNameById(req.userId!);
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const baseUrl = frontendBaseUrl();
 
   const controlResult = await sequelize.query<{
     title: string;
