@@ -107,7 +107,7 @@ function ButtonShowcase() {
       {/* Dashboard Action Buttons */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" gutterBottom>
-          Dashboard Action Buttons (30px)
+          Dashboard Action Buttons (34px)
         </Typography>
         <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
           <Box
@@ -118,9 +118,9 @@ function ButtonShowcase() {
               "color": "white",
               "fontWeight": 500,
               "fontSize": "12px",
-              "height": "30px",
-              "minHeight": "30px",
-              "maxHeight": "30px",
+              "height": "34px",
+              "minHeight": "34px",
+              "maxHeight": "34px",
               "padding": "0 14px",
               "borderRadius": radiusPx.sm,
               "border": "none",
@@ -144,9 +144,9 @@ function ButtonShowcase() {
               "color": "white",
               "fontWeight": 500,
               "fontSize": "12px",
-              "height": "30px",
-              "minHeight": "30px",
-              "maxHeight": "30px",
+              "height": "34px",
+              "minHeight": "34px",
+              "maxHeight": "34px",
               "padding": "0 14px",
               "borderRadius": radiusPx.sm,
               "border": "none",

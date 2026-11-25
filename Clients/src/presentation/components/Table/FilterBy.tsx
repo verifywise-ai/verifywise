@@ -155,7 +155,7 @@ const LogicToggle: React.FC<{
         borderColor: "divider",
         borderRadius: radiusPx.sm,
         overflow: "hidden",
-        height: "30px",
+        height: "34px",
         bgcolor: "action.hover",
         padding: "2px",
         gap: "2px",
