@@ -1263,7 +1263,6 @@ async function deleteUseCasesUnderClaim(
             {
               userId,
               alreadyLocked: true,
-              enqueueAutomationAfterCommit: true,
               archiveRisksLinkedOnlyHere: true,
             },
           );

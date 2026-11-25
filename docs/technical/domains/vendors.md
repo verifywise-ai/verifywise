@@ -1672,6 +1672,8 @@ Strings are translated by the DOM translator from `i18n/translations.ts` (de, fr
 | `vendor_deleted` | Vendor deleted |
 | `vendor_review_date_approaching` | Daily sweep: the review date is today plus the automation's `daysBefore` (UTC days) |
 
+`vendor_added`, `vendor_updated` and `vendor_deleted` run every action of every active automation of the trigger; an automation that existed before that change keeps only the event's first action until it is edited and saved (`legacy_first_action_only`). See [Automations → Dispatch of entity events](../infrastructure/automations.md#dispatch-of-entity-events).
+
 Review reminders exist only as this automation: an organization without an
 active `vendor_review_date_approaching` automation gets no reminder email or
 in-app notice. The Home queue lists due vendors regardless. Both use the same

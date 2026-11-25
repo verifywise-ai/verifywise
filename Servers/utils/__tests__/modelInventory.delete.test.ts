@@ -27,7 +27,11 @@ const sqls = () => mockQuery.mock.calls.map((c) => String(c[0]));
 beforeEach(() => {
   mockQuery.mockReset();
   mockQuery.mockImplementation(async (sql: string) =>
-    /DELETE FROM model_inventories/.test(sql) ? [[{ id: 50 }], 1] : [[], 0],
+    /DELETE FROM model_inventories/.test(sql)
+      ? [[{ id: 50 }], 1]
+      : /FROM automation_triggers/.test(sql)
+        ? [] // no model_deleted automation
+        : [[], 0],
   );
   mockRelease.mockReset();
   mockRelease.mockResolvedValue({ archived: [], kept: [] });

@@ -322,6 +322,8 @@ Task events trigger automations for notifications:
 | `task_updated` | Task modified |
 | `task_deleted` | Task soft deleted |
 
+`task_added`, `task_updated` and `task_deleted` run every action of every active automation of the trigger; an automation that existed before that change keeps only the event's first action until it is edited and saved (`legacy_first_action_only`). See [Automations → Dispatch of entity events](../infrastructure/automations.md#dispatch-of-entity-events).
+
 ### Template Variables
 
 ```

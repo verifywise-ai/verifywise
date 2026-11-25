@@ -531,9 +531,23 @@ CREATE INDEX idx_automation_execution_logs_triggered_at
   ON automation_execution_logs(triggered_at DESC);
 ```
 
-### Dispatch of risk and policy events
+### Dispatch of entity events
 
-Risk and policy triggers run every action of every active automation, ordered by automation id and then action order, enqueued one after another after the save commits (`getEventAutomationActionsQuery`, `enqueueAutomationActions` in `Servers/utils/automation/automationActions.utils.ts`). Automations that existed before every-action dispatch keep their old behaviour until someone edits and saves them: only the event's first action runs (`automations.legacy_first_action_only`, set by migration `20261114200100-legacy-automation-first-action`; the dispatch keeps the single first legacy row by action order, then automation id). Saving the automation in the editor clears the flag; the active toggle does not. New automations run every action. Other triggers (AI Detection) use `getActiveAutomationActionsQuery` and always run every action.
+The added/updated/deleted triggers of risks, policies, vendors, models, use cases (`project_*`), tasks, training records and incidents run every action of every active automation of the trigger, ordered by automation id and then action order, enqueued one after another (`runEventAutomations`, which wraps `getEventAutomationActionsQuery` and `enqueueAutomationActions` in `Servers/utils/automation/automationActions.utils.ts`).
+
+When the actions are read and enqueued:
+
+| Events | Read | Enqueued |
+|--------|------|----------|
+| Every entity event except the two below | Inside the write's transaction | After that transaction commits: a rolled-back write sends nothing, and a slow or unreachable queue never holds the write's row locks |
+| `project_deleted` | Inside the delete's transaction, in a savepoint (`contained`): if the lookup or the owner-name query fails, it is rolled back to the savepoint and logged, nothing is enqueued, and the delete still commits | After the delete commits |
+| `incident_updated` | After the update has committed, outside any transaction (`enqueueIncidentUpdatedAutomations`, called by the incident service) | At once, right after that read |
+
+**A failed enqueue never fails the write.** Each action is enqueued on its own; if the queue (Redis) refuses one, the error is logged with the event (for example `vendor_deleted, vendor 12`) and the other actions are still enqueued. The write itself has already committed by then and the request succeeds, so the user gets no error and the email or Slack message is simply not sent. (Task, training and use case add/update used to enqueue inside the transaction, where a queue failure failed the whole request.)
+
+Automations that existed before every-action dispatch keep their old behaviour until someone edits and saves them: only the event's first action runs (`automations.legacy_first_action_only`; the dispatch keeps the single first legacy row by action order, a missing order last as in the old `ORDER BY aa."order"`, then automation id, and every row of the other automations). Migration `20261114200100-legacy-automation-first-action` set the flag on risk and policy automations, `20261124112309-legacy-automation-first-action-entities` on the vendor, model, use case, task, training and incident ones. Saving the automation in the editor (or an Advisor update that sends its actions) clears the flag; the active toggle does not. New automations run every action.
+
+Other triggers always ran every action and are not flagged: AI Detection (`getActiveAutomationActionsQuery`), `scheduled_report` (one job per action row) and `vendor_review_date_approaching` (every action of every matching automation, per due vendor).
 
 ### Seeded Triggers
 

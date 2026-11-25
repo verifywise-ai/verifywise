@@ -22,7 +22,8 @@ import { TaskStatus } from "../../domain.layer/enums/task-status.enum";
 
 const mockQuery = sequelize.query as unknown as jest.Mock<any>;
 const mockEnqueue = enqueueAutomationAction as unknown as jest.Mock<any>;
-const tx = { id: "tx" } as any;
+const commitHooks: Array<() => unknown> = [];
+const tx = { id: "tx", afterCommit: (hook: () => unknown) => commitHooks.push(hook) } as any;
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -33,15 +34,13 @@ beforeEach(() => {
     if (sql.includes("INSERT INTO task_assignees")) return [[], 1];
     if (sql.includes("automation_triggers")) {
       return [
-        [
-          {
-            trigger_key: "task_added",
-            action_key: "send_email",
-            automation_id: 3,
-            params: { subject: "New task {{task.creator}}", body: "b" },
-          },
-        ],
-        1,
+        {
+          action_key: "send_email",
+          automation_id: 3,
+          params: { subject: "New task {{task.creator}}", body: "b" },
+          order: 1,
+          legacy_first_action_only: false,
+        },
       ];
     }
     // The creator-name lookup: no user for a NULL creator_id.
@@ -66,6 +65,9 @@ describe("createNewTaskQuery without a creator", () => {
     );
 
     expect(task.id).toBe(700);
+    // Queued only once the transaction commits.
+    expect(mockEnqueue).not.toHaveBeenCalled();
+    commitHooks.forEach((hook) => hook());
     expect(mockEnqueue).toHaveBeenCalledTimes(1);
     expect(mockEnqueue).toHaveBeenCalledWith(
       "send_email",
