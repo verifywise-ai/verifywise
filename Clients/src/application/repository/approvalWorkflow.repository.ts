@@ -1,4 +1,8 @@
 import { apiServices } from "../../infrastructure/api/networkServices";
+import {
+  buildApprovalWorkflowBody,
+  type ApprovalWorkflowFormData,
+} from "../utils/approvalWorkflowBody";
 
 export async function getAllApprovalWorkflows({
   signal,
@@ -38,6 +42,33 @@ export async function updateApprovalWorkflow({
 }): Promise<any> {
   const response = await apiServices.put(`/approval-workflows/${id}`, body);
   return response;
+}
+
+/** A saved approval workflow, as the API returns it. */
+export interface SavedApprovalWorkflow {
+  id: number;
+  workflow_title: string;
+  entity_type: string;
+}
+
+/**
+ * Create (no `id`) or update an approval workflow from the workflow modal's
+ * form data. Shared by the Approval workflows page and the use case screens
+ * that create a workflow in place. Returns the saved workflow.
+ */
+export async function saveApprovalWorkflow({
+  id,
+  formData,
+}: {
+  id?: number;
+  formData: ApprovalWorkflowFormData;
+}): Promise<SavedApprovalWorkflow | undefined> {
+  const body = buildApprovalWorkflowBody(formData);
+  const response =
+    id === undefined
+      ? await createApprovalWorkflow({ body })
+      : await updateApprovalWorkflow({ id, body });
+  return (response?.data as { data?: SavedApprovalWorkflow } | undefined)?.data;
 }
 
 export async function deleteApprovalWorkflow({ id }: { id: number }): Promise<any> {

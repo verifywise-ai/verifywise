@@ -30,6 +30,12 @@ export interface ICreateApprovalWorkflowProps {
     auto_approve_max_risk?: string | null;
   };
   isEdit?: boolean;
+  /**
+   * Entity id (see the modal's `arrays.ts`) a new workflow is created for.
+   * Presets the Entity select and locks it, e.g. 1 when a use case screen
+   * creates a workflow in place. Omitted on the Approval workflows page.
+   */
+  fixedEntity?: number;
   onSuccess?: (data: {
     workflow_title: string;
     entity: number;

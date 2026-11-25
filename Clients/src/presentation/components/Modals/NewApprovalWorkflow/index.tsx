@@ -38,6 +38,7 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
   setIsOpen,
   initialData,
   isEdit = false,
+  fixedEntity,
   onSuccess,
 }) => {
   const theme = useTheme();
@@ -59,7 +60,7 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
 
   const [stepsCount, setStepsCount] = useState(1);
   const [workflowTitle, setWorkflowTitle] = useState("");
-  const [entity, setEntity] = useState(0);
+  const [entity, setEntity] = useState(fixedEntity ?? 0);
   const [autoApproveMaxRisk, setAutoApproveMaxRisk] = useState("");
   const [workflowSteps, setWorkflowSteps] = useState<ApprovalWorkflowStepModel[]>([]);
   const [users, setUsers] = useState<Array<{ _id: number; name: string; surname?: string }>>([]);
@@ -108,7 +109,7 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
 
   const clearForm = () => {
     setWorkflowTitle("");
-    setEntity(0);
+    setEntity(fixedEntity ?? 0);
     setAutoApproveMaxRisk("");
     setWorkflowSteps([new ApprovalWorkflowStepModel()]);
     setStepsCount(1);
@@ -225,6 +226,7 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
             label="Entity"
             error={errors.entity}
             isRequired
+            disabled={fixedEntity !== undefined}
             onChange={(e: any) => {
               setEntity(e.target.value);
               clearFieldError("entity");
