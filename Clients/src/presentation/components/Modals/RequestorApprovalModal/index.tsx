@@ -71,6 +71,8 @@ import {
 import { logEngine } from "../../../../application/tools/log.engine";
 import { showAlert } from "../../../../application/tools/alertUtils";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
+import { useQueryClient } from "@tanstack/react-query";
+import { useCaseApprovalWorkflowKeys } from "../../../../application/hooks/useUseCaseApprovalWorkflows";
 import {
   approveMayHaveChangedEntity,
   getApproveOutcome,
@@ -171,6 +173,10 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({
 }) => {
   const formatDate = useFormattedDate();
   const { t } = useTranslation();
+  // A decision changes the approval status the use case overview shows.
+  const queryClient = useQueryClient();
+  const refreshUseCaseWorkflows = () =>
+    void queryClient.invalidateQueries({ queryKey: useCaseApprovalWorkflowKeys.all });
   const [selectedItem, setSelectedItem] = useState<IMenuItemExtended | null>(null);
   const [comment, setComment] = useState<string>("");
   const [commentError, setCommentError] = useState<string | undefined>(undefined);
@@ -307,6 +313,7 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({
 
       // Refresh the count in the header
       onRefresh?.();
+      refreshUseCaseWorkflows();
 
       // Check if the request is still pending after approval
       // If not, it means all steps are completed and we should close the modal
@@ -396,6 +403,7 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({
 
       // Refresh the count in the header
       onRefresh?.();
+      refreshUseCaseWorkflows();
 
       onClose();
     } catch (error) {
@@ -428,6 +436,7 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({
 
       // Refresh the count in the header
       onRefresh?.();
+      refreshUseCaseWorkflows();
 
       onClose();
     } catch (error) {

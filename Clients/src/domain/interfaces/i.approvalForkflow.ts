@@ -30,12 +30,22 @@ export interface ICreateApprovalWorkflowProps {
     auto_approve_max_risk?: string | null;
   };
   isEdit?: boolean;
+  /**
+   * Entity id (see the modal's `arrays.ts`) a new workflow is created for.
+   * Presets the Entity select and locks it, e.g. 1 when a use case screen
+   * creates a workflow in place. Omitted on the Approval workflows page.
+   */
+  fixedEntity?: number;
+  /**
+   * Saves the workflow. The modal waits for it: the form is cleared once it
+   * resolves, and a rejection keeps the input and shows its message.
+   */
   onSuccess?: (data: {
     workflow_title: string;
     entity: number;
     steps: ApprovalWorkflowStepModel[];
     auto_approve_max_risk: string | null;
-  }) => void;
+  }) => void | Promise<void>;
 }
 
 export interface DetailFieldProps {

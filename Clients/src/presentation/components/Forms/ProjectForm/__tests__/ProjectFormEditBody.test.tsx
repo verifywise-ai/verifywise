@@ -55,7 +55,8 @@ vi.mock("../../../../../application/repository/project.repository", () => ({
   updateProject: vi.fn().mockResolvedValue({}),
 }));
 vi.mock("../../../../../application/repository/approvalWorkflow.repository", () => ({
-  getAllApprovalWorkflows: vi.fn().mockResolvedValue({ data: [] }),
+  getApprovalWorkflowsByEntityType: vi.fn().mockResolvedValue([]),
+  saveApprovalWorkflow: vi.fn(),
 }));
 
 import { act, fireEvent, screen } from "@testing-library/react";

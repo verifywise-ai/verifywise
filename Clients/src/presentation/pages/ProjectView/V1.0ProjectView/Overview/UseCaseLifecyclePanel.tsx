@@ -4,6 +4,11 @@ import { Pencil } from "lucide-react";
 import StandardModal from "../../../../components/Modals/StandardModal";
 import Field from "../../../../components/Inputs/Field";
 import Alert from "../../../../components/Alert";
+import StatusBadge from "../../../../components/StatusBadge";
+import { VWLink } from "../../../../components/Link";
+import UseCaseWorkflowSelect, {
+  archivedWorkflowLabel,
+} from "../../../../components/UseCaseWorkflowSelect";
 import LifecyclePanel from "../../../../components/LifecycleTabs/LifecyclePanel";
 import {
   lifecycleLabelSx,
@@ -16,12 +21,63 @@ import {
   useUseCaseLifecycleActions,
   useUseCaseLifecycleSummary,
 } from "../../../../../application/hooks/useUseCaseLifecycle";
+import {
+  useUseCaseApprovalWorkflow,
+  useUseCaseApprovalWorkflows,
+} from "../../../../../application/hooks/useUseCaseApprovalWorkflows";
+import { useTranslation } from "../../../../../application/hooks/useTranslation";
 import { LifecycleStage } from "../../../../../domain/enums/lifecycleStage.enum";
 import { Project } from "../../../../../domain/types/Project";
+import { getApiValidationMessage } from "../../../../../application/utils/apiErrorReason";
+import { fontSize } from "../../../../themes/typography";
+
+/**
+ * What saving a workflow choice does, sentence by sentence, as the server
+ * does it (project.ctrl.ts updateProjectById): attaching or replacing opens
+ * a new approval request (approved at once when an auto-approve level
+ * covers the use case's risk), and only a planned use case moves to In review;
+ * replacing or clearing withdraws a pending request.
+ */
+function workflowChangeNotes({
+  selected,
+  current,
+  stage,
+  approvalStatus,
+  autoApproves,
+}: {
+  selected: number;
+  current: number;
+  stage: LifecycleStage;
+  approvalStatus: Project["approval_status"];
+  /** The selected workflow has an auto-approve risk level. */
+  autoApproves: boolean;
+}): string[] {
+  if (selected === current) return [];
+  const notes: string[] = [];
+  if (selected) {
+    notes.push("Saving sends this use case for approval.");
+    if (stage === LifecycleStage.PLANNED) {
+      notes.push("It moves to In review until the request is approved or rejected.");
+    }
+    // createUseCaseApprovalRequest approves at once when the use case's risk
+    // is at or below the workflow's threshold.
+    if (autoApproves) {
+      notes.push(
+        "If its risk classification is at or below the workflow's auto-approve level, it is approved at once.",
+      );
+    }
+  } else {
+    notes.push("Saving removes the approval workflow from this use case.");
+  }
+  if (current && approvalStatus === "pending") {
+    notes.push("The pending approval request is withdrawn.");
+  }
+  return notes;
+}
 
 /**
  * Lifecycle strip on the use case overview (#5187): the shared LifecyclePanel
- * plus the use case's department.
+ * plus the use case's department and approval workflow.
  */
 const UseCaseLifecyclePanel = ({
   project,
@@ -31,12 +87,18 @@ const UseCaseLifecyclePanel = ({
   onChanged?: () => void;
 }) => {
   const { userRoleName, userId } = useAuth();
-  const { goLive, retire, confirm, setDepartment } = useUseCaseLifecycleActions(project.id);
+  const { goLive, retire, confirm, setDepartment, setApprovalWorkflow } =
+    useUseCaseLifecycleActions(project.id);
   const { data: summary } = useUseCaseLifecycleSummary();
+  const { data: workflows } = useUseCaseApprovalWorkflows();
+  const { t } = useTranslation();
 
   const [departmentOpen, setDepartmentOpen] = useState(false);
   const [department, setDepartmentDraft] = useState(project.department ?? "");
   const [error, setError] = useState<string | null>(null);
+  const [workflowOpen, setWorkflowOpen] = useState(false);
+  const [workflowDraft, setWorkflowDraft] = useState(0);
+  const [workflowError, setWorkflowError] = useState<string | null>(null);
 
   // Same per-org permission matrix the server checks (custom roles included);
   // the built-in role rule only stands in until the list has loaded.
@@ -48,6 +110,78 @@ const UseCaseLifecyclePanel = ({
     canEditUseCases,
   );
   const stage = project.lifecycle_stage ?? LifecycleStage.PLANNED;
+
+  // While the latest approval is pending or rejected the server lets only an
+  // approval workflow admin change the workflow.
+  const isWorkflowAdmin = useCan("approvalWorkflow.admin");
+  // The project responses do not carry the workflow id; this endpoint does,
+  // with its title, whether it is archived, and the approval status.
+  const {
+    data: attached,
+    isSuccess: attachedLoaded,
+    isError: attachedFailed,
+  } = useUseCaseApprovalWorkflow(project.id);
+  const approvalStatus = attachedLoaded
+    ? attached.approval_status
+    : (project.approval_status ?? null);
+  const currentWorkflowId = attached?.approval_workflow_id ?? 0;
+  // The PATCH that changes it is authorized on useCase.edit, which an owner
+  // who may manage the lifecycle does not always hold.
+  const canEditWorkflow = canManage && canEditUseCases;
+  const canChangeWorkflow =
+    attachedLoaded && canEditWorkflow && (!approvalStatus || isWorkflowAdmin);
+  // An attached workflow that can't be chosen again: archived (its title
+  // kept), or not found in the organization (no title at all).
+  const savedWorkflow =
+    currentWorkflowId && attached?.workflow_is_active === false
+      ? {
+          id: currentWorkflowId,
+          label: attached.workflow_title
+            ? archivedWorkflowLabel(attached.workflow_title, t)
+            : "Unavailable workflow",
+          // The user's title is not translated; the fixed label is.
+          noTranslate: !!attached.workflow_title,
+        }
+      : null;
+  const workflowLabel: { text: string; noTranslate: boolean } = attachedFailed
+    ? { text: "Could not load the approval workflow.", noTranslate: false }
+    : !attachedLoaded
+      ? { text: "", noTranslate: false }
+      : !currentWorkflowId
+        ? { text: "None", noTranslate: false }
+        : savedWorkflow
+          ? { text: savedWorkflow.label, noTranslate: savedWorkflow.noTranslate }
+          : { text: attached.workflow_title ?? "", noTranslate: true };
+  const workflowNotes = workflowChangeNotes({
+    selected: workflowDraft,
+    current: Number(currentWorkflowId),
+    stage,
+    approvalStatus,
+    autoApproves: !!workflows?.find((workflow) => workflow._id === workflowDraft)
+      ?.autoApproveMaxRisk,
+  });
+
+  const openWorkflow = () => {
+    setWorkflowDraft(Number(currentWorkflowId));
+    setWorkflowError(null);
+    setWorkflowOpen(true);
+  };
+
+  const saveWorkflow = async () => {
+    setWorkflowError(null);
+    try {
+      await setApprovalWorkflow.mutateAsync(workflowDraft || null);
+      setWorkflowOpen(false);
+      onChanged?.();
+    } catch (err) {
+      // A refused workflow comes back as a field error on approval_workflow_id
+      // ({ errors: [...] }), a refused change as a plain message.
+      setWorkflowError(
+        getApiValidationMessage(err, { passThrough: ["approval_workflow_id"] }) ||
+          "The change could not be saved.",
+      );
+    }
+  };
 
   const saveDepartment = async () => {
     setError(null);
@@ -74,11 +208,14 @@ const UseCaseLifecyclePanel = ({
           // The server refuses go-live while the latest approval request is
           // pending or rejected (audit decision 2). A rejected use case whose
           // workflow an admin cleared stays rejected until a new approval.
-          project.approval_status === "rejected"
-            ? project.approval_workflow_id == null
-              ? "Its last approval request was rejected. Attach an approval workflow and get it approved before marking it as live."
+          // Only an approval workflow admin may attach one to a rejected use case.
+          approvalStatus === "rejected"
+            ? attachedLoaded && !currentWorkflowId
+              ? isWorkflowAdmin
+                ? "Its last approval request was rejected. Attach an approval workflow and get it approved before marking it as live."
+                : "Its last approval request was rejected. An approval workflow admin needs to attach a workflow and get it approved before it can go live."
               : "Approve this use case before marking it as live. Its last approval request was rejected."
-            : project.approval_status === "pending"
+            : approvalStatus === "pending"
               ? "Approve this use case before marking it as live."
               : undefined
         }
@@ -86,7 +223,7 @@ const UseCaseLifecyclePanel = ({
         retire={retire}
         confirm={confirm}
         onChanged={onChanged}
-        isBusy={setDepartment.isPending}
+        isBusy={setDepartment.isPending || setApprovalWorkflow.isPending}
         copy={{
           staleMessage:
             "Nobody has confirmed this use case is still live within the check interval set for your organization. Confirm it, or retire it if it is no longer in use.",
@@ -97,35 +234,74 @@ const UseCaseLifecyclePanel = ({
             "A retired use case stays in the inventory under Retired, with its history, but is no longer checked for being live.",
         }}
         extraFields={
-          <Stack sx={{ gap: "4px" }}>
-            <Typography sx={lifecycleLabelSx}>Department</Typography>
-            <Stack direction="row" alignItems="center" sx={{ gap: "4px" }}>
-              <Typography sx={lifecycleValueSx}>{project.department || "Not set"}</Typography>
-              {canManage && (
-                <Box
-                  component="button"
-                  type="button"
-                  aria-label="Edit department"
-                  data-testid="lifecycle-edit-department"
-                  onClick={() => {
-                    setDepartmentDraft(project.department ?? "");
-                    setError(null);
-                    setDepartmentOpen(true);
-                  }}
-                  sx={{
-                    display: "inline-flex",
-                    border: "none",
-                    background: "none",
-                    cursor: "pointer",
-                    p: "2px",
-                    color: "text.secondary",
-                  }}
+          <>
+            <Stack sx={{ gap: "4px" }}>
+              <Typography sx={lifecycleLabelSx}>Department</Typography>
+              <Stack direction="row" alignItems="center" sx={{ gap: "4px" }}>
+                <Typography sx={lifecycleValueSx}>{project.department || "Not set"}</Typography>
+                {canManage && (
+                  <Box
+                    component="button"
+                    type="button"
+                    aria-label="Edit department"
+                    data-testid="lifecycle-edit-department"
+                    onClick={() => {
+                      setDepartmentDraft(project.department ?? "");
+                      setError(null);
+                      setDepartmentOpen(true);
+                    }}
+                    sx={{
+                      display: "inline-flex",
+                      border: "none",
+                      background: "none",
+                      cursor: "pointer",
+                      p: "2px",
+                      color: "text.secondary",
+                    }}
+                  >
+                    <Pencil size={14} strokeWidth={1.5} />
+                  </Box>
+                )}
+              </Stack>
+            </Stack>
+            <Stack sx={{ gap: "4px" }} data-testid="lifecycle-approval-workflow">
+              <Typography sx={lifecycleLabelSx}>Approval workflow</Typography>
+              <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ gap: "8px" }}>
+                <Typography
+                  sx={lifecycleValueSx}
+                  data-testid="lifecycle-workflow-title"
+                  data-vw-no-translate={workflowLabel.noTranslate ? "true" : undefined}
                 >
-                  <Pencil size={14} strokeWidth={1.5} />
-                </Box>
+                  {workflowLabel.text}
+                </Typography>
+                {approvalStatus === "pending" && (
+                  <StatusBadge
+                    label="Pending approval"
+                    variant="warning"
+                    size="small"
+                    uppercase={false}
+                  />
+                )}
+                {approvalStatus === "rejected" && (
+                  <StatusBadge label="Rejected" variant="error" size="small" uppercase={false} />
+                )}
+                {canChangeWorkflow && (
+                  <VWLink testId="lifecycle-workflow-action" onClick={openWorkflow}>
+                    {currentWorkflowId ? "Change workflow" : "Attach workflow"}
+                  </VWLink>
+                )}
+              </Stack>
+              {canEditWorkflow && !canChangeWorkflow && (
+                <Typography
+                  sx={{ fontSize: fontSize.base, color: "text.secondary", maxWidth: "320px" }}
+                  data-testid="lifecycle-workflow-locked"
+                >
+                  Only an approval workflow admin can change it while approval is pending or
+                  rejected.
+                </Typography>
               )}
             </Stack>
-          </Stack>
+          </>
         }
       />
 
@@ -149,6 +325,38 @@ const UseCaseLifecyclePanel = ({
             isOptional
           />
           {error && <Alert variant="error" body={error} inline />}
+        </Stack>
+      </StandardModal>
+
+      <StandardModal
+        isOpen={workflowOpen}
+        onClose={() => setWorkflowOpen(false)}
+        title={currentWorkflowId ? "Change approval workflow" : "Attach approval workflow"}
+        description="The workflow decides who reviews this use case before it can go live."
+        submitButtonText="Save"
+        isSubmitting={setApprovalWorkflow.isPending}
+        isSubmitDisabled={workflowDraft === Number(currentWorkflowId)}
+        onSubmit={() => void saveWorkflow()}
+      >
+        <Stack sx={{ gap: "16px" }}>
+          <UseCaseWorkflowSelect
+            id="use-case-approval-workflow"
+            value={workflowDraft}
+            onChange={setWorkflowDraft}
+            allowNone={!!currentWorkflowId}
+            savedWorkflow={savedWorkflow}
+            showManageLink
+          />
+          {workflowNotes.length > 0 && (
+            <Stack sx={{ gap: "4px" }} data-testid="lifecycle-workflow-notes">
+              {workflowNotes.map((note) => (
+                <Typography key={note} sx={{ fontSize: fontSize.base, color: "text.secondary" }}>
+                  {note}
+                </Typography>
+              ))}
+            </Stack>
+          )}
+          {workflowError && <Alert variant="error" body={workflowError} inline />}
         </Stack>
       </StandardModal>
     </>

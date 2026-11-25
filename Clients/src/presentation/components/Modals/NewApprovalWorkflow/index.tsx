@@ -2,6 +2,7 @@ import { Box, Divider, Stack, Typography, useTheme } from "@mui/material";
 import { FC, useEffect, useState, useMemo } from "react";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import StandardModal from "../StandardModal";
+import Alert from "../../Alert";
 import Field from "../../Inputs/Field";
 import { fieldStyle } from "../../Reporting/GenerateReport/GenerateReportFrom/styles";
 import SelectComponent from "../../Inputs/Select";
@@ -38,6 +39,7 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
   setIsOpen,
   initialData,
   isEdit = false,
+  fixedEntity,
   onSuccess,
 }) => {
   const theme = useTheme();
@@ -45,6 +47,7 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
     Array<{ step_name?: string; approver?: string; conditions?: string; sla_hours?: string }>
   >([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const validators = useMemo(
     () => ({
@@ -59,7 +62,7 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
 
   const [stepsCount, setStepsCount] = useState(1);
   const [workflowTitle, setWorkflowTitle] = useState("");
-  const [entity, setEntity] = useState(0);
+  const [entity, setEntity] = useState(fixedEntity ?? 0);
   const [autoApproveMaxRisk, setAutoApproveMaxRisk] = useState("");
   const [workflowSteps, setWorkflowSteps] = useState<ApprovalWorkflowStepModel[]>([]);
   const [users, setUsers] = useState<Array<{ _id: number; name: string; surname?: string }>>([]);
@@ -86,7 +89,12 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
     fetchUsers();
   }, []);
 
+  // Reset when the modal opens or the workflow being edited changes, keyed on
+  // the content: a parent re-render that passes an equal but new initialData
+  // object must not wipe what the user has typed.
+  const initialDataKey = initialData && isEdit ? JSON.stringify(initialData) : "";
   useEffect(() => {
+    if (!isOpen) return;
     if (initialData && isEdit) {
       setWorkflowTitle(initialData.workflow_title || "");
       setEntity(initialData.entity);
@@ -94,8 +102,12 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
         initialData.entity === 1 ? (initialData.auto_approve_max_risk ?? "") : "",
       );
       if (initialData.steps && initialData.steps.length > 0) {
-        // Steps are already ApprovalWorkflowStepModel instances, just use them directly
-        setWorkflowSteps([...initialData.steps]);
+        // Copies: editing a step must not change the caller's initialData.
+        setWorkflowSteps(
+          initialData.steps.map(
+            (step) => new ApprovalWorkflowStepModel({ ...step, approver_ids: step.approver_ids }),
+          ),
+        );
         setStepsCount(initialData.steps.length);
       } else {
         setWorkflowSteps([new ApprovalWorkflowStepModel()]);
@@ -104,16 +116,19 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
     } else {
       clearForm();
     }
-  }, [initialData, isEdit]);
+    // initialData is read through its content key.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialDataKey, isOpen]);
 
   const clearForm = () => {
     setWorkflowTitle("");
-    setEntity(0);
+    setEntity(fixedEntity ?? 0);
     setAutoApproveMaxRisk("");
     setWorkflowSteps([new ApprovalWorkflowStepModel()]);
     setStepsCount(1);
     resetErrors();
     setStepErrors([]);
+    setSubmitError(null);
   };
 
   const clearStepFieldError = (
@@ -148,30 +163,38 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
     return !newStepErrors.some((e) => e.step_name || e.approver || e.conditions || e.sla_hours);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
+    if (isSubmitting) return;
     const flatValues: IApprovalWorkflowFlatValues = { workflow_title: workflowTitle, entity };
     const flatValid = validateAll(flatValues);
     const stepsValid = validateSteps();
-    if (flatValid && stepsValid) {
-      setIsSubmitting(true);
-      const formData = {
-        workflow_title: workflowTitle.trim(),
-        entity: entity,
-        auto_approve_max_risk: entity === 1 && autoApproveMaxRisk ? autoApproveMaxRisk : null,
-        steps: workflowSteps.map(
-          (step) =>
-            new ApprovalWorkflowStepModel({
-              step_name: step.step_name?.trim() || "",
-              approver_ids: step.approver_ids || [],
-              requires_all_approvers: step.requires_all_approvers ?? false,
-              description: step.description?.trim() || "",
-              sla_hours: step.sla_hours ?? null,
-              escalation_user_id: step.escalation_user_id ?? null,
-            }),
-        ),
-      };
+    if (!flatValid || !stepsValid) return;
+    setIsSubmitting(true);
+    setSubmitError(null);
+    const formData = {
+      workflow_title: workflowTitle.trim(),
+      entity: entity,
+      auto_approve_max_risk: entity === 1 && autoApproveMaxRisk ? autoApproveMaxRisk : null,
+      steps: workflowSteps.map(
+        (step) =>
+          new ApprovalWorkflowStepModel({
+            step_name: step.step_name?.trim() || "",
+            approver_ids: step.approver_ids || [],
+            requires_all_approvers: step.requires_all_approvers ?? false,
+            description: step.description?.trim() || "",
+            sla_hours: step.sla_hours ?? null,
+            escalation_user_id: step.escalation_user_id ?? null,
+          }),
+      ),
+    };
+    try {
+      // The caller saves; the form is cleared only once that succeeds, so a
+      // refused save keeps what the user typed.
+      await onSuccess?.(formData);
       clearForm();
-      onSuccess?.(formData);
+    } catch (err) {
+      setSubmitError((err as { message?: string })?.message || "The workflow could not be saved.");
+    } finally {
       setIsSubmitting(false);
     }
   };
@@ -197,7 +220,7 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
       title={isEdit ? "Edit approval workflow" : "New approval workflow"}
       description="Define a structured approval workflow with multiple steps, approvers, and conditions to ensure proper oversight and compliance."
       maxWidth="680px"
-      onSubmit={handleSave}
+      onSubmit={() => void handleSave()}
       submitButtonText={isEdit ? "Update" : "Create workflow"}
       isSubmitting={isSubmitting}
     >
@@ -225,6 +248,7 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
             label="Entity"
             error={errors.entity}
             isRequired
+            disabled={fixedEntity !== undefined}
             onChange={(e: any) => {
               setEntity(e.target.value);
               clearFieldError("entity");
@@ -419,6 +443,7 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
             </Stack>
           </Stack>
         ))}
+        {submitError && <Alert variant="error" body={submitError} inline />}
         <Box data-joyride-id="add-step-button">
           <CustomizableButton
             variant="outlined"

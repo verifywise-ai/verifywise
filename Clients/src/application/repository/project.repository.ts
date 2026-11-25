@@ -42,9 +42,51 @@ export async function createProject({ body }: { body: any }): Promise<any> {
   return response;
 }
 
-export async function updateProject({ id, body }: { id: number; body: any }): Promise<any> {
-  const response = await apiServices.patch(`/v1/projects/${id}`, body);
+/**
+ * Pass `suppressGlobalErrorToast` when the caller shows the error itself, so
+ * it is not shown twice.
+ */
+export async function updateProject({
+  id,
+  body,
+  suppressGlobalErrorToast,
+}: {
+  id: number;
+  body: any;
+  suppressGlobalErrorToast?: boolean;
+}): Promise<any> {
+  const endpoint = `/v1/projects/${id}`;
+  const response = suppressGlobalErrorToast
+    ? await apiServices.patch(endpoint, body, { suppressGlobalErrorToast })
+    : await apiServices.patch(endpoint, body);
   return response;
+}
+
+/** A use case's approval workflow (GET /api/v1/projects/:id/approval-workflow). */
+export interface UseCaseApprovalWorkflow {
+  approval_workflow_id: number | null;
+  workflow_title: string | null;
+  /** False once the workflow is archived; null when none is attached. */
+  workflow_is_active: boolean | null;
+  approval_status: "pending" | "rejected" | null;
+}
+
+/**
+ * The workflow attached to a use case and its approval status. The legacy
+ * project responses never carry approval_workflow_id, so read it here.
+ */
+export async function getUseCaseApprovalWorkflow({
+  id,
+  signal,
+}: {
+  id: number;
+  signal?: AbortSignal;
+}): Promise<UseCaseApprovalWorkflow> {
+  const response = await apiServices.get<{ data: UseCaseApprovalWorkflow }>(
+    `/v1/projects/${id}/approval-workflow`,
+    { signal },
+  );
+  return response.data.data;
 }
 
 export interface DeleteUseCaseResult {

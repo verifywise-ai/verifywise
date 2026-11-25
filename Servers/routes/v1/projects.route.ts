@@ -14,6 +14,7 @@ import {
   createProject,
   deleteProjectByIdV1,
   getRisksLinkedOnlyToProject,
+  getUseCaseApprovalWorkflow,
   updateProjectById,
 } from "../../controllers/project.ctrl";
 import { STATUS_CODE } from "../../utils/statusCode.utils";
@@ -62,6 +63,17 @@ router.get(
   validateProjectIdParam,
   requireProjectAccess("id", "params", "write"),
   getRisksLinkedOnlyToProject,
+);
+
+// The use case's approval workflow and approval status, for the overview.
+// New, so it starts here; the legacy project responses do not carry the
+// workflow id. Anyone who may read the use case may read it.
+router.get(
+  "/:id/approval-workflow",
+  authenticateJWT,
+  validateProjectIdParam,
+  requireProjectAccess("id", "params"),
+  getUseCaseApprovalWorkflow,
 );
 
 const ARCHIVE_FLAG = "archive_risks_linked_only_here";

@@ -23,6 +23,7 @@ import {
   textfieldStyle,
 } from "./style";
 import Select from "../../../components/Inputs/Select";
+import UseCaseWorkflowSelect from "../../UseCaseWorkflowSelect";
 
 import useUsers from "../../../../application/hooks/useUsers";
 import useFrameworks from "../../../../application/hooks/useFrameworks";
@@ -58,7 +59,6 @@ import {
   createProject,
   updateProject,
 } from "../../../../application/repository/project.repository";
-import { getAllApprovalWorkflows } from "../../../../application/repository/approvalWorkflow.repository";
 import { AiRiskClassification } from "../../../../domain/enums/aiRiskClassification.enum";
 import HighRiskRolesField from "../../Inputs/HighRiskRolesField";
 import {
@@ -180,9 +180,6 @@ export const ProjectForm = ({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"details" | "custom-fields">("details");
   const customFieldsRef = useRef<CustomFieldsSectionHandle | null>(null);
-  const [approvalWorkflows, setApprovalWorkflows] = useState<Array<{ _id: number; name: string }>>(
-    [],
-  );
   const validators = useMemo<FieldValidators<FormValues>>(
     () => ({
       project_title: (v: unknown, vals: FormValues) => {
@@ -295,29 +292,6 @@ export const ProjectForm = ({
       }));
     }
   }, [projectToEdit, users]);
-
-  // Fetch approval workflows filtered by entity type (use_case)
-  useEffect(() => {
-    const fetchWorkflows = async () => {
-      try {
-        const response = await getAllApprovalWorkflows();
-        const workflows = response?.data || [];
-        // Filter to only show workflows for use_case entity type
-        const filteredWorkflows = workflows.filter((w: any) => w.entity_type === "use_case");
-        setApprovalWorkflows(
-          filteredWorkflows.map((w: any) => ({
-            _id: w.id,
-            name: w.workflow_title,
-          })),
-        );
-      } catch (error) {
-        console.error("Failed to fetch approval workflows:", error);
-        setApprovalWorkflows([]);
-      }
-    };
-
-    fetchWorkflows();
-  }, []);
 
   // True when EU AI Act (framework ID 1) is selected
   const hasEuAiAct = useMemo(() => formHasEuAiAct(values), [formHasEuAiAct, values]);
@@ -452,6 +426,14 @@ export const ProjectForm = ({
     (prop: keyof FormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
       setValues((prev) => ({ ...prev, [prop]: event.target.value }));
       clearFieldError(prop);
+    },
+    [clearFieldError],
+  );
+
+  const handleApprovalWorkflowChange = useCallback(
+    (workflowId: number) => {
+      setValues((prev) => ({ ...prev, approval_workflow_id: workflowId }));
+      clearFieldError("approval_workflow_id");
     },
     [clearFieldError],
   );
@@ -993,17 +975,11 @@ export const ProjectForm = ({
               sx={{ flexDirection: { xs: "column", md: "row" }, gap: 6 }}
             >
               {values.framework_type === FrameworkTypeEnum.ProjectBased && (
-                <Select
+                <UseCaseWorkflowSelect
                   id="approval-workflow-input"
-                  label="Approval workflow"
-                  placeholder="Select workflow"
-                  value={values.approval_workflow_id || ""}
-                  onChange={handleOnSelectChange("approval_workflow_id")}
-                  items={approvalWorkflows}
-                  sx={{
-                    flex: 1,
-                    backgroundColor: theme.palette.background.main,
-                  }}
+                  value={Number(values.approval_workflow_id) || 0}
+                  onChange={handleApprovalWorkflowChange}
+                  sx={{ flex: 1 }}
                   error={errors.approval_workflow_id}
                 />
               )}

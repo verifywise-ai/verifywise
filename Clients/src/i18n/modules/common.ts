@@ -4684,6 +4684,14 @@ export const de: Record<string, string> = {
   "in the last 30 days": "in den letzten 30 Tagen",
   "Since yesterday": "Seit gestern",
   "Last 2 weeks": "Letzte 2 Wochen",
+  // Use case approval workflow select (create form, overview)
+  "No approval workflows for use cases yet.": "Noch keine Genehmigungsabläufe für Anwendungsfälle.",
+  "No approval workflows for use cases yet. Ask an Admin to create one.":
+    "Noch keine Genehmigungsabläufe für Anwendungsfälle. Bitten Sie eine Person mit Adminrechten, einen zu erstellen.",
+  "Create workflow": "Ablauf erstellen",
+  "Manage approval workflows": "Genehmigungsabläufe verwalten",
+  "The workflow could not be saved.": "Der Ablauf konnte nicht gespeichert werden.",
+  "(archived)": "(archiviert)",
 };
 
 export const fr: Record<string, string> = {
@@ -9373,6 +9381,15 @@ export const fr: Record<string, string> = {
   "in the last 30 days": "au cours des 30 derniers jours",
   "Since yesterday": "Depuis hier",
   "Last 2 weeks": "2 dernières semaines",
+  // Use case approval workflow select (create form, overview)
+  "No approval workflows for use cases yet.":
+    "Aucun flux d'approbation pour les cas d'usage pour l'instant.",
+  "No approval workflows for use cases yet. Ask an Admin to create one.":
+    "Aucun flux d'approbation pour les cas d'usage pour l'instant. Demandez à un administrateur d'en créer un.",
+  "Create workflow": "Créer un flux",
+  "Manage approval workflows": "Gérer les flux d'approbation",
+  "The workflow could not be saved.": "Le flux n'a pas pu être enregistré.",
+  "(archived)": "(archivé)",
 };
 
 export const es: Record<string, string> = {
@@ -14059,4 +14076,12 @@ export const es: Record<string, string> = {
   "in the last 30 days": "en los últimos 30 días",
   "Since yesterday": "Desde ayer",
   "Last 2 weeks": "Últimas 2 semanas",
+  // Use case approval workflow select (create form, overview)
+  "No approval workflows for use cases yet.": "Aún no hay flujos de aprobación para casos de uso.",
+  "No approval workflows for use cases yet. Ask an Admin to create one.":
+    "Aún no hay flujos de aprobación para casos de uso. Pida a un administrador que cree uno.",
+  "Create workflow": "Crear flujo",
+  "Manage approval workflows": "Gestionar flujos de aprobación",
+  "The workflow could not be saved.": "No se pudo guardar el flujo.",
+  "(archived)": "(archivado)",
 };

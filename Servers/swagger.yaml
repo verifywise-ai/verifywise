@@ -30370,3 +30370,39 @@ paths:
       security:
         -
           bearerAuth: []
+  '/v1/projects/{id}/approval-workflow':
+    get:
+      summary: 'Get a use case''s approval workflow'
+      description: 'The approval workflow attached to the use case (its id, title and whether it is still active; an archived workflow keeps its title; a stored workflow that cannot be found in the organization comes back with its id, a null title and workflow_is_active false) and the status of the latest approval request: pending, rejected, or null when there is none open or rejected (approved and withdrawn requests read as null). All workflow fields are null when no workflow is attached. Change the workflow with PATCH /api/v1/projects/{id} and approval_workflow_id. Anyone who may read the use case may read this.'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The use case id'
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {approval_workflow_id: {type: integer, nullable: true}, workflow_title: {type: string, nullable: true}, workflow_is_active: {type: boolean, nullable: true, description: 'False when the workflow has been archived or cannot be found in the organization'}, approval_status: {type: string, enum: [pending, rejected], nullable: true}}}
+        '400':
+          description: 'The id is not a positive integer'
+        '403':
+          description: 'No read access to the use case'
+        '404':
+          description: 'Use case not found in the organization'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: getUseCaseApprovalWorkflow
+      security:
+        -
+          bearerAuth: []

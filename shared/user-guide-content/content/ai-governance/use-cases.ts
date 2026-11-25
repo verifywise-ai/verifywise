@@ -58,7 +58,7 @@ export const useCasesContent: ArticleContent = {
         { bold: 'Description', text: 'A longer explanation of the system and how it works.' },
         { bold: 'Members', text: 'Other people who need access. The owner is added automatically.' },
         { bold: 'Status', text: 'Starts at "Not started." You can also choose In progress, Under review, Completed, Closed, On hold, or Rejected.' },
-        { bold: 'Approval workflow', text: 'If your organization requires sign-off before work begins, pick a workflow here. Frameworks won\'t be created until the use case is approved.' },
+        { bold: 'Approval workflow', text: 'If your organization requires sign-off before work begins, pick a workflow here. Frameworks won\'t be created until the use case is approved. You can also attach one later from the Overview tab.' },
       ],
     },
     {
@@ -267,7 +267,7 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Some organizations need sign-off before a use case moves forward. If you assign an approval workflow during creation, here is what happens while it is pending:',
+      text: 'Some organizations need sign-off before a use case moves forward. If you assign an approval workflow, during creation or later from the Overview tab, here is what happens while it is pending:',
     },
     {
       type: 'bullet-list',
@@ -289,6 +289,32 @@ export const useCasesContent: ArticleContent = {
     {
       type: 'paragraph',
       text: 'While a request is pending or after it is rejected, only people who manage approval workflows can change or remove the workflow. If you sent the request, withdraw it from the approval request instead. Removing the workflow from a rejected use case does not create its frameworks. They wait until a new review approves it. Workflow changes show up in the use case\'s history.',
+    },
+    {
+      type: 'heading',
+      id: 'attach-workflow',
+      level: 3,
+      text: 'Attaching a workflow to an existing use case',
+    },
+    {
+      type: 'paragraph',
+      text: 'The lifecycle panel on a use case\'s Overview tab has an **Approval workflow** field. It shows the attached workflow, or None, and the approval status while a request is pending or after a rejection. Choose **Attach workflow** or **Change workflow**, pick a workflow and save.',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { text: 'Saving a new workflow sends the use case for approval. A planned use case moves to In review until the request is approved or rejected. If the workflow has an auto-approve risk level and the use case\'s risk classification is at or below it, the request is approved at once.' },
+        { text: 'Changing the workflow withdraws a pending request and opens a new one under the new workflow.' },
+        { text: 'Picking **None** removes the workflow and withdraws a pending request.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Anyone who can change the use case lifecycle can attach a workflow. While a request is pending or rejected, only people who manage approval workflows can change it, and the field says so.',
+    },
+    {
+      type: 'paragraph',
+      text: 'People who manage approval workflows see **Create workflow** under the workflow field, in this dialog and in the create use case form. It opens the workflow form with the entity set to Use case, and the new workflow is selected once you save it. The dialog also links to **Manage approval workflows**. When there are no use case workflows yet, the field says so. Everyone else is asked to get an Admin to create one.',
     },
     {
       type: 'heading',
