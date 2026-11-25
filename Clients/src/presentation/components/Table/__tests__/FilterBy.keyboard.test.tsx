@@ -66,6 +66,33 @@ describe("FilterBy keyboard access", () => {
     expect(onFilterChange).toHaveBeenLastCalledWith([twoConditions[0]], "and");
   });
 
+  it("keeps focus on a remaining row after a keyboard removal", async () => {
+    const three: FilterCondition[] = [
+      ...twoConditions,
+      { id: "c", columnId: "status", operator: "is_not_empty", value: "" },
+    ];
+    const { user } = await openBuilder(three);
+
+    screen.getAllByRole("button", { name: "Remove filter" })[1].focus();
+    await user.keyboard("{Enter}");
+    // The row that moved up into the removed row's place.
+    expect(screen.getAllByRole("button", { name: "Remove filter" })[1]).toHaveFocus();
+
+    await user.keyboard("{Enter}");
+    // One row left: its remove is disabled, so focus goes to its first field.
+    expect(screen.getAllByRole("combobox")[0]).toHaveFocus();
+  });
+
+  it("clears all filters from the keyboard", async () => {
+    const { user, onFilterChange } = await openBuilder(twoConditions);
+
+    screen.getByRole("button", { name: "Clear all" }).focus();
+    await user.keyboard("{Enter}");
+
+    expect(screen.getAllByRole("button", { name: "Remove filter" })).toHaveLength(1);
+    expect(onFilterChange).toHaveBeenLastCalledWith([expect.any(Object)], "and");
+  });
+
   it("disables remove when only one row is left", async () => {
     await openBuilder([{ id: "a", columnId: "status", operator: "is", value: "" }]);
 

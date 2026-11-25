@@ -151,6 +151,7 @@ const buttonReset = {
   "padding": 0,
   "font": "inherit",
   "background": "none",
+  "border": "none",
   "&:focus-visible": {
     outline: `2px solid ${brand.primary}`,
     outlineOffset: "1px",
@@ -195,20 +196,22 @@ const LogicToggle: React.FC<{
             onClick={() => onChange(option.value)}
             sx={{
               ...buttonReset,
-              cursor: "pointer",
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              height: "100%",
-              fontSize: "11px",
-              fontWeight: 600,
-              userSelect: "none",
-              borderRadius: "2px",
-              bgcolor: selected ? "background.paper" : "transparent",
-              border: selected ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid transparent",
-              color: "text.primary",
-              transition: "all 0.2s ease",
+              // Inset: the group's overflow: hidden would clip an outside ring.
+              "&:focus-visible": { ...buttonReset["&:focus-visible"], outlineOffset: "-2px" },
+              "cursor": "pointer",
+              "flex": 1,
+              "display": "flex",
+              "alignItems": "center",
+              "justifyContent": "center",
+              "height": "100%",
+              "fontSize": "11px",
+              "fontWeight": 600,
+              "userSelect": "none",
+              "borderRadius": "2px",
+              "bgcolor": selected ? "background.paper" : "transparent",
+              "border": selected ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid transparent",
+              "color": "text.primary",
+              "transition": "all 0.2s ease",
             }}
           >
             {option.label}
@@ -409,15 +412,16 @@ const FilterRow: React.FC<{
         component="button"
         type="button"
         aria-label="Remove filter"
+        data-filter-remove=""
         disabled={!showRemove}
-        onClick={showRemove ? onRemove : undefined}
+        onClick={onRemove}
         sx={{
           ...buttonReset,
-          "cursor": showRemove ? "pointer" : "default",
+          "cursor": "pointer",
           "display": "flex",
           "alignItems": "center",
-          "opacity": showRemove ? 1 : 0.3,
-          "&:hover": showRemove ? { opacity: 0.7 } : {},
+          "&:hover": { opacity: 0.7 },
+          "&:disabled": { cursor: "default", opacity: 0.3 },
         }}
       >
         <X size={16} color={status.default.text} />
@@ -515,13 +519,34 @@ export const FilterBy: React.FC<FilterByProps> = ({
     }
   };
 
+  const rowsRef = useRef<HTMLDivElement | null>(null);
+  // Row whose remove button had focus; focus moves to a remaining row once it is gone.
+  const removedIndexRef = useRef<number | null>(null);
+
   const handleRemoveFilter = (index: number) => {
     if (conditions.length > 1) {
       const newConditions = conditions.filter((_, i) => i !== index);
+      removedIndexRef.current = index;
       setConditions(newConditions);
       onFilterChange(newConditions, logic);
     }
   };
+
+  useEffect(() => {
+    const index = removedIndexRef.current;
+    removedIndexRef.current = null;
+    if (index === null || !rowsRef.current) return;
+    const buttons = Array.from(
+      rowsRef.current.querySelectorAll<HTMLButtonElement>("[data-filter-remove]"),
+    );
+    const next = buttons[Math.min(index, buttons.length - 1)];
+    if (next && !next.disabled) {
+      next.focus();
+    } else {
+      // Only one row left (its remove is disabled): go to its first field.
+      rowsRef.current.querySelector<HTMLElement>('[role="combobox"]')?.focus();
+    }
+  }, [conditions]);
 
   const handleClearAll = () => {
     const initialCondition = createInitialCondition();
@@ -588,7 +613,7 @@ export const FilterBy: React.FC<FilterByProps> = ({
           },
         }}
       >
-        <Stack gap="12px">
+        <Stack gap="12px" ref={rowsRef}>
           <FilterByHeader onClose={handleClose} />
 
           {/* Filter rows */}
@@ -640,8 +665,11 @@ export const FilterBy: React.FC<FilterByProps> = ({
             }}
           >
             <Typography
+              component="button"
+              type="button"
               onClick={handleClearAll}
               sx={{
+                ...buttonReset,
                 "fontSize": "9px",
                 "fontWeight": 600,
                 "color": "status.default.text",
