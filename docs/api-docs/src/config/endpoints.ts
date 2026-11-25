@@ -13646,7 +13646,7 @@ export const v1V1projectsEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/v1/projects/{id}/approval-workflow',
     summary: "Get a use case's approval workflow",
-    description: "The approval workflow attached to the use case (its id, title and whether it is still active; an archived workflow keeps its title) and the status of the latest approval request: pending, rejected, or null when there is none open or rejected (approved and withdrawn requests read as null). All workflow fields are null when no workflow is attached. Change the workflow with PATCH /api/v1/projects/{id} and approval_workflow_id. Anyone who may read the use case may read this.",
+    description: "The approval workflow attached to the use case (its id, title and whether it is still active; an archived workflow keeps its title; a stored workflow that cannot be found in the organization comes back with its id, a null title and workflow_is_active false) and the status of the latest approval request: pending, rejected, or null when there is none open or rejected (approved and withdrawn requests read as null). All workflow fields are null when no workflow is attached. Change the workflow with PATCH /api/v1/projects/{id} and approval_workflow_id. Anyone who may read the use case may read this.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The use case id" },

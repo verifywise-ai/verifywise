@@ -175,18 +175,22 @@ describe("ApprovalWorkflows", () => {
     );
   });
 
-  it("refreshes the use case workflow list after a save and after an archive", async () => {
+  it("refreshes the use case workflow lists after a save and after an archive", async () => {
     const queryClient = new QueryClient();
     const invalidate = vi.spyOn(queryClient, "invalidateQueries");
     renderWithProviders(<ApprovalWorkflows />, { queryClient });
     const useCaseList = { queryKey: ["approvalWorkflows", "use_case"] };
+    // Every use case overview's attached workflow (title, archived state).
+    const attachedWorkflows = { queryKey: ["useCaseApprovalWorkflow"] };
 
     fireEvent.click(screen.getByRole("button", { name: "Save workflow form" }));
     await waitFor(() => expect(invalidate).toHaveBeenCalledWith(useCaseList));
+    expect(invalidate).toHaveBeenCalledWith(attachedWorkflows);
 
     invalidate.mockClear();
     fireEvent.click(screen.getByRole("button", { name: "Archive workflow 5" }));
     await waitFor(() => expect(invalidate).toHaveBeenCalledWith(useCaseList));
+    expect(invalidate).toHaveBeenCalledWith(attachedWorkflows);
   });
 
   it("renders without crashing", () => {

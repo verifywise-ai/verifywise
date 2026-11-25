@@ -6,7 +6,6 @@ import Select from "../Inputs/Select";
 import { VWLink } from "../Link";
 import CreateNewApprovalWorkflow from "../Modals/NewApprovalWorkflow";
 import { useCan } from "../../../application/hooks/useCan";
-import { useTranslation } from "../../../application/hooks/useTranslation";
 import {
   useCaseApprovalWorkflowsQueryKey,
   useUseCaseApprovalWorkflows,
@@ -26,8 +25,12 @@ export interface UseCaseWorkflowSelectProps {
   allowNone?: boolean;
   /** Adds a link to the Approval workflows page (admins only). */
   showManageLink?: boolean;
-  /** Title of the selected workflow when it is archived (not in the active list). */
-  archivedTitle?: string | null;
+  /**
+   * The workflow saved on the use case when it can no longer be chosen
+   * (archived, or not found): listed with this label so it stays visible and
+   * selectable after another choice.
+   */
+  savedWorkflow?: { id: number; label: string; noTranslate?: boolean } | null;
   error?: string;
   sx?: object;
 }
@@ -49,29 +52,28 @@ const UseCaseWorkflowSelect = ({
   onChange,
   allowNone = false,
   showManageLink = false,
-  archivedTitle,
+  savedWorkflow,
   error,
   sx,
 }: UseCaseWorkflowSelectProps) => {
   const navigate = useNavigate();
   const canManageWorkflows = useCan("approvalWorkflow.admin");
   const queryClient = useQueryClient();
-  const { t } = useTranslation();
   const { data: workflows = [], isSuccess } = useUseCaseApprovalWorkflows();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
 
-  // A selected workflow missing from the active list was archived: still
-  // show it, so the current choice is visible.
-  const isArchived =
-    isSuccess && value !== 0 && !workflows.some((workflow) => workflow._id === value);
+  const savedIsListed =
+    !!savedWorkflow && workflows.some((workflow) => workflow._id === savedWorkflow.id);
   const items = [
     ...(allowNone ? [{ _id: 0, name: "None" }] : []),
     ...workflows.map(({ _id, name }) => ({ _id, name, noTranslate: true })),
-    ...(isArchived
+    ...(savedWorkflow && !savedIsListed
       ? [
-          archivedTitle
-            ? { _id: value, name: archivedWorkflowLabel(archivedTitle, t), noTranslate: true }
-            : { _id: value, name: "Archived workflow" },
+          {
+            _id: savedWorkflow.id,
+            name: savedWorkflow.label,
+            noTranslate: savedWorkflow.noTranslate ?? false,
+          },
         ]
       : []),
   ];

@@ -89,7 +89,12 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
     fetchUsers();
   }, []);
 
+  // Reset when the modal opens or the workflow being edited changes, keyed on
+  // the content: a parent re-render that passes an equal but new initialData
+  // object must not wipe what the user has typed.
+  const initialDataKey = initialData && isEdit ? JSON.stringify(initialData) : "";
   useEffect(() => {
+    if (!isOpen) return;
     if (initialData && isEdit) {
       setWorkflowTitle(initialData.workflow_title || "");
       setEntity(initialData.entity);
@@ -97,8 +102,12 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
         initialData.entity === 1 ? (initialData.auto_approve_max_risk ?? "") : "",
       );
       if (initialData.steps && initialData.steps.length > 0) {
-        // Steps are already ApprovalWorkflowStepModel instances, just use them directly
-        setWorkflowSteps([...initialData.steps]);
+        // Copies: editing a step must not change the caller's initialData.
+        setWorkflowSteps(
+          initialData.steps.map(
+            (step) => new ApprovalWorkflowStepModel({ ...step, approver_ids: step.approver_ids }),
+          ),
+        );
         setStepsCount(initialData.steps.length);
       } else {
         setWorkflowSteps([new ApprovalWorkflowStepModel()]);
@@ -107,7 +116,9 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
     } else {
       clearForm();
     }
-  }, [initialData, isEdit]);
+    // initialData is read through its content key.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialDataKey, isOpen]);
 
   const clearForm = () => {
     setWorkflowTitle("");

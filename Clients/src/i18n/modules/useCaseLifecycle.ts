@@ -153,7 +153,8 @@ export const de: Record<string, string> = {
   // Approval workflow on the use case overview
   "Its last approval request was rejected. An approval workflow admin needs to attach a workflow and get it approved before it can go live.":
     "Seine letzte Freigabeanfrage wurde abgelehnt. Eine Person mit Adminrechten für Genehmigungsabläufe muss einen Ablauf anhängen und ihn freigeben lassen, bevor er live gehen kann.",
-  "Archived workflow": "Archivierter Ablauf",
+  "Unavailable workflow": "Nicht verfügbarer Ablauf",
+  "Could not load the approval workflow.": "Der Genehmigungsablauf konnte nicht geladen werden.",
   "Attach workflow": "Ablauf anhängen",
   "Change workflow": "Ablauf ändern",
   "Attach approval workflow": "Genehmigungsablauf anhängen",
@@ -329,7 +330,8 @@ export const fr: Record<string, string> = {
   // Approval workflow on the use case overview
   "Its last approval request was rejected. An approval workflow admin needs to attach a workflow and get it approved before it can go live.":
     "Sa dernière demande d'approbation a été refusée. Un administrateur des flux d'approbation doit associer un flux et le faire approuver avant sa mise en service.",
-  "Archived workflow": "Flux archivé",
+  "Unavailable workflow": "Flux indisponible",
+  "Could not load the approval workflow.": "Impossible de charger le flux d'approbation.",
   "Attach workflow": "Associer un flux",
   "Change workflow": "Changer de flux",
   "Attach approval workflow": "Associer un flux d'approbation",
@@ -500,7 +502,8 @@ export const es: Record<string, string> = {
   // Approval workflow on the use case overview
   "Its last approval request was rejected. An approval workflow admin needs to attach a workflow and get it approved before it can go live.":
     "Su última solicitud de aprobación fue rechazada. Un administrador de flujos de aprobación debe adjuntar un flujo y obtener la aprobación antes de que pase a producción.",
-  "Archived workflow": "Flujo archivado",
+  "Unavailable workflow": "Flujo no disponible",
+  "Could not load the approval workflow.": "No se pudo cargar el flujo de aprobación.",
   "Attach workflow": "Adjuntar flujo",
   "Change workflow": "Cambiar flujo",
   "Attach approval workflow": "Adjuntar flujo de aprobación",

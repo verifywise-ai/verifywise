@@ -357,6 +357,38 @@ describe("UseCaseLifecyclePanel approval workflow", () => {
     );
   });
 
+  it("labels an attached workflow that can't be found, and clearing it withdraws its request", async () => {
+    mockGetAttached.mockResolvedValue({
+      approval_workflow_id: 44,
+      workflow_title: null,
+      workflow_is_active: false,
+      approval_status: "pending",
+    });
+    mockPermissions = ["useCase.edit", "approvalWorkflow.admin"];
+    renderWithProviders(<UseCaseLifecyclePanel project={project()} />);
+    await waitFor(() =>
+      expect(screen.getByTestId("lifecycle-workflow-title")).toHaveTextContent(
+        "Unavailable workflow",
+      ),
+    );
+    fireEvent.click(screen.getByTestId("lifecycle-workflow-action"));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByRole("combobox")).toHaveTextContent("Unavailable workflow");
+    await pickWorkflow("None");
+    expect(screen.getByText("The pending approval request is withdrawn.")).toBeInTheDocument();
+  });
+
+  it("says so when the approval workflow can't be loaded", async () => {
+    mockGetAttached.mockRejectedValue(new Error("network"));
+    renderWithProviders(<UseCaseLifecyclePanel project={project()} />);
+    await waitFor(() =>
+      expect(screen.getByTestId("lifecycle-workflow-title")).toHaveTextContent(
+        "Could not load the approval workflow.",
+      ),
+    );
+    expect(screen.queryByTestId("lifecycle-workflow-action")).toBeNull();
+  });
+
   it("replaces a workflow and keeps Save off until the choice changes", async () => {
     renderWithProviders(
       <UseCaseLifecyclePanel

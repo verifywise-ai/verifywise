@@ -7,6 +7,7 @@ vi.mock("../../../../../application/repository/user.repository", () => ({
 
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import CreateNewApprovalWorkflow from "../index";
+import { ApprovalWorkflowStepModel } from "../../../../../domain/models/Common/approvalWorkflow/approvalWorkflowStepModel";
 
 const entitySelect = () =>
   within(screen.getByRole("dialog")).getAllByRole("combobox")[0] as HTMLElement;
@@ -89,6 +90,57 @@ describe("NewApprovalWorkflow async save", () => {
     await act(async () => resolveSave());
     await waitFor(() =>
       expect(screen.getByPlaceholderText("Enter workflow title")).toHaveValue(""),
+    );
+  });
+});
+
+describe("NewApprovalWorkflow edit", () => {
+  const initialData = () => ({
+    workflow_title: "Model risk review",
+    entity: 1,
+    auto_approve_max_risk: null,
+    steps: [
+      new ApprovalWorkflowStepModel({
+        step_name: "Legal",
+        approver_ids: [2],
+        requires_all_approvers: true,
+      }),
+    ],
+  });
+
+  it("keeps typed input when the parent re-renders with an equal but new initialData", async () => {
+    const { rerender } = renderWithProviders(
+      <CreateNewApprovalWorkflow isOpen setIsOpen={vi.fn()} isEdit initialData={initialData()} />,
+    );
+    const title = screen.getByPlaceholderText("Enter workflow title");
+    await waitFor(() => expect(title).toHaveValue("Model risk review"));
+
+    fireEvent.change(title, { target: { value: "Model risk review v2" } });
+    fireEvent.change(screen.getByPlaceholderText("Enter step name"), {
+      target: { value: "Legal and privacy" },
+    });
+    rerender(
+      <CreateNewApprovalWorkflow isOpen setIsOpen={vi.fn()} isEdit initialData={initialData()} />,
+    );
+
+    expect(screen.getByPlaceholderText("Enter workflow title")).toHaveValue("Model risk review v2");
+    expect(screen.getByPlaceholderText("Enter step name")).toHaveValue("Legal and privacy");
+  });
+
+  it("loads another workflow when the one being edited changes", async () => {
+    const { rerender } = renderWithProviders(
+      <CreateNewApprovalWorkflow isOpen setIsOpen={vi.fn()} isEdit initialData={initialData()} />,
+    );
+    rerender(
+      <CreateNewApprovalWorkflow
+        isOpen
+        setIsOpen={vi.fn()}
+        isEdit
+        initialData={{ ...initialData(), workflow_title: "Legal sign-off" }}
+      />,
+    );
+    await waitFor(() =>
+      expect(screen.getByPlaceholderText("Enter workflow title")).toHaveValue("Legal sign-off"),
     );
   });
 });

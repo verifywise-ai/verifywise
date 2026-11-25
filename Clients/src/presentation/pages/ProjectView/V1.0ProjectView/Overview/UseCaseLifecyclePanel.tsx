@@ -114,24 +114,42 @@ const UseCaseLifecyclePanel = ({
   const isWorkflowAdmin = useCan("approvalWorkflow.admin");
   // The project responses do not carry the workflow id; this endpoint does,
   // with its title, whether it is archived, and the approval status.
-  const { data: attached, isSuccess: attachedLoaded } = useUseCaseApprovalWorkflow(project.id);
+  const {
+    data: attached,
+    isSuccess: attachedLoaded,
+    isError: attachedFailed,
+  } = useUseCaseApprovalWorkflow(project.id);
   const approvalStatus = attachedLoaded
     ? attached.approval_status
     : (project.approval_status ?? null);
   const currentWorkflowId = attached?.approval_workflow_id ?? 0;
-  const archivedTitle = attached?.workflow_is_active === false ? attached.workflow_title : null;
   // The PATCH that changes it is authorized on useCase.edit, which an owner
   // who may manage the lifecycle does not always hold.
   const canEditWorkflow = canManage && canEditUseCases;
   const canChangeWorkflow =
     attachedLoaded && canEditWorkflow && (!approvalStatus || isWorkflowAdmin);
-  const workflowTitle = !attachedLoaded
-    ? ""
-    : !currentWorkflowId
-      ? null
-      : archivedTitle
-        ? archivedWorkflowLabel(archivedTitle, t)
-        : (attached.workflow_title ?? "");
+  // An attached workflow that can't be chosen again: archived (its title
+  // kept), or not found in the organization (no title at all).
+  const savedWorkflow =
+    currentWorkflowId && attached?.workflow_is_active === false
+      ? {
+          id: currentWorkflowId,
+          label: attached.workflow_title
+            ? archivedWorkflowLabel(attached.workflow_title, t)
+            : "Unavailable workflow",
+          // The user's title is not translated; the fixed label is.
+          noTranslate: !!attached.workflow_title,
+        }
+      : null;
+  const workflowLabel: { text: string; noTranslate: boolean } = attachedFailed
+    ? { text: "Could not load the approval workflow.", noTranslate: false }
+    : !attachedLoaded
+      ? { text: "", noTranslate: false }
+      : !currentWorkflowId
+        ? { text: "None", noTranslate: false }
+        : savedWorkflow
+          ? { text: savedWorkflow.label, noTranslate: savedWorkflow.noTranslate }
+          : { text: attached.workflow_title ?? "", noTranslate: true };
   const workflowNotes = workflowChangeNotes({
     selected: workflowDraft,
     current: Number(currentWorkflowId),
@@ -242,20 +260,13 @@ const UseCaseLifecyclePanel = ({
             <Stack sx={{ gap: "4px" }} data-testid="lifecycle-approval-workflow">
               <Typography sx={lifecycleLabelSx}>Approval workflow</Typography>
               <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ gap: "8px" }}>
-                {workflowTitle === null ? (
-                  <Typography sx={lifecycleValueSx} data-testid="lifecycle-workflow-title">
-                    None
-                  </Typography>
-                ) : (
-                  // The user's own title (an archived one carries its translated suffix).
-                  <Typography
-                    sx={lifecycleValueSx}
-                    data-testid="lifecycle-workflow-title"
-                    data-vw-no-translate="true"
-                  >
-                    {workflowTitle}
-                  </Typography>
-                )}
+                <Typography
+                  sx={lifecycleValueSx}
+                  data-testid="lifecycle-workflow-title"
+                  data-vw-no-translate={workflowLabel.noTranslate ? "true" : undefined}
+                >
+                  {workflowLabel.text}
+                </Typography>
                 {approvalStatus === "pending" && (
                   <StatusBadge
                     label="Pending approval"
@@ -326,7 +337,7 @@ const UseCaseLifecyclePanel = ({
             value={workflowDraft}
             onChange={setWorkflowDraft}
             allowNone={!!currentWorkflowId}
-            archivedTitle={archivedTitle}
+            savedWorkflow={savedWorkflow}
             showManageLink
           />
           {workflowNotes.length > 0 && (

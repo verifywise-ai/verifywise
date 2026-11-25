@@ -124,12 +124,33 @@ describe("UseCaseWorkflowSelect", () => {
     expect(outerSubmit).not.toHaveBeenCalled();
   });
 
-  it("shows an archived workflow that is still selected", async () => {
+  it("keeps the saved archived workflow selectable after picking another", async () => {
     mockWorkflows = [{ id: 3, workflow_title: "Legal sign-off", entity_type: "use_case" }];
-    renderWithProviders(<UseCaseWorkflowSelect id="workflow" value={99} onChange={onChange} />);
+    const saved = { id: 99, label: "Old review (archived)", noTranslate: true };
+    const SavedHarness = () => {
+      const [value, setValue] = useState(99);
+      return (
+        <UseCaseWorkflowSelect
+          id="workflow"
+          value={value}
+          onChange={setValue}
+          savedWorkflow={saved}
+        />
+      );
+    };
+    renderWithProviders(<SavedHarness />);
     await waitFor(() =>
-      expect(screen.getByRole("combobox")).toHaveTextContent("Archived workflow"),
+      expect(screen.getByRole("combobox")).toHaveTextContent("Old review (archived)"),
     );
+
+    fireEvent.mouseDown(screen.getByRole("combobox"));
+    fireEvent.click(await screen.findByRole("option", { name: "Legal sign-off" }));
+    expect(screen.getByRole("combobox")).toHaveTextContent("Legal sign-off");
+
+    // Still listed, so the user can go back to it.
+    fireEvent.mouseDown(screen.getByRole("combobox"));
+    fireEvent.click(await screen.findByRole("option", { name: "Old review (archived)" }));
+    expect(screen.getByRole("combobox")).toHaveTextContent("Old review (archived)");
   });
 
   it("offers no create action without the approval workflow admin permission", async () => {

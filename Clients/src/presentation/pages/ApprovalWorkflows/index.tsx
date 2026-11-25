@@ -13,7 +13,10 @@ import { useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCan } from "../../../application/hooks/useCan";
 import { HOME_QUEUE_QUERY_KEY } from "../../../application/hooks/useHomeQueue";
-import { useCaseApprovalWorkflowsQueryKey } from "../../../application/hooks/useUseCaseApprovalWorkflows";
+import {
+  useCaseApprovalWorkflowKeys,
+  useCaseApprovalWorkflowsQueryKey,
+} from "../../../application/hooks/useUseCaseApprovalWorkflows";
 import { dispatchApprovalRequestsChanged } from "../../../application/events/approvalRequestEvents";
 import { ApprovalStatus } from "../../../domain/enums/aiApprovalWorkflow.enum";
 import { FilterColumn } from "../../components/Table/FilterBy";
@@ -69,8 +72,13 @@ const ApprovalWorkflows: React.FC = () => {
   const queryClient = useQueryClient();
   // The use case workflow select (create form, use case overview) caches
   // its list; a saved or archived workflow must show up there at once.
+  // The overview's attached workflow shows the title and archived state too.
   const invalidateUseCaseWorkflows = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: useCaseApprovalWorkflowsQueryKey }),
+    () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: useCaseApprovalWorkflowsQueryKey }),
+        queryClient.invalidateQueries({ queryKey: useCaseApprovalWorkflowKeys.all }),
+      ]),
     [queryClient],
   );
   const handleLinkedRequestDecided = useCallback(() => {
@@ -291,6 +299,20 @@ const ApprovalWorkflows: React.FC = () => {
     }
   };
 
+  // Stable between renders, so the modal does not reset what the user typed.
+  const workflowInitialData = useMemo(
+    () =>
+      selectWorkflow
+        ? {
+            workflow_title: selectWorkflow.workflow_title || "",
+            entity: selectWorkflow.entity ?? 0,
+            steps: selectWorkflow.steps || [],
+            auto_approve_max_risk: selectWorkflow.auto_approve_max_risk ?? null,
+          }
+        : undefined,
+    [selectWorkflow],
+  );
+
   /** -------------------- RENDER -------------------- */
   return (
     <PageHeaderExtended
@@ -353,16 +375,7 @@ const ApprovalWorkflows: React.FC = () => {
       <CreateNewApprovalWorkflow
         isOpen={isNewWorkflowModalOpen}
         setIsOpen={handleCloseModal}
-        initialData={
-          selectWorkflow
-            ? {
-                workflow_title: selectWorkflow.workflow_title || "",
-                entity: selectWorkflow.entity ?? 0,
-                steps: selectWorkflow?.steps || [],
-                auto_approve_max_risk: selectWorkflow.auto_approve_max_risk ?? null,
-              }
-            : undefined
-        }
+        initialData={workflowInitialData}
         isEdit={!!selectWorkflow}
         onSuccess={handleWorkflowSuccess}
       />

@@ -1008,7 +1008,11 @@ export const lockUseCaseWorkflowQuery = async (
 export interface UseCaseApprovalWorkflowRow {
   approval_workflow_id: number | null;
   workflow_title: string | null;
-  /** False once the workflow is archived; null when no workflow is attached. */
+  /**
+   * False once the workflow is archived, or when the stored workflow is not
+   * found in the organization (then workflow_title is null); null when no
+   * workflow is attached.
+   */
   workflow_is_active: boolean | null;
 }
 
@@ -1035,11 +1039,16 @@ export const getUseCaseApprovalWorkflowQuery = async (
   }>;
   if (rows.length === 0) return null;
   const row = rows[0];
-  const hasWorkflow = row.approval_workflow_id != null && row.workflow_title != null;
+  if (row.approval_workflow_id == null) {
+    return { approval_workflow_id: null, workflow_title: null, workflow_is_active: null };
+  }
+  // A stored id the organization-scoped join does not find is still attached
+  // (changing it withdraws its request), but cannot be used: no title, inactive.
+  const found = row.workflow_title != null;
   return {
-    approval_workflow_id: hasWorkflow ? Number(row.approval_workflow_id) : null,
-    workflow_title: hasWorkflow ? row.workflow_title : null,
-    workflow_is_active: hasWorkflow ? row.is_active === true : null,
+    approval_workflow_id: Number(row.approval_workflow_id),
+    workflow_title: found ? row.workflow_title : null,
+    workflow_is_active: found ? row.is_active === true : false,
   };
 };
 
