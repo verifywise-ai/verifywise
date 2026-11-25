@@ -194,7 +194,7 @@ describe("ScoreSection", () => {
       assessedLevel: "Limited risk",
     } as const;
     const NOTICE =
-      "This form has no LLM key, so the score comes from matching keywords in the answers. Add an LLM key to the form for a much more accurate score and suggested risks.";
+      "No LLM key was available when this was scored, so the score comes from matching keywords in the answers. With an LLM key on the form, new submissions get a much more accurate score and suggested risks.";
 
     it("shows the keyword score, the notice and the six dimension bars", () => {
       render({ assessment: noKey(), ...limited });

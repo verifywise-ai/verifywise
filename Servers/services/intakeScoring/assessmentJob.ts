@@ -28,6 +28,7 @@ import {
   getSubmissionsNeedingAssessmentQuery,
   setLiveChecksAiQuery,
   updateSubmissionAssessmentV2Query,
+  saveBackfilledKeywordScoreQuery,
   updateSubmissionSuggestionsQuery,
 } from "../../utils/intakeForm.utils";
 import {
@@ -74,6 +75,7 @@ export interface AssessmentDeps {
   /** The form's LLM key as a model, or null when the organization has no such key. */
   getModel: (llmKeyId: number, organizationId: number) => Promise<Model | null>;
   saveAssessment: typeof updateSubmissionAssessmentV2Query;
+  saveBackfilledKeyword: typeof saveBackfilledKeywordScoreQuery;
   saveSuggestions: typeof updateSubmissionSuggestionsQuery;
   saveLiveChecksAi: typeof setLiveChecksAiQuery;
   claimNotification: typeof claimSubmissionNotificationQuery;
@@ -105,6 +107,7 @@ const defaultDeps: AssessmentDeps = {
     return row ? createModelFromKey(row as unknown as LLMKeyRow) : null;
   },
   saveAssessment: updateSubmissionAssessmentV2Query,
+  saveBackfilledKeyword: saveBackfilledKeywordScoreQuery,
   saveSuggestions: updateSubmissionSuggestionsQuery,
   saveLiveChecksAi: setLiveChecksAiQuery,
   claimNotification: claimSubmissionNotificationQuery,
@@ -215,11 +218,11 @@ function useCaseInputFor(submission: IIntakeSubmission, form: IIntakeForm): UseC
   };
 }
 
-/** The basic keyword score of a submission, for a form with no LLM key. */
+/** The basic keyword score of a submission, for a form with no LLM key; null when nothing matched. */
 function keywordFor(
   submission: IIntakeSubmission,
   form: IIntakeForm,
-): NonNullable<IRiskAssessmentV2["keyword"]> {
+): NonNullable<IRiskAssessmentV2["keyword"]> | null {
   return keywordScoreFor(submission.data as Record<string, unknown>, form.schema);
 }
 
@@ -764,9 +767,12 @@ export async function sendIntakeNotificationOnce(
 
 /**
  * Add the basic keyword score to pending submissions scored without an LLM
- * key before it existed, then re-route them as a fresh scoring run does. No
- * AI call is made; decided submissions are left alone, and a submission that
- * already has a keyword score is skipped, so a second run changes nothing.
+ * key before it existed. No AI call is made; decided submissions are left
+ * alone, and a submission that already has a keyword score is skipped, so a
+ * second run changes nothing. The save only lands while the stored
+ * assessment is still the keyword-less "ai_not_configured" one, so a newer
+ * assessment saved meanwhile wins. A submission already in a lane keeps it
+ * (nobody's queue changes mid-review); only an unrouted one is routed.
  * Returns how many submissions were updated.
  */
 async function backfillKeywordScores(d: AssessmentDeps): Promise<number> {
@@ -794,12 +800,16 @@ async function backfillKeywordScores(d: AssessmentDeps): Promise<number> {
       }
       const form = await d.getForm(submission.formId, row.organizationId);
       if (!form) continue;
+      const keyword = keywordFor(submission, form);
+      // Nothing matched: no score to add, and the row stays as it is.
+      if (!keyword) continue;
       const rescored = recomputeAssessmentForLevel(
-        { ...assessment, keyword: keywordFor(submission, form) },
+        { ...assessment, keyword },
         assessment.classificationLevel,
       );
-      await d.saveAssessment(row.id, rescored, row.organizationId);
-      await routeSettled(d, row.id, row.organizationId);
+      const saved = await d.saveBackfilledKeyword(row.id, rescored, row.organizationId);
+      if (!saved) continue;
+      if (!submission.routing) await routeSettled(d, row.id, row.organizationId);
       updated += 1;
     } catch (error) {
       logger.error(

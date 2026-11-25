@@ -746,6 +746,39 @@ export const updateSubmissionAssessmentV2Query = async (
 };
 
 /**
+ * Store a backfilled keyword score, only while the stored assessment is
+ * still the keyword-less "ai_not_configured" one the backfill read: a
+ * retry or rescore saved in the meantime is never overwritten. Returns
+ * whether the row was updated.
+ */
+export const saveBackfilledKeywordScoreQuery = async (
+  id: number,
+  assessment: IRiskAssessmentV2,
+  organizationId: number,
+): Promise<boolean> => {
+  const [, affected] = (await sequelize.query(
+    `UPDATE intake_submissions
+    SET risk_assessment = :riskAssessment,
+        risk_tier = COALESCE(risk_override->>'tier', :riskTier),
+        updated_at = NOW()
+    WHERE organization_id = :organizationId AND id = :id AND status = :pending
+      AND risk_assessment->>'status' = 'ai_not_configured'
+      AND jsonb_typeof(risk_assessment->'keyword') IS DISTINCT FROM 'object'`,
+    {
+      replacements: {
+        organizationId,
+        id,
+        riskAssessment: JSON.stringify(assessment),
+        riskTier: assessment.tier,
+        pending: IntakeSubmissionStatus.PENDING,
+      },
+      type: QueryTypes.UPDATE,
+    },
+  )) as unknown as [unknown, number];
+  return affected > 0;
+};
+
+/**
  * Replace the whole suggested-risks block (stage start / completion / failure)
  * on a pending submission; a job that finishes after a decision changes nothing.
  */

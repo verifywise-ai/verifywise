@@ -20,7 +20,7 @@ const schema: FormSchema = {
 describe("keywordScoreFor", () => {
   it("returns the six dimensions without signals and their weighted average", () => {
     const data = { q1: "Biometric and medical records of patients" };
-    const result = keywordScoreFor(data, schema);
+    const result = keywordScoreFor(data, schema)!;
     const dimensions = scoreSubmissionRuleBased(data, schema);
 
     expect(result.dimensions).toHaveLength(6);
@@ -33,8 +33,9 @@ describe("keywordScoreFor", () => {
     expect(result.dimensions.find((d) => d.key === "data_sensitivity")?.score).toBeGreaterThan(50);
   });
 
-  it("scores answers with no keywords at the neutral 50", () => {
-    expect(keywordScoreFor({ q1: "Screening job applicants" }, schema).overallScore).toBe(50);
-    expect(keywordScoreFor({}, schema).overallScore).toBe(50);
+  // Every dimension would sit at the neutral 50, which says nothing about the risk.
+  it("gives no score when no keyword matched", () => {
+    expect(keywordScoreFor({ q1: "Screening job applicants" }, schema)).toBeNull();
+    expect(keywordScoreFor({}, schema)).toBeNull();
   });
 });

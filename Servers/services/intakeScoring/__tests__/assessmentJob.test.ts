@@ -112,6 +112,14 @@ function harness(
       assessments.push(a);
       state.submission = { ...state.submission, riskAssessment: a };
     }),
+    // As the SQL guard: lands only on a keyword-less "ai_not_configured" row.
+    saveBackfilledKeyword: jest.fn(async (_id, a) => {
+      const stored = state.submission.riskAssessment as IRiskAssessmentV2 | null;
+      if (stored?.status !== "ai_not_configured" || stored.keyword) return false;
+      assessments.push(a);
+      state.submission = { ...state.submission, riskAssessment: a };
+      return true;
+    }),
     saveSuggestions: jest.fn(async (_id, b) => {
       blocks.push(b);
       state.submission = { ...state.submission, suggestedRisks: b };
@@ -208,27 +216,28 @@ describe("runIntakeAssessment", () => {
     expect(finalAssessment(h).tier).toBe("Critical");
   });
 
-  it("without an LLM key: a keyword score below the rule minimum, no suggestions", async () => {
+  it("without an LLM key and no keyword match: the rule minimum alone, no suggestions", async () => {
     const h = harness(submission(), { getForm: jest.fn(async () => form({ llmKeyId: null })) });
     await runIntakeAssessment(job(), h.deps);
     const a = finalAssessment(h);
     expect(a.status).toBe("ai_not_configured");
-    // No keyword matches: every dimension stays at the neutral 50.
-    expect(a.keyword?.overallScore).toBe(50);
-    expect(a.keyword?.dimensions).toHaveLength(6);
+    // No keyword matched, so there is no keyword score: the rule minimum alone.
+    expect(a.keyword).toBeNull();
     expect(a.finalScore).toBe(70);
     expect(a.source).toBe("rule_minimum");
-    expect(a.rulesOnly).toBe(false);
+    expect(a.rulesOnly).toBe(true);
     expect(a.tier).toBe("High");
     expect(a.ai).toBeNull();
     expect(finalBlock(h)).toMatchObject({ status: "ai_not_configured", items: [] });
-    expect((h.deps.sendNotification as jest.Mock).mock.calls[0][7].scoreText).toBe("70 (High)");
+    expect((h.deps.sendNotification as jest.Mock).mock.calls[0][7].scoreText).toBe(
+      "at least 70 (rules only)",
+    );
     expect(h.deps.getModel).not.toHaveBeenCalled();
   });
 
   it("without a key and with no rules check: the keyword score is the score", async () => {
     const data = { q1: "Biometric and medical records of patients", q2: "jane@example.com" };
-    const expected = keywordScoreFor(data, form().schema as unknown as FormSchema);
+    const expected = keywordScoreFor(data, form().schema as unknown as FormSchema)!;
     const h = harness(submission({ data }), {
       getForm: jest.fn(async () => form({ llmKeyId: null, euAiActRiskStepEnabled: false })),
       getClassification: jest.fn(async () => null),
@@ -253,7 +262,7 @@ describe("runIntakeAssessment", () => {
 
   it("without a key: a keyword score above the rule minimum wins", async () => {
     const data = { q1: "Biometric and medical records of patients", q2: "jane@example.com" };
-    const expected = keywordScoreFor(data, form().schema as unknown as FormSchema);
+    const expected = keywordScoreFor(data, form().schema as unknown as FormSchema)!;
     const h = harness(submission({ data }), {
       getForm: jest.fn(async () => form({ llmKeyId: null })),
       getClassification: jest.fn(async () => ({ level: "Limited risk", reasons: [] })),
@@ -1063,7 +1072,7 @@ describe("backfillIntakeAssessments", () => {
 
   describe("keyword scores for submissions scored without a key", () => {
     const data = { q1: "Biometric and medical records of patients", q2: "jane@example.com" };
-    const keyword = keywordScoreFor(data, form().schema as unknown as FormSchema);
+    const keyword = keywordScoreFor(data, form().schema as unknown as FormSchema)!;
     const noKey = (overrides: Partial<IRiskAssessmentV2> = {}): IRiskAssessmentV2 => ({
       version: 2,
       status: "ai_not_configured",
@@ -1146,6 +1155,37 @@ describe("backfillIntakeAssessments", () => {
         expect(h.assessments).toHaveLength(0);
         expect(routeSubmission).not.toHaveBeenCalled();
       }
+    });
+
+    it("keeps the lane of a submission that was already routed", async () => {
+      const { h, routeSubmission } = run(
+        submission({
+          data,
+          riskAssessment: noKey(),
+          routing: { lane: "senior", reason: "no_score" } as any,
+        }),
+      );
+      await backfillIntakeAssessments(h.deps);
+      expect(h.assessments).toHaveLength(1);
+      expect(h.assessments[0].keyword).toEqual(keyword);
+      expect(routeSubmission).not.toHaveBeenCalled();
+    });
+
+    it("never overwrites an assessment saved after it was read", async () => {
+      const { h, routeSubmission } = run(submission({ data, riskAssessment: noKey() }));
+      (h.deps.saveBackfilledKeyword as jest.Mock).mockResolvedValueOnce(false);
+      await backfillIntakeAssessments(h.deps);
+      expect(h.assessments).toHaveLength(0);
+      expect(routeSubmission).not.toHaveBeenCalled();
+    });
+
+    it("adds nothing when no keyword matched", async () => {
+      const { h, routeSubmission } = run(
+        submission({ data: { q1: "Screening job applicants" }, riskAssessment: noKey() }),
+      );
+      await backfillIntakeAssessments(h.deps);
+      expect(h.assessments).toHaveLength(0);
+      expect(routeSubmission).not.toHaveBeenCalled();
     });
 
     it("a second run changes nothing", async () => {

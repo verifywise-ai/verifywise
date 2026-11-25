@@ -1,5 +1,5 @@
 import { Box, LinearProgress, Typography, useTheme } from "@mui/material";
-import { riskMark } from "../../../themes/palette";
+import { radiusPx, riskMark } from "../../../themes/palette";
 import { bandFor, type ScoreBand } from "../../../../application/utils/intakeScoring/scoreMath";
 
 export interface DimensionBar {
@@ -65,11 +65,11 @@ function DimensionBars({ dimensions }: { dimensions: DimensionBar[] }) {
               aria-label={dimLabel}
               sx={{
                 "height": "6px",
-                "borderRadius": "3px",
+                "borderRadius": radiusPx.sm,
                 "backgroundColor": theme.palette.background.accent,
                 "& .MuiLinearProgress-bar": {
                   backgroundColor: barColor,
-                  borderRadius: "3px",
+                  borderRadius: radiusPx.sm,
                 },
               }}
             />
@@ -84,7 +84,7 @@ function DimensionBars({ dimensions }: { dimensions: DimensionBar[] }) {
               sx={{
                 width: "8px",
                 height: "8px",
-                borderRadius: "50%",
+                borderRadius: radiusPx.pill,
                 backgroundColor: BAND_COLORS[item.band],
               }}
             />

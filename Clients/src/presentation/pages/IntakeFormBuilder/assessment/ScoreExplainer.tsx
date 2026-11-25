@@ -121,8 +121,8 @@ function ScoreExplainer({
                 {heading("Keyword score")}
                 <Typography sx={body}>{keyword.overallScore}</Typography>
                 <Typography sx={{ fontSize: "12px", color: theme.palette.text.tertiary }}>
-                  Weighted average of six risk dimensions, from keywords in the answers. This form
-                  has no LLM key.
+                  Weighted average of six risk dimensions, from keywords in the answers. No LLM key
+                  was available when this was scored.
                 </Typography>
               </Box>
 
@@ -161,7 +161,7 @@ function ScoreExplainer({
                 )}
               </Box>
 
-              <Typography sx={{ ...body, fontStyle: "normal" }}>
+              <Typography sx={body}>
                 The final score is the higher of the rule minimum and the AI median. The AI can
                 raise the score but never lower it.
               </Typography>

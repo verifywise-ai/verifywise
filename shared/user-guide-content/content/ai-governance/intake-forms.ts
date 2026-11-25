@@ -723,7 +723,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'A form with no LLM key gets a basic keyword score. VerifyWise looks for risk keywords in the answers, scores 6 dimensions from 0 to 100 and takes their weighted average. That number takes the AI score\'s place: the final score is the higher of the rule minimum and the keyword score. The dialog says the score is a basic keyword score and shows the 6 dimension scores. Connect an LLM key to the form for a much more accurate score and suggested risks.',
+      text: 'A form with no LLM key gets a basic keyword score. VerifyWise looks for risk keywords in the answers, scores 6 dimensions from 0 to 100 and takes their weighted average. That number takes the AI score\'s place: the final score is the higher of the rule minimum and the keyword score. If no keyword matches at all, there is no keyword score, and the submission is treated as unscored (or scored by its rule minimum). The dialog says the score is a basic keyword score and shows the 6 dimension scores. Connect an LLM key to the form for a much more accurate score and suggested risks.',
     },
     {
       type: 'paragraph',

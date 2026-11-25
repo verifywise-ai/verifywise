@@ -437,10 +437,13 @@ export interface KeywordScore {
 export function keywordScoreFor(
   submissionData: Record<string, unknown>,
   schema: FormSchema,
-): KeywordScore {
-  const dimensions = scoreSubmissionRuleBased(submissionData, schema).map(
-    ({ key, label, weight, score }) => ({ key, label, weight, score }),
-  );
+): KeywordScore | null {
+  const scored = scoreSubmissionRuleBased(submissionData, schema);
+  // No keyword matched anywhere: every dimension sits at the neutral 50,
+  // which says nothing about the risk. Report no score, so the submission
+  // routes as unscored (senior lane) instead of as a Medium.
+  if (scored.every((dimension) => dimension.signals.length === 0)) return null;
+  const dimensions = scored.map(({ key, label, weight, score }) => ({ key, label, weight, score }));
   return { overallScore: weightedOverall(dimensions), dimensions };
 }
 

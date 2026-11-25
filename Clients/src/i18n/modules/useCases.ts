@@ -98,11 +98,11 @@ export const de: Record<string, string> = {
   "The rule minimum set this score. The keyword score was lower.":
     "Das Regelminimum hat diesen Wert bestimmt. Die Stichwortbewertung war niedriger.",
   "Basic keyword score": "Einfache Stichwortbewertung",
-  "This form has no LLM key, so the score comes from matching keywords in the answers. Add an LLM key to the form for a much more accurate score and suggested risks.":
-    "Dieses Formular hat keinen LLM-Schlüssel, daher beruht der Wert auf Stichwörtern in den Antworten. Fügen Sie dem Formular einen LLM-Schlüssel hinzu, um einen deutlich genaueren Wert und Risikovorschläge zu erhalten.",
+  "No LLM key was available when this was scored, so the score comes from matching keywords in the answers. With an LLM key on the form, new submissions get a much more accurate score and suggested risks.":
+    "Beim Bewerten war kein LLM-Schlüssel verfügbar, daher beruht der Wert auf Stichwörtern in den Antworten. Mit einem LLM-Schlüssel im Formular erhalten neue Einreichungen einen deutlich genaueren Wert und Risikovorschläge.",
   "Keyword score": "Stichwortbewertung",
-  "Weighted average of six risk dimensions, from keywords in the answers. This form has no LLM key.":
-    "Gewichteter Durchschnitt aus sechs Risikodimensionen, ermittelt aus Stichwörtern in den Antworten. Dieses Formular hat keinen LLM-Schlüssel.",
+  "Weighted average of six risk dimensions, from keywords in the answers. No LLM key was available when this was scored.":
+    "Gewichteter Durchschnitt aus sechs Risikodimensionen, ermittelt aus Stichwörtern in den Antworten. Beim Bewerten war kein LLM-Schlüssel verfügbar.",
   "The final score is the higher of the rule minimum and the keyword score.":
     "Der endgültige Wert ist der höhere von Regelminimum und Stichwortbewertung.",
   "Reasons": "Gründe",
@@ -881,11 +881,11 @@ export const fr: Record<string, string> = {
   "The rule minimum set this score. The keyword score was lower.":
     "Le minimum des règles a fixé ce score. Le score par mots-clés était plus bas.",
   "Basic keyword score": "Score de base par mots-clés",
-  "This form has no LLM key, so the score comes from matching keywords in the answers. Add an LLM key to the form for a much more accurate score and suggested risks.":
-    "Ce formulaire n'a pas de clé LLM : le score provient des mots-clés trouvés dans les réponses. Ajoutez une clé LLM au formulaire pour obtenir un score bien plus précis et des suggestions de risques.",
+  "No LLM key was available when this was scored, so the score comes from matching keywords in the answers. With an LLM key on the form, new submissions get a much more accurate score and suggested risks.":
+    "Aucune clé LLM n'était disponible lors de l'évaluation : le score provient des mots-clés trouvés dans les réponses. Avec une clé LLM sur le formulaire, les nouvelles soumissions obtiennent un score bien plus précis et des suggestions de risques.",
   "Keyword score": "Score par mots-clés",
-  "Weighted average of six risk dimensions, from keywords in the answers. This form has no LLM key.":
-    "Moyenne pondérée de six dimensions de risque, à partir des mots-clés des réponses. Ce formulaire n'a pas de clé LLM.",
+  "Weighted average of six risk dimensions, from keywords in the answers. No LLM key was available when this was scored.":
+    "Moyenne pondérée de six dimensions de risque, à partir des mots-clés des réponses. Aucune clé LLM n'était disponible lors de l'évaluation.",
   "The final score is the higher of the rule minimum and the keyword score.":
     "Le score final est le plus élevé entre le minimum des règles et le score par mots-clés.",
   "Reasons": "Raisons",
@@ -1660,11 +1660,11 @@ export const es: Record<string, string> = {
   "The rule minimum set this score. The keyword score was lower.":
     "El mínimo de las reglas fijó esta puntuación. La puntuación por palabras clave fue menor.",
   "Basic keyword score": "Puntuación básica por palabras clave",
-  "This form has no LLM key, so the score comes from matching keywords in the answers. Add an LLM key to the form for a much more accurate score and suggested risks.":
-    "Este formulario no tiene clave LLM, así que la puntuación sale de las palabras clave de las respuestas. Añade una clave LLM al formulario para obtener una puntuación mucho más precisa y riesgos sugeridos.",
+  "No LLM key was available when this was scored, so the score comes from matching keywords in the answers. With an LLM key on the form, new submissions get a much more accurate score and suggested risks.":
+    "No había ninguna clave LLM disponible al puntuar, así que la puntuación sale de las palabras clave de las respuestas. Con una clave LLM en el formulario, los nuevos envíos obtienen una puntuación mucho más precisa y riesgos sugeridos.",
   "Keyword score": "Puntuación por palabras clave",
-  "Weighted average of six risk dimensions, from keywords in the answers. This form has no LLM key.":
-    "Media ponderada de seis dimensiones de riesgo, a partir de las palabras clave de las respuestas. Este formulario no tiene clave LLM.",
+  "Weighted average of six risk dimensions, from keywords in the answers. No LLM key was available when this was scored.":
+    "Media ponderada de seis dimensiones de riesgo, a partir de las palabras clave de las respuestas. No había ninguna clave LLM disponible al puntuar.",
   "The final score is the higher of the rule minimum and the keyword score.":
     "La puntuación final es la más alta entre el mínimo de las reglas y la puntuación por palabras clave.",
   "Reasons": "Motivos",

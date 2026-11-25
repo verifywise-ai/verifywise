@@ -142,7 +142,7 @@ function ScoreSection({
           variant="info"
           inline
           title="Basic keyword score"
-          body="This form has no LLM key, so the score comes from matching keywords in the answers. Add an LLM key to the form for a much more accurate score and suggested risks."
+          body="No LLM key was available when this was scored, so the score comes from matching keywords in the answers. With an LLM key on the form, new submissions get a much more accurate score and suggested risks."
         />
       ) : (
         assessment.status === "ai_not_configured" && (
