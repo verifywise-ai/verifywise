@@ -144,6 +144,24 @@ const LOGIC_CONTROL_WIDTH = "88px";
 // Shared height for WHERE badge and AND/OR toggle: the house control height
 const LOGIC_CONTROL_HEIGHT = "34px";
 
+// Resets the browser's button look so a native <button> can be styled like a Box.
+const buttonReset = {
+  "appearance": "none",
+  "margin": 0,
+  "padding": 0,
+  "font": "inherit",
+  "background": "none",
+  "&:focus-visible": {
+    outline: `2px solid ${brand.primary}`,
+    outlineOffset: "1px",
+  },
+} as const;
+
+const LOGIC_OPTIONS: Array<{ value: "and" | "or"; label: string }> = [
+  { value: "and", label: "AND" },
+  { value: "or", label: "OR" },
+];
+
 // Narrow AND/OR Toggle Component for filter rows
 const LogicToggle: React.FC<{
   value: "and" | "or";
@@ -151,6 +169,8 @@ const LogicToggle: React.FC<{
 }> = ({ value, onChange }) => {
   return (
     <Box
+      role="group"
+      aria-label="Combine filters with"
       sx={{
         display: "flex",
         border: "1px solid",
@@ -164,48 +184,37 @@ const LogicToggle: React.FC<{
         width: LOGIC_CONTROL_WIDTH,
       }}
     >
-      <Box
-        onClick={() => onChange("and")}
-        sx={{
-          cursor: "pointer",
-          flex: 1,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100%",
-          fontSize: "11px",
-          fontWeight: 600,
-          userSelect: "none",
-          borderRadius: "2px",
-          bgcolor: value === "and" ? "background.paper" : "transparent",
-          border: value === "and" ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid transparent",
-          color: "text.primary",
-          transition: "all 0.2s ease",
-        }}
-      >
-        AND
-      </Box>
-      <Box
-        onClick={() => onChange("or")}
-        sx={{
-          cursor: "pointer",
-          flex: 1,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          height: "100%",
-          fontSize: "11px",
-          fontWeight: 600,
-          userSelect: "none",
-          borderRadius: "2px",
-          bgcolor: value === "or" ? "background.paper" : "transparent",
-          border: value === "or" ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid transparent",
-          color: "text.primary",
-          transition: "all 0.2s ease",
-        }}
-      >
-        OR
-      </Box>
+      {LOGIC_OPTIONS.map((option) => {
+        const selected = value === option.value;
+        return (
+          <Box
+            key={option.value}
+            component="button"
+            type="button"
+            aria-pressed={selected}
+            onClick={() => onChange(option.value)}
+            sx={{
+              ...buttonReset,
+              cursor: "pointer",
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "100%",
+              fontSize: "11px",
+              fontWeight: 600,
+              userSelect: "none",
+              borderRadius: "2px",
+              bgcolor: selected ? "background.paper" : "transparent",
+              border: selected ? "1px solid rgba(0, 0, 0, 0.08)" : "1px solid transparent",
+              color: "text.primary",
+              transition: "all 0.2s ease",
+            }}
+          >
+            {option.label}
+          </Box>
+        );
+      })}
     </Box>
   );
 };
@@ -397,8 +406,13 @@ const FilterRow: React.FC<{
 
       {/* Remove button */}
       <Box
+        component="button"
+        type="button"
+        aria-label="Remove filter"
+        disabled={!showRemove}
         onClick={showRemove ? onRemove : undefined}
         sx={{
+          ...buttonReset,
           "cursor": showRemove ? "pointer" : "default",
           "display": "flex",
           "alignItems": "center",
