@@ -111,9 +111,9 @@ describe("ArenaSettingSection", () => {
     arenaState.mutateAsync.mockRejectedValueOnce(new Error("403"));
     renderWithProviders(<ArenaSettingSection />);
     fireEvent.click(toggle());
-    expect(
-      await screen.findByText("Could not save the Arena setting. Try again."),
-    ).toBeInTheDocument();
+    const message = await screen.findByText("Could not save the Arena setting. Try again.");
+    // Inline under the toggle, not a fixed toast in the corner.
+    expect(message.closest('[role="alert"]')).toHaveStyle({ position: "static" });
   });
 
   it("disables the toggle when the setting cannot be loaded", () => {

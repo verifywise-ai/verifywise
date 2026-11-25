@@ -11,6 +11,24 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "v2.7.0",
+    date: "November 25, 2026",
+    title: "Vendor research, framework requirements in reports and use case approvals",
+    summary:
+      "VerifyWise can now research a vendor on the open web and suggest risks for you to accept. Reports can include the requirements of the 24 bundled frameworks. You can attach an approval workflow to an existing use case and resubmit one that was rejected. Tasks can link to incidents, and LLM keys are checked with their provider before they are saved.",
+    items: [
+      "Vendor research: research a vendor on the open web with your organization's LLM key, by hand, when the vendor is created or on a schedule. Findings are suggested risks, and nothing reaches the vendor risk register until someone accepts one",
+      "Vendor risk database: research also draws on 31 public lists, most of them official, that come with each release, such as sanctions lists, known exploited vulnerabilities, AI incident records or recalls. Each finding carries a credibility label based on its sources",
+      "Brave Search: add a Brave Search API key for vendor research. It searches the web and news through Brave when the research key is not an Anthropic key, and falls back to Brave when it is",
+      "Vendors page: research findings and insights have tabs of their own",
+      "Framework requirements in reports: a report on a use case with a bundled framework (such as SOC 2, GDPR or HIPAA) lists each requirement with its status, owner, due date, evidence and linked risks",
+      "Use case approvals: attach or change an approval workflow on an existing use case from its Overview, and resubmit a rejected use case for approval. A resubmission is never auto-approved, even when the workflow allows it",
+      "Tasks and incidents: link a task to an incident. The incident drawer lists its linked tasks",
+      "LLM keys: a key is checked with its provider when you save it, and a problem shows under the field to fix. Anthropic keys can carry a workspace ID",
+      "File storage: deployments can keep uploaded files in Amazon S3 or an S3-compatible store. By default files are kept in the database, as before",
+    ],
+  },
+  {
     version: "v2.6.9",
     date: "November 18, 2026",
     title: "A new look, a Home page, OSFI E-23, EN 18286 and risk approvals",

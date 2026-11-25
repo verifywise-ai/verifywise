@@ -1229,6 +1229,8 @@ export const de: Record<string, string> = {
   "Enter surname": "Nachname eingeben",
   "Enter task title": "Aufgabentitel eingeben",
   "Enter text here...": "Text hier eingeben...",
+  "Combine filters with": "Filter verknüpfen mit",
+  "Remove filter": "Filter entfernen",
   "Enter text...": "Text eingeben...",
   "Enter the API key value": "API-Schlüsselwert eingeben",
   "Enter the bearer token": "Bearer-Token eingeben",
@@ -4577,6 +4579,8 @@ export const de: Record<string, string> = {
     "Schulungszuweisungen, Gruppen und benutzerdefinierte Rollen sowie Framework-Import",
   "A new look, a Home page, OSFI E-23, EN 18286 and risk approvals":
     "Ein neues Erscheinungsbild, eine Startseite, OSFI E-23, EN 18286 und Risikofreigaben",
+  "Vendor research, framework requirements in reports and use case approvals":
+    "Lieferantenrecherche, Framework-Anforderungen in Berichten und Freigaben für Anwendungsfälle",
   // Unified sidebar (phase 2)
   "Record": "Erfassen",
   "Workspace": "Arbeitsbereich",
@@ -5925,6 +5929,8 @@ export const fr: Record<string, string> = {
   "Enter surname": "Saisir le nom de famille",
   "Enter task title": "Saisir le titre de la tâche",
   "Enter text here...": "Saisir du texte ici...",
+  "Combine filters with": "Combiner les filtres avec",
+  "Remove filter": "Supprimer le filtre",
   "Enter text...": "Saisir du texte...",
   "Enter the API key value": "Saisir la valeur de la clé API",
   "Enter the bearer token": "Saisir le jeton bearer",
@@ -9271,6 +9277,8 @@ export const fr: Record<string, string> = {
     "Affectation des formations, groupes et rôles personnalisés, et import de référentiels",
   "A new look, a Home page, OSFI E-23, EN 18286 and risk approvals":
     "Une nouvelle apparence, une page d'accueil, OSFI E-23, EN 18286 et l'approbation des risques",
+  "Vendor research, framework requirements in reports and use case approvals":
+    "Recherche sur les fournisseurs, exigences des référentiels dans les rapports et approbation des cas d'usage",
 
   "Request": "Requête",
   // Unified sidebar (phase 2)
@@ -10621,6 +10629,8 @@ export const es: Record<string, string> = {
   "Enter surname": "Introduce los apellidos",
   "Enter task title": "Introduce el título de la tarea",
   "Enter text here...": "Introduce el texto aquí...",
+  "Combine filters with": "Combinar filtros con",
+  "Remove filter": "Quitar filtro",
   "Enter text...": "Introduce texto...",
   "Enter the API key value": "Introduce el valor de la API key",
   "Enter the bearer token": "Introduce el bearer token",
@@ -13968,6 +13978,8 @@ export const es: Record<string, string> = {
     "Asignación de formaciones, grupos y roles personalizados, e importación de marcos",
   "A new look, a Home page, OSFI E-23, EN 18286 and risk approvals":
     "Un nuevo aspecto, una página de inicio, OSFI E-23, EN 18286 y aprobación de riesgos",
+  "Vendor research, framework requirements in reports and use case approvals":
+    "Investigación de proveedores, requisitos de marcos en los informes y aprobación de casos de uso",
   // Unified sidebar (phase 2)
   "Record": "Registrar",
   "Workspace": "Espacio de trabajo",

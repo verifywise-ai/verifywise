@@ -120,6 +120,11 @@ export interface AnalyzeOptions {
    * spec scans several.
    */
   reportName?: string;
+  /**
+   * CSS selector to limit the scan to one component, for tests that check
+   * that component alone. Leave unset to scan the whole page.
+   */
+  include?: string;
 }
 
 /**
@@ -196,10 +201,11 @@ export async function analyzeCriticalAndSeriousViolations(
 
   const disabled = { ...DEFERRED_AXE_RULES, ...options.alsoDisable };
 
-  const results = await new AxeBuilder({ page })
+  let builder = new AxeBuilder({ page })
     .withTags([...WCAG_TAGS])
-    .disableRules(Object.keys(disabled))
-    .analyze();
+    .disableRules(Object.keys(disabled));
+  if (options.include) builder = builder.include(options.include);
+  const results = await builder.analyze();
 
   writeReport(options.reportName, results, disabled, page.url());
 
