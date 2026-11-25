@@ -4579,6 +4579,8 @@ export const de: Record<string, string> = {
     "Schulungszuweisungen, Gruppen und benutzerdefinierte Rollen sowie Framework-Import",
   "A new look, a Home page, OSFI E-23, EN 18286 and risk approvals":
     "Ein neues Erscheinungsbild, eine Startseite, OSFI E-23, EN 18286 und Risikofreigaben",
+  "Vendor research, framework requirements in reports and use case approvals":
+    "Lieferantenrecherche, Framework-Anforderungen in Berichten und Freigaben für Anwendungsfälle",
   // Unified sidebar (phase 2)
   "Record": "Erfassen",
   "Workspace": "Arbeitsbereich",
@@ -9275,6 +9277,8 @@ export const fr: Record<string, string> = {
     "Affectation des formations, groupes et rôles personnalisés, et import de référentiels",
   "A new look, a Home page, OSFI E-23, EN 18286 and risk approvals":
     "Une nouvelle apparence, une page d'accueil, OSFI E-23, EN 18286 et l'approbation des risques",
+  "Vendor research, framework requirements in reports and use case approvals":
+    "Recherche sur les fournisseurs, exigences des référentiels dans les rapports et approbation des cas d'usage",
 
   "Request": "Requête",
   // Unified sidebar (phase 2)
@@ -13974,6 +13978,8 @@ export const es: Record<string, string> = {
     "Asignación de formaciones, grupos y roles personalizados, e importación de marcos",
   "A new look, a Home page, OSFI E-23, EN 18286 and risk approvals":
     "Un nuevo aspecto, una página de inicio, OSFI E-23, EN 18286 y aprobación de riesgos",
+  "Vendor research, framework requirements in reports and use case approvals":
+    "Investigación de proveedores, requisitos de marcos en los informes y aprobación de casos de uso",
   // Unified sidebar (phase 2)
   "Record": "Registrar",
   "Workspace": "Espacio de trabajo",
