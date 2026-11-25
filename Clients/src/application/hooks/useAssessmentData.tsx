@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Framework } from "../../domain/types/Framework";
-import { getAssessmentById } from "../repository/assesment.repository";
+import { getAssessmentById } from "../repository/assessment.repository";
 
 /**
  * Custom hook to fetch and manage assessment data based on the selected project ID.

@@ -16,7 +16,7 @@ import CustomizableSkeleton from "../../../components/Skeletons";
 import AccordionView from "./AccordionView";
 import EUAIActQuestionDrawerDialog from "../../../components/Drawer/EUAIActQuestionDrawerDialog";
 import useAssessmentProgress from "../../../../application/hooks/useAssessmentProgress";
-import useAssessmentTopics from "../../../../application/hooks/useAssessmentTopcis";
+import useAssessmentTopics from "../../../../application/hooks/useAssessmentTopics";
 import useAssessmentSubtopics from "../../../../application/hooks/useAssessmentSubtopics";
 import PageTour from "../../../components/PageTour";
 import useMultipleOnScreen from "../../../../application/hooks/useMultipleOnScreen";

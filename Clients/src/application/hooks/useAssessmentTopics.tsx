@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Topic } from "../../domain/types/Topic";
-import { getAllAssessmentTopics } from "../repository/assesment.repository";
+import { getAllAssessmentTopics } from "../repository/assessment.repository";
 
 /**
  * Custom hook to fetch and manage assessment topics.

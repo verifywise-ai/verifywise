@@ -87,7 +87,7 @@ vi.mock("../../application/repository/question.repository", () => ({
   updateEUAIActAnswerById: (...args: any[]) => mockUpdateEUAIActAnswerById(...args),
 }));
 
-vi.mock("../../application/repository/assesment.repository", () => ({
+vi.mock("../../application/repository/assessment.repository", () => ({
   getAssessmentTopicById: (...args: any[]) => mockGetAssessmentTopicById(...args),
 }));
 

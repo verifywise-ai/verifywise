@@ -45,7 +45,7 @@ import useUsers from "../../../../application/hooks/useUsers";
 import { updateEUAIActAnswerById } from "../../../../application/repository/question.repository";
 import { getEntityById } from "../../../../application/repository/entity.repository";
 import { attachFilesToEntity } from "../../../../application/repository/file.repository";
-import { getAssessmentTopicById } from "../../../../application/repository/assesment.repository";
+import { getAssessmentTopicById } from "../../../../application/repository/assessment.repository";
 import { useCanCheck } from "../../../../application/hooks/useCan";
 import { palette, radiusPx } from "../../../themes/palette";
 
