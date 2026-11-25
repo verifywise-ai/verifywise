@@ -241,6 +241,89 @@ describe("AIGateway - Prompts", () => {
     });
   });
 
+  it("keeps the prompt and shows an error when the delete fails", async () => {
+    mockLoad([makePrompt()]);
+    mockDelete.mockRejectedValue(new Error("403"));
+    renderWithProviders(<PromptsPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Support agent")).toBeInTheDocument();
+    });
+
+    const trashButton = screen
+      .getAllByRole("button")
+      .find((b) => b.querySelector("svg.lucide-trash-2")) as HTMLButtonElement;
+    fireEvent.click(trashButton);
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Could not delete the prompt. Try again.",
+    );
+    // The modal stays open and the prompt stays in the list.
+    expect(screen.getByRole("heading", { name: "Delete prompt" })).toBeInTheDocument();
+    expect(screen.getAllByText("Support agent").length).toBeGreaterThan(0);
+
+    // Closing and reopening clears the old error.
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => {
+      expect(screen.queryByRole("heading", { name: "Delete prompt" })).not.toBeInTheDocument();
+    });
+    fireEvent.click(trashButton);
+    expect(screen.queryByText("Could not delete the prompt. Try again.")).not.toBeInTheDocument();
+  });
+
+  const openDeleteFor = async (name: string) => {
+    await waitFor(() => {
+      expect(screen.getByText(name)).toBeInTheDocument();
+    });
+    const trashButton = screen
+      .getAllByRole("button")
+      .find((b) => b.querySelector("svg.lucide-trash-2")) as HTMLButtonElement;
+    fireEvent.click(trashButton);
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+  };
+
+  it("shows the server's reason when it rejects the delete", async () => {
+    mockLoad([makePrompt()]);
+    mockDelete.mockRejectedValue(new CustomException("Only Admins can delete prompts", 403, {}));
+    renderWithProviders(<PromptsPage />);
+    await openDeleteFor("Support agent");
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Only Admins can delete prompts");
+  });
+
+  it("removes the row when the prompt was already deleted (404)", async () => {
+    mockLoad([makePrompt()]);
+    mockDelete.mockRejectedValue(new CustomException("Not Found", 404, {}));
+    renderWithProviders(<PromptsPage />);
+    await openDeleteFor("Support agent");
+
+    await waitFor(() => {
+      expect(screen.queryByText("Support agent")).not.toBeInTheDocument();
+    });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("goes back a page after deleting the only row on the last page", async () => {
+    const many = Array.from({ length: 11 }, (_, i) =>
+      makePrompt({ id: i + 1, name: `Prompt ${i + 1}` }),
+    );
+    mockLoad(many);
+    mockDelete.mockResolvedValue({ data: {} });
+    renderWithProviders(<PromptsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Prompt 1")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /next page/i }));
+    await openDeleteFor("Prompt 11");
+
+    await waitFor(() => {
+      expect(screen.getByText("Prompt 1")).toBeInTheDocument();
+    });
+    expect(screen.getByText(/1–10 of 10/)).toBeInTheDocument();
+  });
+
   it("shows pagination controls when there are more than 5 prompts", async () => {
     // Default rows-per-page (from getPaginationRowCount's fallback) is 10.
     const many = Array.from({ length: 15 }, (_, i) =>
