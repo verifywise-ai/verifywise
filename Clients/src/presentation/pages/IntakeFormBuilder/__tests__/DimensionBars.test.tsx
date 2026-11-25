@@ -1,7 +1,7 @@
 import { screen } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import DimensionBars, { dimensionBarColor } from "../assessment/DimensionBars";
-import { risk } from "../../../themes/palette";
+import { riskMark } from "../../../themes/palette";
 
 describe("DimensionBars", () => {
   it("renders one bar per dimension with its score and the band legend", () => {
@@ -31,9 +31,9 @@ describe("DimensionBars", () => {
   });
 
   it("colours a score by its band", () => {
-    expect(dimensionBarColor(25)).toBe(risk.low.text);
-    expect(dimensionBarColor(26)).toBe(risk.medium.text);
-    expect(dimensionBarColor(75)).toBe(risk.high.text);
-    expect(dimensionBarColor(76)).toBe(risk.critical.text);
+    expect(dimensionBarColor(25)).toBe(riskMark.low);
+    expect(dimensionBarColor(26)).toBe(riskMark.medium);
+    expect(dimensionBarColor(75)).toBe(riskMark.high);
+    expect(dimensionBarColor(76)).toBe(riskMark.critical);
   });
 });
