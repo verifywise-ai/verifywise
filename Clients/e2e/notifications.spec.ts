@@ -1,4 +1,5 @@
 import { test, expect } from "./fixtures/auth.fixture";
+import { analyzeCriticalAndSeriousViolations, summarizeViolations } from "./helpers/axe";
 
 test.describe("Snackbar / Toast Notifications", () => {
   test.beforeEach(async ({ authedPage: page }) => {
@@ -142,4 +143,40 @@ test.describe("Snackbar / Toast Notifications", () => {
 
     await page.keyboard.press("Escape");
   });
+});
+
+// The bell's visible badge text must be part of its accessible name (axe
+// label-content-name-mismatch). It used to fail at 0 unread (MUI kept a hidden
+// "0" badge) and above 99 (badge "99+", label "120"), so whole-page scans
+// passed or failed depending on the seeded user's unread count.
+test.describe("Notification bell accessibility", () => {
+  for (const [unread, label] of [
+    [0, "Notifications"],
+    [14, "Notifications, 14 unread"],
+    [120, "Notifications, 99+ unread"],
+  ] as const) {
+    test(`bell has no critical or serious violations at ${unread} unread`, async ({
+      authedPage: page,
+    }) => {
+      await page.route("**/api/notifications/summary*", (route) =>
+        route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            data: { recent_notifications: [], unread_count: unread, total_count: unread },
+          }),
+        }),
+      );
+      await page.goto("/");
+
+      const bell = page.getByRole("button", { name: label, exact: true });
+      await expect(bell).toBeVisible({ timeout: 10_000 });
+
+      const violations = await analyzeCriticalAndSeriousViolations(page, {
+        include: `button[aria-label="${label}"]`,
+        reportName: `notification-bell-${unread}`,
+      });
+      expect(summarizeViolations(violations)).toEqual([]);
+    });
+  }
 });

@@ -96,6 +96,26 @@ describe("NotificationBell", () => {
     expect(screen.getByText("5")).toBeInTheDocument();
   });
 
+  // axe label-content-name-mismatch: the visible badge text must be part of
+  // the button's accessible name, and no hidden "0" may sit inside it.
+  it.each([
+    [0, "Notifications", ""],
+    [14, "Notifications, 14 unread", "14"],
+    [120, "Notifications, 99+ unread", "99+"],
+  ])("unread %i: label %s matches the badge", (count, label, badge) => {
+    mockUnreadCount = count;
+    renderWithProviders(<NotificationBell />);
+    const button = screen.getByRole("button");
+    expect(button).toHaveAttribute("aria-label", label);
+    const badgeEl = button.querySelector(".MuiBadge-badge");
+    if (badge) {
+      expect(badgeEl).toHaveTextContent(badge);
+    } else {
+      expect(badgeEl).toBeNull();
+      expect(button).toHaveTextContent(/^$/);
+    }
+  });
+
   it("opens popover on bell click", async () => {
     await openPopover();
     expect(screen.getByText("Notifications")).toBeInTheDocument();
