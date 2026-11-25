@@ -272,14 +272,14 @@ export default function AuditLedger() {
                 variant="outlined"
                 onClick={handleExport}
                 isDisabled={isExporting}
-                sx={{ height: 30, minWidth: 120 }}
+                sx={{ minWidth: 120 }}
               />
               <CustomizableButton
                 text={isVerifying ? "Verifying..." : "Verify chain"}
                 variant="contained"
                 onClick={verify}
                 isDisabled={isVerifying}
-                sx={{ height: 30, minWidth: 120 }}
+                sx={{ minWidth: 120 }}
               />
             </Stack>
           </Stack>

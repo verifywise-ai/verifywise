@@ -202,7 +202,6 @@ const ReportsArchive: React.FC = () => {
   };
 
   const textButtonStyle = {
-    "height": "30px",
     "fontSize": 13,
     "&:hover": {
       backgroundColor: theme.palette.background.accent,
@@ -391,7 +390,6 @@ const ReportsArchive: React.FC = () => {
                           icon={<Download size={14} />}
                           onClick={() => report.id && handleDownload(report.id)}
                           sx={{
-                            "height": "30px",
                             "color": theme.palette.primary.main,
                             "fontSize": 13,
                             "&:hover": {

@@ -60,7 +60,6 @@ export const PreviewRoleBanner = ({ role, note, onRoleChange, onExit }: PreviewR
       <RoleSwitch role={role} onChange={onRoleChange} />
       <CustomizableButton
         variant="outlined"
-        size="small"
         text="Exit preview"
         onClick={onExit}
         testId="button-preview-exit"

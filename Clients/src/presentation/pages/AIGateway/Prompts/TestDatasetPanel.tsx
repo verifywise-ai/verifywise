@@ -274,14 +274,14 @@ export default function TestDatasetPanel({
             onClick={handleSave}
             isDisabled={isSaving}
             variant="outlined"
-            sx={{ height: 30, fontSize: 12 }}
+            sx={{ fontSize: 12 }}
           />
           <CustomizableButton
             text="Run all"
             icon={<Play size={13} strokeWidth={1.5} />}
             onClick={handleRunAll}
             isDisabled={isRunning || !selectedEndpoint || testCases.length === 0}
-            sx={{ height: 30, fontSize: 12 }}
+            sx={{ fontSize: 12 }}
           />
           {selectedDatasetId !== "new" && (
             <CustomizableButton
@@ -289,7 +289,7 @@ export default function TestDatasetPanel({
               icon={<Trash2 size={13} strokeWidth={1.5} />}
               onClick={deleteDataset}
               variant="text"
-              sx={{ height: 30, fontSize: 12, color: vwPalette.status.error.text }}
+              sx={{ fontSize: 12, color: vwPalette.status.error.text }}
             />
           )}
         </Box>

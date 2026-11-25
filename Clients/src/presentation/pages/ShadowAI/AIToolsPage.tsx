@@ -358,7 +358,6 @@ export default function AIToolsPage() {
                   sx={{
                     "backgroundColor": palette.brand.primary,
                     "&:hover": { backgroundColor: palette.brand.primaryHover },
-                    "height": 30,
                     "fontSize": 12,
                   }}
                   onClick={() => setGovernanceModalOpen(true)}
@@ -368,7 +367,7 @@ export default function AIToolsPage() {
               <CustomizableButton
                 text="Promote to AI app"
                 variant="outlined"
-                sx={{ height: 30, fontSize: 12 }}
+                sx={{ fontSize: 12 }}
                 onClick={async () => {
                   try {
                     const aiApp = await promoteMutation.mutateAsync(selectedTool.id);
