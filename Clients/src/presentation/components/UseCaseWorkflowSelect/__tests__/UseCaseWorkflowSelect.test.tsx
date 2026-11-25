@@ -24,15 +24,35 @@ const formData = {
   steps: [],
   auto_approve_max_risk: null,
 };
-vi.mock("../../Modals/NewApprovalWorkflow", () => ({
-  default: ({ onSuccess, fixedEntity }: any) => (
-    <div data-testid="new-workflow-modal" data-fixed-entity={fixedEntity}>
-      <button type="button" onClick={() => onSuccess(formData)}>
-        Submit new workflow
-      </button>
-    </div>
-  ),
-}));
+vi.mock("../../Modals/NewApprovalWorkflow", async () => {
+  const { useState } = await import("react");
+  const { createPortal } = await import("react-dom");
+  // Portalled like the real modal, with its own form.
+  const MockModal = ({ onSuccess, fixedEntity }: any) => {
+    const [error, setError] = useState<string | null>(null);
+    return createPortal(
+      <form
+        data-testid="new-workflow-modal"
+        data-fixed-entity={fixedEntity}
+        onSubmit={(event) => event.preventDefault()}
+      >
+        <button
+          type="button"
+          onClick={() =>
+            Promise.resolve(onSuccess(formData)).catch((err: { message: string }) =>
+              setError(err.message),
+            )
+          }
+        >
+          Submit new workflow
+        </button>
+        {error && <p>{error}</p>}
+      </form>,
+      document.body,
+    );
+  };
+  return { default: MockModal };
+});
 
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import UseCaseWorkflowSelect from "../index";
@@ -81,13 +101,35 @@ describe("UseCaseWorkflowSelect", () => {
     expect(screen.queryByTestId("use-case-workflow-empty")).toBeNull();
   });
 
-  it("says why when the workflow can't be created", async () => {
+  it("keeps the workflow form open with the reason when the save fails", async () => {
     mockSave.mockRejectedValue({ message: "Workflow title is required" });
     renderWithProviders(<Harness />);
     fireEvent.click(await screen.findByTestId("use-case-workflow-create"));
     fireEvent.click(screen.getByRole("button", { name: "Submit new workflow" }));
+    // The rejection reaches the modal, which shows it and keeps the input.
     expect(await screen.findByText("Workflow title is required")).toBeInTheDocument();
+    expect(screen.getByTestId("new-workflow-modal")).toBeInTheDocument();
     expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("does not submit the form it sits in when the workflow form is submitted", async () => {
+    const outerSubmit = vi.fn((event: React.FormEvent) => event.preventDefault());
+    renderWithProviders(
+      <form onSubmit={outerSubmit}>
+        <Harness />
+      </form>,
+    );
+    fireEvent.click(await screen.findByTestId("use-case-workflow-create"));
+    fireEvent.submit(screen.getByTestId("new-workflow-modal"));
+    expect(outerSubmit).not.toHaveBeenCalled();
+  });
+
+  it("shows an archived workflow that is still selected", async () => {
+    mockWorkflows = [{ id: 3, workflow_title: "Legal sign-off", entity_type: "use_case" }];
+    renderWithProviders(<UseCaseWorkflowSelect id="workflow" value={99} onChange={onChange} />);
+    await waitFor(() =>
+      expect(screen.getByRole("combobox")).toHaveTextContent("Archived workflow"),
+    );
   });
 
   it("offers no create action without the approval workflow admin permission", async () => {

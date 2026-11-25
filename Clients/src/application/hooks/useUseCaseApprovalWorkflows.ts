@@ -5,6 +5,8 @@ import { getApprovalWorkflowsByEntityType } from "../repository/approvalWorkflow
 export interface UseCaseWorkflowOption {
   _id: number;
   name: string;
+  /** Risk level up to which the workflow approves a use case automatically. */
+  autoApproveMaxRisk: string | null;
 }
 
 export const useCaseApprovalWorkflowsQueryKey = ["approvalWorkflows", "use_case"] as const;
@@ -18,10 +20,17 @@ export function useUseCaseApprovalWorkflows() {
     queryKey: useCaseApprovalWorkflowsQueryKey,
     queryFn: async ({ signal }): Promise<UseCaseWorkflowOption[]> => {
       const workflows = await getApprovalWorkflowsByEntityType({ entityType: "use_case", signal });
-      return workflows.map((workflow: { id: number; workflow_title: string }) => ({
-        _id: Number(workflow.id),
-        name: workflow.workflow_title,
-      }));
+      return workflows.map(
+        (workflow: {
+          id: number;
+          workflow_title: string;
+          auto_approve_max_risk?: string | null;
+        }) => ({
+          _id: Number(workflow.id),
+          name: workflow.workflow_title,
+          autoApproveMaxRisk: workflow.auto_approve_max_risk ?? null,
+        }),
+      );
     },
     staleTime: 60 * 1000,
   });

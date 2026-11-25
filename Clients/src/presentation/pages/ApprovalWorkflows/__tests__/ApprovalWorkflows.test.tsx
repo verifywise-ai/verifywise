@@ -42,7 +42,9 @@ vi.mock("../ApprovalWorkflowsTable", () => ({
       data-testid="approval-workflows-table"
       data-can-edit={String(Boolean(onEdit))}
       data-can-archive={String(Boolean(onArchive))}
-    />
+    >
+      <button onClick={() => onArchive?.("5")}>Archive workflow 5</button>
+    </div>
   ),
 }));
 
@@ -171,6 +173,20 @@ describe("ApprovalWorkflows", () => {
         formData: newWorkflowForm,
       }),
     );
+  });
+
+  it("refreshes the use case workflow list after a save and after an archive", async () => {
+    const queryClient = new QueryClient();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    renderWithProviders(<ApprovalWorkflows />, { queryClient });
+    const useCaseList = { queryKey: ["approvalWorkflows", "use_case"] };
+
+    fireEvent.click(screen.getByRole("button", { name: "Save workflow form" }));
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith(useCaseList));
+
+    invalidate.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Archive workflow 5" }));
+    await waitFor(() => expect(invalidate).toHaveBeenCalledWith(useCaseList));
   });
 
   it("renders without crashing", () => {

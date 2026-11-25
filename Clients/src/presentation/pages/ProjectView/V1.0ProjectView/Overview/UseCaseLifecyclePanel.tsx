@@ -26,7 +26,8 @@ import { Project } from "../../../../../domain/types/Project";
 /**
  * What saving a workflow choice does, sentence by sentence, as the server
  * does it (project.ctrl.ts updateProjectById): attaching or replacing opens
- * a new approval request, and only a planned use case moves to In review;
+ * a new approval request (approved at once when an auto-approve level
+ * covers the use case's risk), and only a planned use case moves to In review;
  * replacing or clearing withdraws a pending request.
  */
 function workflowChangeNotes({
@@ -34,11 +35,14 @@ function workflowChangeNotes({
   current,
   stage,
   approvalStatus,
+  autoApproves,
 }: {
   selected: number;
   current: number;
   stage: LifecycleStage;
   approvalStatus: Project["approval_status"];
+  /** The selected workflow has an auto-approve risk level. */
+  autoApproves: boolean;
 }): string[] {
   if (selected === current) return [];
   const notes: string[] = [];
@@ -46,6 +50,13 @@ function workflowChangeNotes({
     notes.push("Saving sends this use case for approval.");
     if (stage === LifecycleStage.PLANNED) {
       notes.push("It moves to In review until the request is approved or rejected.");
+    }
+    // createUseCaseApprovalRequest approves at once when the use case's risk
+    // is at or below the workflow's threshold.
+    if (autoApproves) {
+      notes.push(
+        "If its risk classification is at or below the workflow's auto-approve level, it is approved at once.",
+      );
     }
   } else {
     notes.push("Saving removes the approval workflow from this use case.");
@@ -96,7 +107,10 @@ const UseCaseLifecyclePanel = ({
   const isWorkflowAdmin = useCan("approvalWorkflow.admin");
   const approvalStatus = project.approval_status ?? null;
   const currentWorkflowId = project.approval_workflow_id ?? 0;
-  const canChangeWorkflow = canManage && (!approvalStatus || isWorkflowAdmin);
+  // The PATCH that changes it is authorized on useCase.edit, which an owner
+  // who may manage the lifecycle does not always hold.
+  const canEditWorkflow = canManage && canEditUseCases;
+  const canChangeWorkflow = canEditWorkflow && (!approvalStatus || isWorkflowAdmin);
   const workflowTitle = currentWorkflowId
     ? workflowsLoaded
       ? (workflows?.find((workflow) => workflow._id === Number(currentWorkflowId))?.name ??
@@ -108,6 +122,8 @@ const UseCaseLifecyclePanel = ({
     current: Number(currentWorkflowId),
     stage,
     approvalStatus,
+    autoApproves: !!workflows?.find((workflow) => workflow._id === workflowDraft)
+      ?.autoApproveMaxRisk,
   });
 
   const openWorkflow = () => {
@@ -237,7 +253,7 @@ const UseCaseLifecyclePanel = ({
                   </VWLink>
                 )}
               </Stack>
-              {canManage && !canChangeWorkflow && (
+              {canEditWorkflow && !canChangeWorkflow && (
                 <Typography
                   sx={{ fontSize: 13, color: "text.secondary", maxWidth: "320px" }}
                   data-testid="lifecycle-workflow-locked"

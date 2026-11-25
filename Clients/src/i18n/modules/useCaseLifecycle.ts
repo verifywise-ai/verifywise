@@ -166,6 +166,8 @@ export const de: Record<string, string> = {
     "Beim Speichern wird dieser Anwendungsfall zur Freigabe gesendet.",
   "It moves to In review until the request is approved or rejected.":
     "Er wechselt zu „In Prüfung“, bis die Anfrage freigegeben oder abgelehnt wird.",
+  "If its risk classification is at or below the workflow's auto-approve level, it is approved at once.":
+    "Liegt seine Risikoeinstufung auf oder unter der Stufe für automatische Freigabe des Ablaufs, wird er sofort freigegeben.",
   "Saving removes the approval workflow from this use case.":
     "Beim Speichern wird der Genehmigungsablauf von diesem Anwendungsfall entfernt.",
   "The pending approval request is withdrawn.":
@@ -340,6 +342,8 @@ export const fr: Record<string, string> = {
     "L'enregistrement envoie ce cas d'usage en approbation.",
   "It moves to In review until the request is approved or rejected.":
     "Il passe à « En examen » jusqu'à ce que la demande soit approuvée ou refusée.",
+  "If its risk classification is at or below the workflow's auto-approve level, it is approved at once.":
+    "Si sa classification de risque est égale ou inférieure au niveau d'approbation automatique du flux, il est approuvé immédiatement.",
   "Saving removes the approval workflow from this use case.":
     "L'enregistrement retire le flux d'approbation de ce cas d'usage.",
   "The pending approval request is withdrawn.": "La demande d'approbation en attente est retirée.",
@@ -508,6 +512,8 @@ export const es: Record<string, string> = {
   "Saving sends this use case for approval.": "Al guardar, este caso de uso se envía a aprobación.",
   "It moves to In review until the request is approved or rejected.":
     "Pasa a «En revisión» hasta que la solicitud se apruebe o se rechace.",
+  "If its risk classification is at or below the workflow's auto-approve level, it is approved at once.":
+    "Si su clasificación de riesgo está en el nivel de aprobación automática del flujo o por debajo, se aprueba de inmediato.",
   "Saving removes the approval workflow from this use case.":
     "Al guardar, se quita el flujo de aprobación de este caso de uso.",
   "The pending approval request is withdrawn.": "La solicitud de aprobación pendiente se retira.",

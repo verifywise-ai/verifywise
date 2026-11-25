@@ -303,7 +303,7 @@ export const useCasesContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { text: 'Saving a new workflow sends the use case for approval. A planned use case moves to In review until the request is approved or rejected.' },
+        { text: 'Saving a new workflow sends the use case for approval. A planned use case moves to In review until the request is approved or rejected. If the workflow has an auto-approve risk level and the use case\'s risk classification is at or below it, the request is approved at once.' },
         { text: 'Changing the workflow withdraws a pending request and opens a new one under the new workflow.' },
         { text: 'Picking **None** removes the workflow and withdraws a pending request.' },
       ],

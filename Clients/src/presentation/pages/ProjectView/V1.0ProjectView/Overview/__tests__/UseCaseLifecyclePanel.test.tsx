@@ -27,7 +27,12 @@ vi.mock("../../../../../../application/repository/useCaseLifecycle.repository", 
   updateLifecycleSettings: vi.fn(),
 }));
 
-let mockWorkflows: Array<{ id: number; workflow_title: string; entity_type: string }> = [];
+let mockWorkflows: Array<{
+  id: number;
+  workflow_title: string;
+  entity_type: string;
+  auto_approve_max_risk?: string | null;
+}> = [];
 vi.mock("../../../../../../application/repository/approvalWorkflow.repository", () => ({
   getApprovalWorkflowsByEntityType: () => Promise.resolve(mockWorkflows),
   saveApprovalWorkflow: vi.fn(),
@@ -230,6 +235,12 @@ describe("UseCaseLifecyclePanel approval workflow", () => {
     mockWorkflows = [
       { id: 3, workflow_title: "Model risk review", entity_type: "use_case" },
       { id: 4, workflow_title: "Legal sign-off", entity_type: "use_case" },
+      {
+        id: 5,
+        workflow_title: "Fast track",
+        entity_type: "use_case",
+        auto_approve_max_risk: "Limited risk",
+      },
     ];
     vi.clearAllMocks();
     mockUpdateProject.mockResolvedValue({});
@@ -328,6 +339,42 @@ describe("UseCaseLifecyclePanel approval workflow", () => {
     expect(screen.getByText("Rejected")).toBeInTheDocument();
     expect(screen.getByTestId("lifecycle-workflow-action")).toBeInTheDocument();
     expect(screen.queryByTestId("lifecycle-workflow-locked")).toBeNull();
+  });
+
+  // PATCH /v1/projects/:id is authorized on useCase.edit; owning the use case
+  // is enough for the lifecycle actions but not for this.
+  it("offers no workflow action to an owner without useCase.edit", () => {
+    mockRole = "Reviewer";
+    mockUserId = 1;
+    mockPermissions = [];
+    renderWithProviders(<UseCaseLifecyclePanel project={project()} />);
+    expect(screen.getByTestId("lifecycle-go-live-btn")).toBeInTheDocument();
+    expect(screen.queryByTestId("lifecycle-workflow-action")).toBeNull();
+    expect(screen.queryByTestId("lifecycle-workflow-locked")).toBeNull();
+  });
+
+  it("says a workflow with an auto-approve level may approve at once", async () => {
+    const autoNote =
+      "If its risk classification is at or below the workflow's auto-approve level, it is approved at once.";
+    renderWithProviders(<UseCaseLifecyclePanel project={project()} />);
+    fireEvent.click(screen.getByTestId("lifecycle-workflow-action"));
+
+    await pickWorkflow("Fast track");
+    expect(screen.getByText(autoNote)).toBeInTheDocument();
+    expect(screen.getByText("Saving sends this use case for approval.")).toBeInTheDocument();
+
+    await pickWorkflow("Legal sign-off");
+    expect(screen.queryByText(autoNote)).toBeNull();
+  });
+
+  it("shows an archived current workflow in the Change select", async () => {
+    renderWithProviders(<UseCaseLifecyclePanel project={project({ approval_workflow_id: 99 })} />);
+    fireEvent.click(await screen.findByTestId("lifecycle-workflow-action"));
+    const dialog = await screen.findByRole("dialog");
+    await waitFor(() =>
+      expect(within(dialog).getByRole("combobox")).toHaveTextContent("Archived workflow"),
+    );
+    expect(within(dialog).getByRole("button", { name: "Save" })).toBeDisabled();
   });
 
   it("offers no workflow action to someone who can't edit the use case", () => {

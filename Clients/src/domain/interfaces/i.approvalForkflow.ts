@@ -36,12 +36,16 @@ export interface ICreateApprovalWorkflowProps {
    * creates a workflow in place. Omitted on the Approval workflows page.
    */
   fixedEntity?: number;
+  /**
+   * Saves the workflow. The modal waits for it: the form is cleared once it
+   * resolves, and a rejection keeps the input and shows its message.
+   */
   onSuccess?: (data: {
     workflow_title: string;
     entity: number;
     steps: ApprovalWorkflowStepModel[];
     auto_approve_max_risk: string | null;
-  }) => void;
+  }) => void | Promise<void>;
 }
 
 export interface DetailFieldProps {

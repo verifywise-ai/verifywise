@@ -4689,7 +4689,7 @@ export const de: Record<string, string> = {
     "Noch keine Genehmigungsabläufe für Anwendungsfälle. Bitten Sie eine Person mit Adminrechten, einen zu erstellen.",
   "Create workflow": "Ablauf erstellen",
   "Manage approval workflows": "Genehmigungsabläufe verwalten",
-  "The workflow could not be created.": "Der Ablauf konnte nicht erstellt werden.",
+  "The workflow could not be saved.": "Der Ablauf konnte nicht gespeichert werden.",
 };
 
 export const fr: Record<string, string> = {
@@ -9385,7 +9385,7 @@ export const fr: Record<string, string> = {
     "Aucun flux d'approbation pour les cas d'usage pour l'instant. Demandez à un administrateur d'en créer un.",
   "Create workflow": "Créer un flux",
   "Manage approval workflows": "Gérer les flux d'approbation",
-  "The workflow could not be created.": "Le flux n'a pas pu être créé.",
+  "The workflow could not be saved.": "Le flux n'a pas pu être enregistré.",
 };
 
 export const es: Record<string, string> = {
@@ -14077,5 +14077,5 @@ export const es: Record<string, string> = {
     "Aún no hay flujos de aprobación para casos de uso. Pida a un administrador que cree uno.",
   "Create workflow": "Crear flujo",
   "Manage approval workflows": "Gestionar flujos de aprobación",
-  "The workflow could not be created.": "No se pudo crear el flujo.",
+  "The workflow could not be saved.": "No se pudo guardar el flujo.",
 };

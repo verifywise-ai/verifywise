@@ -1,12 +1,15 @@
 import { useState } from "react";
-import { Stack, Typography } from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import Select from "../Inputs/Select";
-import Alert from "../Alert";
 import { VWLink } from "../Link";
 import CreateNewApprovalWorkflow from "../Modals/NewApprovalWorkflow";
 import { useCan } from "../../../application/hooks/useCan";
-import { useUseCaseApprovalWorkflows } from "../../../application/hooks/useUseCaseApprovalWorkflows";
+import {
+  useCaseApprovalWorkflowsQueryKey,
+  useUseCaseApprovalWorkflows,
+} from "../../../application/hooks/useUseCaseApprovalWorkflows";
 import { saveApprovalWorkflow } from "../../../application/repository/approvalWorkflow.repository";
 import {
   USE_CASE_WORKFLOW_ENTITY_ID,
@@ -44,29 +47,26 @@ const UseCaseWorkflowSelect = ({
 }: UseCaseWorkflowSelectProps) => {
   const navigate = useNavigate();
   const canManageWorkflows = useCan("approvalWorkflow.admin");
-  const { data: workflows = [], isSuccess, refetch } = useUseCaseApprovalWorkflows();
+  const queryClient = useQueryClient();
+  const { data: workflows = [], isSuccess } = useUseCaseApprovalWorkflows();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [createError, setCreateError] = useState<string | null>(null);
 
+  // A selected workflow missing from the active list was archived: still
+  // show it, so the current choice is visible.
+  const isArchived =
+    isSuccess && value !== 0 && !workflows.some((workflow) => workflow._id === value);
   const items = [
     ...(allowNone ? [{ _id: 0, name: "None" }] : []),
-    ...workflows.map((workflow) => ({ ...workflow, noTranslate: true })),
+    ...workflows.map(({ _id, name }) => ({ _id, name, noTranslate: true })),
+    ...(isArchived ? [{ _id: value, name: "Archived workflow" }] : []),
   ];
 
+  // A failed save throws back to the modal, which keeps the input and shows why.
   const handleCreated = async (formData: ApprovalWorkflowFormData) => {
-    setCreateError(null);
-    try {
-      const saved = await saveApprovalWorkflow({ formData });
-      setIsCreateOpen(false);
-      await refetch();
-      if (saved?.id) onChange(Number(saved.id));
-    } catch (err) {
-      // The modal has already cleared its form, so close it and say why.
-      setIsCreateOpen(false);
-      setCreateError(
-        (err as { message?: string })?.message || "The workflow could not be created.",
-      );
-    }
+    const saved = await saveApprovalWorkflow({ formData });
+    setIsCreateOpen(false);
+    await queryClient.invalidateQueries({ queryKey: useCaseApprovalWorkflowsQueryKey });
+    if (saved?.id) onChange(Number(saved.id));
   };
 
   return (
@@ -90,13 +90,7 @@ const UseCaseWorkflowSelect = ({
       )}
       {canManageWorkflows && (
         <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ gap: "16px" }}>
-          <VWLink
-            testId="use-case-workflow-create"
-            onClick={() => {
-              setCreateError(null);
-              setIsCreateOpen(true);
-            }}
-          >
+          <VWLink testId="use-case-workflow-create" onClick={() => setIsCreateOpen(true)}>
             Create workflow
           </VWLink>
           {showManageLink && (
@@ -109,14 +103,18 @@ const UseCaseWorkflowSelect = ({
           )}
         </Stack>
       )}
-      {createError && <Alert variant="error" body={createError} inline />}
       {canManageWorkflows && isCreateOpen && (
-        <CreateNewApprovalWorkflow
-          isOpen
-          setIsOpen={() => setIsCreateOpen(false)}
-          fixedEntity={USE_CASE_WORKFLOW_ENTITY_ID}
-          onSuccess={(formData) => void handleCreated(formData)}
-        />
+        // React submit events bubble through portals: without this, Enter in
+        // the workflow form would also submit the form this select sits in
+        // (the create use case form, the change workflow dialog).
+        <Box component="span" onSubmit={(event) => event.stopPropagation()}>
+          <CreateNewApprovalWorkflow
+            isOpen
+            setIsOpen={() => setIsCreateOpen(false)}
+            fixedEntity={USE_CASE_WORKFLOW_ENTITY_ID}
+            onSuccess={handleCreated}
+          />
+        </Box>
       )}
     </Stack>
   );

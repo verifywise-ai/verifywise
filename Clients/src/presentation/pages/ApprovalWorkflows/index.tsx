@@ -13,6 +13,7 @@ import { useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCan } from "../../../application/hooks/useCan";
 import { HOME_QUEUE_QUERY_KEY } from "../../../application/hooks/useHomeQueue";
+import { useCaseApprovalWorkflowsQueryKey } from "../../../application/hooks/useUseCaseApprovalWorkflows";
 import { dispatchApprovalRequestsChanged } from "../../../application/events/approvalRequestEvents";
 import { ApprovalStatus } from "../../../domain/enums/aiApprovalWorkflow.enum";
 import { FilterColumn } from "../../components/Table/FilterBy";
@@ -66,6 +67,12 @@ const ApprovalWorkflows: React.FC = () => {
   }, [setSearchParams]);
   // A decision here removes the request from Home and changes the top-bar count.
   const queryClient = useQueryClient();
+  // The use case workflow select (create form, use case overview) caches
+  // its list; a saved or archived workflow must show up there at once.
+  const invalidateUseCaseWorkflows = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: useCaseApprovalWorkflowsQueryKey }),
+    [queryClient],
+  );
   const handleLinkedRequestDecided = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: HOME_QUEUE_QUERY_KEY });
     dispatchApprovalRequestsChanged();
@@ -239,12 +246,15 @@ const ApprovalWorkflows: React.FC = () => {
           : "Workflow created successfully!",
       });
       handleCloseModal();
+      void invalidateUseCaseWorkflows();
       await fetchApprovalWorkflowData(false);
     } catch (error) {
       logEngine({
         type: "error",
         message: `Failed to save workflow: ${error}`,
       });
+      // The modal keeps the input and shows the message.
+      throw error;
     }
   };
 
@@ -258,6 +268,7 @@ const ApprovalWorkflows: React.FC = () => {
       setArchivedId(id);
 
       await deleteApprovalWorkflow({ id: parseInt(id, 10) });
+      void invalidateUseCaseWorkflows();
 
       logEngine({
         type: "info",
