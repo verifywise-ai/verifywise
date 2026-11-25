@@ -307,6 +307,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
   }, [loadMore]);
 
   const open = Boolean(anchorEl);
+  const badgeText = unreadCount > 0 ? (unreadCount > 99 ? "99+" : String(unreadCount)) : "";
 
   const baseStyles = {
     "width": "32px",
@@ -336,28 +337,34 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
         <IconButton
           size="small"
           onClick={handleOpen}
-          aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
+          aria-label={badgeText ? `Notifications, ${badgeText} unread` : "Notifications"}
           aria-haspopup="dialog"
           aria-expanded={open}
           sx={{ ...baseStyles, ...sx }}
         >
-          <Badge
-            badgeContent={unreadCount}
-            max={99}
-            sx={{
-              "& .MuiBadge-badge": {
-                backgroundColor: vwPalette.riskMark.critical,
-                color: "white",
-                fontSize: "10px",
-                fontWeight: 600,
-                minWidth: "16px",
-                height: "16px",
-                padding: "0 4px",
-              },
-            }}
-          >
+          {/* No Badge at zero: MUI keeps the hidden "0" in the DOM, and the
+              visible badge text must appear in the accessible name (axe
+              label-content-name-mismatch). */}
+          {badgeText ? (
+            <Badge
+              badgeContent={badgeText}
+              sx={{
+                "& .MuiBadge-badge": {
+                  backgroundColor: vwPalette.riskMark.critical,
+                  color: "white",
+                  fontSize: "10px",
+                  fontWeight: 600,
+                  minWidth: "16px",
+                  height: "16px",
+                  padding: "0 4px",
+                },
+              }}
+            >
+              <Bell size={16} />
+            </Badge>
+          ) : (
             <Bell size={16} />
-          </Badge>
+          )}
         </IconButton>
       </VWTooltip>
 
