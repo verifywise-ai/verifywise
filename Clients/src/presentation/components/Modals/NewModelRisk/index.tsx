@@ -4,6 +4,7 @@ import { Stack, Box, useTheme } from "@mui/material";
 import Field from "../../Inputs/Field";
 import DatePicker from "../../Inputs/Datepicker";
 import SelectComponent from "../../Inputs/Select";
+import { SELECT_MIN_WIDTH } from "../../Inputs/Select/constants";
 import StandardModal from "../StandardModal";
 import TabBar from "../../TabBar";
 import { TabContext } from "@mui/lab";
@@ -421,8 +422,16 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
         </Box>
       </Stack>
 
-      {/* Third row: owner, review date, model */}
-      <Stack direction="row" spacing={6}>
+      {/* Third row: owner, review date, model. Each column may shrink to a
+          select's minimum, so a long model name is cut instead of widening the
+          row; a modal too narrow for three wraps the row instead of overlapping. */}
+      <Stack
+        direction="row"
+        spacing={6}
+        useFlexGap
+        flexWrap="wrap"
+        sx={{ "rowGap": "16px", "& > *": { minWidth: SELECT_MIN_WIDTH } }}
+      >
         <Box sx={{ flex: 1 }}>
           <SelectComponent
             id="owner"
