@@ -838,11 +838,7 @@ export async function getUseCaseApprovalWorkflow(req: Request, res: Response): P
     if (!workflow) {
       return res.status(404).json(STATUS_CODE[404]({}));
     }
-    const approvalStatus = await getApprovalStatusQuery(
-      projectId,
-      "use_case",
-      req.organizationId!,
-    );
+    const approvalStatus = await getApprovalStatusQuery(projectId, "use_case", req.organizationId!);
 
     return res.status(200).json(STATUS_CODE[200]({ ...workflow, approval_status: approvalStatus }));
   } catch (error) {

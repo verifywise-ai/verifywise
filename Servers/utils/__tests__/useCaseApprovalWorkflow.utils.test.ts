@@ -41,7 +41,9 @@ describe("getUseCaseApprovalWorkflowQuery", () => {
   });
 
   it("keeps a stored workflow the organization-scoped join does not find, as unusable", async () => {
-    query.mockResolvedValueOnce([{ approval_workflow_id: 4, workflow_title: null, is_active: null }]);
+    query.mockResolvedValueOnce([
+      { approval_workflow_id: 4, workflow_title: null, is_active: null },
+    ]);
     expect(await getUseCaseApprovalWorkflowQuery(12, 7)).toEqual({
       approval_workflow_id: 4,
       workflow_title: null,
