@@ -28,7 +28,7 @@ export function DescriptionCard({ title, body, icon }: DescriptionCardProps) {
         </Box>
       )}
       <Typography sx={infoCardTitleStyle}>{title}</Typography>
-      <Typography sx={descCardbodyStyle}>{body}</Typography>
+      <Typography sx={{ ...descCardbodyStyle, whiteSpace: "pre-line" }}>{body}</Typography>
     </Stack>
   );
 }
