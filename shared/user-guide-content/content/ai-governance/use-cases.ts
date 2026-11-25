@@ -328,7 +328,7 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Anyone who can edit the use case and works on it (its owner, a team member, or an Admin) can resubmit it. You do not need to manage approval workflows, because the workflow stays the same. The option appears only after a rejection and only while the workflow is still active. If the workflow has been archived, or can no longer review use cases, ask someone who manages approval workflows to change it. The resubmission shows up in the use case\'s history.',
+      text: 'Anyone who can edit the use case and works on it (its owner, a team member, a member of a group attached to it, or an Admin) can resubmit it. You do not need to manage approval workflows, because the workflow stays the same. The option appears only after a rejection and only while the workflow is still active. If the workflow has been archived, or can no longer review use cases, ask someone who manages approval workflows to change it. The resubmission shows up in the use case\'s history.',
     },
     {
       type: 'heading',

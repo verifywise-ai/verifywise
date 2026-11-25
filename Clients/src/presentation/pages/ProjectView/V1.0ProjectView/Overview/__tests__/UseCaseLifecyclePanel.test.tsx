@@ -788,6 +788,27 @@ describe("UseCaseLifecyclePanel resubmit for approval", () => {
     expect(screen.queryByTestId("lifecycle-workflow-resubmit")).toBeNull();
   });
 
+  // Write access follows the owner and members, so a save that changes them
+  // re-reads viewer_can_write instead of trusting the cached answer.
+  it("hides it after a save takes away the user's write access", async () => {
+    const { rerender } = renderWithProviders(
+      <UseCaseLifecyclePanel
+        project={project({ approval_workflow_id: 3, approval_status: "rejected" })}
+      />,
+    );
+    expect(await screen.findByTestId("lifecycle-workflow-resubmit")).toBeInTheDocument();
+    expect(mockGetAttached).toHaveBeenCalledTimes(1);
+
+    mockCanWrite = false;
+    rerender(
+      <UseCaseLifecyclePanel
+        project={project({ approval_workflow_id: 3, approval_status: "rejected", owner: 2 })}
+      />,
+    );
+    await waitFor(() => expect(screen.queryByTestId("lifecycle-workflow-resubmit")).toBeNull());
+    expect(mockGetAttached).toHaveBeenCalledTimes(2);
+  });
+
   it("does not offer it when the approval workflow could not be loaded", async () => {
     mockGetAttached.mockRejectedValue(new Error("network"));
     renderWithProviders(

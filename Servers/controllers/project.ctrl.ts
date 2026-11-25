@@ -849,11 +849,13 @@ export async function getUseCaseApprovalWorkflow(req: Request, res: Response): P
     }
     const [approvalStatus, writeAccess] = await Promise.all([
       getApprovalStatusQuery(projectId, "use_case", req.organizationId!),
+      // Only feeds the optional flag: if it fails, the workflow and status
+      // still come back and the flag says no.
       getProjectAccessQuery(
         projectId,
         { userId: req.userId!, role: req.role! },
         req.organizationId!,
-      ),
+      ).catch(() => "denied" as const),
     ]);
 
     return res.status(200).json(

@@ -99,6 +99,22 @@ describe("GET /api/v1/projects/:id/approval-workflow", () => {
     const res = await get("Auditor");
     expect(res.status).toBe(200);
     expect(readAccessQuery).toHaveBeenCalledWith(12, { userId: 9, role: "Auditor" }, 42);
+    // The write rule runs once, in the controller for the flag, never as the guard.
+    expect(accessQuery).toHaveBeenCalledTimes(1);
+    expect(res.body.data.viewer_can_write).toBe(false);
+  });
+
+  it("still answers with viewer_can_write false when the write-access lookup fails", async () => {
+    workflowQuery.mockResolvedValue({
+      approval_workflow_id: 4,
+      workflow_title: "Model risk review",
+      workflow_is_active: true,
+    });
+    statusQuery.mockResolvedValue("rejected");
+    accessQuery.mockRejectedValue(new Error("db timeout"));
+    const res = await get("Editor");
+    expect(res.status).toBe(200);
+    expect(res.body.data.approval_status).toBe("rejected");
     expect(res.body.data.viewer_can_write).toBe(false);
   });
 

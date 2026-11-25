@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 import { Pencil } from "lucide-react";
 import StandardModal from "../../../../components/Modals/StandardModal";
@@ -132,7 +132,17 @@ const UseCaseLifecyclePanel = ({
     data: attached,
     isSuccess: attachedLoaded,
     isError: attachedFailed,
+    refetch: refetchAttached,
   } = useUseCaseApprovalWorkflow(project.id);
+  // viewer_can_write depends on the owner and members, so re-read it when a
+  // save changes them rather than offering Resubmit from a cached answer.
+  const accessKey = JSON.stringify([project.owner ?? null, project.members ?? []]);
+  const lastAccessKey = useRef(accessKey);
+  useEffect(() => {
+    if (lastAccessKey.current === accessKey) return;
+    lastAccessKey.current = accessKey;
+    void refetchAttached();
+  }, [accessKey, refetchAttached]);
   const approvalStatus = attachedLoaded
     ? attached.approval_status
     : (project.approval_status ?? null);
