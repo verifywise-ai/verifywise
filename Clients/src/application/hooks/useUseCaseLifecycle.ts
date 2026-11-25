@@ -114,7 +114,12 @@ export function useUseCaseLifecycleActions(projectId: number) {
   // the approval request; a planned use case moves to In review.
   const setApprovalWorkflow = useMutation({
     mutationFn: (workflowId: number | null) =>
-      updateProject({ id: projectId, body: { approval_workflow_id: workflowId } }),
+      // The dialog shows the server's reason inline.
+      updateProject({
+        id: projectId,
+        body: { approval_workflow_id: workflowId },
+        suppressGlobalErrorToast: true,
+      }),
     // The stage can change, and the Use cases tabs count stages from the list.
     onSuccess: async () => {
       await Promise.all([

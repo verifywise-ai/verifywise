@@ -28,6 +28,8 @@ import {
 import { useTranslation } from "../../../../../application/hooks/useTranslation";
 import { LifecycleStage } from "../../../../../domain/enums/lifecycleStage.enum";
 import { Project } from "../../../../../domain/types/Project";
+import { getApiValidationMessage } from "../../../../../application/utils/apiErrorReason";
+import { fontSize } from "../../../../themes/typography";
 
 /**
  * What saving a workflow choice does, sentence by sentence, as the server
@@ -172,7 +174,12 @@ const UseCaseLifecyclePanel = ({
       setWorkflowOpen(false);
       onChanged?.();
     } catch (err) {
-      setWorkflowError((err as { message?: string })?.message || "The change could not be saved.");
+      // A refused workflow comes back as a field error on approval_workflow_id
+      // ({ errors: [...] }), a refused change as a plain message.
+      setWorkflowError(
+        getApiValidationMessage(err, { passThrough: ["approval_workflow_id"] }) ||
+          "The change could not be saved.",
+      );
     }
   };
 
@@ -286,7 +293,7 @@ const UseCaseLifecyclePanel = ({
               </Stack>
               {canEditWorkflow && !canChangeWorkflow && (
                 <Typography
-                  sx={{ fontSize: 13, color: "text.secondary", maxWidth: "320px" }}
+                  sx={{ fontSize: fontSize.base, color: "text.secondary", maxWidth: "320px" }}
                   data-testid="lifecycle-workflow-locked"
                 >
                   Only an approval workflow admin can change it while approval is pending or
@@ -343,7 +350,7 @@ const UseCaseLifecyclePanel = ({
           {workflowNotes.length > 0 && (
             <Stack sx={{ gap: "4px" }} data-testid="lifecycle-workflow-notes">
               {workflowNotes.map((note) => (
-                <Typography key={note} sx={{ fontSize: 13, color: "text.secondary" }}>
+                <Typography key={note} sx={{ fontSize: fontSize.base, color: "text.secondary" }}>
                   {note}
                 </Typography>
               ))}

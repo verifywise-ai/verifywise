@@ -42,8 +42,23 @@ export async function createProject({ body }: { body: any }): Promise<any> {
   return response;
 }
 
-export async function updateProject({ id, body }: { id: number; body: any }): Promise<any> {
-  const response = await apiServices.patch(`/v1/projects/${id}`, body);
+/**
+ * Pass `suppressGlobalErrorToast` when the caller shows the error itself, so
+ * it is not shown twice.
+ */
+export async function updateProject({
+  id,
+  body,
+  suppressGlobalErrorToast,
+}: {
+  id: number;
+  body: any;
+  suppressGlobalErrorToast?: boolean;
+}): Promise<any> {
+  const endpoint = `/v1/projects/${id}`;
+  const response = suppressGlobalErrorToast
+    ? await apiServices.patch(endpoint, body, { suppressGlobalErrorToast })
+    : await apiServices.patch(endpoint, body);
   return response;
 }
 

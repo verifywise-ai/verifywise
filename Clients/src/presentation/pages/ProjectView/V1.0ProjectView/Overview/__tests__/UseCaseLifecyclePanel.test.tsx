@@ -4,6 +4,7 @@ import UseCaseLifecyclePanel from "../UseCaseLifecyclePanel";
 import { canManageLifecycle } from "../../../../../../application/utils/useCaseLifecycle";
 import { LifecycleStage } from "../../../../../../domain/enums/lifecycleStage.enum";
 import type { Project } from "../../../../../../domain/types/Project";
+import CustomException from "../../../../../../infrastructure/exceptions/customeException";
 
 const mockMarkLive = vi.fn();
 const mockRetire = vi.fn();
@@ -296,7 +297,12 @@ describe("UseCaseLifecyclePanel approval workflow", () => {
     saveWorkflow();
 
     await waitFor(() => expect(mockUpdateProject).toHaveBeenCalledTimes(1));
-    expect(mockUpdateProject).toHaveBeenCalledWith({ id: 7, body: { approval_workflow_id: 3 } });
+    // The dialog shows a refusal itself, so the global error toast is skipped.
+    expect(mockUpdateProject).toHaveBeenCalledWith({
+      id: 7,
+      body: { approval_workflow_id: 3 },
+      suppressGlobalErrorToast: true,
+    });
     await waitFor(() => expect(onChanged).toHaveBeenCalled());
     // The attached workflow is read again from the endpoint.
     await waitFor(() => expect(mockGetAttached).toHaveBeenCalledTimes(2));
@@ -327,6 +333,7 @@ describe("UseCaseLifecyclePanel approval workflow", () => {
       expect(mockUpdateProject).toHaveBeenCalledWith({
         id: 7,
         body: { approval_workflow_id: null },
+        suppressGlobalErrorToast: true,
       }),
     );
   });
@@ -405,7 +412,11 @@ describe("UseCaseLifecyclePanel approval workflow", () => {
     expect(screen.queryByText(/It moves to In review/)).toBeNull();
     saveWorkflow();
     await waitFor(() =>
-      expect(mockUpdateProject).toHaveBeenCalledWith({ id: 7, body: { approval_workflow_id: 4 } }),
+      expect(mockUpdateProject).toHaveBeenCalledWith({
+        id: 7,
+        body: { approval_workflow_id: 4 },
+        suppressGlobalErrorToast: true,
+      }),
     );
   });
 
@@ -482,10 +493,16 @@ describe("UseCaseLifecyclePanel approval workflow", () => {
   });
 
   it("shows the server's refusal in the modal", async () => {
-    mockUpdateProject.mockRejectedValue({
-      message:
+    mockUpdateProject.mockRejectedValue(
+      new CustomException(
         "Only an approval workflow admin can change the workflow while its approval is pending or rejected",
-    });
+        403,
+        {
+          message: "Forbidden",
+          data: "Only an approval workflow admin can change the workflow while its approval is pending or rejected",
+        },
+      ),
+    );
     renderWithProviders(<UseCaseLifecyclePanel project={project()} />);
     fireEvent.click(await screen.findByTestId("lifecycle-workflow-action"));
     await pickWorkflow("Legal sign-off");
@@ -495,6 +512,35 @@ describe("UseCaseLifecyclePanel approval workflow", () => {
         "Only an approval workflow admin can change the workflow while its approval is pending or rejected",
       ),
     ).toBeInTheDocument();
+  });
+
+  // PATCH /api/v1/projects/:id answers a refused workflow with a field error
+  // ({ message: "Bad Request", data: { errors: [...] } }); the dialog shows the
+  // field's message, not the status text.
+  it("shows the field error of a refused workflow, not Bad Request", async () => {
+    mockUpdateProject.mockRejectedValue(
+      new CustomException("Bad Request", 400, {
+        message: "Bad Request",
+        data: {
+          errors: [
+            {
+              field: "approval_workflow_id",
+              message: "The selected approval workflow is no longer active",
+              location: "body",
+            },
+          ],
+        },
+      }),
+    );
+    renderWithProviders(<UseCaseLifecyclePanel project={project()} />);
+    fireEvent.click(await screen.findByTestId("lifecycle-workflow-action"));
+    await pickWorkflow("Legal sign-off");
+    saveWorkflow();
+    const dialog = screen.getByRole("dialog");
+    expect(
+      await within(dialog).findByText("The selected approval workflow is no longer active"),
+    ).toBeInTheDocument();
+    expect(within(dialog).queryByText("Bad Request")).toBeNull();
   });
 
   it("tells a non-admin there are no workflows and to ask an Admin", async () => {

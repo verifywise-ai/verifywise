@@ -15,6 +15,7 @@ import {
   USE_CASE_WORKFLOW_ENTITY_ID,
   type ApprovalWorkflowFormData,
 } from "../../../application/utils/approvalWorkflowBody";
+import { fontSize } from "../../themes/typography";
 
 export interface UseCaseWorkflowSelectProps {
   id: string;
@@ -35,7 +36,7 @@ export interface UseCaseWorkflowSelectProps {
   sx?: object;
 }
 
-const hintSx = { fontSize: 13, color: "text.secondary" };
+const hintSx = { fontSize: fontSize.base, color: "text.secondary" };
 
 /** "<title> (archived)": the title is the user's text, the suffix is translated. */
 export const archivedWorkflowLabel = (title: string, t: (key: string) => string) =>
