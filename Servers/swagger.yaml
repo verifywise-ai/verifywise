@@ -30406,3 +30406,43 @@ paths:
       security:
         -
           bearerAuth: []
+  '/v1/projects/{id}/resubmit-approval':
+    post:
+      summary: 'Resubmit a rejected use case for approval'
+      description: 'Sends a use case whose latest approval request was rejected for approval again, under the approval workflow already attached to it. Opens a new pending request exactly as attaching a workflow does: a planned use case moves to in review, the step 1 approvers are notified, and the workflow''s risk-based auto-approval applies (the request is then approved at once). The use case row is locked for the duration, so two resubmits at once open one request; the second answers 409. Requires useCase.edit and write access to the use case; no approval workflow admin is needed, since the workflow does not change. To use another workflow, an approval workflow admin changes it with PATCH /api/v1/projects/{id}.'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The use case id'
+          schema:
+            type: integer
+      responses:
+        '201':
+          description: 'Approval request opened'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {approval_request_id: {type: integer}, status: {type: string, enum: [pending, approved], description: 'approved when the workflow auto-approved the request'}, auto_approved: {type: boolean}}}
+        '400':
+          description: 'The id is not a positive integer, no workflow is attached, or the attached workflow can no longer review a use case (archived, no steps, a step without approvers)'
+        '401':
+          description: Unauthorized
+        '403':
+          description: 'No useCase.edit permission, or no write access to the use case'
+        '404':
+          description: 'Use case not found in the organization'
+        '409':
+          description: 'The latest approval request is not rejected: it is still pending, or the use case was approved or never sent for approval'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Projects'
+      operationId: resubmitUseCaseApproval
+      security:
+        -
+          bearerAuth: []

@@ -56,7 +56,11 @@ jest.mock("../../services/inAppNotification.service", () => ({
   notifyApprovalAutoApproved: jest.fn<any>().mockResolvedValue(undefined),
   sendInAppNotification: jest.fn<any>().mockResolvedValue(undefined),
   buildEntityUrl: jest.fn((type: string, id: number) =>
-    type === "policy" ? `/policies/${id}/edit` : "/overview",
+    type === "policy"
+      ? `/policies/${id}/edit`
+      : type === "use_case"
+        ? `/project-view?projectId=${id}`
+        : "/overview",
   ),
 }));
 
@@ -1184,7 +1188,7 @@ describe("approvalRequest.ctrl", () => {
       );
     });
 
-    it("keeps the use case entity and approval-workflows link for other requests", async () => {
+    it("links a rejected use case request to the use case, where it can be resubmitted", async () => {
       const req = createReq({ params: { id: "9" }, body: { comments: "No" } });
       const res = createRes();
       const mockTransaction = { commit: jest.fn(), rollback: jest.fn() };
@@ -1195,6 +1199,38 @@ describe("approvalRequest.ctrl", () => {
         requesterId: 4,
         entityType: "use_case",
         entityId: 3,
+      } as any);
+
+      await rejectRequest(req as Request, res as Response);
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(mockSendInAppNotification).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          entity_type: "use_case",
+          entity_id: 3,
+          action_url: expect.stringContaining("/project-view?projectId=3"),
+        }),
+        true,
+        expect.objectContaining({
+          variables: expect.objectContaining({
+            request_url: expect.stringContaining("/project-view?projectId=3"),
+          }),
+        }),
+      );
+    });
+
+    it("keeps the approval-workflows link for other entity types", async () => {
+      const req = createReq({ params: { id: "9" }, body: { comments: "No" } });
+      const res = createRes();
+      const mockTransaction = { commit: jest.fn(), rollback: jest.fn() };
+      (sequelize.transaction as any).mockResolvedValue(mockTransaction);
+      mockProcessApprovalQuery.mockResolvedValue({
+        type: "requester_rejected",
+        requestName: "Evidence file",
+        requesterId: 4,
+        entityType: "file",
+        entityId: 12,
       } as any);
 
       await rejectRequest(req as Request, res as Response);

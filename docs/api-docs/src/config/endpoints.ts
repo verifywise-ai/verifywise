@@ -13660,6 +13660,26 @@ export const v1V1projectsEndpoints: Endpoint[] = [
     ],
     tag: "v1: V1/Projects",
   },
+  {
+    method: 'POST',
+    path: '/v1/projects/{id}/resubmit-approval',
+    summary: "Resubmit a rejected use case for approval",
+    description: "Sends a use case whose latest approval request was rejected for approval again, under the approval workflow already attached to it. Opens a new pending request exactly as attaching a workflow does: a planned use case moves to in review, the step 1 approvers are notified, and the workflow's risk-based auto-approval applies (the request is then approved at once). The use case row is locked for the duration, so two resubmits at once open one request; the second answers 409. Requires useCase.edit and write access to the use case; no approval workflow admin is needed, since the workflow does not change. To use another workflow, an approval workflow admin changes it with PATCH /api/v1/projects/{id}.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The use case id" },
+    ],
+    responses: [
+      { status: 201, description: "Approval request opened" },
+      { status: 400, description: "The id is not a positive integer, no workflow is attached, or the attached workflow can no longer review a use case (archived, no steps, a step without approvers)" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "No useCase.edit permission, or no write access to the use case" },
+      { status: 404, description: "Use case not found in the organization" },
+      { status: 409, description: "The latest approval request is not rejected: it is still pending, or the use case was approved or never sent for approval" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Projects",
+  },
 ];
 
 // v1: V1/Report Runs endpoints
