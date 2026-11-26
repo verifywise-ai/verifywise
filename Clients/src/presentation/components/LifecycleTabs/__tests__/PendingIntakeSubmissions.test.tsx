@@ -61,6 +61,24 @@ describe("PendingIntakeSubmissions", () => {
     });
   });
 
+  it("heads the page's own list only when requests are shown", () => {
+    const listHeading = {
+      title: "Use cases",
+      description: "Existing use cases waiting for an approval decision.",
+    };
+    const { rerender } = renderWithProviders(
+      <PendingIntakeSubmissions {...copy} pending={pending([row()])} listHeading={listHeading} />,
+    );
+    const heading = screen.getByTestId("pending-intake-list-heading");
+    expect(heading.textContent).toContain("Use cases");
+    expect(heading.textContent).toContain("Existing use cases waiting for an approval decision.");
+
+    rerender(
+      <PendingIntakeSubmissions {...copy} pending={pending([])} listHeading={listHeading} />,
+    );
+    expect(screen.queryByTestId("pending-intake-list-heading")).toBeNull();
+  });
+
   it("applies the use cases search to title, form and submitter", () => {
     const items = [
       row({ id: 1, title: "Chatbot", form_name: "Form A", submitter_name: "Ana" }),

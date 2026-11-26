@@ -344,6 +344,10 @@ export default function AIApps() {
             pending={pendingSubmissions}
             searchTerm={debouncedSearch}
             description="Submitted through an intake form. The AI app is created when a reviewer approves the request."
+            listHeading={{
+              title: "AI apps",
+              description: "Existing AI apps waiting for an approval decision.",
+            }}
           />
         )}
 

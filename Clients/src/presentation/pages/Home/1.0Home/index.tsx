@@ -169,6 +169,10 @@ const Home = () => {
               searchTerm={searchTerm}
               description="Submitted through an intake form. The use case is created when a reviewer approves the request."
               exportNote="Intake requests are not included in the use case export."
+              listHeading={{
+                title: "Use cases",
+                description: "Existing use cases waiting for an approval decision.",
+              }}
             />
           ) : null
         }

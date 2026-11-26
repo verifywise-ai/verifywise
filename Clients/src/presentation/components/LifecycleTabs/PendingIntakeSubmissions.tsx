@@ -19,6 +19,17 @@ const COLUMNS = ["Request", "Intake form", "Submitted by", "Submitted", "Days in
 
 const cellSx = { ...singleTheme.tableStyles.primary.body.cell, fontSize: "13px" };
 
+// The row divider of the house table; the rows themselves are not clickable
+// (the Review button is), so the pointer cursor of the house row is dropped.
+const rowSx = { ...singleTheme.tableStyles.primary.body.row, "&:hover": { cursor: "default" } };
+
+const SectionHeading = ({ title, description }: { title: string; description: string }) => (
+  <Box>
+    <Typography sx={{ fontSize: 15, fontWeight: 600 }}>{title}</Typography>
+    <Typography sx={{ fontSize: 13, color: "text.secondary" }}>{description}</Typography>
+  </Box>
+);
+
 /**
  * Intake submissions waiting for a decision, shown in an In review tab (use
  * cases #5188, AI apps #5193). Nothing exists in the inventory yet: approving
@@ -29,6 +40,7 @@ const PendingIntakeSubmissions = ({
   searchTerm = "",
   description,
   exportNote,
+  listHeading,
 }: {
   pending: PendingRequests | undefined;
   /** The list's search box; matches the title, form name and submitter. */
@@ -37,6 +49,11 @@ const PendingIntakeSubmissions = ({
   description: string;
   /** Shown under the table when the page exports its list without the requests. */
   exportNote?: string;
+  /**
+   * Heading for the page's own list, which follows this block. Shown only
+   * with requests: without them the list is the only thing in the tab.
+   */
+  listHeading?: { title: string; description: string };
 }) => {
   const navigateSearch = useNavigateSearch();
   const formatDate = useFormattedDate();
@@ -55,67 +72,75 @@ const PendingIntakeSubmissions = ({
     navigateSearch("/intake-forms/submissions", { submission: String(id) });
 
   return (
-    <Stack sx={{ gap: "8px", mb: "24px" }} data-testid="pending-intake-submissions">
-      <Box>
-        <Typography sx={{ fontSize: 15, fontWeight: 600 }}>Intake requests</Typography>
-        <Typography sx={{ fontSize: 13, color: "text.secondary" }}>{description}</Typography>
-      </Box>
-      <TableContainer>
-        <Table sx={singleTheme.tableStyles.primary.frame}>
-          <TableHead>
-            <TableRow sx={singleTheme.tableStyles.primary.header.row}>
-              {COLUMNS.map((label, index) => (
-                <TableCell key={index} sx={singleTheme.tableStyles.primary.header.cell}>
-                  {label}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {submissions.map((submission) => (
-              <TableRow key={submission.id} data-testid="pending-intake-submission-row">
-                <TableCell sx={{ ...cellSx, fontWeight: 500 }}>
-                  {submission.title ?? (
-                    <Box component="span" sx={{ color: "text.secondary" }}>
-                      Untitled request
-                    </Box>
-                  )}
-                </TableCell>
-                <TableCell sx={cellSx}>{submission.form_name}</TableCell>
-                <TableCell sx={cellSx}>{submission.submitter_name || "-"}</TableCell>
-                <TableCell sx={cellSx}>{formatDate(submission.submitted_at)}</TableCell>
-                <TableCell sx={cellSx}>{submission.days_in_review}</TableCell>
-                <TableCell sx={{ ...cellSx, textAlign: "right" }}>
-                  <CustomizableButton
-                    variant="outlined"
-                    text="Review"
-                    testId={`pending-intake-review-${submission.id}`}
-                    onClick={() => openReview(submission.id)}
-                  />
-                </TableCell>
+    <>
+      <Stack sx={{ gap: "8px", mb: "24px" }} data-testid="pending-intake-submissions">
+        <SectionHeading title="Intake requests" description={description} />
+        <TableContainer>
+          <Table sx={singleTheme.tableStyles.primary.frame}>
+            <TableHead>
+              <TableRow sx={singleTheme.tableStyles.primary.header.row}>
+                {COLUMNS.map((label, index) => (
+                  <TableCell key={index} sx={singleTheme.tableStyles.primary.header.cell}>
+                    {label}
+                  </TableCell>
+                ))}
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      {submissions.length === 0 && (
-        <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-          No intake requests match your search.
-        </Typography>
+            </TableHead>
+            <TableBody>
+              {submissions.map((submission) => (
+                <TableRow
+                  key={submission.id}
+                  sx={rowSx}
+                  data-testid="pending-intake-submission-row"
+                >
+                  <TableCell sx={{ ...cellSx, fontWeight: 500 }}>
+                    {submission.title ?? (
+                      <Box component="span" sx={{ color: "text.secondary" }}>
+                        Untitled request
+                      </Box>
+                    )}
+                  </TableCell>
+                  <TableCell sx={cellSx}>{submission.form_name}</TableCell>
+                  <TableCell sx={cellSx}>{submission.submitter_name || "-"}</TableCell>
+                  <TableCell sx={cellSx}>{formatDate(submission.submitted_at)}</TableCell>
+                  <TableCell sx={cellSx}>{submission.days_in_review}</TableCell>
+                  <TableCell sx={{ ...cellSx, textAlign: "right" }}>
+                    <CustomizableButton
+                      variant="outlined"
+                      text="Review"
+                      testId={`pending-intake-review-${submission.id}`}
+                      onClick={() => openReview(submission.id)}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        {submissions.length === 0 && (
+          <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+            No intake requests match your search.
+          </Typography>
+        )}
+        {isCapped && (
+          <Typography
+            sx={{ fontSize: 13, color: "text.secondary" }}
+            data-testid="pending-intake-capped"
+          >
+            <span>Showing the oldest</span> <span>{pending.items.length}</span> <span>of</span>{" "}
+            <span>{pending.total}</span>
+          </Typography>
+        )}
+        {exportNote && (
+          <Typography sx={{ fontSize: 13, color: "text.secondary" }}>{exportNote}</Typography>
+        )}
+      </Stack>
+      {listHeading && (
+        <Box sx={{ mb: "8px" }} data-testid="pending-intake-list-heading">
+          <SectionHeading {...listHeading} />
+        </Box>
       )}
-      {isCapped && (
-        <Typography
-          sx={{ fontSize: 13, color: "text.secondary" }}
-          data-testid="pending-intake-capped"
-        >
-          <span>Showing the oldest</span> <span>{pending.items.length}</span> <span>of</span>{" "}
-          <span>{pending.total}</span>
-        </Typography>
-      )}
-      {exportNote && (
-        <Typography sx={{ fontSize: 13, color: "text.secondary" }}>{exportNote}</Typography>
-      )}
-    </Stack>
+    </>
   );
 };
 

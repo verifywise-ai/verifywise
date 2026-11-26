@@ -14,6 +14,10 @@ export const de: Record<string, string> = {
     "Intake-Anfragen und KI-Apps, die auf eine Freigabeentscheidung warten",
   "No AI apps are waiting for an approval decision.":
     "Keine KI-Apps warten auf eine Freigabeentscheidung.",
+  "Existing use cases waiting for an approval decision.":
+    "Bestehende Anwendungsfälle, die auf eine Freigabeentscheidung warten.",
+  "Existing AI apps waiting for an approval decision.":
+    "Bestehende KI-Apps, die auf eine Freigabeentscheidung warten.",
   "Submitted through an intake form. The AI app is created when a reviewer approves the request.":
     "Über ein Intake-Formular eingereicht. Die KI-App wird erstellt, wenn eine prüfende Person die Anfrage freigibt.",
   "Approve this AI app before marking it as live. Change its status to Approved or Restricted below.":
@@ -197,6 +201,10 @@ export const fr: Record<string, string> = {
     "Demandes d'intake et applications IA en attente d'une décision d'approbation",
   "No AI apps are waiting for an approval decision.":
     "Aucune application IA n'attend de décision d'approbation.",
+  "Existing use cases waiting for an approval decision.":
+    "Cas d'usage existants en attente d'une décision d'approbation.",
+  "Existing AI apps waiting for an approval decision.":
+    "Applications IA existantes en attente d'une décision d'approbation.",
   "Submitted through an intake form. The AI app is created when a reviewer approves the request.":
     "Soumise via un formulaire d'intake. L'application IA est créée lorsqu'un examinateur approuve la demande.",
   "Approve this AI app before marking it as live. Change its status to Approved or Restricted below.":
@@ -381,6 +389,10 @@ export const es: Record<string, string> = {
     "Solicitudes de intake y apps de IA a la espera de una decisión de aprobación",
   "No AI apps are waiting for an approval decision.":
     "Ninguna app de IA espera una decisión de aprobación.",
+  "Existing use cases waiting for an approval decision.":
+    "Casos de uso existentes que esperan una decisión de aprobación.",
+  "Existing AI apps waiting for an approval decision.":
+    "Apps de IA existentes que esperan una decisión de aprobación.",
   "Submitted through an intake form. The AI app is created when a reviewer approves the request.":
     "Enviada mediante un formulario de intake. La app de IA se crea cuando un revisor aprueba la solicitud.",
   "Approve this AI app before marking it as live. Change its status to Approved or Restricted below.":
