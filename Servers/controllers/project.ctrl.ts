@@ -8,6 +8,7 @@ import {
   countAnswersByProjectId,
   countSubControlsByProjectId,
   getAllProjectsQuery,
+  getProjectAccessQuery,
   getProjectByIdQuery,
   getUseCaseApprovalSnapshotQuery,
   getUseCaseApprovalWorkflowQuery,
@@ -830,6 +831,12 @@ export async function getRisksLinkedOnlyToProject(req: Request, res: Response): 
  * workflow (id, title, still active or archived) and the status of its latest
  * approval request. The legacy project responses never carried the workflow
  * id and are frozen, so the use case overview reads it here.
+ *
+ * viewer_can_write says whether the caller has write access to this use case
+ * by the rule requireProjectAccess(..., "write") applies (getProjectAccessQuery:
+ * Admin, owner, member, or a group attached to the use case), so the overview
+ * offers resubmitting to exactly those the resubmit route lets through. It
+ * leaves out the useCase.edit permission, which the client checks itself.
  */
 export async function getUseCaseApprovalWorkflow(req: Request, res: Response): Promise<any> {
   const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
@@ -840,9 +847,24 @@ export async function getUseCaseApprovalWorkflow(req: Request, res: Response): P
     if (!workflow) {
       return res.status(404).json(STATUS_CODE[404]({}));
     }
-    const approvalStatus = await getApprovalStatusQuery(projectId, "use_case", req.organizationId!);
+    const [approvalStatus, writeAccess] = await Promise.all([
+      getApprovalStatusQuery(projectId, "use_case", req.organizationId!),
+      // Only feeds the optional flag: if it fails, the workflow and status
+      // still come back and the flag says no.
+      getProjectAccessQuery(
+        projectId,
+        { userId: req.userId!, role: req.role! },
+        req.organizationId!,
+      ).catch(() => "denied" as const),
+    ]);
 
-    return res.status(200).json(STATUS_CODE[200]({ ...workflow, approval_status: approvalStatus }));
+    return res.status(200).json(
+      STATUS_CODE[200]({
+        ...workflow,
+        approval_status: approvalStatus,
+        viewer_can_write: writeAccess === "allowed",
+      }),
+    );
   } catch (error) {
     await logFailure({
       eventType: "Read",
