@@ -157,6 +157,10 @@ export const useCasesContent: ArticleContent = {
       text: 'Split into two sub-tabs. Controls tracks progress against each framework\'s requirements. Assessments tracks questionnaire-style evaluations. Completion percentages update automatically as you work through items.',
     },
     {
+      type: 'paragraph',
+      text: 'AI readiness scores how ready each control is for an audit. All, Public and Private filter the results: public ones everyone in your organization can see, private ones only you can see. With Private selected, Calculate readiness saves a private result, and with Public a public one; an existing result switches to that choice. With All selected, an existing result keeps its visibility and a new one is public. To remove a result, use the delete button on its card. You can delete your own results, and an Admin can also delete anyone\'s public result.',
+    },
+    {
       type: 'heading',
       id: 'ce-marking-tab',
       level: 3,

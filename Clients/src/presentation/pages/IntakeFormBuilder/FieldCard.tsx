@@ -359,7 +359,7 @@ export function FieldCard({
           <Chip label="Conditional" variant="info" size="small" uppercase={false} />
         )}
         {field.type === "calculated" && field.formula && (
-          <Typography sx={{ fontSize: "11px", color: theme.palette.text.accent, width: "100%" }}>
+          <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary, width: "100%" }}>
             {describeFormula(
               field.formula,
               fields.filter((f) => f.type === "number" || f.type === "calculated"),

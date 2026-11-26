@@ -8094,6 +8094,8 @@ tags:
   -
     name: 'v1: V1/Projects'
   -
+    name: 'v1: V1/Readiness'
+  -
     name: 'v1: V1/Report Runs'
   -
     name: 'v1: V1/Report Templates'
@@ -30443,6 +30445,37 @@ paths:
       tags:
         - 'v1: V1/Projects'
       operationId: resubmitUseCaseApproval
+      security:
+        -
+          bearerAuth: []
+  '/v1/readiness/scores/{id}':
+    delete:
+      summary: 'Delete a readiness calculation'
+      description: 'Deletes one framework readiness score with its control scores and history points. The person who ran it may delete it; deleting someone else''s public calculation requires readiness.admin. Someone else''s private calculation answers 404.'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The framework readiness score ID'
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: 'Invalid ID'
+        '401':
+          description: Unauthorized
+        '403':
+          description: 'Insufficient permissions'
+        '404':
+          description: 'Readiness score not found'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Readiness'
+      operationId: deleteCalculation
       security:
         -
           bearerAuth: []

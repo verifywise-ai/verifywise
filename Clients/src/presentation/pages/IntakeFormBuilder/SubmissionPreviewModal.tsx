@@ -232,7 +232,7 @@ function OverrideSection({
           items={tierItems}
         />
         {floorApplies && (
-          <Typography sx={{ fontSize: "12px", color: theme.palette.text.tertiary }}>
+          <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
             Can't be lower than the rule minimum allows
           </Typography>
         )}
@@ -1012,7 +1012,7 @@ function SubmissionPreviewModal({
                             unmatched.map((label) => (
                               <Typography
                                 key={String(label)}
-                                sx={{ fontSize: "12px", color: theme.palette.text.tertiary }}
+                                sx={{ fontSize: "13px", color: theme.palette.text.secondary }}
                               >
                                 <span>Not a high-risk role:</span> <span>{String(label)}</span>
                               </Typography>

@@ -121,7 +121,7 @@ export function VisibilityEditor({
   // author can remove them (they block saving a live form).
   if (hint && conditions.length === 0) {
     return (
-      <Typography sx={{ fontSize: "11px", color: theme.palette.text.accent }}>{hint}</Typography>
+      <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>{hint}</Typography>
     );
   }
 
@@ -258,7 +258,9 @@ export function VisibilityEditor({
         );
       })}
       {hint ? (
-        <Typography sx={{ fontSize: "11px", color: theme.palette.text.accent }}>{hint}</Typography>
+        <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
+          {hint}
+        </Typography>
       ) : (
         <CustomizableButton
           variant="outlined"

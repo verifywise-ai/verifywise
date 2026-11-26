@@ -234,16 +234,16 @@ export function OversightTab({
             <CartesianGrid strokeDasharray="3 3" stroke={palette.border.light} />
             <XAxis
               dataKey="label"
-              tick={{ fontSize: 11, fill: palette.text.tertiary }}
+              tick={{ fontSize: 12, fill: palette.text.secondary }}
               axisLine={{ stroke: palette.border.light }}
             />
             <YAxis
               allowDecimals={false}
-              tick={{ fontSize: 11, fill: palette.text.tertiary }}
+              tick={{ fontSize: 12, fill: palette.text.secondary }}
               axisLine={{ stroke: palette.border.light }}
             />
             <ChartTooltip />
-            <Legend wrapperStyle={{ fontSize: 12 }} />
+            <Legend wrapperStyle={{ fontSize: 13 }} />
             {SERIES.map((s) => (
               <Bar key={s.key} dataKey={s.key} name={s.name} stackId="lane" fill={s.color} />
             ))}
@@ -254,7 +254,7 @@ export function OversightTab({
       <Box sx={cardSx}>
         <Typography sx={{ fontWeight: 600, fontSize: 16, mb: "12px" }}>Reviewers</Typography>
         {d.reviewers.length === 0 ? (
-          <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
+          <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
             No decisions in this period.
           </Typography>
         ) : (
@@ -303,20 +303,20 @@ export function OversightTab({
             </Table>
           </TableContainer>
         )}
-        <Typography sx={{ fontSize: 12, color: palette.text.tertiary, mt: "8px" }}>
+        <Typography sx={{ fontSize: 13, color: palette.text.secondary, mt: "8px" }}>
           Counts the band in force at decision
         </Typography>
       </Box>
 
       <Box sx={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "16px" }}>
         <Box sx={cardSx} data-testid="band-kept">
-          <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>Band kept</Typography>
+          <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>Band kept</Typography>
           <Typography sx={{ fontSize: 16, fontWeight: 600 }}>
             <Rate part={d.bandKept.kept} whole={d.bandKept.decided} />
           </Typography>
         </Box>
         <Box sx={cardSx} data-testid="band-kept-senior">
-          <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+          <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
             Band kept, expert review
           </Typography>
           <Typography sx={{ fontSize: 16, fontWeight: 600 }}>
@@ -324,7 +324,7 @@ export function OversightTab({
           </Typography>
         </Box>
         <Box sx={cardSx} data-testid="suggestions-accepted">
-          <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+          <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
             Suggested risks accepted
           </Typography>
           <Typography sx={{ fontSize: 16, fontWeight: 600 }}>
@@ -372,7 +372,7 @@ export function OversightTab({
               >
                 {item.title}
               </Typography>
-              <Typography sx={{ fontSize: 12, color: palette.text.tertiary, ml: "auto" }}>
+              <Typography sx={{ fontSize: 13, color: palette.text.secondary, ml: "auto" }}>
                 {formatDate(new Date(item.at))}
               </Typography>
             </Stack>

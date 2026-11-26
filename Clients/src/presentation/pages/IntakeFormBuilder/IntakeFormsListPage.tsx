@@ -640,7 +640,9 @@ export function IntakeFormsListPage() {
                       onClick={() => handleRowClick(form)}
                       sx={singleTheme.tableStyles.primary.body.row}
                     >
-                      <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                      <TableCell
+                        sx={{ ...singleTheme.tableStyles.primary.body.cell, whiteSpace: "normal" }}
+                      >
                         <Box>
                           <Typography
                             sx={{
@@ -652,14 +654,17 @@ export function IntakeFormsListPage() {
                             {form.name}
                           </Typography>
                           {form.description && (
+                            // Wraps to two lines; a longer description shows in full on hover.
                             <Typography
+                              title={form.description}
                               sx={{
-                                fontSize: "12px",
-                                color: theme.palette.text.accent,
-                                maxWidth: 300,
+                                fontSize: "13px",
+                                color: theme.palette.text.secondary,
+                                maxWidth: 480,
                                 overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
                               }}
                             >
                               {form.description}
@@ -898,7 +903,9 @@ export function IntakeFormsListPage() {
                             {submission.submitterName || submission.submitterEmail || "Anonymous"}
                           </Typography>
                           {submission.submitterName && submission.submitterEmail && (
-                            <Typography sx={{ fontSize: "12px", color: theme.palette.text.accent }}>
+                            <Typography
+                              sx={{ fontSize: "13px", color: theme.palette.text.secondary }}
+                            >
                               {submission.submitterEmail}
                             </Typography>
                           )}

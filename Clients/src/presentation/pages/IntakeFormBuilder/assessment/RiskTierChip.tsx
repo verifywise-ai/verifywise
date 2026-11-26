@@ -22,7 +22,7 @@ function RiskTierChip({ submission }: { submission: IntakeSubmission }) {
     const override = submission.riskOverride?.tier;
     const overrideNote =
       override && override !== assessment.tier ? (
-        <Typography sx={{ fontSize: "12px", color: theme.palette.text.tertiary }}>
+        <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
           <span>set to</span> <span>{override}</span>
         </Typography>
       ) : null;
