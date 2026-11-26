@@ -110,6 +110,13 @@ private result unasked.
 The list filter (`buildVisibilityFilter`) returns public rows, the caller's own
 private rows, or both.
 
+Visibility is only ever `public` or `private`: the calculate endpoints
+normalize it, and a check constraint on all three tables enforces it.
+Migration `20261126130000-readiness-visibility-cleanup` turned older values
+(such as `all`, which matched no filter) into `public`, and aligned each
+control score's visibility with its framework score in the same scope, so a
+calculation's rows always share one visibility.
+
 `DELETE /api/v1/readiness/scores/:id` removes one calculation: the framework
 score, the control scores in the same scope (organization, framework, project,
 creator) and the history points in that scope, in one transaction. The
