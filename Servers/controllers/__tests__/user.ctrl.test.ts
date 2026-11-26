@@ -714,6 +714,10 @@ describe("user.ctrl", () => {
       const res = createRes();
       await loginUser(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "Bad Request",
+        data: "Email and password are required",
+      });
       expect(mockGetByEmail).not.toHaveBeenCalled();
     });
   });

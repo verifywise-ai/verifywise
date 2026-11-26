@@ -859,6 +859,13 @@ async function loginUser(req: Request, res: Response): Promise<any> {
     typeof password !== "string" ||
     password === ""
   ) {
+    // The values themselves are not logged: they may be malformed probes.
+    logStructured(
+      "error",
+      "login refused: missing or malformed credentials",
+      "loginUser",
+      "user.ctrl.ts",
+    );
     return res.status(400).json(STATUS_CODE[400](req.t!("Email and password are required")));
   }
 
