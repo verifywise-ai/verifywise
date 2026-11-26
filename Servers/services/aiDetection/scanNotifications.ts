@@ -72,6 +72,7 @@ import { translate } from "../../utils/i18n.utils";
 import { getUserLanguage } from "../../utils/userPreference.utils";
 import { sendInAppNotification, buildEntityUrl } from "../inAppNotification.service";
 import { EMAIL_TEMPLATES } from "../../constants/emailTemplates";
+import { frontendBaseUrl } from "../../utils/frontendUrl.utils";
 import {
   ITranslationVars,
   NotificationEntityType,
@@ -96,8 +97,6 @@ const TRIGGER_LABELS: Record<string, string> = {
   scheduled: "Scheduled scan",
   webhook: "GitHub webhook",
 };
-
-const frontendUrl = () => process.env.FRONTEND_URL || "http://localhost:5173";
 
 const findingKey = (f: IScanFindingKey) => `${f.finding_type}::${f.name}::${f.provider ?? ""}`;
 
@@ -419,7 +418,7 @@ export async function notifyAiDetectionScanFinished(
       repository: repositoryOf(scan),
       status: "completed",
       triggeredByType: scan.triggered_by_type || "manual",
-      url: `${frontendUrl()}${scanActionUrl(scanId)}`,
+      url: `${frontendBaseUrl()}${scanActionUrl(scanId)}`,
       // The scan's own count, so the notice matches the scan page it links to.
       findingsCount: Number(scan.findings_count ?? findings.length),
       highRiskCount: findings.filter(isHighRisk).length,
@@ -508,7 +507,7 @@ export async function notifyAiDetectionScanFailed(
       repository: repositoryOf(scan),
       status: "failed",
       triggeredByType,
-      url: `${frontendUrl()}${scanActionUrl(scanId)}`,
+      url: `${frontendBaseUrl()}${scanActionUrl(scanId)}`,
       findingsCount: 0,
       highRiskCount: 0,
       secretCount: 0,

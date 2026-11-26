@@ -51,6 +51,7 @@ import {
   ThresholdEvaluation,
 } from "../utils/mrmMonitoring.utils";
 import { toId } from "../utils/validations/validation.utils";
+import { frontendBaseUrl } from "../utils/frontendUrl.utils";
 
 const FILE = "mrmMonitoring.ctrl.ts";
 
@@ -455,7 +456,7 @@ export async function handleBreaches(
     if (recipients.length === 0) return; // recorded, but no one assigned to notify
 
     const label = (await getModelLabelQuery(organizationId, modelInventoryId)) ?? "a model";
-    const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const baseUrl = frontendBaseUrl();
     for (const breach of breaches) {
       const isHard = breach.evaluation!.status === MrmEvalStatus.BREACH;
       // Translated per recipient by sendInAppNotification; the same key titles

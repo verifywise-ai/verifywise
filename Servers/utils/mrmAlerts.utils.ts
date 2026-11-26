@@ -16,6 +16,7 @@ import {
   NotificationType,
 } from "../domain.layer/interfaces/i.notification";
 import logger from "./logger/fileLogger";
+import { frontendBaseUrl } from "./frontendUrl.utils";
 
 /**
  * MRM alerts (gaps #2+#3): recipient resolution, breach auto-finding, and
@@ -299,7 +300,7 @@ export const notifyRevalidationDue = async (
   const settings = await getMrmOrgSettings(organizationId);
   const label = (await getModelLabelQuery(organizationId, modelInventoryId)) ?? "a model";
   const dueDate = nextDue ? new Date(nextDue).toISOString().slice(0, 10) : "unknown";
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const baseUrl = frontendBaseUrl();
   const validationPath = "/model-inventory/model-risk-management/validation";
 
   await dispatchAlerts(

@@ -8,6 +8,7 @@ import {
   NotificationEntityType,
 } from "../domain.layer/interfaces/i.notification";
 import { EMAIL_TEMPLATES } from "../constants/emailTemplates";
+import { frontendBaseUrl } from "../utils/frontendUrl.utils";
 
 interface Notification {
   title: string;
@@ -28,8 +29,6 @@ type ContextNotification = Omit<Notification, "entityId" | "entityType"> & {
   /** Frontend path the in-app notice opens. */
   actionUrl?: string;
 };
-
-const frontendBaseUrl = (): string => process.env.FRONTEND_URL || "https://app.ai";
 
 // Map legacy notification types to new NotificationType enum
 const mapNotificationType = (type: Notification["type"]): NotificationType => {

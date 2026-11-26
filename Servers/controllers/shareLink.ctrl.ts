@@ -31,6 +31,7 @@ import {
 import { getProjectAccessQuery } from "../utils/project.utils";
 import { seesAllProjects } from "../utils/projectVisibility.utils";
 import { isRiskVisibleQuery, riskViewer } from "../utils/riskVisibility.utils";
+import { frontendBaseUrl } from "../utils/frontendUrl.utils";
 /**
  * The share link's warnings as translated messages. Each key is a literal so
  * the i18n key scanner sees it.
@@ -168,7 +169,7 @@ export const createShareLink = async (req: Request, res: Response) => {
 
     await transaction.commit();
 
-    const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const baseUrl = frontendBaseUrl();
     const shareable_url = `${baseUrl}/shared/${resource_type}s/${share_token}`;
 
     const response = {
@@ -275,7 +276,7 @@ export const getShareLinksForResource = async (req: Request, res: Response) => {
     );
     logger.debug(`✅ Fetched ${shareLinks.length} share links`);
 
-    const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const baseUrl = frontendBaseUrl();
     const response = shareLinks.map((link) => {
       const shareable_url = `${baseUrl}/shared/${link.resource_type}s/${link.share_token}`;
       const is_valid =
@@ -546,7 +547,7 @@ export const updateShareLink = async (req: Request, res: Response) => {
 
     await transaction.commit();
 
-    const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const baseUrl = frontendBaseUrl();
     const shareable_url = `${baseUrl}/shared/${updatedLink.resource_type}s/${updatedLink.share_token}`;
     const is_valid =
       updatedLink.is_enabled &&

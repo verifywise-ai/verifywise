@@ -207,7 +207,8 @@ describe("notification.service", () => {
       process.env.FRONTEND_URL = BASE;
     });
     afterAll(() => {
-      process.env.FRONTEND_URL = ORIGINAL_FRONTEND_URL;
+      if (ORIGINAL_FRONTEND_URL === undefined) delete process.env.FRONTEND_URL;
+      else process.env.FRONTEND_URL = ORIGINAL_FRONTEND_URL;
     });
 
     const stepContext = {
@@ -288,5 +289,24 @@ describe("notification.service", () => {
       );
       expect(email!.variables.request_url).toBe(`${BASE}/approval-workflows?request=100`);
     });
+  });
+
+  it("links an approval email to the local frontend when FRONTEND_URL is not set", async () => {
+    const saved = process.env.FRONTEND_URL;
+    delete process.env.FRONTEND_URL;
+    try {
+      mockQuery
+        .mockResolvedValueOnce([{ approver_id: 10, approver_name: "Alice" }] as any)
+        .mockResolvedValueOnce([] as any);
+
+      await notifyStepApprovers(1, 100, 1, "File Approval: a.pdf");
+
+      const [, , , email] = mockSendInApp.mock.calls[0];
+      expect(email!.variables.approval_url).toBe(
+        "http://localhost:5173/approval-workflows?request=100",
+      );
+    } finally {
+      if (saved !== undefined) process.env.FRONTEND_URL = saved;
+    }
   });
 });

@@ -42,6 +42,7 @@ import { roleHasPermission } from "../../utils/rolePermissions.utils";
 import { notifyFirstStepApprovers } from "../approvalRequestNotification.service";
 import { notifyRequesterRejected } from "../notification.service";
 import logger from "../../utils/logger/fileLogger";
+import { frontendBaseUrl } from "../../utils/frontendUrl.utils";
 
 /** Statuses from which a policy may be submitted or approved directly. */
 const SUBMITTABLE_STATUSES = ["Draft", POLICY_UNDER_REVIEW];
@@ -374,7 +375,7 @@ export const submitPolicyForApproval = async (params: {
     requesterId: userId,
     workflow: { workflow_title: workflow.workflow_title },
     workflowSteps,
-    baseUrl: process.env.FRONTEND_URL || "http://localhost:3000",
+    baseUrl: frontendBaseUrl(),
     entity: { type: "policy", id: policyId },
   }).catch((notifyError) =>
     logger.error(

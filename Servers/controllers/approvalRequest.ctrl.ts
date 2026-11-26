@@ -59,6 +59,7 @@ import { NotificationType } from "../domain.layer/interfaces/i.notification";
 import { EMAIL_TEMPLATES } from "../constants/emailTemplates";
 
 import { translateError } from "../utils/i18n.utils";
+import { frontendBaseUrl } from "../utils/frontendUrl.utils";
 
 /**
  * Reads an admin override (`override: true` + `step_number`, validated by
@@ -211,7 +212,7 @@ export async function createApprovalRequest(req: Request, res: Response): Promis
     // requests notify the requester instead of the step-1 approvers
     (async () => {
       try {
-        const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+        const baseUrl = frontendBaseUrl();
         const requestEntityId = Number(entity_id) || null;
 
         if (autoApproval.autoApproved) {
@@ -449,7 +450,7 @@ export async function approveRequest(req: Request, res: Response): Promise<any> 
     if (notificationInfo) {
       (async () => {
         try {
-          const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+          const baseUrl = frontendBaseUrl();
 
           // Get approver name
           const approverResult = await sequelize.query<{ name: string; surname: string }>(
@@ -666,7 +667,7 @@ export async function rejectRequest(req: Request, res: Response): Promise<any> {
     if (notificationInfo && notificationInfo.type === "requester_rejected") {
       (async () => {
         try {
-          const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+          const baseUrl = frontendBaseUrl();
 
           // Get rejector name
           const rejectorResult = await sequelize.query<{ name: string; surname: string }>(

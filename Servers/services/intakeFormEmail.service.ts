@@ -13,6 +13,7 @@ import {
 import { translate } from "../utils/i18n.utils";
 import type { ClassificationLevel } from "./intakeScoring/scoreMath";
 import { escapeHtml } from "../utils/sanitization.utils";
+import { frontendBaseUrl } from "../utils/frontendUrl.utils";
 
 // `lang?: string` on each helper below currently uses the *requester's* locale
 // (req.lang). For known recipients we should prefer their stored preference via
@@ -64,7 +65,7 @@ async function getAdminUsersForOrganization(
  * Build the frontend URL for a given path
  */
 function buildFrontendUrl(path: string): string {
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const baseUrl = frontendBaseUrl();
   return `${baseUrl}${path}`;
 }
 

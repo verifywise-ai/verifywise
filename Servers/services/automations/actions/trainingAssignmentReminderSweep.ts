@@ -5,6 +5,7 @@ import {
 } from "../../../utils/trainingAssignment.utils";
 import { notifyTrainingReminder } from "../../inAppNotification.service";
 import logger from "../../../utils/logger/fileLogger";
+import { frontendBaseUrl } from "../../../utils/frontendUrl.utils";
 
 /**
  * Daily training reminder sweep (#5260).
@@ -25,7 +26,7 @@ export interface TrainingReminderSweepSummary {
 export async function runTrainingAssignmentReminderSweep(
   organizationId: number,
 ): Promise<TrainingReminderSweepSummary> {
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const baseUrl = frontendBaseUrl();
   const reminders = await findTrainingRemindersDueQuery(organizationId);
 
   let notified = 0;
