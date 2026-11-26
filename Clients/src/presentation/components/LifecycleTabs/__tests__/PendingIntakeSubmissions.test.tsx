@@ -73,6 +73,18 @@ describe("PendingIntakeSubmissions", () => {
     expect(heading.textContent).toContain("Use cases");
     expect(heading.textContent).toContain("Existing use cases waiting for an approval decision.");
 
+    // A search that hides every request still leaves the list below it.
+    rerender(
+      <PendingIntakeSubmissions
+        {...copy}
+        pending={pending([row()])}
+        searchTerm="no such request"
+        listHeading={listHeading}
+      />,
+    );
+    expect(screen.getByText("No intake requests match your search.")).toBeInTheDocument();
+    expect(screen.getByTestId("pending-intake-list-heading")).toBeInTheDocument();
+
     rerender(
       <PendingIntakeSubmissions {...copy} pending={pending([])} listHeading={listHeading} />,
     );

@@ -19,8 +19,9 @@ const COLUMNS = ["Request", "Intake form", "Submitted by", "Submitted", "Days in
 
 const cellSx = { ...singleTheme.tableStyles.primary.body.cell, fontSize: "13px" };
 
-// The row divider of the house table; the rows themselves are not clickable
-// (the Review button is), so the pointer cursor of the house row is dropped.
+// The row divider of the house table. The rows themselves are not clickable
+// (the Review button is), so the pointer cursor of the house row is dropped;
+// the hover highlight stays, to help follow a row across the columns.
 const rowSx = { ...singleTheme.tableStyles.primary.body.row, "&:hover": { cursor: "default" } };
 
 const SectionHeading = ({ title, description }: { title: string; description: string }) => (
