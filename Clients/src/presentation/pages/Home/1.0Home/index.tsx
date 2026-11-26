@@ -169,6 +169,16 @@ const Home = () => {
               searchTerm={searchTerm}
               description="Submitted through an intake form. The use case is created when a reviewer approves the request."
               exportNote="Intake requests are not included in the use case export."
+              // An org with no use cases shows the onboarding empty state
+              // instead of a list, so there is nothing to head.
+              listHeading={
+                projects.length === 0
+                  ? undefined
+                  : {
+                      title: "Use cases",
+                      description: "Existing use cases waiting for an approval decision.",
+                    }
+              }
             />
           ) : null
         }
