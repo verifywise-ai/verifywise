@@ -437,6 +437,7 @@ describe("deleteReadinessCalculationQuery", () => {
     await deleteReadinessCalculationQuery(
       { id: 5, framework_type: "eu_ai_act", project_id: 49, created_by: 9, visibility: "public" },
       42,
+      { ownPrivateRows: true },
     );
     expect(mockQuery).toHaveBeenCalledTimes(3);
     const [scoreSql, controlSql, historySql] = mockQuery.mock.calls.map((c) => c[0] as string);
@@ -452,6 +453,7 @@ describe("deleteReadinessCalculationQuery", () => {
     // Every history point of the calculation, whichever visibility it was
     // recorded with: a recalculation can switch it.
     expect(historySql).not.toContain("visibility");
+    expect(controlSql).not.toContain("visibility");
     for (const [, options] of mockQuery.mock.calls) {
       expect(options.transaction).toBe("tx");
       expect(options.replacements).toMatchObject({
@@ -461,6 +463,24 @@ describe("deleteReadinessCalculationQuery", () => {
         createdBy: 9,
       });
     }
+  });
+});
+
+describe("deleteReadinessCalculationQuery for someone else's public calculation", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockQuery.mockResolvedValue([[]]);
+  });
+
+  it("leaves the person's private control scores and history points alone", async () => {
+    await deleteReadinessCalculationQuery(
+      { id: 5, framework_type: "eu_ai_act", project_id: 49, created_by: 9, visibility: "public" },
+      42,
+      { ownPrivateRows: false },
+    );
+    const [, controlSql, historySql] = mockQuery.mock.calls.map((c) => c[0] as string);
+    expect(controlSql).toContain("AND visibility = 'public'");
+    expect(historySql).toContain("AND visibility = 'public'");
   });
 });
 

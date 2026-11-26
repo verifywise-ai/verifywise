@@ -663,14 +663,18 @@ export async function getReadinessCalculationQuery(
 
 /**
  * Delete one readiness calculation: the framework score, the control scores
- * it was built from and every history point it recorded, whatever visibility
- * each was recorded with (a recalculation can switch it). Every row is matched on the same scope as the upserts
- * (framework, use case, person, organization), so another person's
- * calculation, or the organization-wide one, is never touched.
+ * it was built from and the history points it recorded. A recalculation can
+ * switch visibility, so the person who ran it (`ownPrivateRows`) removes rows
+ * of both visibilities; anyone else (an admin deleting a public calculation)
+ * removes only public rows and never touches the person's private ones.
+ * Every row is matched on the same scope as the upserts (framework, use case,
+ * person, organization), so another person's calculation, or the
+ * organization-wide one, is never touched.
  */
 export async function deleteReadinessCalculationQuery(
   calculation: ReadinessCalculation,
   organizationId: number,
+  { ownPrivateRows }: { ownPrivateRows: boolean },
 ): Promise<void> {
   const replacements = {
     id: calculation.id,
@@ -683,7 +687,9 @@ export async function deleteReadinessCalculationQuery(
   const sameScope = `organization_id = :organizationId
          AND framework_type = :frameworkType
          AND COALESCE(project_id, 0) = COALESCE(:projectId::int, 0)
-         AND COALESCE(created_by, 0) = COALESCE(:createdBy::int, 0)`;
+         AND COALESCE(created_by, 0) = COALESCE(:createdBy::int, 0)${
+           ownPrivateRows ? "" : " AND visibility = 'public'"
+         }`;
   await sequelize.transaction(async (transaction) => {
     await sequelize.query(
       `DELETE FROM framework_readiness_scores

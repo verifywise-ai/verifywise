@@ -112,8 +112,10 @@ private rows, or both.
 
 `DELETE /api/v1/readiness/scores/:id` removes one calculation: the framework
 score, the control scores in the same scope (organization, framework, project,
-creator) and every history point in that scope, whatever its visibility, in
-one transaction. The person who ran it may delete it; anyone else needs
+creator) and the history points in that scope, in one transaction. The
+person who ran it removes rows of both visibilities (a recalculation can
+switch it); an admin deleting someone else's public calculation removes only
+public rows, so that person's private rows stay. The person who ran it may delete it; anyone else needs
 `readiness.admin` (built-in Admin) and may delete only public calculations.
 Someone else's private calculation answers 404, as if it did not exist.
 

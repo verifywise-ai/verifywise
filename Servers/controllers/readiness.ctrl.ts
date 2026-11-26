@@ -608,7 +608,9 @@ export async function deleteCalculation(req: Request, res: Response) {
       }
     }
 
-    await deleteReadinessCalculationQuery(calculation, organizationId);
+    await deleteReadinessCalculationQuery(calculation, organizationId, {
+      ownPrivateRows: isOwner,
+    });
     logStructured("successful", `readiness calculation ${id} deleted`, functionName, fileName);
     return res.status(200).json(STATUS_CODE[200]({ id }));
   } catch (error) {

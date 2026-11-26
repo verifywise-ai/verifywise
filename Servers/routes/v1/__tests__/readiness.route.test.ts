@@ -87,7 +87,9 @@ describe("DELETE /api/v1/readiness/scores/:id", () => {
       const res = await request(app).delete(`${BASE}/5`).set(auth);
       expect(res.status).toBe(200);
       expect(res.body.data).toEqual({ id: 5 });
-      expect(deleteReadinessCalculationQuery).toHaveBeenCalledWith(calc({ visibility }), 42);
+      expect(deleteReadinessCalculationQuery).toHaveBeenCalledWith(calc({ visibility }), 42, {
+        ownPrivateRows: true,
+      });
       expect(roleHasPermission).not.toHaveBeenCalled();
     }
   });
@@ -104,7 +106,10 @@ describe("DELETE /api/v1/readiness/scores/:id", () => {
     stored(calc({ created_by: 3 }));
     const res = await request(app).delete(`${BASE}/5`).set(auth).set("x-role", "Admin");
     expect(res.status).toBe(200);
-    expect(deleteReadinessCalculationQuery).toHaveBeenCalledWith(calc({ created_by: 3 }), 42);
+    // Only public rows: the admin never touches the other person's private ones.
+    expect(deleteReadinessCalculationQuery).toHaveBeenCalledWith(calc({ created_by: 3 }), 42, {
+      ownPrivateRows: false,
+    });
   });
 
   it("answers 404 for someone else's private calculation, even to an admin", async () => {
