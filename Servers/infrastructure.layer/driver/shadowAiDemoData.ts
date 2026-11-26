@@ -758,21 +758,21 @@ export async function insertShadowAiDemoData(
       description: "Fires when a previously unseen AI tool is detected in network traffic.",
       trigger_type: "new_tool_detected",
       trigger_config: {},
-      actions: { notify: true, create_alert: true },
+      actions: [{ type: "send_alert" }],
     },
     {
       name: "High risk tool alert",
       description: "Fires when a detected tool has a risk score above the configured threshold.",
       trigger_type: "risk_score_exceeded",
       trigger_config: { risk_score_min: 70 },
-      actions: { notify: true, create_alert: true, auto_block: false },
+      actions: [{ type: "send_alert" }],
     },
     {
       name: "Sensitive department usage",
       description: "Fires when employees in sensitive departments use shadow AI tools.",
       trigger_type: "sensitive_department",
       trigger_config: { departments: ["Finance", "Legal", "HR"] },
-      actions: { notify: true, create_alert: true },
+      actions: [{ type: "send_alert" }],
     },
   ];
 
