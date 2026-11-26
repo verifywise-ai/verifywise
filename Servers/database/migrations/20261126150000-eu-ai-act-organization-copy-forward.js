@@ -20,7 +20,8 @@
  *      one without, then the latest change in its change history (answers have
  *      none), then the highest id. Nothing is copied when no hidden row has
  *      any work. "Work" is a non-default status, a filled user field, or an
- *      evidence or risk link.
+ *      evidence or risk link. A control's own status is derived from its
+ *      subcontrols, so controls are ranked on their fields and links only.
  *      - controls_eu: owner, reviewer, approver, risk_review, due_date,
  *        implementation_details; its status is derived from its subcontrols as
  *        saveControls does, so the control and its subcontrols agree.
@@ -32,12 +33,16 @@
  *      into owner, reviewer or approver (left empty).
  *      copied_from_project_id is set to the source use case; the trackers show
  *      "copied, review it" until a user saves the row, which clears it. A
- *      control whose own row had no work is still marked when one of its
- *      subcontrols was copied, with that subcontrol's use case.
- *   2. Each copied subcontrol and answer gets the union of the evidence and
- *      feedback files (file_entity_links) of every hidden row of that item in
- *      the organization, not only the chosen one; each copied control,
- *      subcontrol and answer gets the union of their risk links.
+ *      control whose own row had no work, or that someone already worked on,
+ *      is still marked when one of its subcontrols was copied, with that
+ *      subcontrol's use case, and its status is derived again; a control
+ *      already worked on keeps its fields.
+ *   2. Each framework-29 subcontrol and answer gets the union of the evidence
+ *      and feedback files (file_entity_links) of every hidden row of that item
+ *      in the organization, and each control, subcontrol and answer the union
+ *      of their risk links, whether or not its fields were copied: the File
+ *      Manager no longer shows links to hidden rows, so they must not be left
+ *      only there.
  *   3. Each copied control and subcontrol gets a change-history entry
  *      "Copied from use case" = "<use case title> (<UC id>)", by the system.
  *   4. Every Admin of each such organization gets one in-app notification,
@@ -94,17 +99,24 @@ const hasNoFields = (row, fields, defaultStatus) =>
 const isUntouchedTarget = (row, fields, defaultStatus) =>
   row.copied_from_project_id === null && hasNoFields(row, fields, defaultStatus);
 
-/** A hidden row someone worked on: a field, a status or a link. */
-const hasWork = (row, fields, defaultStatus) =>
-  row.has_links || !hasNoFields(row, fields, defaultStatus);
+/**
+ * A hidden row someone worked on: a field, a link or, unless byStatus is
+ * false, a status.
+ */
+const hasWork = (row, fields, defaultStatus, byStatus) =>
+  row.has_links ||
+  (byStatus ? !hasNoFields(row, fields, defaultStatus) : fields.some((f) => !isEmpty(row[f])));
 
-/** The hidden row to copy for one item, or null when none has any work. */
-function bestSource(sources, fields, defaultStatus) {
+/**
+ * The hidden row to copy for one item, or null when none has any work.
+ * byStatus false leaves the status out (a control's is derived, not entered).
+ */
+function bestSource(sources, fields, defaultStatus, { byStatus = true } = {}) {
   const ranked = sources
-    .map((row) => ({ row, work: hasWork(row, fields, defaultStatus) }))
+    .map((row) => ({ row, work: hasWork(row, fields, defaultStatus, byStatus) }))
     .sort(
       (a, b) =>
-        statusRank(b.row.status) - statusRank(a.row.status) ||
+        (byStatus ? statusRank(b.row.status) - statusRank(a.row.status) : 0) ||
         Number(b.work) - Number(a.work) ||
         (b.row.last_changed_at ? new Date(b.row.last_changed_at).getTime() : 0) -
           (a.row.last_changed_at ? new Date(a.row.last_changed_at).getTime() : 0) ||
@@ -350,16 +362,8 @@ async function copyOrganization(sequelize, organization, transaction) {
   // Subcontrols first: a control's status is derived from them.
   const copiedSubcontrolsByControl = new Map();
   for (const target of rows.targetSubcontrols) {
-    if (!isUntouchedTarget(target, SUBCONTROL_FIELDS, "Waiting")) continue;
     const sources = rows.sourceSubcontrols.get(target.subcontrol_meta_id) ?? [];
-    const source = bestSource(sources, SUBCONTROL_FIELDS, "Waiting");
-    if (!source) continue;
-
-    const values = {
-      status: source.status ?? "Waiting",
-      ...copiedValues(source, SUBCONTROL_FIELDS, members),
-    };
-    await writeCopy(sequelize, "subcontrols_eu", target.id, values, source.project_id, transaction);
+    if (sources.length === 0) continue;
     await copyFileLinks(
       sequelize,
       "subcontrol",
@@ -377,6 +381,15 @@ async function copyOrganization(sequelize, organization, transaction) {
       ids(sources),
       transaction,
     );
+    if (!isUntouchedTarget(target, SUBCONTROL_FIELDS, "Waiting")) continue;
+    const source = bestSource(sources, SUBCONTROL_FIELDS, "Waiting");
+    if (!source) continue;
+
+    const values = {
+      status: source.status ?? "Waiting",
+      ...copiedValues(source, SUBCONTROL_FIELDS, members),
+    };
+    await writeCopy(sequelize, "subcontrols_eu", target.id, values, source.project_id, transaction);
     await recordHistory(
       sequelize,
       "subcontrol_eu_change_history",
@@ -394,23 +407,7 @@ async function copyOrganization(sequelize, organization, transaction) {
 
   const subcontrolsByControl = groupBy(rows.targetSubcontrols, "control_id");
   for (const target of rows.targetControls) {
-    if (!isUntouchedTarget(target, CONTROL_FIELDS, "Waiting")) continue;
     const sources = rows.sourceControls.get(target.control_meta_id) ?? [];
-    const source =
-      bestSource(sources, CONTROL_FIELDS, "Waiting") ?? copiedSubcontrolsByControl.get(target.id);
-    if (!source) continue;
-
-    const ownSource = sources.includes(source);
-    const subcontrols = subcontrolsByControl.get(target.id) ?? [];
-    const values = {
-      status: subcontrols.length
-        ? deriveControlStatus(subcontrols.map((s) => s.status))
-        : (source.status ?? "Waiting"),
-      ...(ownSource
-        ? copiedValues(source, CONTROL_FIELDS, members)
-        : Object.fromEntries(CONTROL_FIELDS.map((f) => [f, null]))),
-    };
-    await writeCopy(sequelize, "controls_eu", target.id, values, source.project_id, transaction);
     if (sources.length > 0) {
       await copyRiskLinks(
         sequelize,
@@ -422,6 +419,54 @@ async function copyOrganization(sequelize, organization, transaction) {
         transaction,
       );
     }
+    const subcontrols = subcontrolsByControl.get(target.id) ?? [];
+    const subcontrolSource = copiedSubcontrolsByControl.get(target.id);
+
+    if (!isUntouchedTarget(target, CONTROL_FIELDS, "Waiting")) {
+      // Someone worked on the control: keep its fields, but its status follows
+      // the subcontrols just copied, and it is marked for review.
+      if (!subcontrolSource) continue;
+      await sequelize.query(
+        `UPDATE verifywise.controls_eu
+            SET status = :status,
+                copied_from_project_id = COALESCE(copied_from_project_id, :projectId)
+          WHERE id = :id;`,
+        {
+          replacements: {
+            id: target.id,
+            status: deriveControlStatus(subcontrols.map((s) => s.status)),
+            projectId: subcontrolSource.project_id,
+          },
+          transaction,
+        },
+      );
+      await recordHistory(
+        sequelize,
+        "control_eu_change_history",
+        "control_eu_id",
+        organizationId,
+        target.id,
+        sourceLabel(subcontrolSource),
+        transaction,
+      );
+      controls++;
+      continue;
+    }
+
+    const source =
+      bestSource(sources, CONTROL_FIELDS, "Waiting", { byStatus: false }) ?? subcontrolSource;
+    if (!source) continue;
+
+    const ownSource = sources.includes(source);
+    const values = {
+      status: subcontrols.length
+        ? deriveControlStatus(subcontrols.map((s) => s.status))
+        : (source.status ?? "Waiting"),
+      ...(ownSource
+        ? copiedValues(source, CONTROL_FIELDS, members)
+        : Object.fromEntries(CONTROL_FIELDS.map((f) => [f, null]))),
+    };
+    await writeCopy(sequelize, "controls_eu", target.id, values, source.project_id, transaction);
     await recordHistory(
       sequelize,
       "control_eu_change_history",
@@ -435,19 +480,8 @@ async function copyOrganization(sequelize, organization, transaction) {
   }
 
   for (const target of rows.targetAnswers) {
-    if (!isUntouchedTarget(target, ANSWER_FIELDS, "Not started")) continue;
     const sources = rows.sourceAnswers.get(target.question_id) ?? [];
-    const source = bestSource(sources, ANSWER_FIELDS, "Not started");
-    if (!source) continue;
-
-    await writeCopy(
-      sequelize,
-      "answers_eu",
-      target.id,
-      { answer: source.answer, status: source.status ?? "Not started" },
-      source.project_id,
-      transaction,
-    );
+    if (sources.length === 0) continue;
     await copyFileLinks(
       sequelize,
       "assessment",
@@ -463,6 +497,18 @@ async function copyOrganization(sequelize, organization, transaction) {
       organizationId,
       target.id,
       ids(sources),
+      transaction,
+    );
+    if (!isUntouchedTarget(target, ANSWER_FIELDS, "Not started")) continue;
+    const source = bestSource(sources, ANSWER_FIELDS, "Not started");
+    if (!source) continue;
+
+    await writeCopy(
+      sequelize,
+      "answers_eu",
+      target.id,
+      { answer: source.answer, status: source.status ?? "Not started" },
+      source.project_id,
       transaction,
     );
     answers++;

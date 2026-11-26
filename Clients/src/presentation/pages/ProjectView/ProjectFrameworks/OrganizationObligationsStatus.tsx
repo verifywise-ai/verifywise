@@ -35,7 +35,12 @@ const OrganizationObligationsStatus = () => {
   const { data: projects, isLoading: projectsLoading, isError: projectsError } = useProjects();
 
   const projectFrameworkId = useMemo(() => {
-    for (const project of projects ?? []) {
+    // The server uses the non-demo organizational project when there is one;
+    // a demo one is a fallback. The sort is stable, so list order holds.
+    const ordered = [...(projects ?? [])].sort(
+      (a, b) => Number(Boolean(a.is_demo)) - Number(Boolean(b.is_demo)),
+    );
+    for (const project of ordered) {
       if (!project.is_organizational) continue;
       const link = (project.framework ?? []).find(
         (fw) => fw.framework_id === FRAMEWORK_IDS.EU_AI_ACT_ORGANIZATION,

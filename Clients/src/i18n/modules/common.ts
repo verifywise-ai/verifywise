@@ -4700,6 +4700,8 @@ export const de: Record<string, string> = {
     "Aus {useCase} kopiert, als dies in die Organisation verschoben wurde. Prüfen Sie es und speichern Sie dann.",
   "Copied from a use case when this moved to the organization. Review it, then save.":
     "Aus einem Anwendungsfall kopiert, als dies in die Organisation verschoben wurde. Prüfen Sie es und speichern Sie dann.",
+  "EU AI Act (organization) was added for the organization's own obligations. Admins fill it in on the Frameworks page.":
+    "EU AI Act (Organisation) wurde für die eigenen Pflichten der Organisation hinzugefügt. Admins füllen es auf der Seite Frameworks aus.",
   "Copied, needs review": "Kopiert, Prüfung nötig",
 };
 
@@ -9407,6 +9409,8 @@ export const fr: Record<string, string> = {
     "Copié depuis {useCase} lors du passage au niveau de l'organisation. Vérifiez-le, puis enregistrez.",
   "Copied from a use case when this moved to the organization. Review it, then save.":
     "Copié depuis un cas d'usage lors du passage au niveau de l'organisation. Vérifiez-le, puis enregistrez.",
+  "EU AI Act (organization) was added for the organization's own obligations. Admins fill it in on the Frameworks page.":
+    "EU AI Act (organisation) a été ajouté pour les obligations propres de l'organisation. Les administrateurs le remplissent sur la page Frameworks.",
   "Copied, needs review": "Copié, à vérifier",
 };
 
@@ -14110,5 +14114,7 @@ export const es: Record<string, string> = {
     "Copiado de {useCase} cuando esto pasó a la organización. Revíselo y luego guarde.",
   "Copied from a use case when this moved to the organization. Review it, then save.":
     "Copiado de un caso de uso cuando esto pasó a la organización. Revíselo y luego guarde.",
+  "EU AI Act (organization) was added for the organization's own obligations. Admins fill it in on the Frameworks page.":
+    "EU AI Act (organización) se añadió para las obligaciones propias de la organización. Los administradores lo completan en la página Frameworks.",
   "Copied, needs review": "Copiado, pendiente de revisión",
 };

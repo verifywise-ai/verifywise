@@ -3,6 +3,7 @@ import StatusBadge from "../StatusBadge";
 import { useTranslation } from "../../../application/hooks/useTranslation";
 import { fill } from "../../../i18n/fill";
 import { isCopiedForReview } from "../../../application/constants/frameworks";
+import { fontSize } from "../../themes/typography";
 
 const COPIED_TEMPLATE =
   "Copied from {useCase} when this moved to the organization. Review it, then save.";
@@ -31,7 +32,7 @@ export const EuAiActCopiedNote = ({ item }: { item?: CopiedMarker | null }) => {
       inline
       hasIcon={false}
       body={useCase ? fill(t(COPIED_TEMPLATE), { useCase }) : t(COPIED_UNNAMED)}
-      sx={{ "& .MuiTypography-root": { fontSize: "13px" } }}
+      sx={{ "& .MuiTypography-root": { fontSize: fontSize.base } }}
     />
   );
 };

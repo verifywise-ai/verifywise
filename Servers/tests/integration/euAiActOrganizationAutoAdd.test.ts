@@ -151,7 +151,7 @@ describe("EU AI Act (organization) is added when a use case gets EU AI Act", () 
     expect(alerts()).toEqual([expectedAlert]);
   });
 
-  it("tells every Admin and the Editor who enabled it, and no one else", async () => {
+  it("tells every Admin, and not the Editor who enabled it and can't open it", async () => {
     const { orgId, adminId } = await adminApi();
     const secondAdminId = await createTestUser(
       orgId,
@@ -188,7 +188,8 @@ describe("EU AI Act (organization) is added when a use case gets EU AI Act", () 
     expect(organizationalProject.owner).toBe(adminId);
     const [alert] = alerts();
     expect(alerts()).toHaveLength(1);
-    expect(alert.recipientIds).toEqual([adminId, secondAdminId, editorId].sort((x, y) => x - y));
+    expect(alert.recipientIds).toEqual([adminId, secondAdminId].sort((x, y) => x - y));
+    expect(alert.recipientIds).not.toContain(editorId);
     expect(alert.recipientIds).not.toContain(reviewerId);
   });
 

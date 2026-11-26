@@ -73,6 +73,30 @@ describe("OrganizationObligationsStatus", () => {
     expect(mockComplianceProgress).not.toHaveBeenCalled();
   });
 
+  it("uses the real organizational project over a newer demo one", async () => {
+    const demoProject = {
+      ...orgProject,
+      id: 9,
+      is_demo: true,
+      framework: [{ project_framework_id: 90, framework_id: 29, name: "EU AI Act (organization)" }],
+    };
+    mockUseProjects.mockReturnValue({ data: [demoProject, useCase, orgProject], isLoading: false });
+    mockComplianceProgress.mockResolvedValue({
+      data: { allDonesubControls: 1, allsubControls: 17 },
+    });
+    mockAssessmentProgress.mockResolvedValue({ data: { answeredQuestions: 0, totalQuestions: 9 } });
+
+    renderWithProviders(<OrganizationObligationsStatus />);
+
+    await screen.findByTestId("eu-ai-act-organization-open");
+    expect(mockComplianceProgress).toHaveBeenCalledWith(
+      expect.objectContaining({ projectFrameworkId: 41 }),
+    );
+    expect(mockComplianceProgress).not.toHaveBeenCalledWith(
+      expect.objectContaining({ projectFrameworkId: 90 }),
+    );
+  });
+
   it("renders nothing while projects load or when they fail", () => {
     mockUseProjects.mockReturnValue({ data: undefined, isLoading: true });
     const { container, rerender } = renderWithProviders(<OrganizationObligationsStatus />);

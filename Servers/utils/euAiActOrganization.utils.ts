@@ -139,9 +139,11 @@ export const ensureEuAiActOrganizationFrameworkQuery = async (
   const ownerId = organizationalProject.owner;
   const notify = async () => {
     try {
+      // Only people who can open the organizational project: Admins and its
+      // owner. A non-Admin who enabled EU AI Act is not a member of it.
       const adminIds = await getDeadlineAdminIdsQuery(organizationId);
       const recipientIds = [
-        ...new Set([...adminIds, actorUserId, ownerId].filter((id): id is number => id !== null)),
+        ...new Set([...adminIds, ownerId].filter((id): id is number => id !== null)),
       ];
       await notifyEuAiActOrganizationAdded(organizationId, recipientIds, notified);
     } catch (error) {

@@ -96,7 +96,7 @@ describe("AddFrameworkModal", () => {
 
     expect(
       await screen.findByText(
-        "EU AI Act (organization) was added to the Frameworks page. Fill in its organization-level controls there.",
+        "EU AI Act (organization) was added for the organization's own obligations. Admins fill it in on the Frameworks page.",
       ),
     ).toBeInTheDocument();
   });

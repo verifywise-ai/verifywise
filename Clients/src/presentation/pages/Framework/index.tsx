@@ -430,7 +430,11 @@ const Framework = () => {
       if (euAiActOrganizationIndex !== -1) {
         setSelectedFramework(euAiActOrganizationIndex);
       }
-      setEuAiActOrganizationTracker(euSubtab === "assessment" ? "assessment" : "compliance");
+      // Only a link that names a tracker picks it: this effect reruns when the
+      // project list refetches, and must not undo the user's own tab choice.
+      if (euSubtab === "assessment" || euSubtab === "compliance") {
+        setEuAiActOrganizationTracker(euSubtab);
+      }
     } else if (framework === "nist-ai-rmf" || frameworkName === "nist-ai-rmf") {
       // Find NIST AI RMF framework in filtered frameworks
       const nistAiRmfIndex = filteredFrameworks.findIndex(

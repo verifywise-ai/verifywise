@@ -63,7 +63,7 @@ export const matchesEuAiActStatusFilter = (
 
 /** Shown when enabling EU AI Act on a use case also added EU AI Act (organization). */
 export const EU_AI_ACT_ORGANIZATION_ADDED_MESSAGE =
-  "EU AI Act (organization) was added to the Frameworks page. Fill in its organization-level controls there.";
+  "EU AI Act (organization) was added for the organization's own obligations. Admins fill it in on the Frameworks page.";
 
 /** Why EU AI Act (organization) can't be removed while a use case has EU AI Act. */
 export const EU_AI_ACT_ORGANIZATION_LOCKED_REASON = "Required while a use case has EU AI Act";

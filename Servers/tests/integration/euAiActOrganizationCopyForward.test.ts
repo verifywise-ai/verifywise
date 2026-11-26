@@ -528,6 +528,8 @@ describe("EU AI Act (organization) copy-forward migration", () => {
     const uc = await legacyUseCase(orgId, "Hiring", false, items, {
       sub1: { status: "Done", implementation_details: "use case work" },
     });
+    const evidence = await createTestFile(orgId, admin, { filename: "hiring.pdf" });
+    await link(orgId, evidence, "subcontrol", uc.sub1);
     await split.up({ sequelize });
 
     // Someone already worked on the organizational subcontrol.
@@ -546,6 +548,15 @@ describe("EU AI Act (organization) copy-forward migration", () => {
     });
     expect(after.control.copied_from_project_id).toBeNull();
     expect(uc.projectId).toBeGreaterThan(0);
+    // Its fields are kept, but the hidden row's file is linked to it, since
+    // links to hidden rows no longer show anywhere.
+    expect(
+      await select(
+        `SELECT file_id FROM file_entity_links
+          WHERE organization_id = :orgId AND entity_type = 'subcontrol' AND entity_id = :id`,
+        { orgId, id: after.sub1.id },
+      ),
+    ).toEqual([{ file_id: evidence }]);
 
     const [notice] = await select<{ user_id: number; message: string }>(
       `SELECT user_id, message FROM notifications WHERE organization_id = :orgId`,
@@ -554,5 +565,71 @@ describe("EU AI Act (organization) copy-forward migration", () => {
     expect(notice.user_id).toBe(admin);
     expect(notice.message).not.toContain("copied");
     expect(notice.message).toContain("Review them on the Frameworks page.");
+  });
+
+  it("ranks controls on their fields, not on the status derived from their subcontrols", async () => {
+    const items = await movedItems();
+    const orgId = await createTestOrganization();
+    await createTestUser(orgId, 1, email("admin"), "Pw123456!");
+    // Older use case: the control has text but its subcontrols were never done.
+    const written = await legacyUseCase(orgId, "Credit", false, items, {
+      control: { status: "Waiting", implementation_details: "Credit control text" },
+    });
+    // Newer use case: every subcontrol done, so its control reads Done, but empty.
+    await legacyUseCase(orgId, "Hiring", false, items, {
+      control: { status: "Done" },
+      sub1: { status: "Done", implementation_details: "Hiring sub" },
+    });
+    await runMigrations();
+
+    const org = await organizationRows(orgId, items);
+    expect(org.control).toMatchObject({
+      implementation_details: "Credit control text",
+      copied_from_project_id: written.projectId,
+      status: "In progress",
+    });
+    expect(org.sub1).toMatchObject({ status: "Done", implementation_details: "Hiring sub" });
+  });
+
+  it("derives and marks a control already worked on when its subcontrols are copied", async () => {
+    const items = await movedItems();
+    const orgId = await createTestOrganization();
+    const admin = await createTestUser(orgId, 1, email("admin"), "Pw123456!");
+    const uc = await legacyUseCase(orgId, "Hiring", false, items, {
+      sub1: { status: "Done", implementation_details: "use case work" },
+      sub2: { status: "Done", implementation_details: "more work" },
+    });
+    await split.up({ sequelize });
+    const before = await organizationRows(orgId, items);
+    await sequelize.query(`UPDATE controls_eu SET owner = :admin WHERE id = :id`, {
+      replacements: { admin, id: before.control.id },
+    });
+    await copyForward.up({ sequelize });
+
+    const after = await organizationRows(orgId, items);
+    expect(after.sub1).toMatchObject({ status: "Done", copied_from_project_id: uc.projectId });
+    expect(after.control).toMatchObject({
+      owner: admin,
+      implementation_details: null,
+      copied_from_project_id: uc.projectId,
+    });
+    // Two of its subcontrols are copied Done; the control follows them.
+    const statuses = await select<{ status: string }>(
+      `SELECT status FROM subcontrols_eu WHERE control_id = :id`,
+      { id: after.control.id },
+    );
+    expect(after.control.status).toBe(
+      statuses.every((r) => r.status === "Done") ? "Done" : "In progress",
+    );
+    const [notice] = await select<{ message: string }>(
+      `SELECT message FROM notifications WHERE organization_id = :orgId`,
+      { orgId },
+    );
+    expect(notice.message).toContain("1 item was copied from your use cases");
+
+    // A re-run changes nothing.
+    const snap = await snapshot(orgId);
+    await copyForward.up({ sequelize });
+    expect(await snapshot(orgId)).toEqual(snap);
   });
 });
