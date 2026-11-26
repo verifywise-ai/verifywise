@@ -812,7 +812,6 @@ export async function insertShadowAiDemoData(
         vendor: "Anysphere",
         first_user: "liam.thompson@acmecorp.com",
       },
-      actions_taken: { notified_users: [userId], alert_created: true },
       days_ago: 22,
     },
     {
@@ -823,7 +822,6 @@ export async function insertShadowAiDemoData(
         vendor: "StackBlitz",
         first_user: "leo.stewart@acmecorp.com",
       },
-      actions_taken: { notified_users: [userId], alert_created: true },
       days_ago: 14,
     },
     {
@@ -834,7 +832,6 @@ export async function insertShadowAiDemoData(
         vendor: "Perplexity AI",
         first_user: "henry.wright@acmecorp.com",
       },
-      actions_taken: { notified_users: [userId], alert_created: true },
       days_ago: 9,
     },
     {
@@ -845,7 +842,6 @@ export async function insertShadowAiDemoData(
         risk_score: 85,
         threshold: 70,
       },
-      actions_taken: { notified_users: [userId], alert_created: true },
       days_ago: 18,
     },
     {
@@ -856,7 +852,6 @@ export async function insertShadowAiDemoData(
         risk_score: 72,
         threshold: 70,
       },
-      actions_taken: { notified_users: [userId], alert_created: true },
       days_ago: 11,
     },
     {
@@ -867,7 +862,6 @@ export async function insertShadowAiDemoData(
         department: "Finance",
         tool_name: "ChatGPT",
       },
-      actions_taken: { notified_users: [userId], alert_created: true },
       days_ago: 20,
     },
     {
@@ -878,7 +872,6 @@ export async function insertShadowAiDemoData(
         department: "Legal",
         tool_name: "Claude AI",
       },
-      actions_taken: { notified_users: [userId], alert_created: true },
       days_ago: 7,
     },
     {
@@ -889,7 +882,6 @@ export async function insertShadowAiDemoData(
         department: "HR",
         tool_name: "Gemini",
       },
-      actions_taken: { notified_users: [userId], alert_created: true },
       days_ago: 3,
     },
   ];
@@ -911,7 +903,7 @@ export async function insertShadowAiDemoData(
           rule_name: alert.rule_name,
           trigger_type: alert.trigger_type,
           trigger_data: JSON.stringify(alert.trigger_data),
-          actions_taken: JSON.stringify(alert.actions_taken),
+          actions_taken: JSON.stringify({ types: ["send_alert"], fired_at: firedAt.toISOString() }),
           fired_at: firedAt.toISOString(),
         },
       },

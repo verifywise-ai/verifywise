@@ -1182,6 +1182,7 @@
   "rows must be a list of 1 to 1000 rows": "rows must be a list of 1 to 1000 rows",
   "rule and facts are required": "rule and facts are required",
   "Rule deleted successfully": "Rule deleted successfully",
+  "Rule actions must be a list of actions with a type": "Rule actions must be a list of actions with a type",
   "Rule not found": "Rule not found",
   "Rules array is required": "Rules array is required",
   "Rules must be an array": "Rules must be an array",

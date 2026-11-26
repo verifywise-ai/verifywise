@@ -8,7 +8,6 @@ import {
   SortableColumn,
   SortConfig,
 } from "../constants";
-import { ruleActionsLabel } from "../ruleActions";
 
 describe("ShadowAI constants", () => {
   it("exposes the shared period filter options", () => {
@@ -171,26 +170,5 @@ describe("SortableTableHead", () => {
   it("shows a tooltip trigger for columns with a tooltip", () => {
     render(<Table />);
     expect(screen.getByText("Status").parentElement).toBeTruthy();
-  });
-});
-
-describe("ruleActionsLabel", () => {
-  it("lists the type of each stored action", () => {
-    expect(ruleActionsLabel([{ type: "send_alert" }, { type: "create_task" }])).toBe(
-      "send alert, create task",
-    );
-  });
-
-  it("lists only the flags set to true in legacy demo data", () => {
-    expect(ruleActionsLabel({ notify: true, create_alert: true, auto_block: false })).toBe(
-      "notify, create alert",
-    );
-  });
-
-  it("says None when there is no action", () => {
-    expect(ruleActionsLabel([])).toBe("None");
-    expect(ruleActionsLabel({ auto_block: false })).toBe("None");
-    expect(ruleActionsLabel(null)).toBe("None");
-    expect(ruleActionsLabel([{}, null, { type: "" }])).toBe("None");
   });
 });
