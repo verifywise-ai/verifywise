@@ -94,6 +94,17 @@ export const de: Record<string, string> = {
   "Median": "Median",
   "Range": "Spanne",
   "No AI scores": "Keine KI-Bewertungen",
+  "The keyword score set this score.": "Die Stichwortbewertung hat diesen Wert bestimmt.",
+  "The rule minimum set this score. The keyword score was lower.":
+    "Das Regelminimum hat diesen Wert bestimmt. Die Stichwortbewertung war niedriger.",
+  "Basic keyword score": "Einfache Stichwortbewertung",
+  "No LLM key was available when this was scored, so the score comes from matching keywords in the answers. With an LLM key on the form, new submissions get a much more accurate score and suggested risks.":
+    "Beim Bewerten war kein LLM-Schlüssel verfügbar, daher beruht der Wert auf Stichwörtern in den Antworten. Mit einem LLM-Schlüssel im Formular erhalten neue Einreichungen einen deutlich genaueren Wert und Risikovorschläge.",
+  "Keyword score": "Stichwortbewertung",
+  "Weighted average of six risk dimensions, from keywords in the answers. No LLM key was available when this was scored.":
+    "Gewichteter Durchschnitt aus sechs Risikodimensionen, ermittelt aus Stichwörtern in den Antworten. Beim Bewerten war kein LLM-Schlüssel verfügbar.",
+  "The final score is the higher of the rule minimum and the keyword score.":
+    "Der endgültige Wert ist der höhere von Regelminimum und Stichwortbewertung.",
   "Reasons": "Gründe",
   "Band override": "Manuelle Stufe",
   "Suggesting risks…": "Risiken werden vorgeschlagen…",
@@ -120,8 +131,8 @@ export const de: Record<string, string> = {
     "Die Fragen zum EU AI Act sind deaktiviert. Einreichungen erhalten keine regelbasierte Einstufung nach dem EU AI Act, daher hat ihr Risikowert kein regelbasiertes Minimum und wird als „nicht regelbasiert geprüft“ markiert. Anwendungsfälle, die aus diesem Formular genehmigt werden, erhalten ebenfalls keine Einstufung nach dem EU AI Act.",
   "Used to score submissions and suggest risks. You can also generate suggested questions and field guidance text with AI.":
     "Wird verwendet, um Einreichungen zu bewerten und Risiken vorzuschlagen. Sie können mit KI auch Fragenvorschläge und Hilfetexte für Felder erstellen.",
-  "Used to score submissions and suggest risks. Without a key, reviewers see the rule-based classification only. Add a key in Settings > LLM keys.":
-    "Wird verwendet, um Einreichungen zu bewerten und Risiken vorzuschlagen. Ohne Schlüssel sehen Prüfer nur die regelbasierte Einstufung. Fügen Sie einen Schlüssel unter Einstellungen > LLM-Schlüssel hinzu.",
+  "Used to score submissions and suggest risks. Without a key, submissions get a basic keyword score and no suggested risks. Add a key in Settings > LLM keys.":
+    "Wird verwendet, um Einreichungen zu bewerten und Risiken vorzuschlagen. Ohne Schlüssel erhalten Einreichungen eine einfache Stichwortbewertung und keine Risikovorschläge. Fügen Sie einen Schlüssel unter Einstellungen > LLM-Schlüssel hinzu.",
   "High-risk roles *": "Hochrisiko-Rollen *",
   "Not a high-risk role:": "Keine Hochrisiko-Rolle:",
   "Roles:": "Rollen:",
@@ -866,6 +877,17 @@ export const fr: Record<string, string> = {
   "Median": "Médiane",
   "Range": "Plage",
   "No AI scores": "Aucun score de l'IA",
+  "The keyword score set this score.": "Le score par mots-clés a fixé ce score.",
+  "The rule minimum set this score. The keyword score was lower.":
+    "Le minimum des règles a fixé ce score. Le score par mots-clés était plus bas.",
+  "Basic keyword score": "Score de base par mots-clés",
+  "No LLM key was available when this was scored, so the score comes from matching keywords in the answers. With an LLM key on the form, new submissions get a much more accurate score and suggested risks.":
+    "Aucune clé LLM n'était disponible lors de l'évaluation : le score provient des mots-clés trouvés dans les réponses. Avec une clé LLM sur le formulaire, les nouvelles soumissions obtiennent un score bien plus précis et des suggestions de risques.",
+  "Keyword score": "Score par mots-clés",
+  "Weighted average of six risk dimensions, from keywords in the answers. No LLM key was available when this was scored.":
+    "Moyenne pondérée de six dimensions de risque, à partir des mots-clés des réponses. Aucune clé LLM n'était disponible lors de l'évaluation.",
+  "The final score is the higher of the rule minimum and the keyword score.":
+    "Le score final est le plus élevé entre le minimum des règles et le score par mots-clés.",
   "Reasons": "Raisons",
   "Band override": "Niveau modifié",
   "Suggesting risks…": "Suggestion des risques…",
@@ -892,8 +914,8 @@ export const fr: Record<string, string> = {
     "Les questions sur l'AI Act de l'UE sont désactivées. Les soumissions n'obtiendront pas de classification fondée sur les règles de l'AI Act de l'UE : leur score de risque n'a donc pas de minimum fondé sur les règles et est marqué « non vérifié par les règles ». Les cas d'usage approuvés depuis ce formulaire n'obtiendront pas non plus de classification selon l'AI Act de l'UE.",
   "Used to score submissions and suggest risks. You can also generate suggested questions and field guidance text with AI.":
     "Sert à évaluer les soumissions et à suggérer des risques. Vous pouvez aussi générer avec l'IA des questions suggérées et des textes d'aide pour les champs.",
-  "Used to score submissions and suggest risks. Without a key, reviewers see the rule-based classification only. Add a key in Settings > LLM keys.":
-    "Sert à évaluer les soumissions et à suggérer des risques. Sans clé, les réviseurs ne voient que la classification fondée sur les règles. Ajoutez une clé dans Paramètres > Clés LLM.",
+  "Used to score submissions and suggest risks. Without a key, submissions get a basic keyword score and no suggested risks. Add a key in Settings > LLM keys.":
+    "Sert à évaluer les soumissions et à suggérer des risques. Sans clé, les soumissions obtiennent un score de base par mots-clés et aucune suggestion de risques. Ajoutez une clé dans Paramètres > Clés LLM.",
   "High-risk roles *": "Rôles à haut risque *",
   "Not a high-risk role:": "Pas un rôle à haut risque :",
   "Roles:": "Rôles :",
@@ -1634,6 +1656,17 @@ export const es: Record<string, string> = {
   "Median": "Mediana",
   "Range": "Rango",
   "No AI scores": "Sin puntuaciones de la IA",
+  "The keyword score set this score.": "La puntuación por palabras clave fijó esta puntuación.",
+  "The rule minimum set this score. The keyword score was lower.":
+    "El mínimo de las reglas fijó esta puntuación. La puntuación por palabras clave fue menor.",
+  "Basic keyword score": "Puntuación básica por palabras clave",
+  "No LLM key was available when this was scored, so the score comes from matching keywords in the answers. With an LLM key on the form, new submissions get a much more accurate score and suggested risks.":
+    "No había ninguna clave LLM disponible al puntuar, así que la puntuación sale de las palabras clave de las respuestas. Con una clave LLM en el formulario, los nuevos envíos obtienen una puntuación mucho más precisa y riesgos sugeridos.",
+  "Keyword score": "Puntuación por palabras clave",
+  "Weighted average of six risk dimensions, from keywords in the answers. No LLM key was available when this was scored.":
+    "Media ponderada de seis dimensiones de riesgo, a partir de las palabras clave de las respuestas. No había ninguna clave LLM disponible al puntuar.",
+  "The final score is the higher of the rule minimum and the keyword score.":
+    "La puntuación final es la más alta entre el mínimo de las reglas y la puntuación por palabras clave.",
   "Reasons": "Motivos",
   "Band override": "Banda modificada",
   "Suggesting risks…": "Sugiriendo riesgos…",
@@ -1659,8 +1692,8 @@ export const es: Record<string, string> = {
     "Las preguntas de la Ley de IA de la UE están desactivadas. Los envíos no obtendrán una clasificación basada en reglas de la Ley de IA de la UE, así que su puntuación de riesgo no tiene un mínimo basado en reglas y se marca como «sin comprobación de reglas». Los casos de uso aprobados desde este formulario tampoco obtendrán una clasificación de la Ley de IA de la UE.",
   "Used to score submissions and suggest risks. You can also generate suggested questions and field guidance text with AI.":
     "Se usa para puntuar envíos y sugerir riesgos. También puedes generar con IA preguntas sugeridas y textos de ayuda para los campos.",
-  "Used to score submissions and suggest risks. Without a key, reviewers see the rule-based classification only. Add a key in Settings > LLM keys.":
-    "Se usa para puntuar envíos y sugerir riesgos. Sin clave, los revisores solo ven la clasificación basada en reglas. Añade una clave en Configuración > Claves LLM.",
+  "Used to score submissions and suggest risks. Without a key, submissions get a basic keyword score and no suggested risks. Add a key in Settings > LLM keys.":
+    "Se usa para puntuar envíos y sugerir riesgos. Sin clave, los envíos reciben una puntuación básica por palabras clave y ningún riesgo sugerido. Añade una clave en Configuración > Claves LLM.",
   "High-risk roles *": "Roles de alto riesgo *",
   "Not a high-risk role:": "No es un rol de alto riesgo:",
   "Roles:": "Roles:",

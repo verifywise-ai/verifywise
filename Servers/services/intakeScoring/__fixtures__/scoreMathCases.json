@@ -24,5 +24,61 @@
   { "ruleMinimum": 0, "aiMedian": null, "finalScore": null, "source": null, "rulesOnly": false },
   { "ruleMinimum": null, "aiMedian": null, "finalScore": null, "source": null, "rulesOnly": false },
   { "ruleMinimum": null, "aiMedian": 64, "finalScore": 64, "source": "ai", "rulesOnly": false },
-  { "ruleMinimum": 0, "aiMedian": 12, "finalScore": 12, "source": "ai", "rulesOnly": false }
+  { "ruleMinimum": 0, "aiMedian": 12, "finalScore": 12, "source": "ai", "rulesOnly": false },
+  {
+    "ruleMinimum": null,
+    "aiMedian": null,
+    "keywordScore": 42,
+    "finalScore": 42,
+    "source": "keyword",
+    "rulesOnly": false
+  },
+  {
+    "ruleMinimum": 70,
+    "aiMedian": null,
+    "keywordScore": 40,
+    "finalScore": 70,
+    "source": "rule_minimum",
+    "rulesOnly": false
+  },
+  {
+    "ruleMinimum": 30,
+    "aiMedian": null,
+    "keywordScore": 55,
+    "finalScore": 55,
+    "source": "keyword",
+    "rulesOnly": false
+  },
+  {
+    "ruleMinimum": 30,
+    "aiMedian": null,
+    "keywordScore": 30,
+    "finalScore": 30,
+    "source": "keyword",
+    "rulesOnly": false
+  },
+  {
+    "ruleMinimum": 0,
+    "aiMedian": null,
+    "keywordScore": 0,
+    "finalScore": 0,
+    "source": "keyword",
+    "rulesOnly": false
+  },
+  {
+    "ruleMinimum": 30,
+    "aiMedian": 20,
+    "keywordScore": 80,
+    "finalScore": 30,
+    "source": "rule_minimum",
+    "rulesOnly": false
+  },
+  {
+    "ruleMinimum": null,
+    "aiMedian": 64,
+    "keywordScore": 10,
+    "finalScore": 64,
+    "source": "ai",
+    "rulesOnly": false
+  }
 ]

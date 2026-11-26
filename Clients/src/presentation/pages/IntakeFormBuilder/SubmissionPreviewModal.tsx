@@ -1,13 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import {
-  Box,
-  Typography,
-  LinearProgress,
-  Collapse,
-  CircularProgress,
-  Alert,
-  useTheme,
-} from "@mui/material";
+import { Box, Typography, Collapse, CircularProgress, Alert, useTheme } from "@mui/material";
 import { ChevronDown, ChevronUp, ShieldAlert } from "lucide-react";
 import StandardModal from "../../components/Modals/StandardModal";
 import Field from "../../components/Inputs/Field";
@@ -42,6 +34,7 @@ import {
   type ScoreBand,
 } from "../../../application/utils/intakeScoring/scoreMath";
 import ScoreSection from "./assessment/ScoreSection";
+import DimensionBars from "./assessment/DimensionBars";
 import SuggestedRisksSection from "./assessment/SuggestedRisksSection";
 import { isRetryable } from "./assessment/scoreView";
 import { AnswerLiveChecks, LiveChecksSection } from "./LiveChecksSection";
@@ -138,20 +131,6 @@ const POLL_INTERVAL_MS = 5000;
 const POLL_LIMIT_MS = 11 * 60 * 1000;
 
 // ============================================================================
-// Helpers
-// ============================================================================
-
-/**
- * Returns a color for a dimension score bar based on the score value.
- */
-function getDimensionBarColor(score: number): string {
-  if (score <= 25) return palette.riskMark.low;
-  if (score <= 50) return palette.riskMark.medium;
-  if (score <= 75) return palette.riskMark.high;
-  return palette.riskMark.critical;
-}
-
-// ============================================================================
 // Sub-components
 // ============================================================================
 
@@ -203,65 +182,7 @@ function RiskSection({ riskAssessment }: RiskSectionProps) {
       </Box>
 
       {/* Dimension bars */}
-      {riskAssessment.dimensions && riskAssessment.dimensions.length > 0 && (
-        <Box sx={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-          {riskAssessment.dimensions.map((dim, idx) => {
-            const barColor = getDimensionBarColor(dim.score);
-            const dimLabel = dim.label || dim.name || dim.key || `Dimension ${idx + 1}`;
-            return (
-              <Box key={`${dimLabel}-${idx}`}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    mb: 0.5,
-                  }}
-                >
-                  <Typography sx={{ fontSize: "12px", color: theme.palette.text.tertiary }}>
-                    {dimLabel}
-                  </Typography>
-                  <Typography sx={{ fontSize: "12px", fontWeight: 600, color: barColor }}>
-                    {dim.score}/100
-                  </Typography>
-                </Box>
-                <LinearProgress
-                  variant="determinate"
-                  value={dim.score}
-                  sx={{
-                    "height": 6,
-                    "borderRadius": "3px",
-                    "backgroundColor": theme.palette.background.accent,
-                    "& .MuiLinearProgress-bar": {
-                      backgroundColor: barColor,
-                      borderRadius: "3px",
-                    },
-                  }}
-                />
-              </Box>
-            );
-          })}
-
-          {/* Color legend */}
-          <Box sx={{ display: "flex", gap: "12px", mt: "4px", flexWrap: "wrap" }}>
-            {[
-              { color: palette.riskMark.low, label: "Low (0-25)" },
-              { color: palette.riskMark.medium, label: "Medium (26-50)" },
-              { color: palette.riskMark.high, label: "High (51-75)" },
-              { color: palette.riskMark.critical, label: "Critical (76-100)" },
-            ].map((item) => (
-              <Box key={item.label} sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
-                <Box
-                  sx={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: item.color }}
-                />
-                <Typography sx={{ fontSize: "11px", color: theme.palette.text.accent }}>
-                  {item.label}
-                </Typography>
-              </Box>
-            ))}
-          </Box>
-        </Box>
-      )}
+      {riskAssessment.dimensions && <DimensionBars dimensions={riskAssessment.dimensions} />}
     </Box>
   );
 }

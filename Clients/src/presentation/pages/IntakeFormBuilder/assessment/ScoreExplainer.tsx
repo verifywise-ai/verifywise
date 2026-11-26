@@ -31,6 +31,7 @@ function ScoreExplainer({
   const theme = useTheme();
   const [open, setOpen] = useState(false);
   const ai = assessment.ai;
+  const keyword = assessment.status === "ai_not_configured" ? (assessment.keyword ?? null) : null;
 
   const heading = (text: string) => (
     <Typography sx={{ fontSize: "12px", fontWeight: 600, color: theme.palette.text.secondary }}>
@@ -114,39 +115,58 @@ function ScoreExplainer({
             )}
           </Box>
 
-          <Box>
-            {heading("AI scores")}
-            {ai ? (
-              <>
-                <Typography sx={body}>
-                  {ai.runs.map((score, i) => (
-                    <span key={`run-${i}`}>
-                      {i > 0 ? ", " : ""}
-                      {score}
-                    </span>
-                  ))}
-                  {Array.from({ length: ai.failedRuns }, (_, i) => (
-                    <span key={`failed-${i}`}>
-                      {ai.runs.length + i > 0 ? ", " : ""}
-                      <span>failed</span>
-                    </span>
-                  ))}
+          {keyword ? (
+            <>
+              <Box>
+                {heading("Keyword score")}
+                <Typography sx={body}>{keyword.overallScore}</Typography>
+                <Typography sx={{ fontSize: "12px", color: theme.palette.text.tertiary }}>
+                  Weighted average of six risk dimensions, from keywords in the answers. No LLM key
+                  was available when this was scored.
                 </Typography>
-                {ai.median !== null && (
-                  <Typography sx={{ fontSize: "12px", color: theme.palette.text.tertiary }}>
-                    <span>Median</span> {ai.median} · <span>Range</span> {ai.min}–{ai.max}
-                  </Typography>
-                )}
-              </>
-            ) : (
-              <Typography sx={body}>No AI scores</Typography>
-            )}
-          </Box>
+              </Box>
 
-          <Typography sx={{ ...body, fontStyle: "normal" }}>
-            The final score is the higher of the rule minimum and the AI median. The AI can raise
-            the score but never lower it.
-          </Typography>
+              <Typography sx={body}>
+                The final score is the higher of the rule minimum and the keyword score.
+              </Typography>
+            </>
+          ) : (
+            <>
+              <Box>
+                {heading("AI scores")}
+                {ai ? (
+                  <>
+                    <Typography sx={body}>
+                      {ai.runs.map((score, i) => (
+                        <span key={`run-${i}`}>
+                          {i > 0 ? ", " : ""}
+                          {score}
+                        </span>
+                      ))}
+                      {Array.from({ length: ai.failedRuns }, (_, i) => (
+                        <span key={`failed-${i}`}>
+                          {ai.runs.length + i > 0 ? ", " : ""}
+                          <span>failed</span>
+                        </span>
+                      ))}
+                    </Typography>
+                    {ai.median !== null && (
+                      <Typography sx={{ fontSize: "12px", color: theme.palette.text.tertiary }}>
+                        <span>Median</span> {ai.median} · <span>Range</span> {ai.min}–{ai.max}
+                      </Typography>
+                    )}
+                  </>
+                ) : (
+                  <Typography sx={body}>No AI scores</Typography>
+                )}
+              </Box>
+
+              <Typography sx={body}>
+                The final score is the higher of the rule minimum and the AI median. The AI can
+                raise the score but never lower it.
+              </Typography>
+            </>
+          )}
 
           {ai && ai.reasons.length > 0 && (
             <Box>

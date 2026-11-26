@@ -1568,7 +1568,7 @@ export function IntakeFormBuilder() {
                           >
                             {activeLlmKeyId
                               ? "Used to score submissions and suggest risks. You can also generate suggested questions and field guidance text with AI."
-                              : "Used to score submissions and suggest risks. Without a key, reviewers see the rule-based classification only. Add a key in Settings > LLM keys."}
+                              : "Used to score submissions and suggest risks. Without a key, submissions get a basic keyword score and no suggested risks. Add a key in Settings > LLM keys."}
                           </Typography>
                         </Box>
 

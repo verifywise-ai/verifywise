@@ -33,6 +33,7 @@
   "{name} must be an array": "{name} doit être un tableau",
   "{name} must contain positive integer user ids": "{name} doit contenir des identifiants d'utilisateur entiers positifs",
   "{projectName} is created in VerifyWise": "{projectName} a été créé dans VerifyWise",
+  "{score} ({band}, keyword score)": "{score} ({band}, score par mots-clés)",
   "{score} ({band})": "{score} ({band})",
   "{type} with id {id} not found": "{type} avec l'ID {id} introuvable",
   "1 day": "1 jour",

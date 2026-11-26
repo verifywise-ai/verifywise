@@ -420,6 +420,33 @@ export function scoreSubmissionRuleBased(
   });
 }
 
+/** Weighted average of the dimension scores, rounded. */
+function weightedOverall(dimensions: Array<{ score: number; weight: number }>): number {
+  return Math.round(dimensions.reduce((sum, d) => sum + d.score * d.weight, 0));
+}
+
+export interface KeywordScore {
+  overallScore: number;
+  dimensions: Array<{ key: string; label: string; weight: number; score: number }>;
+}
+
+/**
+ * The basic keyword score of a submission: the keyword-based dimension scores
+ * and their weighted average. Used when the form has no LLM key.
+ */
+export function keywordScoreFor(
+  submissionData: Record<string, unknown>,
+  schema: FormSchema,
+): KeywordScore | null {
+  const scored = scoreSubmissionRuleBased(submissionData, schema);
+  // No keyword matched anywhere: every dimension sits at the neutral 50,
+  // which says nothing about the risk. Report no score, so the submission
+  // routes as unscored (senior lane) instead of as a Medium.
+  if (scored.every((dimension) => dimension.signals.length === 0)) return null;
+  const dimensions = scored.map(({ key, label, weight, score }) => ({ key, label, weight, score }));
+  return { overallScore: weightedOverall(dimensions), dimensions };
+}
+
 // ============================================================================
 // LLM ENHANCEMENT
 // ============================================================================
@@ -583,7 +610,7 @@ export async function calculateSubmissionRisk(
   }
 
   // Step 3: Calculate weighted average
-  const overallScore = Math.round(dimensions.reduce((sum, d) => sum + d.score * d.weight, 0));
+  const overallScore = weightedOverall(dimensions);
 
   // Step 4: Determine tier
   const tier = getTierFromScore(overallScore, tierSystem);

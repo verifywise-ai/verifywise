@@ -41,9 +41,19 @@ export interface IRiskAssessmentV1 {
 /** Progress of one background stage (scoring or suggestions). */
 export type StageStatus = "pending" | "complete" | "ai_not_configured" | "ai_failed";
 
+/** One dimension of the basic keyword score (no signals stored). */
+export interface IKeywordDimension {
+  key: string;
+  label: string;
+  weight: number;
+  score: number;
+}
+
 /**
  * AI-assisted risk assessment (version 2): final score is
- * max(rule minimum, AI median).
+ * max(rule minimum, AI median). A form with no LLM key
+ * (status "ai_not_configured") uses the basic keyword score in place of the
+ * AI median: max(rule minimum, keyword score).
  */
 export interface IRiskAssessmentV2 {
   version: 2;
@@ -59,6 +69,11 @@ export interface IRiskAssessmentV2 {
     min: number | null;
     max: number | null;
     reasons: AiReason[];
+  } | null;
+  /** Basic keyword score; set only when status is "ai_not_configured". */
+  keyword?: {
+    overallScore: number;
+    dimensions: IKeywordDimension[];
   } | null;
   finalScore: number | null;
   source: ScoreSource | null;
