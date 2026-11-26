@@ -41,7 +41,7 @@ vi.mock("../../../components/Skeletons", () => ({
 
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import MCPAgentKeysPage from "./index";
-import CustomException from "../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../infrastructure/exceptions/customException";
 
 const mockKeys = [
   {

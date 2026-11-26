@@ -3,7 +3,7 @@
 - **Branch:** `fix/frontend-naming-typos` (off `develop`)
 - **Size:** Small
 - **Gate mode:** Interactive — stop for review after every task. Do not auto-advance.
-- **Status:** In progress. Task 1 done.
+- **Status:** In progress. Tasks 1 and 2 done.
 
 Pure renames. Exported symbols stay as they are (`useAssessmentTopics`, `CustomException`, and every function in the two AI detection clients). No `.tsx` → `.ts` conversion. No merge or delete of either AI detection client. No backend edits. `routes/aiDetectionRepository.route.ts` is a server route and stays.
 
@@ -94,7 +94,9 @@ The last seven tests use `drawerTestFactory.tsx`, which mocks the assessment rep
 
 ## Wave 2 — Exception filename
 
-### Task 2 — Rename `customeException.tsx`
+### Task 2 — Rename `customeException.tsx` ☒
+
+Done. No deviation. Vitest: 33 files, 647 tests passed.
 
 **Rename**
 

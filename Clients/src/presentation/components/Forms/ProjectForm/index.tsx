@@ -66,7 +66,7 @@ import {
   highRiskRolesPayload,
   projectHighRiskRoles,
 } from "../../../../application/utils/highRiskRoles";
-import CustomException from "../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../infrastructure/exceptions/customException";
 import { applyApprovalWorkflowSelection } from "./approvalWorkflowField";
 import { splitServerErrors } from "./serverErrors";
 import { includesEuAiAct } from "../../../../application/constants/frameworks";

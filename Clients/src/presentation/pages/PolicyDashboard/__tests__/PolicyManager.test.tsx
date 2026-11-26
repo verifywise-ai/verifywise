@@ -1,7 +1,7 @@
 import { screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { PolicyManagerModel } from "../../../../domain/models/Common/policy/policyManager.model";
-import CustomException from "../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../infrastructure/exceptions/customException";
 
 const mockNavigate = vi.fn();
 vi.mock("react-router", async () => {

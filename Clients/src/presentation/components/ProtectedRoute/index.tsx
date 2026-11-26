@@ -1,7 +1,7 @@
 import { useSelector } from "react-redux";
 import { Navigate, useLocation } from "react-router";
 import axios from "axios";
-import CustomException from "../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../infrastructure/exceptions/customException";
 import { useEffect, useState, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { setUserExists } from "../../../application/redux/auth/authSlice";

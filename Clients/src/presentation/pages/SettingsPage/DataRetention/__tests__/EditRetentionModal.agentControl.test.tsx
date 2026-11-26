@@ -3,7 +3,7 @@ import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import EditRetentionModal from "../EditRetentionModal";
 import type { RetentionRow } from "../../../../../application/repository/dataRetention.repository";
-import CustomException from "../../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../../infrastructure/exceptions/customException";
 
 const updateGatewayRetention = vi.fn();
 vi.mock("../../../../../application/repository/dataRetention.repository", async (orig) => ({

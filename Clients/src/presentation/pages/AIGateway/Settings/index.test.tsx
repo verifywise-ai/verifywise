@@ -39,7 +39,7 @@ vi.mock("../VirtualKeys/index", () => ({
 }));
 
 import { apiServices } from "../../../../infrastructure/api/networkServices";
-import CustomException from "../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../infrastructure/exceptions/customException";
 import AIGatewaySettingsPage from "./index";
 
 const mockGet = apiServices.get as unknown as ReturnType<typeof vi.fn>;

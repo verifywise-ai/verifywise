@@ -11,7 +11,7 @@ import {
 } from "../../../../application/repository/euAiActClassification.repository";
 import { useFetchEuAiActQuestionnaire } from "../../../../application/hooks/useEuAiActQuestionnaire";
 import { pruneHiddenAnswers } from "../../../../application/utils/euAiActQuestionnaire";
-import CustomException from "../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../infrastructure/exceptions/customException";
 import type {
   Answers,
   ClassificationResult,

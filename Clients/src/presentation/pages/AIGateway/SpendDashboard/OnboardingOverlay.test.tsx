@@ -13,7 +13,7 @@ vi.mock("../../../../infrastructure/api/networkServices", () => ({
 
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import OnboardingOverlay from "./OnboardingOverlay";
-import CustomException from "../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../infrastructure/exceptions/customException";
 
 const mockGet = apiServices.get as unknown as ReturnType<typeof vi.fn>;
 const mockPost = apiServices.post as unknown as ReturnType<typeof vi.fn>;

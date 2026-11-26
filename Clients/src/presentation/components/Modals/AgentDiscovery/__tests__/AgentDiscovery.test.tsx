@@ -135,7 +135,7 @@ vi.mock("../../../../../application/validations/stringValidation", () => ({
 }));
 
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
-import CustomException from "../../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../../infrastructure/exceptions/customException";
 import { apiServices } from "../../../../../infrastructure/api/networkServices";
 import {
   getAllEntities,
