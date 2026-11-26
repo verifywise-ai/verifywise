@@ -21,7 +21,7 @@ const mockCancelScan = vi.fn();
 const mockGetActiveScan = vi.fn();
 const mockGetAIDetectionStats = vi.fn();
 
-vi.mock("../../../../application/repository/aiDetection.repository", () => ({
+vi.mock("../../../../application/repository/aiDetectionScan.repository", () => ({
   startScan: (...args: unknown[]) => mockStartScan(...args),
   pollScanStatus: (...args: unknown[]) => mockPollScanStatus(...args),
   getScan: (...args: unknown[]) => mockGetScan(...args),

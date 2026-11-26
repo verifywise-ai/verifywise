@@ -947,7 +947,7 @@ The system maps findings to EU AI Act articles:
 | `pages/AIDetection/RepositoriesPage.tsx` | Repository registry and scheduling |
 | `pages/AIDetection/AddRepositoryModal.tsx` | Repository registration modal |
 | `pages/AIDetection/components/RiskScoreCard.tsx` | Risk score visualization |
-| `repository/aiDetection.repository.ts` | API client |
+| `repository/aiDetectionScan.repository.ts` | API client |
 
 ## Related Documentation
 

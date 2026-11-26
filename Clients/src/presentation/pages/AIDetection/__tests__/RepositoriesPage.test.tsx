@@ -9,7 +9,7 @@ const mockUpdateRepository = vi.fn();
 const mockDeleteRepository = vi.fn();
 const mockTriggerRepositoryScan = vi.fn();
 
-vi.mock("../../../../application/repository/aiDetectionRepository.repository", () => ({
+vi.mock("../../../../application/repository/aiDetectionRegistry.repository", () => ({
   getRepositories: (...args: unknown[]) => mockGetRepositories(...args),
   createRepository: (...args: unknown[]) => mockCreateRepository(...args),
   updateRepository: (...args: unknown[]) => mockUpdateRepository(...args),

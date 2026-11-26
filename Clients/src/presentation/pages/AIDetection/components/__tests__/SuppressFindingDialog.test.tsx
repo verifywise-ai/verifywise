@@ -5,7 +5,7 @@ import type { Finding } from "../../../../../domain/ai-detection/types";
 
 const mockCreateSuppression = vi.fn();
 
-vi.mock("../../../../../application/repository/aiDetection.repository", () => ({
+vi.mock("../../../../../application/repository/aiDetectionScan.repository", () => ({
   createSuppression: (...args: unknown[]) => mockCreateSuppression(...args),
 }));
 

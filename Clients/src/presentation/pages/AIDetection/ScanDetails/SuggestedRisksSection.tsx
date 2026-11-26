@@ -31,7 +31,7 @@ import {
   getSuggestedRiskActions,
   recordSuggestedRiskAction,
   restoreSuggestedRisk,
-} from "../../../../application/repository/aiDetection.repository";
+} from "../../../../application/repository/aiDetectionScan.repository";
 import { SuggestedRisk, DIMENSION_LABELS } from "../../../../domain/ai-detection/riskScoringTypes";
 import type {
   SuggestedRiskAction,

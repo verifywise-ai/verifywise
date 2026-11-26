@@ -3,7 +3,7 @@
 - **Branch:** `fix/frontend-naming-typos` (off `develop`)
 - **Size:** Small
 - **Gate mode:** Interactive — stop for review after every task. Do not auto-advance.
-- **Status:** In progress. Tasks 1 and 2 done.
+- **Status:** In progress. Tasks 1–3 done.
 
 Pure renames. Exported symbols stay as they are (`useAssessmentTopics`, `CustomException`, and every function in the two AI detection clients). No `.tsx` → `.ts` conversion. No merge or delete of either AI detection client. No backend edits. `routes/aiDetectionRepository.route.ts` is a server route and stays.
 
@@ -195,7 +195,9 @@ npx vitest run \
 
 ## Wave 3 — AI detection clients
 
-### Task 3 — Rename the two AI detection repository files
+### Task 3 — Rename the two AI detection repository files ☒
+
+Done. No deviation. Vitest: 31 files, 387 tests passed. `routes/aiDetectionRepository.route.ts` was not changed. Task 4's repo-wide search for the old filenames will also match this plan file, which still records the old names.
 
 Update both imports in the same edit where a file references both clients.
 

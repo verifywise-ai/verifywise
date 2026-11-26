@@ -34,7 +34,7 @@ import {
   ScheduleFrequency,
   WebhookDeliveryStatus,
 } from "../../../domain/ai-detection/repositoryTypes";
-import { generateWebhookSecret } from "../../../application/repository/aiDetectionRepository.repository";
+import { generateWebhookSecret } from "../../../application/repository/aiDetectionRegistry.repository";
 import { useWebhookConfig } from "../../../application/hooks/useWebhookConfig";
 import { useTranslation } from "../../../application/hooks/useTranslation";
 import { fill } from "../../../i18n/fill";

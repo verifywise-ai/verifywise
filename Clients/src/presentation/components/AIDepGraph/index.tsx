@@ -33,7 +33,7 @@ import {
 } from "@mui/material";
 import { Network, X, AlertTriangle } from "lucide-react";
 import AIDepNode from "./AIDepNode";
-import { getDependencyGraph } from "../../../application/repository/aiDetection.repository";
+import { getDependencyGraph } from "../../../application/repository/aiDetectionScan.repository";
 import type {
   DependencyGraphResponse,
   DependencyNodeType,

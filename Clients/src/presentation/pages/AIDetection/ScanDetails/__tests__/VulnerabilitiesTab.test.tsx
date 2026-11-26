@@ -10,7 +10,7 @@ vi.mock("../../../../../application/hooks/useCan", () => ({
   useCanCheck: () => (key: string) => !permissions.denied.has(key),
 }));
 
-vi.mock("../../../../../application/repository/aiDetection.repository", () => ({
+vi.mock("../../../../../application/repository/aiDetectionScan.repository", () => ({
   updateFindingGovernanceStatus: vi.fn(),
   createSuppression: vi.fn(),
 }));

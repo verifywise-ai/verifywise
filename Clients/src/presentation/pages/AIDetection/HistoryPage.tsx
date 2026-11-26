@@ -52,7 +52,7 @@ import {
   getScans,
   deleteScan,
   getScanStatus,
-} from "../../../application/repository/aiDetection.repository";
+} from "../../../application/repository/aiDetectionScan.repository";
 import { Scan, ScansResponse, ScanStatus } from "../../../domain/ai-detection/types";
 import { useAIDetectionSidebarContext } from "../../../application/contexts/AIDetectionSidebar.context";
 import { palette, radiusPx } from "../../themes/palette";

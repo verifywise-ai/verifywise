@@ -25,7 +25,7 @@ const mockRecalculateRiskScore = vi.fn();
 const mockUpdateFindingGovernanceStatus = vi.fn();
 const mockCreateSuppression = vi.fn();
 
-vi.mock("../../../../application/repository/aiDetection.repository", () => ({
+vi.mock("../../../../application/repository/aiDetectionScan.repository", () => ({
   getScan: (...args: unknown[]) => mockGetScan(...args),
   getScanFindings: (...args: unknown[]) => mockGetScanFindings(...args),
   getScanSecurityFindings: (...args: unknown[]) => mockGetScanSecurityFindings(...args),
