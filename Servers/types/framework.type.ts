@@ -1,5 +1,10 @@
 import { Transaction } from "sequelize";
-import { createEUFrameworkQuery, deleteProjectFrameworkEUQuery } from "../utils/eu.utils";
+import {
+  createEUAIActOrganizationFrameworkQuery,
+  createEUFrameworkQuery,
+  deleteProjectFrameworkEUAIActOrganizationQuery,
+  deleteProjectFrameworkEUQuery,
+} from "../utils/eu.utils";
 import { createISOFrameworkQuery, deleteProjectFrameworkISOQuery } from "../utils/iso42001.utils";
 import {
   createISO27001FrameworkQuery,
@@ -97,6 +102,7 @@ export const frameworkAdditionMap: Record<
   26: createOSFIE23FrameworkQuery,
   27: createEN18286FrameworkQuery,
   28: createEN18286AISystemsFrameworkQuery,
+  29: createEUAIActOrganizationFrameworkQuery,
 };
 
 export const frameworkDeletionMap: Record<
@@ -131,6 +137,7 @@ export const frameworkDeletionMap: Record<
   26: deleteProjectFrameworkOSFIE23Query,
   27: deleteProjectFrameworkEN18286Query,
   28: deleteProjectFrameworkEN18286AISystemsQuery,
+  29: deleteProjectFrameworkEUAIActOrganizationQuery,
 };
 
 export const frameworkFilesDeletionSourceMap: Record<number, string[]> = {
@@ -165,4 +172,7 @@ export const frameworkFilesDeletionSourceMap: Record<number, string[]> = {
   26: [],
   27: [],
   28: [],
+  // EU AI Act (organization) keeps its controls and questions in the EU AI Act
+  // tables on the organizational project, so its evidence carries their sources.
+  29: ["Assessment tracker group", "Compliance tracker group"],
 };

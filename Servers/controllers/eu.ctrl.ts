@@ -15,7 +15,7 @@ import {
   deriveControlStatus,
   findUsersNotInOrganization,
   getAllControlCategoriesQuery,
-  getAllTopicsQuery,
+  getUseCaseAssessmentTopicsQuery,
   getAssessmentsEUByProjectIdQuery,
   getComplianceEUByProjectIdQuery,
   getControlByIdForProjectQuery,
@@ -27,6 +27,7 @@ import {
   subcontrolsBelongToControlQuery,
   updateSubcontrolEUByIdQuery,
 } from "../utils/eu.utils";
+import { EU_AI_ACT_FRAMEWORK_ID } from "../utils/validations/projectValidation.utils";
 import { checkedUseCaseId } from "../middleware/projectAccess.middleware";
 import { AnswerEU } from "../domain.layer/frameworks/EU-AI-Act/answerEU.model";
 import { sequelize } from "../database/db";
@@ -1262,9 +1263,16 @@ export async function getAllControlCategories(req: Request, res: Response): Prom
   logger.debug("🔍 Fetching all control categories");
 
   try {
-    let controlCategories = await getAllControlCategoriesQuery(req.organizationId!);
+    const forProjectFramework = Boolean(projectFrameworkId && !isNaN(projectFrameworkId));
+    // For one project framework, every category, narrowed below to the ones
+    // it shows; otherwise the EU AI Act catalogue.
+    let controlCategories = await getAllControlCategoriesQuery(
+      req.organizationId!,
+      null,
+      forProjectFramework ? null : EU_AI_ACT_FRAMEWORK_ID,
+    );
 
-    if (projectFrameworkId && !isNaN(projectFrameworkId)) {
+    if (forProjectFramework && projectFrameworkId) {
       const visibleIds = await getVisibleEuCategoryIdsForProject(
         projectFrameworkId,
         req.organizationId!,
@@ -1371,7 +1379,7 @@ export async function getAllTopics(req: Request, res: Response): Promise<any> {
   logger.debug("🔍 Fetching all topics");
 
   try {
-    const topics = await getAllTopicsQuery(req.organizationId!);
+    const topics = await getUseCaseAssessmentTopicsQuery();
 
     await logSuccess({
       eventType: "Read",

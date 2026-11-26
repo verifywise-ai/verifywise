@@ -10,7 +10,12 @@ import {
 import { deleteObjectOnCommit } from "../services/storage/transactionRegistry";
 import { StorageObjectRef } from "../services/storage/types";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
-import { getStructureById } from "../structures";
+import { EU_AI_ACT_ORGANIZATION_FRAMEWORK_ID, getStructureById } from "../structures";
+import { EU_AI_ACT_FRAMEWORK_ID } from "./validations/projectValidation.utils";
+import {
+  assertEuAiActOrganizationRemovableQuery,
+  ensureEuAiActOrganizationFrameworkQuery,
+} from "./euAiActOrganization.utils";
 
 /** Response keys the four core frameworks have always been reported under. */
 const CORE_FRAMEWORK_RESULT_KEYS: Record<number, string> = {
@@ -59,7 +64,9 @@ export const assertFrameworksBuildable = (frameworkIds: number[]): void => {
  * Set up a framework's controls, clauses and assessments on a project whose
  * projects_frameworks row already exists. Every framework, core or bundled,
  * goes through frameworkAdditionMap, so creation, approval and "add framework"
- * build the same thing.
+ * build the same thing. EU AI Act also attaches EU AI Act (organization) to the
+ * organizational project, and reports whether it did as
+ * organization_framework_added.
  */
 export const buildProjectFrameworkQuery = async (
   frameworkId: number,
@@ -67,6 +74,8 @@ export const buildProjectFrameworkQuery = async (
   enableAiDataInsertion: boolean,
   organizationId: number,
   transaction: Transaction,
+  /** Who enabled the framework; null for automatic approval. */
+  actorUserId: number | null,
 ): Promise<object> => {
   const build = FRAMEWORK_BUILDERS.get(frameworkId);
   if (typeof build !== "function") {
@@ -74,7 +83,15 @@ export const buildProjectFrameworkQuery = async (
       i18nKey: "Framework not found",
     });
   }
-  return build(projectId, enableAiDataInsertion, organizationId, transaction);
+  const built = await build(projectId, enableAiDataInsertion, organizationId, transaction);
+  if (frameworkId !== EU_AI_ACT_FRAMEWORK_ID) return built;
+  const organizationFrameworkAdded = await ensureEuAiActOrganizationFrameworkQuery(
+    projectId,
+    organizationId,
+    actorUserId,
+    transaction,
+  );
+  return { ...built, organization_framework_added: organizationFrameworkAdded };
 };
 
 export const getAllFrameworksQuery = async (organizationId: number): Promise<FrameworkModel[]> => {
@@ -211,7 +228,17 @@ export const addFrameworkToProjectQuery = async (
   projectId: number,
   organizationId: number,
   transaction: Transaction,
-): Promise<boolean> => {
+  actorUserId: number | null,
+): Promise<false | { organization_framework_added: boolean }> => {
+  if (frameworkId === EU_AI_ACT_ORGANIZATION_FRAMEWORK_ID) {
+    throw new ValidationException(
+      "EU AI Act (organization) is added automatically when a use case has EU AI Act",
+      "framework",
+      frameworkId,
+      { i18nKey: "EU AI Act (organization) is added automatically when a use case has EU AI Act" },
+    );
+  }
+
   const canAdd = await canAddFrameworkToProjectQuery(
     frameworkId,
     projectId,
@@ -240,8 +267,18 @@ export const addFrameworkToProjectQuery = async (
     return false;
   }
 
-  await buildProjectFrameworkQuery(frameworkId, projectId, false, organizationId, transaction);
-  return true;
+  const built = await buildProjectFrameworkQuery(
+    frameworkId,
+    projectId,
+    false,
+    organizationId,
+    transaction,
+    actorUserId,
+  );
+  return {
+    organization_framework_added:
+      (built as { organization_framework_added?: boolean }).organization_framework_added === true,
+  };
 };
 
 const deleteFrameworkEvidenceFiles = async (
@@ -300,6 +337,10 @@ export const deleteFrameworkFromProjectQuery = async (
   );
   if (!canRemove) {
     return false;
+  }
+
+  if (frameworkId === EU_AI_ACT_ORGANIZATION_FRAMEWORK_ID) {
+    await assertEuAiActOrganizationRemovableQuery(organizationId, transaction);
   }
 
   const frameworkFilesDeletionSource = frameworkFilesDeletionSourceMap[frameworkId];

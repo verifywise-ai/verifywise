@@ -26,19 +26,24 @@ import { Question } from "../../../../domain/types/Question";
 import { Subtopic } from "../../../../domain/types/Subtopic";
 import { useSearchParams } from "react-router";
 import { brand, background, radiusPx } from "../../../themes/palette";
+import { FRAMEWORK_IDS } from "../../../../application/constants/frameworks";
 
 const AssessmentTracker = ({
   project,
   statusFilter,
+  frameworkId = FRAMEWORK_IDS.EU_AI_ACT,
 }: {
   project: Project;
   statusFilter?: string;
+  /** EU AI Act on a use case, or EU AI Act (organization) on the organizational project. */
+  frameworkId?: number;
 }) => {
   const theme = useTheme();
   const [refreshKey, setRefreshKey] = useState(false);
   const currentProjectId = project?.id;
-  const currentProjectFramework = project.framework?.filter((p) => p.framework_id === 1)[0]
-    ?.project_framework_id;
+  const currentProjectFramework = project.framework?.filter(
+    (p) => p.framework_id === frameworkId,
+  )[0]?.project_framework_id;
   const [searchParams, setSearchParams] = useSearchParams();
   const topicId = searchParams.get("topicId");
   const questionId = searchParams.get("questionId");
@@ -56,7 +61,11 @@ const AssessmentTracker = ({
     refreshKey,
   });
 
-  const { assessmentTopics, loading: loadingAssessmentTopics } = useAssessmentTopics();
+  // EU AI Act (organization) lists only the topics of the questions moved to it.
+  const { assessmentTopics, loading: loadingAssessmentTopics } = useAssessmentTopics({
+    projectFrameworkId:
+      frameworkId === FRAMEWORK_IDS.EU_AI_ACT ? undefined : currentProjectFramework,
+  });
   const { assessmentSubtopics, loading: loadingAssessmentSubtopic } = useAssessmentSubtopics({
     activeAssessmentTopicId: assessmentTopics?.[activeTab]?.id,
     projectFrameworkId: currentProjectFramework,

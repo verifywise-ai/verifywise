@@ -26,6 +26,11 @@ import en18286Structure from "./EN-18286/en-18286.structure";
 import en18286AiSystemsStructure from "./EN-18286/en-18286-ai-systems.structure";
 
 export * from "./types";
+export {
+  EU_AI_ACT_ORGANIZATION_CONTROLS,
+  EU_AI_ACT_ORGANIZATION_FRAMEWORK_ID,
+  EU_AI_ACT_ORGANIZATION_QUESTIONS,
+} from "./EU-AI-Act-Organization/euAiActOrganization";
 
 /**
  * Registry of the 24 migrated frameworks. Built-ins (EU AI Act, ISO 42001,

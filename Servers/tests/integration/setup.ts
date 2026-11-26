@@ -23,6 +23,7 @@ jest.mock("../../services/inAppNotification.service", () => ({
   notifyAiAppAssessmentsAssigned: jest.fn().mockResolvedValue(undefined),
   notifyTrainingAssigned: jest.fn().mockResolvedValue(undefined),
   notifyTrainingReminder: jest.fn().mockResolvedValue(undefined),
+  notifyEuAiActOrganizationAdded: jest.fn().mockResolvedValue(undefined),
   ITaskEntityLinkForEmail: {},
 }));
 

@@ -32,8 +32,10 @@ jest.mock("../../utils/useCaseOrgSettings.utils", () => ({
     default_framework_ids: [],
   }),
 }));
-jest.mock("../../utils/framework.utils", () => ({ addFrameworkToProjectQuery: async () => true }));
-jest.mock("../../utils/eu.utils", () => ({ createEUFrameworkQuery: jest.fn() }));
+jest.mock("../../utils/framework.utils", () => ({
+  addFrameworkToProjectQuery: async () => true,
+  buildProjectFrameworkQuery: jest.fn(),
+}));
 // A model submission is created through the model services, as the
 // approving user.
 jest.mock("../../services/modelInventory.service", () => ({

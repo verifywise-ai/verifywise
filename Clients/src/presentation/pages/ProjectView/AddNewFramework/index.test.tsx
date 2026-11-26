@@ -22,6 +22,7 @@ vi.mock("../../../../domain/constants/pluginSlots", () => ({
 }));
 
 import AddFrameworkModal from "./index";
+import CustomException from "../../../../infrastructure/exceptions/customeException";
 import type { Project } from "../../../../domain/types/Project";
 import type { Framework } from "../../../../domain/types/Framework";
 
@@ -47,6 +48,57 @@ describe("AddFrameworkModal", () => {
 
     expect(screen.getByText("Added")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
+  });
+
+  it("shows the reason instead of Remove for a locked framework", () => {
+    renderWithProviders(
+      <AddFrameworkModal
+        open={true}
+        onClose={vi.fn()}
+        frameworks={frameworks}
+        project={project}
+        lockedFrameworks={{ 1: "Required while a use case has EU AI Act" }}
+      />,
+    );
+
+    expect(screen.getByText("Added")).toBeInTheDocument();
+    expect(screen.getByText("Required while a use case has EU AI Act")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
+  });
+
+  it("shows the server's reason when a removal is refused", async () => {
+    mockDeleteEntityById.mockRejectedValue(
+      new CustomException("EU AI Act (organization) can't be removed", 400, {}),
+    );
+    renderWithProviders(
+      <AddFrameworkModal open={true} onClose={vi.fn()} frameworks={frameworks} project={project} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove" }));
+    const confirm = await screen.findAllByRole("button", { name: "Remove" });
+    fireEvent.click(confirm[confirm.length - 1]);
+
+    expect(
+      await screen.findByText("EU AI Act (organization) can't be removed"),
+    ).toBeInTheDocument();
+  });
+
+  it("says EU AI Act (organization) was added when the server added it", async () => {
+    mockAssignFrameworkToProject.mockResolvedValue({
+      status: 200,
+      data: { data: { organization_framework_added: true } },
+    });
+    renderWithProviders(
+      <AddFrameworkModal open={true} onClose={vi.fn()} frameworks={frameworks} project={project} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    expect(
+      await screen.findByText(
+        "EU AI Act (organization) was added to the Frameworks page. Fill in its organization-level controls there.",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("shows an Add button for frameworks not yet on the project", () => {

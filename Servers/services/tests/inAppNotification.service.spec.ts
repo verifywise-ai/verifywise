@@ -46,6 +46,7 @@ import {
   sendBulkInAppNotifications,
   notifyUserAssigned,
   type AssignmentEntityContext,
+  notifyEuAiActOrganizationAdded,
 } from "../inAppNotification.service";
 import redisClient from "../../database/redis";
 import { sequelize } from "../../database/db";
@@ -557,6 +558,50 @@ describe("inAppNotification.service", () => {
       expect(variables.entity_url).toBe("https://app.example/vendors?vendorRiskId=9");
       expect(variables.role_type).toBe("Action Owner");
       expect(variables.entity_type).toBe("Vendor Risk");
+    });
+  });
+
+  describe("notifyEuAiActOrganizationAdded", () => {
+    const added = {
+      projectId: 9,
+      projectTitle: "Acme",
+      useCaseTitle: "Claims triage",
+      projectCreated: true,
+    };
+
+    it("tells each recipient, in-app only, linking to the Frameworks page", async () => {
+      await notifyEuAiActOrganizationAdded(1, [10, 20], added);
+
+      expect(mockCreateNotification).toHaveBeenCalledTimes(2);
+      expect(mockCreateNotification.mock.calls.map(([n]) => n.user_id)).toEqual([10, 20]);
+      expect(mockCreateNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          user_id: 10,
+          type: NotificationType.SYSTEM,
+          title: "Organizational project created",
+          message:
+            'EU AI Act was enabled on "Claims triage", so the organizational project "Acme" was created with EU AI Act (organization). Fill in its organization-level controls on the Frameworks page.',
+          entity_type: NotificationEntityType.PROJECT,
+          entity_id: 9,
+          entity_name: "Acme",
+          action_url: "/framework",
+        }),
+        1,
+      );
+      expect(mockSendEmailWithTemplate).not.toHaveBeenCalled();
+    });
+
+    it("says the framework was added when the project already existed", async () => {
+      await notifyEuAiActOrganizationAdded(1, [10], { ...added, projectCreated: false });
+
+      expect(mockCreateNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "EU AI Act (organization) added",
+          message:
+            'EU AI Act was enabled on "Claims triage", so EU AI Act (organization) was added to "Acme". Fill in its organization-level controls on the Frameworks page.',
+        }),
+        1,
+      );
     });
   });
 });

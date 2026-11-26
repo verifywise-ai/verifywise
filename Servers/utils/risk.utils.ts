@@ -37,6 +37,7 @@ import {
   scopedRiskViewer,
   SYSTEM_RISK_VIEWER,
 } from "./riskVisibility.utils";
+import { structItemInEuAiActSql } from "./euAiActStructItem.sql";
 
 type RiskAutomationTrigger = "risk_added" | "risk_updated" | "risk_deleted";
 
@@ -556,7 +557,8 @@ export const getRiskByIdQuery = async (
       JOIN controls_struct_eu cse ON cse.id = ac.control_meta_id
       JOIN controlcategories_struct_eu ccs ON ccs.id = cse.control_category_id
       JOIN projects_frameworks pf ON pf.framework_id = ccs.framework_id AND pf.organization_id = :organizationId
-      WHERE cr.projects_risks_id = :riskId AND cr.organization_id = :organizationId${mappingScope("ac.projects_frameworks_id")}`,
+      WHERE cr.projects_risks_id = :riskId AND cr.organization_id = :organizationId
+        AND ${structItemInEuAiActSql("cse")}${mappingScope("ac.projects_frameworks_id")}`,
     { replacements: mappingReplacements },
   )) as [Mitigation[], number];
   if (attachedControls[0].length > 0) {
@@ -572,9 +574,10 @@ export const getRiskByIdQuery = async (
       JOIN subtopics_struct_eu sts ON sts.id = qse.subtopic_id
       JOIN topics_struct_eu ts ON ts.id = sts.topic_id
       JOIN projects_frameworks pf ON pf.framework_id = ts.framework_id AND pf.organization_id = :organizationId
-      WHERE aur.projects_risks_id = :riskId AND aur.organization_id = :organizationId${mappingScope(
-        "(SELECT asm.projects_frameworks_id FROM assessments asm WHERE asm.id = ans.assessment_id AND asm.organization_id = :organizationId)",
-      )}`,
+      WHERE aur.projects_risks_id = :riskId AND aur.organization_id = :organizationId
+        AND ${structItemInEuAiActSql("qse")}${mappingScope(
+          "(SELECT asm.projects_frameworks_id FROM assessments asm WHERE asm.id = ans.assessment_id AND asm.organization_id = :organizationId)",
+        )}`,
     { replacements: mappingReplacements },
   )) as [Mitigation[], number];
   if (attachedAssessments[0].length > 0) {

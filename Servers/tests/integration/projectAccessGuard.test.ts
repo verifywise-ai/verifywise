@@ -252,7 +252,7 @@ const GUARDED_ROUTES: GuardedRoute[] = [
     success: 200,
     prepare: (orgId, projectId) =>
       sequelize.transaction(async (transaction) => {
-        await addFrameworkToProjectQuery(NEW_FRAMEWORK_ID, projectId, orgId, transaction);
+        await addFrameworkToProjectQuery(NEW_FRAMEWORK_ID, projectId, orgId, transaction, null);
       }),
     verify: (after) => expect(after.frameworks).toEqual([]),
   },

@@ -31,6 +31,8 @@ import {
 import { LifecycleStage } from "../../../../domain/enums/lifecycleStage.enum";
 import { useLifecycleTab } from "../../../../application/hooks/useLifecycleTab";
 import PendingIntakeSubmissions from "../../../components/LifecycleTabs/PendingIntakeSubmissions";
+import { showAlert } from "../../../../application/tools/alertUtils";
+import { EU_AI_ACT_ORGANIZATION_ADDED_MESSAGE } from "../../../../application/constants/frameworks";
 
 const STAGE_STORAGE_KEY = "use-cases-lifecycle-tab";
 
@@ -212,6 +214,13 @@ const Home = () => {
           useStandardModal={true}
           onSubmitRef={submitFormRef}
           onClose={handleProjectFormModalClose}
+          onOrganizationFrameworkAdded={() =>
+            showAlert({
+              variant: "info",
+              body: EU_AI_ACT_ORGANIZATION_ADDED_MESSAGE,
+              isToast: true,
+            })
+          }
         />
       </StandardModal>
       <AiOrNotScreening

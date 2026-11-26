@@ -40,6 +40,7 @@ import {
   withLegacyHighRiskRole,
 } from "./highRiskRoles.utils";
 import { effectiveRiskLevelSql } from "./riskLevel.utils";
+import { EU_AI_ACT_ORGANIZATION_FRAMEWORK_ID } from "../structures";
 
 /**
  * The owner's name as plain text (automation emails, reports): the user's full
@@ -483,7 +484,8 @@ export const createNewProjectQuery = async (
   members: number[],
   frameworks: number[] | undefined,
   organizationId: number,
-  userId: number,
+  /** Null when the system creates the project (EU AI Act (organization) auto-add). */
+  userId: number | null,
   transaction: Transaction,
   isDemo: boolean = false,
   serverFields: NewProjectServerFields = {},
@@ -514,6 +516,14 @@ export const createNewProjectQuery = async (
       { transaction },
     )) as [{ id: number }[], number];
     allowedFrameworks.push(...result[0].map((f) => f.id));
+  }
+  if (projectFrameworks.includes(EU_AI_ACT_ORGANIZATION_FRAMEWORK_ID)) {
+    throw new ValidationException(
+      "EU AI Act (organization) is added automatically when a use case has EU AI Act",
+      "framework",
+      EU_AI_ACT_ORGANIZATION_FRAMEWORK_ID,
+      { i18nKey: "EU AI Act (organization) is added automatically when a use case has EU AI Act" },
+    );
   }
   for (let framework of projectFrameworks) {
     if (!allowedFrameworks.includes(framework)) {

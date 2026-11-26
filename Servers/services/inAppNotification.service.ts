@@ -1829,6 +1829,40 @@ export const notifyLifecycleConfirmationDue = async (
 };
 
 /**
+ * Tell the recipients that EU AI Act (organization) was added to the
+ * organizational project because a use case got EU AI Act, and that the
+ * project was created for it when the organization had none. In-app only;
+ * keyed so each recipient reads it in their language.
+ */
+export const notifyEuAiActOrganizationAdded = async (
+  organizationId: number,
+  recipientIds: number[],
+  added: { projectId: number; projectTitle: string; useCaseTitle: string; projectCreated: boolean },
+): Promise<void> => {
+  for (const recipientId of recipientIds) {
+    await sendInAppNotification(
+      organizationId,
+      {
+        user_id: recipientId,
+        type: NotificationType.SYSTEM,
+        titleKey: added.projectCreated
+          ? "Organizational project created"
+          : "EU AI Act (organization) added",
+        messageKey: added.projectCreated
+          ? 'EU AI Act was enabled on "{useCase}", so the organizational project "{project}" was created with EU AI Act (organization). Fill in its organization-level controls on the Frameworks page.'
+          : 'EU AI Act was enabled on "{useCase}", so EU AI Act (organization) was added to "{project}". Fill in its organization-level controls on the Frameworks page.',
+        messageVars: { useCase: added.useCaseTitle, project: added.projectTitle },
+        entity_type: NotificationEntityType.PROJECT,
+        entity_id: added.projectId,
+        entity_name: added.projectTitle,
+        action_url: "/framework",
+      },
+      false,
+    );
+  }
+};
+
+/**
  * One summary of the AI app assessments a bulk run left for this owner (#5258).
  * Awaits the in-app row, which rejects if it can't be stored. The email joins
  * the rate-limited queue un-awaited, at about 600ms each it would otherwise

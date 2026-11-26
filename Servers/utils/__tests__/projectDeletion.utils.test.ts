@@ -11,6 +11,9 @@ jest.mock("../approvalRequest.utils", () => ({
 jest.mock("../useCaseChangeHistory.utils", () => ({
   recordUseCaseDeletion: jest.fn(),
 }));
+jest.mock("../euAiActOrganization.utils", () => ({
+  assertProjectDeletableForEuAiActQuery: jest.fn(),
+}));
 jest.mock("../risk.utils", () => ({
   getRisksLinkedOnlyToProjectQuery: jest.fn(),
   archiveRisksInBulkQuery: jest.fn(),
@@ -29,6 +32,7 @@ import {
   getRisksLinkedOnlyToProjectQuery,
   lockRiskLinksOfProjectQuery,
 } from "../risk.utils";
+import { assertProjectDeletableForEuAiActQuery } from "../euAiActOrganization.utils";
 
 const lock = lockProjectForDelete as unknown as jest.Mock<(...a: any[]) => Promise<any>>;
 const del = deleteProjectByIdQuery as unknown as jest.Mock<(...a: any[]) => Promise<any>>;
@@ -46,6 +50,9 @@ const bulkArchive = archiveRisksInBulkQuery as unknown as jest.Mock<(...a: any[]
 const lockLinks = lockRiskLinksOfProjectQuery as unknown as jest.Mock<
   (...a: any[]) => Promise<any>
 >;
+const euGuard = assertProjectDeletableForEuAiActQuery as unknown as jest.Mock<
+  (...a: any[]) => Promise<any>
+>;
 const tx = { id: "tx" } as any;
 
 beforeEach(() => {
@@ -61,6 +68,7 @@ beforeEach(() => {
   ]);
   bulkArchive.mockResolvedValue([{ id: 3 }, { id: 4 }]);
   lockLinks.mockResolvedValue(undefined);
+  euGuard.mockResolvedValue(undefined);
 });
 
 const order = (m: jest.Mock) => m.mock.invocationCallOrder[0];
@@ -78,7 +86,9 @@ describe("deleteProjectWithSideEffects", () => {
     expect(withdraw).toHaveBeenCalledWith(900, 5, tx, { releaseUseCase: false });
     expect(record).toHaveBeenCalledWith(111, 8, 5, tx);
     expect(del).toHaveBeenCalledWith(111, 5, tx);
-    expect(order(lock)).toBeLessThan(order(pending));
+    expect(euGuard).toHaveBeenCalledWith(111, 5, tx);
+    expect(order(lock)).toBeLessThan(order(euGuard));
+    expect(order(euGuard)).toBeLessThan(order(pending));
     expect(order(pending)).toBeLessThan(order(withdraw));
     expect(order(withdraw)).toBeLessThan(order(record));
     expect(order(record)).toBeLessThan(order(del));
@@ -112,7 +122,17 @@ describe("deleteProjectWithSideEffects", () => {
     const result = await deleteProjectWithSideEffects(111, 5, tx, { userId: 8 });
 
     expect(result).toEqual({ deleted: false, withdrawnApprovalId: null, archivedRiskIds: [] });
+    expect(euGuard).not.toHaveBeenCalled();
     expect(pending).not.toHaveBeenCalled();
+    expect(withdraw).not.toHaveBeenCalled();
+    expect(record).not.toHaveBeenCalled();
+    expect(del).not.toHaveBeenCalled();
+  });
+
+  it("changes nothing when the project holds EU AI Act (organization) still in use", async () => {
+    euGuard.mockRejectedValue(new Error("in use"));
+
+    await expect(deleteProjectWithSideEffects(111, 5, tx, { userId: 8 })).rejects.toThrow("in use");
     expect(withdraw).not.toHaveBeenCalled();
     expect(record).not.toHaveBeenCalled();
     expect(del).not.toHaveBeenCalled();

@@ -10,7 +10,31 @@ export const FRAMEWORK_IDS = {
   ISO_42001: 2,
   ISO_27001: 3,
   NIST_AI_RMF: 4,
+  // Added to the organizational project by the server when a use case gets
+  // EU AI Act; never offered in an "add framework" list.
+  EU_AI_ACT_ORGANIZATION: 29,
 } as const;
+
+/** Status filter options of EU AI Act requirements (use case, or EU AI Act (organization)). */
+export const EU_AI_ACT_CONTROL_STATUS_OPTIONS = [
+  { value: "waiting", label: "Waiting" },
+  { value: "in progress", label: "In progress" },
+  { value: "done", label: "Done" },
+];
+
+/** Status filter options of an EU AI Act assessment (use case, or EU AI Act (organization)). */
+export const EU_AI_ACT_ASSESSMENT_STATUS_OPTIONS = [
+  { value: "not started", label: "Not started" },
+  { value: "in progress", label: "In progress" },
+  { value: "done", label: "Done" },
+];
+
+/** Shown when enabling EU AI Act on a use case also added EU AI Act (organization). */
+export const EU_AI_ACT_ORGANIZATION_ADDED_MESSAGE =
+  "EU AI Act (organization) was added to the Frameworks page. Fill in its organization-level controls there.";
+
+/** Why EU AI Act (organization) can't be removed while a use case has EU AI Act. */
+export const EU_AI_ACT_ORGANIZATION_LOCKED_REASON = "Required while a use case has EU AI Act";
 
 export const FRAMEWORK_NAMES = {
   EU_AI_ACT: "EU AI Act",
