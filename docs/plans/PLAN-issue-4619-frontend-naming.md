@@ -3,7 +3,7 @@
 - **Branch:** `fix/frontend-naming-typos` (off `develop`)
 - **Size:** Small
 - **Gate mode:** Interactive — stop for review after every task. Do not auto-advance.
-- **Status:** In progress. Tasks 1–3 done.
+- **Status:** Tasks 1–4 done.
 
 Pure renames. Exported symbols stay as they are (`useAssessmentTopics`, `CustomException`, and every function in the two AI detection clients). No `.tsx` → `.ts` conversion. No merge or delete of either AI detection client. No backend edits. `routes/aiDetectionRepository.route.ts` is a server route and stays.
 
@@ -270,7 +270,19 @@ npx vitest run \
 
 ## Wave 4 — Review
 
-### Task 4 — Prove the old names are gone, then match CI
+### Task 4 — Prove the old names are gone, then match CI ☒
+
+Done. Deviation: a repo-wide search still hits this plan file, which records the old names. `Clients/`, `docs/technical/`, `Servers/`, and every other path are clean. The plan text was left as the record.
+
+From `Clients/`: `format-check`, `typecheck`, `lint --quiet`, and `i18n:audit:strict` passed. Vitest: 1120 files passed, 1 skipped; 13501 tests passed, 5 skipped. `npm run build` completed successfully.
+
+A later PR description lists these five renames:
+
+- `assesment.repository.ts` → `assessment.repository.ts`
+- `useAssessmentTopcis.tsx` → `useAssessmentTopics.tsx`
+- `customeException.tsx` → `customException.tsx`
+- `aiDetection.repository.ts` → `aiDetectionScan.repository.ts`
+- `aiDetectionRepository.repository.ts` → `aiDetectionRegistry.repository.ts`
 
 From the repo root, these searches must return no hits:
 
