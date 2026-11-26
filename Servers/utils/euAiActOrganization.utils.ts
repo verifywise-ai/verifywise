@@ -121,11 +121,7 @@ export const ensureEuAiActOrganizationFrameworkQuery = async (
     projectCreated: !existing,
   };
   const ownerId = organizationalProject.owner;
-  // A savepoint runs its afterCommit hooks when it is released, before the
-  // outer transaction commits, so the hook goes on the outermost one.
-  let outermost = transaction as Transaction & { parent?: Transaction };
-  while (outermost.parent) outermost = outermost.parent;
-  outermost.afterCommit(async () => {
+  const notify = async () => {
     try {
       const adminIds = await getDeadlineAdminIdsQuery(organizationId);
       const recipientIds = [
@@ -140,6 +136,15 @@ export const ensureEuAiActOrganizationFrameworkQuery = async (
         }`,
       );
     }
+  };
+  // A savepoint runs its afterCommit hooks when it is released, before the
+  // outer transaction commits, so the hook goes on the outermost one. commit()
+  // awaits its hooks, so the notification is not awaited: a slow or unreachable
+  // Redis must not hold the request that enabled EU AI Act.
+  let outermost = transaction as Transaction & { parent?: Transaction };
+  while (outermost.parent) outermost = outermost.parent;
+  outermost.afterCommit(() => {
+    void notify();
   });
   return true;
 };
