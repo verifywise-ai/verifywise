@@ -8543,6 +8543,12 @@ paths:
                 properties:
                   message: {type: string, example: Accepted}
                   data: {type: object, properties: {token: {type: string, description: 'JWT access token (absent when requiresOrganizationSelection)'}, isSuperAdmin: {type: boolean, description: 'Whether the user has a super_admins row'}, onboarding_status: {type: string, description: 'Organization onboarding status (not present for a pure super-admin)', example: completed}, is_org_creator: {type: boolean, description: 'Whether user is the first admin of the org (not present for a pure super-admin)'}, requiresOrganizationSelection: {type: boolean, description: 'Present and true when the user belongs to several organizations'}, organizations: {type: array, description: 'The organizations to choose from', items: {type: object, properties: {id: {type: integer}, name: {type: string}, role_name: {type: string}}}}, selectionToken: {type: string, description: 'Exchange at POST /users/login/select-organization; valid for 5 minutes'}}}
+        '400':
+          description: 'Email or password missing, empty, or not a string'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
         '401':
           description: 'Invalid email or password'
           content:

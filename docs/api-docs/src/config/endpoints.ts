@@ -12063,6 +12063,7 @@ export const userEndpoints: Endpoint[] = [
     },
     responses: [
       { status: 202, description: "Authentication successful" },
+      { status: 400, description: "Email or password missing, empty, or not a string" },
       { status: 401, description: "Invalid email or password" },
       { status: 429, description: "Too many login attempts" },
       { status: 500, description: "Internal server error" },

@@ -849,7 +849,18 @@ async function completeOrganizationLogin(
  * Set-Cookie: refresh_token=<token>; Path=/api/users; HttpOnly; Secure (prod); SameSite=none (prod) or lax (dev)
  */
 async function loginUser(req: Request, res: Response): Promise<any> {
-  const { email, password } = req.body;
+  const { email, password } = req.body ?? {};
+
+  // A missing or non-string email used to reach the SQL replacement map and
+  // come back as a 500. Refuse it up front as a bad request.
+  if (
+    typeof email !== "string" ||
+    email.trim() === "" ||
+    typeof password !== "string" ||
+    password === ""
+  ) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Email and password are required")));
+  }
 
   logStructured("processing", `attempting login for ${email}`, "loginUser", "user.ctrl.ts");
   logger.debug(`🔐 Login attempt for ${email}`);
