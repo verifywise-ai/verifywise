@@ -192,7 +192,7 @@ function SuggestedCategory({
         >
           {category}
         </Typography>
-        <Typography sx={{ color: theme.palette.text.accent, fontSize: "11px" }}>
+        <Typography sx={{ color: theme.palette.text.secondary, fontSize: "13px" }}>
           {availableQuestions.length}
         </Typography>
       </Box>
@@ -599,8 +599,8 @@ export const SuggestedQuestionsPanel = forwardRef<
             {filteredLLMQuestions.length > 0 && !llmLoading && (
               <Typography
                 sx={{
-                  fontSize: "11px",
-                  color: theme.palette.text.accent,
+                  fontSize: "13px",
+                  color: theme.palette.text.secondary,
                   backgroundColor: theme.palette.background.fill,
                   borderRadius: radiusPx.pill,
                   px: "6px",
@@ -657,7 +657,7 @@ export const SuggestedQuestionsPanel = forwardRef<
             {llmLoading && (
               <Box sx={{ display: "flex", alignItems: "center", gap: "8px", py: "12px" }}>
                 <CircularProgress size={16} sx={{ color: theme.palette.primary.main }} />
-                <Typography sx={{ fontSize: "12px", color: theme.palette.text.accent }}>
+                <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
                   Generating questions...
                 </Typography>
               </Box>
@@ -703,7 +703,7 @@ export const SuggestedQuestionsPanel = forwardRef<
 
             {!llmLoading && !llmError && llmFetched && filteredLLMQuestions.length === 0 && (
               <Box sx={{ py: "8px" }}>
-                <Typography sx={{ fontSize: "11px", color: theme.palette.text.accent }}>
+                <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
                   All suggested questions have been added. Click regenerate for more.
                 </Typography>
               </Box>

@@ -783,6 +783,20 @@ export const de: Record<string, string> = {
     "{count} Risiko ist nur mit diesem Anwendungsfall verknüpft. Nach dem Löschen können alle in der Organisation es sehen.",
   "{count} risks are linked only to this use case. After you delete it, everyone in the organization can see them.":
     "{count} Risiken sind nur mit diesem Anwendungsfall verknüpft. Nach dem Löschen können alle in der Organisation sie sehen.",
+  "Delete this calculation": "Diese Berechnung löschen",
+  "Delete this calculation?": "Diese Berechnung löschen?",
+  "Only you can see this calculation": "Nur Sie sehen diese Berechnung",
+  "Could not delete the calculation": "Die Berechnung konnte nicht gelöscht werden",
+  "Public results and your private ones": "Öffentliche Ergebnisse und Ihre privaten",
+  "Results everyone in your organization can see":
+    "Ergebnisse, die alle in Ihrer Organisation sehen",
+  "Results only you can see": "Ergebnisse, die nur Sie sehen",
+  "Public results and your private ones. Calculating now keeps each result's visibility, and a new result is public.":
+    "Öffentliche Ergebnisse und Ihre privaten. Eine Berechnung jetzt behält die Sichtbarkeit jedes Ergebnisses bei, ein neues Ergebnis ist öffentlich.",
+  "Results everyone in your organization can see. Calculating now shares the result.":
+    "Ergebnisse, die alle in Ihrer Organisation sehen. Eine Berechnung jetzt teilt das Ergebnis.",
+  "Results only you can see. Calculating now keeps the result to yourself.":
+    "Ergebnisse, die nur Sie sehen. Eine Berechnung jetzt behält das Ergebnis für Sie.",
 };
 
 export const fr: Record<string, string> = {
@@ -1562,6 +1576,20 @@ export const fr: Record<string, string> = {
     "{count} risque est lié uniquement à ce cas d'usage. Après la suppression, tous les membres de l'organisation pourront le voir.",
   "{count} risks are linked only to this use case. After you delete it, everyone in the organization can see them.":
     "{count} risques sont liés uniquement à ce cas d'usage. Après la suppression, tous les membres de l'organisation pourront les voir.",
+  "Delete this calculation": "Supprimer ce calcul",
+  "Delete this calculation?": "Supprimer ce calcul ?",
+  "Only you can see this calculation": "Vous seul voyez ce calcul",
+  "Could not delete the calculation": "Impossible de supprimer le calcul",
+  "Public results and your private ones": "Résultats publics et vos résultats privés",
+  "Results everyone in your organization can see":
+    "Résultats visibles par toute votre organisation",
+  "Results only you can see": "Résultats que vous seul voyez",
+  "Public results and your private ones. Calculating now keeps each result's visibility, and a new result is public.":
+    "Résultats publics et vos résultats privés. Calculer maintenant conserve la visibilité de chaque résultat, et un nouveau résultat est public.",
+  "Results everyone in your organization can see. Calculating now shares the result.":
+    "Résultats visibles par toute votre organisation. Calculer maintenant partage le résultat.",
+  "Results only you can see. Calculating now keeps the result to yourself.":
+    "Résultats que vous seul voyez. Calculer maintenant garde le résultat pour vous.",
 };
 
 export const es: Record<string, string> = {
@@ -2338,4 +2366,17 @@ export const es: Record<string, string> = {
     "{count} riesgo está vinculado solo a este caso de uso. Después de eliminarlo, todos en la organización podrán verlo.",
   "{count} risks are linked only to this use case. After you delete it, everyone in the organization can see them.":
     "{count} riesgos están vinculados solo a este caso de uso. Después de eliminarlo, todos en la organización podrán verlos.",
+  "Delete this calculation": "Eliminar este cálculo",
+  "Delete this calculation?": "¿Eliminar este cálculo?",
+  "Only you can see this calculation": "Solo usted ve este cálculo",
+  "Could not delete the calculation": "No se pudo eliminar el cálculo",
+  "Public results and your private ones": "Resultados públicos y sus resultados privados",
+  "Results everyone in your organization can see": "Resultados que ve toda su organización",
+  "Results only you can see": "Resultados que solo usted ve",
+  "Public results and your private ones. Calculating now keeps each result's visibility, and a new result is public.":
+    "Resultados públicos y sus resultados privados. Calcular ahora mantiene la visibilidad de cada resultado, y un resultado nuevo es público.",
+  "Results everyone in your organization can see. Calculating now shares the result.":
+    "Resultados que ve toda su organización. Calcular ahora comparte el resultado.",
+  "Results only you can see. Calculating now keeps the result to yourself.":
+    "Resultados que solo usted ve. Calcular ahora guarda el resultado para usted.",
 };

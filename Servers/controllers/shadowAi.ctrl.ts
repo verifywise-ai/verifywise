@@ -72,6 +72,7 @@ import {
   canStartLifecycle,
   startLifecycleForModel,
 } from "../extensions/model-lifecycle/modelLifecycle.service";
+import { isRuleActionList } from "../utils/shadowAiRuleActions.utils";
 const FILE_NAME = "shadowAi.ctrl.ts";
 
 // ─── Helpers ────────────────────────────────────────────────────────────
@@ -879,7 +880,7 @@ export async function createRule(req: Request, res: Response) {
       notification_user_ids,
     } = req.body;
 
-    if (!name || !trigger_type || !actions || !Array.isArray(actions)) {
+    if (!name || !trigger_type || !isRuleActionList(actions)) {
       return res
         .status(400)
         .json(STATUS_CODE[400](req.t!("Missing required fields: name, trigger_type, actions")));
@@ -941,6 +942,12 @@ export async function updateRule(req: Request, res: Response) {
 
     if (isNaN(ruleId)) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid rule ID")));
+    }
+
+    if (req.body?.actions !== undefined && !isRuleActionList(req.body.actions)) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400](req.t!("Rule actions must be a list of actions with a type")));
     }
 
     const updated = await updateRuleQuery(organizationId, ruleId, req.body);

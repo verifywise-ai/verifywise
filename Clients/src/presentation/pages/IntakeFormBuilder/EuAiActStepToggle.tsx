@@ -43,11 +43,11 @@ const EuAiActStepToggle = ({
         <Typography sx={{ fontSize: "12px", fontWeight: 600, color: theme.palette.text.secondary }}>
           EU AI Act risk classification step
         </Typography>
-        <Typography sx={{ fontSize: "11px", color: theme.palette.text.accent }}>
+        <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
           {DESCRIPTION}
         </Typography>
         {hasRiskMapping && (
-          <Typography sx={{ fontSize: "11px", color: theme.palette.text.accent, mt: "4px" }}>
+          <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary, mt: "4px" }}>
             {UNMAP_NOTE}
           </Typography>
         )}

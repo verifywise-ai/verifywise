@@ -31,7 +31,9 @@ const LiveChecksToggle = ({ enabled, onToggle }: LiveChecksToggleProps) => {
         <Typography sx={{ fontSize: "12px", fontWeight: 600, color: theme.palette.text.secondary }}>
           Check answers while the submitter types
         </Typography>
-        <Typography sx={{ fontSize: "11px", color: theme.palette.text.accent }}>{HELP}</Typography>
+        <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
+          {HELP}
+        </Typography>
       </Box>
     </Box>
   );

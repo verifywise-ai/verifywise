@@ -12067,6 +12067,7 @@ export const userEndpoints: Endpoint[] = [
     },
     responses: [
       { status: 202, description: "Authentication successful" },
+      { status: 400, description: "Email or password missing, empty, or not a string" },
       { status: 401, description: "Invalid email or password" },
       { status: 429, description: "Too many login attempts" },
       { status: 500, description: "Internal server error" },
@@ -13686,6 +13687,29 @@ export const v1V1projectsEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Readiness endpoints
+export const v1V1readinessEndpoints: Endpoint[] = [
+  {
+    method: 'DELETE',
+    path: '/v1/readiness/scores/{id}',
+    summary: "Delete a readiness calculation",
+    description: "Deletes one framework readiness score with its control scores and history points. The person who ran it may delete it; deleting someone else's public calculation requires readiness.admin. Someone else's private calculation answers 404.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The framework readiness score ID" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "Invalid ID" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Insufficient permissions" },
+      { status: 404, description: "Readiness score not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Readiness",
+  },
+];
+
 // v1: V1/Report Runs endpoints
 export const v1V1reportRunsEndpoints: Endpoint[] = [
   {
@@ -14680,6 +14704,7 @@ export const allEndpoints = {
   v1V1modelRisks: v1V1modelRisksEndpoints,
   v1V1policyTemplates: v1V1policyTemplatesEndpoints,
   v1V1projects: v1V1projectsEndpoints,
+  v1V1readiness: v1V1readinessEndpoints,
   v1V1reportRuns: v1V1reportRunsEndpoints,
   v1V1reportTemplates: v1V1reportTemplatesEndpoints,
   v1V1scheduledReports: v1V1scheduledReportsEndpoints,

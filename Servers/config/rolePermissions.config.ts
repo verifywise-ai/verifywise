@@ -176,6 +176,11 @@ export const ROLE_PERMISSIONS = {
     description: "Run the evidence freshness check on demand",
     legacyRoles: ADMIN,
   },
+  "readiness.admin": {
+    module: "AI readiness",
+    description: "Delete other people's public readiness calculations",
+    legacyRoles: ADMIN,
+  },
   "incident.delete": {
     module: "Incidents",
     description: "Permanently delete AI incidents",

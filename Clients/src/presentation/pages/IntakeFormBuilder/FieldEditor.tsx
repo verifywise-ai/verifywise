@@ -825,7 +825,7 @@ export function FieldEditor({
                 />
                 {mappingItems.length <= 1 && (
                   <Typography
-                    sx={{ color: theme.palette.text.accent, fontSize: "11px", mt: "4px" }}
+                    sx={{ color: theme.palette.text.secondary, fontSize: "13px", mt: "4px" }}
                   >
                     No compatible entity fields for this field type
                   </Typography>

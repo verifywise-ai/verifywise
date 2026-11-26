@@ -377,6 +377,7 @@
   "Either project_id or framework_id must be provided": "Either project_id or framework_id must be provided",
   "Email alerts must be true or false": "Email alerts must be true or false",
   "Email already exists": "Email already exists",
+  "Email and password are required": "Email and password are required",
   "Email does not match the original submission.": "Email does not match the original submission.",
   "email is required": "email is required",
   "Email is required": "Email is required",
@@ -1182,6 +1183,7 @@
   "rows must be a list of 1 to 1000 rows": "rows must be a list of 1 to 1000 rows",
   "rule and facts are required": "rule and facts are required",
   "Rule deleted successfully": "Rule deleted successfully",
+  "Rule actions must be a list of actions with a type": "Rule actions must be a list of actions with a type",
   "Rule not found": "Rule not found",
   "Rules array is required": "Rules array is required",
   "Rules must be an array": "Rules must be an array",
@@ -1701,5 +1703,6 @@
   "Minor": "Minor",
   "Serious": "Serious",
   "Very serious": "Very serious",
-  "key must be a non-empty string": "key must be a non-empty string"
+  "key must be a non-empty string": "key must be a non-empty string",
+  "Readiness score not found": "Readiness score not found"
 }

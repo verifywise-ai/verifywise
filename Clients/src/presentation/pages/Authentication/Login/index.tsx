@@ -144,6 +144,10 @@ const loginErrorMessage = (error: LoginError): string => {
   const status = error.status || error.response?.status;
   const responseData = error.response?.data;
 
+  if (status === 400) {
+    // A blank email or password: the server refuses it before any lookup.
+    return "Email and password are required";
+  }
   if (status === 401 || status === 429) {
     // Expected user errors - no logging needed, just show the message
     return error.message || "Invalid email or password";

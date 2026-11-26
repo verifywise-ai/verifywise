@@ -245,7 +245,7 @@ function ColorGrid({
             }}
           />
           <Typography
-            sx={{ fontSize: "11px", color: theme.palette.text.accent, fontFamily: "monospace" }}
+            sx={{ fontSize: "13px", color: theme.palette.text.secondary, fontFamily: "monospace" }}
           >
             {customValue || brand.primary}
           </Typography>
@@ -298,9 +298,9 @@ export function DesignPanel({ settings, onChange }: DesignPanelProps) {
         <Box>
           <Typography
             sx={{
-              fontSize: "11px",
+              fontSize: "13px",
               fontWeight: 600,
-              color: theme.palette.text.tertiary,
+              color: theme.palette.text.secondary,
               mb: "6px",
               textTransform: "uppercase",
               letterSpacing: "0.5px",
@@ -330,9 +330,9 @@ export function DesignPanel({ settings, onChange }: DesignPanelProps) {
         <Box>
           <Typography
             sx={{
-              fontSize: "11px",
+              fontSize: "13px",
               fontWeight: 600,
-              color: theme.palette.text.tertiary,
+              color: theme.palette.text.secondary,
               mb: "6px",
               textTransform: "uppercase",
               letterSpacing: "0.5px",
@@ -371,9 +371,9 @@ export function DesignPanel({ settings, onChange }: DesignPanelProps) {
         <Box>
           <Typography
             sx={{
-              fontSize: "11px",
+              fontSize: "13px",
               fontWeight: 600,
-              color: theme.palette.text.tertiary,
+              color: theme.palette.text.secondary,
               mb: "4px",
               textTransform: "uppercase",
               letterSpacing: "0.5px",

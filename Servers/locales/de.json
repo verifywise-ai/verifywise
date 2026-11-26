@@ -371,6 +371,7 @@
   "Either project_id or framework_id must be provided": "Entweder project_id oder framework_id muss angegeben werden",
   "Email alerts must be true or false": "E-Mail-Warnungen müssen true oder false sein",
   "Email already exists": "E-Mail existiert bereits",
+  "Email and password are required": "E-Mail und Passwort sind erforderlich",
   "Email does not match the original submission.": "E-Mail stimmt nicht mit der ursprünglichen Einreichung überein.",
   "email is required": "email ist erforderlich",
   "Email is required": "E-Mail ist erforderlich",
@@ -1151,6 +1152,7 @@
   "rows must be a list of 1 to 1000 rows": "rows muss eine Liste mit 1 bis 1000 Zeilen sein",
   "rule and facts are required": "rule und facts sind erforderlich",
   "Rule deleted successfully": "Regel erfolgreich gelöscht",
+  "Rule actions must be a list of actions with a type": "Regelaktionen müssen eine Liste von Aktionen mit einem Typ sein",
   "Rule not found": "Regel nicht gefunden",
   "Rules array is required": "Regeln-Array ist erforderlich",
   "Rules must be an array": "Regeln müssen ein Array sein",
@@ -1708,5 +1710,6 @@
   "Minor": "Gering",
   "Serious": "Schwerwiegend",
   "Very serious": "Sehr schwerwiegend",
-  "key must be a non-empty string": "key muss eine nicht leere Zeichenkette sein"
+  "key must be a non-empty string": "key muss eine nicht leere Zeichenkette sein",
+  "Readiness score not found": "Bereitschaftswert nicht gefunden"
 }
