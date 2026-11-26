@@ -33,6 +33,7 @@ import { logStructured } from "./logger/fileLogger";
 import { demoDueDate } from "./demoSeedFields";
 import { highRiskRolesArraySql } from "./highRiskRoles.utils";
 import { recordUpdateChanges, writtenValues } from "./changeHistory.base.utils";
+import { ProjectViewer, projectVisibilitySql } from "./projectVisibility.utils";
 
 // Skips the questions moved to EU AI Act (organization), as createNewAnswersEUQuery
 // does, so the two stay paired by position.
@@ -149,6 +150,7 @@ export const getTopicByIdForProjectQuery = async (
   topicStructId: number,
   projectFrameworkId: number,
   organizationId: number,
+  viewer?: ProjectViewer,
 ): Promise<TopicStructEUModel | null> => {
   const assessmentResult = (await sequelize.query(
     `SELECT id FROM assessments WHERE organization_id = :organizationId AND projects_frameworks_id = :projects_frameworks_id`,
@@ -178,7 +180,13 @@ export const getTopicByIdForProjectQuery = async (
   const subtopicStruct = await getAllSubTopicsQuery(topic.id!, organizationId);
   (topic.dataValues as any).subTopics = subtopicStruct;
   for (let subtopic of subtopicStruct) {
-    const questionAnswers = await getAllQuestionsQuery(subtopic.id!, assessmentId, organizationId);
+    const questionAnswers = await getAllQuestionsQuery(
+      subtopic.id!,
+      assessmentId,
+      organizationId,
+      null,
+      viewer,
+    );
     (subtopic.dataValues as any).questions = [];
     for (let question of questionAnswers) {
       (subtopic.dataValues as any).questions.push({ ...question });
@@ -205,9 +213,24 @@ export { findUsersNotInOrganization } from "./user.utils";
  * SQL for the use case an EU AI Act (organization) row's work was copied from
  * on upgrade (copied_from_project_id, cleared when a user saves the row): the
  * join of that project as `cp`, and its label "<title> (<UC id>)", or NULL.
+ *
+ * The label names a use case, so the join only matches one the viewer can see
+ * (projectVisibilitySql); otherwise, and when no viewer is given, the label is
+ * NULL and only copied_from_project_id is returned. The query must bind
+ * :organizationId and the returned replacements.
  */
-const copiedFromJoinSql = (row: string) =>
-  `LEFT JOIN projects cp ON cp.id = ${row}.copied_from_project_id AND cp.organization_id = ${row}.organization_id`;
+const copiedFromJoinSql = (
+  row: string,
+  viewer: ProjectViewer | undefined,
+): { sql: string; replacements: Record<string, unknown> } => {
+  const visibility = viewer
+    ? projectVisibilitySql("cp", viewer)
+    : { sql: " AND FALSE", replacements: {} };
+  return {
+    sql: `LEFT JOIN projects cp ON cp.id = ${row}.copied_from_project_id AND cp.organization_id = ${row}.organization_id${visibility.sql}`,
+    replacements: visibility.replacements,
+  };
+};
 const COPIED_FROM_USE_CASE_SQL = `CASE WHEN cp.id IS NULL THEN NULL
        WHEN cp.uc_id IS NULL THEN cp.project_title
        ELSE cp.project_title || ' (' || cp.uc_id || ')' END`;
@@ -263,6 +286,7 @@ export const getControlByIdForProjectQuery = async (
   approver: number | undefined,
   dueDateFilter: number | undefined,
   organizationId: number,
+  viewer?: ProjectViewer,
 ): Promise<Partial<ControlEU & ControlStructEUModel> | null> => {
   const controlId = (await sequelize.query(
     `SELECT id FROM controls_eu WHERE organization_id = :organizationId AND control_meta_id = :control_meta_id AND projects_frameworks_id = :projects_frameworks_id`,
@@ -274,7 +298,7 @@ export const getControlByIdForProjectQuery = async (
       },
     },
   )) as [{ id: number }[], number];
-  const controls = await getControlByIdQuery(controlId[0][0].id, organizationId);
+  const controls = await getControlByIdQuery(controlId[0][0].id, organizationId, null, viewer);
   const control = controls[0];
   const subControls = await getSubControlsByIdQuery(
     control.id!,
@@ -282,6 +306,8 @@ export const getControlByIdForProjectQuery = async (
     approver,
     dueDateFilter,
     organizationId,
+    null,
+    viewer,
   );
 
   (control as any).subControls = [];
@@ -357,7 +383,9 @@ export const getAllQuestionsQuery = async (
   assessmentId: number,
   organizationId: number,
   transaction: Transaction | null = null,
+  viewer?: ProjectViewer,
 ) => {
+  const copiedFrom = copiedFromJoinSql("a", viewer);
   const result = (await sequelize.query(
     `SELECT
       q.id AS question_id,
@@ -381,13 +409,18 @@ export const getAllQuestionsQuery = async (
     FROM questions_struct_eu q JOIN answers_eu a ON q.id = a.question_id
       JOIN assessments s ON s.organization_id = a.organization_id AND s.id = a.assessment_id
       JOIN projects_frameworks pf ON pf.organization_id = s.organization_id AND pf.id = s.projects_frameworks_id
-      ${copiedFromJoinSql("a")}
+      ${copiedFrom.sql}
       WHERE
       a.organization_id = :organizationId AND q.subtopic_id = :subtopic_id AND a.assessment_id = :assessment_id
         AND ${structItemInFrameworkSql("q", "pf.framework_id")}
       ORDER BY created_at DESC, question_id ASC;`,
     {
-      replacements: { organizationId, subtopic_id: subtopicId, assessment_id: assessmentId },
+      replacements: {
+        organizationId,
+        subtopic_id: subtopicId,
+        assessment_id: assessmentId,
+        ...copiedFrom.replacements,
+      },
       ...(transaction && { transaction }),
     },
   )) as [Partial<QuestionStructEUModel & AnswerEU & { answer_id: number }>[], number];
@@ -432,6 +465,7 @@ export const getAssessmentsEUByIdQuery = async (
   assessmentId: number,
   organizationId: number,
   transaction: Transaction | null = null,
+  viewer?: ProjectViewer,
 ) => {
   const topicStruct = await getAllTopicsQuery(organizationId, transaction);
   for (let topic of topicStruct) {
@@ -443,6 +477,7 @@ export const getAssessmentsEUByIdQuery = async (
         assessmentId,
         organizationId,
         transaction,
+        viewer,
       );
       if (questionAnswers.length === 0) continue;
       (subtopic.dataValues as any).questions = [];
@@ -504,12 +539,14 @@ export const getControlStructByControlCategoryIdForAProjectQuery = async (
   approver: number | undefined,
   dueDateFilter: number | undefined,
   organizationId: number,
+  viewer?: ProjectViewer,
 ) => {
+  const copiedFrom = copiedFromJoinSql("c", viewer);
   const controlsStruct = (await sequelize.query(
     `SELECT cs.*, c.id AS control_id, c.owner, c.status, ${copiedFromColumnsSql("c")}
       FROM controls_struct_eu cs JOIN controls_eu c ON cs.id = c.control_meta_id
       JOIN projects_frameworks pf ON pf.organization_id = c.organization_id AND pf.id = c.projects_frameworks_id
-      ${copiedFromJoinSql("c")}
+      ${copiedFrom.sql}
       WHERE c.organization_id = :organizationId AND cs.control_category_id = :control_category_id AND c.projects_frameworks_id = :projects_frameworks_id
         AND ${structItemInFrameworkSql("cs", "pf.framework_id")}
       ORDER BY cs.order_no, cs.id;`,
@@ -518,6 +555,7 @@ export const getControlStructByControlCategoryIdForAProjectQuery = async (
         organizationId,
         control_category_id: controlCategoryId,
         projects_frameworks_id: projectFrameworkId,
+        ...copiedFrom.replacements,
       },
     },
   )) as [Partial<ControlStructEUModel & ControlEUModel & { control_id: number }>[], number];
@@ -541,7 +579,9 @@ export const getControlByIdQuery = async (
   controlId: number,
   organizationId: number,
   transaction: Transaction | null = null,
+  viewer?: ProjectViewer,
 ) => {
+  const copiedFrom = copiedFromJoinSql("c", viewer);
   const result = (await sequelize.query(
     `SELECT
       cs.title AS title,
@@ -559,11 +599,11 @@ export const getControlByIdQuery = async (
       c.created_at AS created_at,
       ${copiedFromColumnsSql("c")}
     FROM controls_eu c JOIN controls_struct_eu cs ON c.control_meta_id = cs.id
-      ${copiedFromJoinSql("c")}
+      ${copiedFrom.sql}
     WHERE c.organization_id = :organizationId AND c.id = :control_id
     ORDER BY created_at DESC, id ASC;`,
     {
-      replacements: { organizationId, control_id: controlId },
+      replacements: { organizationId, control_id: controlId, ...copiedFrom.replacements },
       ...(transaction && { transaction }),
     },
   )) as [Partial<ControlEUModel & ControlStructEUModel>[], number];
@@ -578,6 +618,7 @@ export const getSubControlsByIdQuery = async (
   dueDateFilter: number | undefined,
   organizationId: number,
   transaction: Transaction | null = null,
+  viewer?: ProjectViewer,
 ) => {
   const conditions: string[] = [
     "sc.organization_id = :organizationId",
@@ -604,6 +645,7 @@ export const getSubControlsByIdQuery = async (
   }
 
   const whereClause = conditions.join(" AND ");
+  const copiedFrom = copiedFromJoinSql("sc", viewer);
 
   const subControls = (await sequelize.query(
     `SELECT
@@ -627,11 +669,11 @@ export const getSubControlsByIdQuery = async (
     FROM subcontrols_eu sc
       JOIN subcontrols_struct_eu scs ON sc.subcontrol_meta_id = scs.id
       JOIN controls_eu c ON c.id = sc.control_id AND c.organization_id = sc.organization_id
-      ${copiedFromJoinSql("sc")}
+      ${copiedFrom.sql}
     WHERE ${whereClause}
     ORDER BY created_at DESC, id ASC;`,
     {
-      replacements,
+      replacements: { ...replacements, ...copiedFrom.replacements },
       ...(transaction && { transaction }),
     },
   )) as [Partial<SubcontrolEUModel | ControlStructEUModel>[], number];
@@ -679,6 +721,7 @@ export const getCompliancesEUByIdQuery = async (
   controlIds: number[],
   organizationId: number,
   transaction: Transaction | null = null,
+  viewer?: ProjectViewer,
 ) => {
   // The controls may be of either framework, so every category is listed.
   const controlCategoriesStruct = await getAllControlCategoriesQuery(
@@ -693,7 +736,7 @@ export const getCompliancesEUByIdQuery = async (
   }
 
   for (let controlId of controlIds) {
-    const controls = await getControlByIdQuery(controlId, organizationId, transaction);
+    const controls = await getControlByIdQuery(controlId, organizationId, transaction, viewer);
 
     for (let control of controls) {
       (controlCategoriesStruct as any)[
@@ -706,6 +749,7 @@ export const getCompliancesEUByIdQuery = async (
         undefined,
         organizationId,
         transaction,
+        viewer,
       );
       (control as any).subControls = [];
       for (let subControl of subControls) {
@@ -719,6 +763,7 @@ export const getCompliancesEUByIdQuery = async (
 export const getAssessmentsEUByProjectIdQuery = async (
   projectFrameworkId: number,
   organizationId: number,
+  viewer?: ProjectViewer,
 ) => {
   const assessmentId = (await sequelize.query(
     `SELECT id FROM assessments WHERE organization_id = :organizationId AND projects_frameworks_id = :projects_frameworks_id`,
@@ -726,7 +771,12 @@ export const getAssessmentsEUByProjectIdQuery = async (
       replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
     },
   )) as [{ id: number }[], number];
-  const assessments = await getAssessmentsEUByIdQuery(assessmentId[0][0].id, organizationId);
+  const assessments = await getAssessmentsEUByIdQuery(
+    assessmentId[0][0].id,
+    organizationId,
+    null,
+    viewer,
+  );
   return assessments;
 };
 
@@ -833,6 +883,7 @@ export const getVisibleEuCategoryIdsForProject = async (
 export const getComplianceEUByProjectIdQuery = async (
   projectFrameworkId: number,
   organizationId: number,
+  viewer?: ProjectViewer,
 ) => {
   const controlIds = (await sequelize.query(
     `SELECT c.id FROM controls_eu c
@@ -848,6 +899,8 @@ export const getComplianceEUByProjectIdQuery = async (
   const compliances = await getCompliancesEUByIdQuery(
     controlIds[0].map((c) => c.id),
     organizationId,
+    null,
+    viewer,
   );
 
   const visibleIds = await getVisibleEuCategoryIdsForProject(projectFrameworkId, organizationId);

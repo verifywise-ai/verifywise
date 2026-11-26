@@ -137,6 +137,7 @@ export async function getAssessmentsByProjectId(req: Request, res: Response): Pr
     const assessments = await getAssessmentsEUByProjectIdQuery(
       projectFrameworkId,
       req.organizationId!,
+      { userId: req.userId!, role: req.role! },
     );
 
     await logSuccess({
@@ -181,6 +182,7 @@ export async function getCompliancesByProjectId(req: Request, res: Response): Pr
     const complainces = await getComplianceEUByProjectIdQuery(
       projectFrameworkId,
       req.organizationId!,
+      { userId: req.userId!, role: req.role! },
     );
 
     await logSuccess({
@@ -226,6 +228,7 @@ export async function getTopicById(req: Request, res: Response): Promise<any> {
       topicId,
       projectFrameworkId,
       req.organizationId!,
+      { userId: req.userId!, role: req.role! },
     );
 
     if (topic) {
@@ -291,6 +294,7 @@ export async function getControlById(req: Request, res: Response): Promise<any> 
       approver,
       dueDateFilter,
       req.organizationId!,
+      { userId: req.userId!, role: req.role! },
     );
 
     if (topic) {
@@ -1342,6 +1346,7 @@ export async function getControlsByControlCategoryId(req: Request, res: Response
       approver,
       dueDateFilter,
       req.organizationId!,
+      { userId: req.userId!, role: req.role! },
     );
 
     await logSuccess({

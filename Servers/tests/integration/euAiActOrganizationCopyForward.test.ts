@@ -21,6 +21,7 @@ import { getTranslator } from "../../utils/i18n.utils";
 import { EU_AI_ACT_ORGANIZATION_MOVED_NOTICE } from "../../structures";
 import { attachLinkProjections } from "../../utils/files/attachLinkProjections";
 import { buildEntityUrlAsync } from "../../services/inAppNotification.service";
+import { getControlByIdQuery } from "../../utils/eu.utils";
 
 const EU_AI_ACT = 1;
 const EU_AI_ACT_ORGANIZATION = 29;
@@ -496,6 +497,28 @@ describe("EU AI Act (organization) copy-forward migration", () => {
     const before = await snapshot(orgId);
     await runMigrations();
     expect(await snapshot(orgId)).toEqual(before);
+
+    // The source use case is named only to a viewer who can see it.
+    const outsider = await createTestUser(orgId, 3, email("outsider"), "Pw123456!");
+    const labelFor = async (viewer?: { userId: number; role: string }) => {
+      const [control] = await getControlByIdQuery(org.control.id, orgId, null, viewer);
+      return control as { copied_from_project_id: number; copied_from_use_case: string | null };
+    };
+    expect((await labelFor({ userId: germanAdmin, role: "Admin" })).copied_from_use_case).toMatch(
+      /^Fraud scoring/,
+    );
+    expect(await labelFor({ userId: outsider, role: "Editor" })).toMatchObject({
+      copied_from_project_id: b.projectId,
+      copied_from_use_case: null,
+    });
+    expect((await labelFor()).copied_from_use_case).toBeNull();
+    await sequelize.query(
+      `INSERT INTO projects_members (organization_id, project_id, user_id) VALUES (:orgId, :p, :u)`,
+      { replacements: { orgId, p: b.projectId, u: outsider } },
+    );
+    expect((await labelFor({ userId: outsider, role: "Editor" })).copied_from_use_case).toMatch(
+      /^Fraud scoring/,
+    );
   });
 
   it("leaves rows already worked on, and sends the no-copy notice when nothing was copied", async () => {

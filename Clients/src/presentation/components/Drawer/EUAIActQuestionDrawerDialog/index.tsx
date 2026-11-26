@@ -387,7 +387,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
       >
         <TabPanel value="details" sx={{ padding: "15px 20px", gap: "15px" }}>
           <Stack gap="15px">
-            <EuAiActCopiedNote useCase={displayQuestion?.copied_from_use_case} />
+            <EuAiActCopiedNote item={displayQuestion} />
             {displayQuestion?.question && (
               <Stack
                 sx={{

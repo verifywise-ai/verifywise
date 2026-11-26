@@ -4698,6 +4698,8 @@ export const de: Record<string, string> = {
   "(archived)": "(archiviert)",
   "Copied from {useCase} when this moved to the organization. Review it, then save.":
     "Aus {useCase} kopiert, als dies in die Organisation verschoben wurde. Prüfen Sie es und speichern Sie dann.",
+  "Copied from a use case when this moved to the organization. Review it, then save.":
+    "Aus einem Anwendungsfall kopiert, als dies in die Organisation verschoben wurde. Prüfen Sie es und speichern Sie dann.",
   "Copied, needs review": "Kopiert, Prüfung nötig",
 };
 
@@ -9403,6 +9405,8 @@ export const fr: Record<string, string> = {
   "(archived)": "(archivé)",
   "Copied from {useCase} when this moved to the organization. Review it, then save.":
     "Copié depuis {useCase} lors du passage au niveau de l'organisation. Vérifiez-le, puis enregistrez.",
+  "Copied from a use case when this moved to the organization. Review it, then save.":
+    "Copié depuis un cas d'usage lors du passage au niveau de l'organisation. Vérifiez-le, puis enregistrez.",
   "Copied, needs review": "Copié, à vérifier",
 };
 
@@ -14104,5 +14108,7 @@ export const es: Record<string, string> = {
   "(archived)": "(archivado)",
   "Copied from {useCase} when this moved to the organization. Review it, then save.":
     "Copiado de {useCase} cuando esto pasó a la organización. Revíselo y luego guarde.",
+  "Copied from a use case when this moved to the organization. Review it, then save.":
+    "Copiado de un caso de uso cuando esto pasó a la organización. Revíselo y luego guarde.",
   "Copied, needs review": "Copiado, pendiente de revisión",
 };

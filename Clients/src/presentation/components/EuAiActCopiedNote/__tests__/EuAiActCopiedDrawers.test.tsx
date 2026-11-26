@@ -38,6 +38,8 @@ import { EuAiActCopiedNote, EuAiActReviewBadge } from "../index";
 
 const COPIED_LINE =
   "Copied from Credit scoring (UC-12) when this moved to the organization. Review it, then save.";
+const UNNAMED_LINE =
+  "Copied from a use case when this moved to the organization. Review it, then save.";
 
 const question = {
   answer_id: 1,
@@ -75,13 +77,22 @@ const control = {
 };
 
 describe("EuAiActCopiedNote", () => {
-  it("renders the line only when a use case is given", () => {
-    const { rerender } = renderWithProviders(
-      <EuAiActCopiedNote useCase="Credit scoring (UC-12)" />,
+  it("names the use case when the server returns its label", () => {
+    renderWithProviders(
+      <EuAiActCopiedNote
+        item={{ copied_from_project_id: 12, copied_from_use_case: "Credit scoring (UC-12)" }}
+      />,
     );
     expect(screen.getByText(COPIED_LINE)).toBeInTheDocument();
-    rerender(<EuAiActCopiedNote useCase={null} />);
-    expect(screen.queryByText(COPIED_LINE)).not.toBeInTheDocument();
+  });
+
+  it("names no use case when the label is withheld, and renders nothing unmarked", () => {
+    const { rerender } = renderWithProviders(
+      <EuAiActCopiedNote item={{ copied_from_project_id: 12, copied_from_use_case: null }} />,
+    );
+    expect(screen.getByText(UNNAMED_LINE)).toBeInTheDocument();
+    rerender(<EuAiActCopiedNote item={{ copied_from_project_id: null }} />);
+    expect(screen.queryByText(/Copied from/)).not.toBeInTheDocument();
   });
 
   it("shows the Review badge only on marked items", () => {
@@ -110,6 +121,12 @@ describe("EU AI Act question drawer", () => {
   it("shows the copied line when the answer was copied from a use case", async () => {
     renderDrawer({ copied_from_project_id: 12, copied_from_use_case: "Credit scoring (UC-12)" });
     expect(await screen.findByText(COPIED_LINE)).toBeInTheDocument();
+  });
+
+  it("names no use case when the server leaves its label out", async () => {
+    renderDrawer({ copied_from_project_id: 12, copied_from_use_case: null });
+    expect(await screen.findByText(UNNAMED_LINE)).toBeInTheDocument();
+    expect(screen.queryByText(COPIED_LINE)).not.toBeInTheDocument();
   });
 
   it("shows no copied line otherwise", async () => {
@@ -155,6 +172,11 @@ describe("EU AI Act control drawer", () => {
       })),
     });
     expect(await screen.findAllByText(COPIED_LINE)).toHaveLength(1);
+  });
+
+  it("shows the unnamed line when the control's use case is hidden from the viewer", async () => {
+    renderPane({ ...control, copied_from_project_id: 12, copied_from_use_case: null });
+    expect(await screen.findAllByText(UNNAMED_LINE)).toHaveLength(1);
   });
 
   it("shows no copied line when nothing was copied", async () => {

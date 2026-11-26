@@ -2,6 +2,8 @@
  * EU AI Act rows copied from a use case on upgrade (copied_from_project_id,
  * migration 20261126150000) carry a "review it" marker: the tracker loaders
  * return it with the use case's label, and any save of the row clears it.
+ * The label names the use case, so it is only returned to a viewer who can
+ * see that use case.
  */
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
@@ -17,6 +19,7 @@ jest.mock("../files/evidenceFiles.utils", () => ({
 import { sequelize } from "../../database/db";
 import {
   getAllQuestionsQuery,
+  getControlByIdForProjectQuery,
   getControlByIdQuery,
   getControlStructByControlCategoryIdForAProjectQuery,
   getSubControlsByIdQuery,
@@ -119,5 +122,67 @@ describe("the tracker loaders return the marker", () => {
   it("for answers", async () => {
     await getAllQuestionsQuery(4, 2, 1);
     expectMarker(sqlOf(/FROM questions_struct_eu q JOIN answers_eu a/)[0], "a");
+  });
+});
+
+describe("the use case label follows project visibility", () => {
+  const joinOf = () => {
+    const [sql] = sqlOf(/FROM controls_eu c JOIN controls_struct_eu cs/);
+    const join = sql.slice(
+      sql.indexOf("LEFT JOIN projects cp"),
+      sql.indexOf("WHERE c.organization_id"),
+    );
+    const call = mockQuery.mock.calls.find(([q]) => String(q) === sql)!;
+    return { join, replacements: (call[1] as any).replacements };
+  };
+
+  it("matches no use case when no viewer is given", async () => {
+    await getControlByIdQuery(7, 1);
+    const { join } = joinOf();
+    expect(join).toContain("AND FALSE");
+    expect(sqlOf(/FROM controls_eu c JOIN/)[0]).toContain(
+      "c.copied_from_project_id AS copied_from_project_id",
+    );
+  });
+
+  it("matches any use case in the organization for an Admin", async () => {
+    await getControlByIdQuery(7, 1, null, { userId: 3, role: "Admin" });
+    const { join, replacements } = joinOf();
+    expect(join).not.toContain("FALSE");
+    expect(join).not.toContain("visibilityUserId");
+    expect(replacements).not.toHaveProperty("visibilityUserId");
+  });
+
+  it("matches only a use case a non-admin owns, is a member of or reaches by group", async () => {
+    await getControlByIdQuery(7, 1, null, { userId: 9, role: "Editor" });
+    const { join, replacements } = joinOf();
+    expect(join).toContain("cp.owner = :visibilityUserId");
+    expect(join).toContain("pm.project_id = cp.id");
+    expect(join).toContain("pg.project_id = cp.id");
+    expect(replacements).toMatchObject({ organizationId: 1, visibilityUserId: 9 });
+  });
+
+  it("passes the viewer down from the project loaders", async () => {
+    mockQuery.mockImplementation(async (sql: any, options?: any) => {
+      if (/^\s*SELECT id FROM controls_eu/.test(String(sql))) return [[{ id: 7 }], 1];
+      if (/FROM controls_eu c JOIN controls_struct_eu cs/.test(String(sql))) {
+        return [[{ id: 7 }], 1];
+      }
+      if (/numberOfSubcontrols/.test(String(sql))) {
+        return [[{ numberOfSubcontrols: "0", numberOfDoneSubcontrols: "0" }], 1];
+      }
+      return options?.type ? [] : [[], 0];
+    });
+    await getControlByIdForProjectQuery(2, 11, undefined, undefined, undefined, 1, {
+      userId: 9,
+      role: "Reviewer",
+    });
+    for (const sql of [
+      ...sqlOf(/FROM controls_eu c JOIN controls_struct_eu cs/),
+      ...sqlOf(/FROM subcontrols_eu sc/),
+    ]) {
+      expect(sql).toContain("cp.owner = :visibilityUserId");
+    }
+    expect(sqlOf(/FROM subcontrols_eu sc/)).toHaveLength(1);
   });
 });
