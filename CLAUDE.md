@@ -1,6 +1,6 @@
 # VerifyWise - Development Guide
 
-> **Last Updated:** 2026-11-18
+> **Last Updated:** 2026-11-20
 
 This document contains cross-cutting rules for the VerifyWise codebase. Directory-scoped guides load automatically when working in each area:
 
@@ -13,6 +13,10 @@ This document contains cross-cutting rules for the VerifyWise codebase. Director
 ### Custom Agents
 
 - **verifywise-explorer** (`.claude/agents/verifywise-explorer.md`) — Codebase explorer agent that finds conventions, patterns, and relevant code for any task. Auto-delegates when implementing features, fixing bugs, or understanding existing functionality. Invoke explicitly with `@verifywise-explorer` or `claude --agent verifywise-explorer`.
+
+### Custom Skills
+
+A review-gated development flow from GitHub issue to PR-ready branch, in `.claude/skills/` — run them in order: **issue-intake** (fetch the issue via `gh`, confirm the brief) → **plan-issue** (written plan in `docs/plans/`, approved before code) → **implement-plan** (task-by-task execution with per-task review) → **verify-pr** (local run of the same checks GitHub Actions runs, then a readiness report). Reference docs: `docs/agent/README.md`, `docs/agent/repo-map.md`, `docs/agent/ci-local-parity.md`, `docs/agent/plan-template.md`.
 
 ---
 
