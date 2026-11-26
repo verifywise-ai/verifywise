@@ -53,6 +53,16 @@ export const de: Record<string, string> = {
   "App switcher": "App-Umschalter",
   "The old look, with an app switcher and a flat menu, gives way to the new look with one grouped sidebar":
     "Der alte Look mit App-Umschalter und flachem Menü weicht dem neuen Look mit einer gruppierten Seitenleiste",
+  "Organization-wide EU AI Act obligations moved":
+    "Organisationsweite Pflichten des EU AI Act verschoben",
+  "Prohibited practices, AI literacy and the quality management system are now tracked once for the organization, in EU AI Act (organization) on the Frameworks page, instead of on every use case.":
+    "Verbotene Praktiken, KI-Kompetenz und das Qualitätsmanagementsystem werden jetzt einmal für die Organisation verfolgt, in EU AI Act (Organisation) auf der Seite „Rahmenwerke“, statt in jedem Anwendungsfall.",
+  "Work already done on your use cases was copied there and marked for review.":
+    "Bereits erledigte Arbeit aus Ihren Anwendungsfällen wurde dorthin kopiert und zur Prüfung markiert.",
+  "Only Admins and members of the organizational project can see and edit it.":
+    "Nur Admins und Mitglieder des Organisationsprojekts können sie sehen und bearbeiten.",
+  "EU AI Act (organization)": "EU AI Act (Organisation)",
+  "Every use case": "Jeder Anwendungsfall",
 };
 
 export const fr: Record<string, string> = {
@@ -109,6 +119,16 @@ export const fr: Record<string, string> = {
   "App switcher": "Sélecteur d'applications",
   "The old look, with an app switcher and a flat menu, gives way to the new look with one grouped sidebar":
     "L'ancien look, avec un sélecteur d'applications et un menu à plat, laisse place au nouveau look avec une seule barre latérale groupée",
+  "Organization-wide EU AI Act obligations moved":
+    "Les obligations de l'EU AI Act à l'échelle de l'organisation ont été déplacées",
+  "Prohibited practices, AI literacy and the quality management system are now tracked once for the organization, in EU AI Act (organization) on the Frameworks page, instead of on every use case.":
+    "Les pratiques interdites, la maîtrise de l'IA et le système de management de la qualité sont désormais suivis une seule fois pour l'organisation, dans EU AI Act (organisation) sur la page Référentiels, au lieu de chaque cas d'usage.",
+  "Work already done on your use cases was copied there and marked for review.":
+    "Le travail déjà fait dans vos cas d'usage y a été copié et marqué pour vérification.",
+  "Only Admins and members of the organizational project can see and edit it.":
+    "Seuls les administrateurs et les membres du projet organisationnel peuvent le voir et le modifier.",
+  "EU AI Act (organization)": "EU AI Act (organisation)",
+  "Every use case": "Chaque cas d'usage",
 };
 
 export const es: Record<string, string> = {
@@ -164,4 +184,14 @@ export const es: Record<string, string> = {
   "App switcher": "Selector de aplicaciones",
   "The old look, with an app switcher and a flat menu, gives way to the new look with one grouped sidebar":
     "El aspecto anterior, con un selector de aplicaciones y un menú plano, da paso al nuevo aspecto con una barra lateral agrupada",
+  "Organization-wide EU AI Act obligations moved":
+    "Las obligaciones del EU AI Act de toda la organización se han trasladado",
+  "Prohibited practices, AI literacy and the quality management system are now tracked once for the organization, in EU AI Act (organization) on the Frameworks page, instead of on every use case.":
+    "Las prácticas prohibidas, la alfabetización en IA y el sistema de gestión de la calidad ahora se gestionan una sola vez para la organización, en EU AI Act (organización) en la página Marcos, en lugar de en cada caso de uso.",
+  "Work already done on your use cases was copied there and marked for review.":
+    "El trabajo ya hecho en sus casos de uso se copió allí y se marcó para revisión.",
+  "Only Admins and members of the organizational project can see and edit it.":
+    "Solo los administradores y los miembros del proyecto organizativo pueden verlo y editarlo.",
+  "EU AI Act (organization)": "EU AI Act (organización)",
+  "Every use case": "Cada caso de uso",
 };

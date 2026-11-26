@@ -35,6 +35,7 @@ import { ProjectForm } from "../../components/Forms/ProjectForm";
 import AddFrameworkModal from "../ProjectView/AddNewFramework";
 import {
   EU_AI_ACT_ORGANIZATION_LOCKED_REASON,
+  EU_AI_ACT_ORGANIZATION_SLUG,
   FRAMEWORK_IDS,
 } from "../../../application/constants/frameworks";
 import { useCanCheck, useCan } from "../../../application/hooks/useCan";
@@ -120,6 +121,10 @@ const Framework = () => {
   const functionId = searchParams.get("functionId");
   const categoryId = searchParams.get("categoryId");
   const subcategoryId = searchParams.get("subcategoryId");
+
+  // EU AI Act (organization) parameters; controlId, subControlId, topicId and
+  // questionId are read by its trackers.
+  const euSubtab = searchParams.get("subtab");
 
   const dispatch = useDispatch();
   const projects = useProjects().data ?? [];
@@ -415,6 +420,17 @@ const Framework = () => {
       } else if (clause27001Id || subClause27001Id) {
         setIso27001TabValue("clause");
       }
+    } else if (
+      framework === EU_AI_ACT_ORGANIZATION_SLUG ||
+      frameworkName === EU_AI_ACT_ORGANIZATION_SLUG
+    ) {
+      const euAiActOrganizationIndex = filteredFrameworks.findIndex(
+        (fw) => Number(fw.id) === FRAMEWORK_IDS.EU_AI_ACT_ORGANIZATION,
+      );
+      if (euAiActOrganizationIndex !== -1) {
+        setSelectedFramework(euAiActOrganizationIndex);
+      }
+      setEuAiActOrganizationTracker(euSubtab === "assessment" ? "assessment" : "compliance");
     } else if (framework === "nist-ai-rmf" || frameworkName === "nist-ai-rmf") {
       // Find NIST AI RMF framework in filtered frameworks
       const nistAiRmfIndex = filteredFrameworks.findIndex(
@@ -451,6 +467,7 @@ const Framework = () => {
     functionId,
     categoryId,
     subcategoryId,
+    euSubtab,
   ]);
 
   const resetFilters = () => {

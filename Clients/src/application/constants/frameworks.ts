@@ -15,6 +15,9 @@ export const FRAMEWORK_IDS = {
   EU_AI_ACT_ORGANIZATION: 29,
 } as const;
 
+/** The Frameworks page's ?framework= value for EU AI Act (organization); notification links use it. */
+export const EU_AI_ACT_ORGANIZATION_SLUG = "eu-ai-act-organization";
+
 /** Status filter options of EU AI Act requirements (use case, or EU AI Act (organization)). */
 export const EU_AI_ACT_CONTROL_STATUS_OPTIONS = [
   { value: "waiting", label: "Waiting" },
@@ -28,6 +31,35 @@ export const EU_AI_ACT_ASSESSMENT_STATUS_OPTIONS = [
   { value: "in progress", label: "In progress" },
   { value: "done", label: "Done" },
 ];
+
+/**
+ * Extra status filter value on EU AI Act (organization): items the upgrade copied
+ * from a use case and nobody has saved since.
+ */
+export const EU_AI_ACT_NEEDS_REVIEW_FILTER = "needs review";
+export const EU_AI_ACT_NEEDS_REVIEW_OPTION = {
+  value: EU_AI_ACT_NEEDS_REVIEW_FILTER,
+  label: "Copied, needs review",
+};
+
+type CopiedMarker = {
+  copied_from_project_id?: number | null;
+  copied_from_use_case?: string | null;
+};
+
+/** True when an EU AI Act (organization) item still carries the "copied, review" marker. */
+export const isCopiedForReview = (item?: CopiedMarker | null): boolean =>
+  Boolean(item?.copied_from_use_case || item?.copied_from_project_id);
+
+/** Applies an EU AI Act status filter, including the "needs review" value. */
+export const matchesEuAiActStatusFilter = (
+  item: CopiedMarker & { status?: string | null },
+  statusFilter?: string,
+): boolean => {
+  if (!statusFilter || statusFilter === "all") return true;
+  if (statusFilter === EU_AI_ACT_NEEDS_REVIEW_FILTER) return isCopiedForReview(item);
+  return item.status?.toLowerCase() === statusFilter.toLowerCase();
+};
 
 /** Shown when enabling EU AI Act on a use case also added EU AI Act (organization). */
 export const EU_AI_ACT_ORGANIZATION_ADDED_MESSAGE =

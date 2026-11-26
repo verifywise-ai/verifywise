@@ -201,6 +201,19 @@ export const deriveControlStatus = (
 // Moved to user.utils; re-exported for existing importers.
 export { findUsersNotInOrganization } from "./user.utils";
 
+/**
+ * SQL for the use case an EU AI Act (organization) row's work was copied from
+ * on upgrade (copied_from_project_id, cleared when a user saves the row): the
+ * join of that project as `cp`, and its label "<title> (<UC id>)", or NULL.
+ */
+const copiedFromJoinSql = (row: string) =>
+  `LEFT JOIN projects cp ON cp.id = ${row}.copied_from_project_id AND cp.organization_id = ${row}.organization_id`;
+const COPIED_FROM_USE_CASE_SQL = `CASE WHEN cp.id IS NULL THEN NULL
+       WHEN cp.uc_id IS NULL THEN cp.project_title
+       ELSE cp.project_title || ' (' || cp.uc_id || ')' END`;
+const copiedFromColumnsSql = (row: string) =>
+  `${row}.copied_from_project_id AS copied_from_project_id, ${COPIED_FROM_USE_CASE_SQL} AS copied_from_use_case`;
+
 const getSubControlsCalculations = async (
   controlId: number,
   organizationId: number,
@@ -363,10 +376,12 @@ export const getAllQuestionsQuery = async (
       a.dropdown_options AS dropdown_options,
       a.status AS status,
       a.created_at AS created_at,
-      a.is_demo AS is_demo
+      a.is_demo AS is_demo,
+      ${copiedFromColumnsSql("a")}
     FROM questions_struct_eu q JOIN answers_eu a ON q.id = a.question_id
       JOIN assessments s ON s.organization_id = a.organization_id AND s.id = a.assessment_id
       JOIN projects_frameworks pf ON pf.organization_id = s.organization_id AND pf.id = s.projects_frameworks_id
+      ${copiedFromJoinSql("a")}
       WHERE
       a.organization_id = :organizationId AND q.subtopic_id = :subtopic_id AND a.assessment_id = :assessment_id
         AND ${structItemInFrameworkSql("q", "pf.framework_id")}
@@ -491,8 +506,10 @@ export const getControlStructByControlCategoryIdForAProjectQuery = async (
   organizationId: number,
 ) => {
   const controlsStruct = (await sequelize.query(
-    `SELECT cs.*, c.id AS control_id, c.owner, c.status FROM controls_struct_eu cs JOIN controls_eu c ON cs.id = c.control_meta_id
+    `SELECT cs.*, c.id AS control_id, c.owner, c.status, ${copiedFromColumnsSql("c")}
+      FROM controls_struct_eu cs JOIN controls_eu c ON cs.id = c.control_meta_id
       JOIN projects_frameworks pf ON pf.organization_id = c.organization_id AND pf.id = c.projects_frameworks_id
+      ${copiedFromJoinSql("c")}
       WHERE c.organization_id = :organizationId AND cs.control_category_id = :control_category_id AND c.projects_frameworks_id = :projects_frameworks_id
         AND ${structItemInFrameworkSql("cs", "pf.framework_id")}
       ORDER BY cs.order_no, cs.id;`,
@@ -539,8 +556,11 @@ export const getControlByIdQuery = async (
       c.reviewer AS reviewer,
       c.due_date AS due_date,
       c.implementation_details AS implementation_details,
-      c.created_at AS created_at
-    FROM controls_eu c JOIN controls_struct_eu cs ON c.control_meta_id = cs.id WHERE c.organization_id = :organizationId AND c.id = :control_id
+      c.created_at AS created_at,
+      ${copiedFromColumnsSql("c")}
+    FROM controls_eu c JOIN controls_struct_eu cs ON c.control_meta_id = cs.id
+      ${copiedFromJoinSql("c")}
+    WHERE c.organization_id = :organizationId AND c.id = :control_id
     ORDER BY created_at DESC, id ASC;`,
     {
       replacements: { organizationId, control_id: controlId },
@@ -602,10 +622,12 @@ export const getSubControlsByIdQuery = async (
       sc.is_demo AS is_demo,
       sc.evidence_description AS evidence_description,
       sc.feedback_description AS feedback_description,
-      sc.created_at AS created_at
+      sc.created_at AS created_at,
+      ${copiedFromColumnsSql("sc")}
     FROM subcontrols_eu sc
       JOIN subcontrols_struct_eu scs ON sc.subcontrol_meta_id = scs.id
       JOIN controls_eu c ON c.id = sc.control_id AND c.organization_id = sc.organization_id
+      ${copiedFromJoinSql("sc")}
     WHERE ${whereClause}
     ORDER BY created_at DESC, id ASC;`,
     {
@@ -1178,7 +1200,8 @@ export const updateControlEUByIdQuery = async (
   )) as Array<Record<string, unknown>>;
   const before = beforeRows[0] ?? null;
 
-  const query = `UPDATE controls_eu SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
+  // A save is the review of work copied from a use case on upgrade.
+  const query = `UPDATE controls_eu SET ${setClause}, copied_from_project_id = NULL WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
 
   updateControl.organizationId = organizationId;
   updateControl.id = id;
@@ -1249,10 +1272,12 @@ export const updateSubcontrolEUByIdQuery = async (
   let subcontrolResult: any;
 
   if (setClause.length === 0) {
-    // No fields to update, but we still need to handle file operations
-    // Fetch the current subcontrol
+    // No fields to update, but we still need to handle file operations.
+    // Fetch the current subcontrol; the save still reviews work copied from a
+    // use case on upgrade.
     const existing = await sequelize.query(
-      `SELECT * FROM subcontrols_eu WHERE organization_id = :organizationId AND id = :id`,
+      `UPDATE subcontrols_eu SET copied_from_project_id = NULL
+        WHERE organization_id = :organizationId AND id = :id RETURNING *`,
       {
         replacements: { organizationId, id },
         mapToModel: true,
@@ -1273,7 +1298,8 @@ export const updateSubcontrolEUByIdQuery = async (
     )) as Array<Record<string, unknown>>;
     const before = beforeRows[0] ?? null;
 
-    const query = `UPDATE subcontrols_eu SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
+    // A save is the review of work copied from a use case on upgrade.
+    const query = `UPDATE subcontrols_eu SET ${setClause}, copied_from_project_id = NULL WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
 
     updateSubControl.organizationId = organizationId;
     updateSubControl.id = id;
@@ -1551,9 +1577,11 @@ export const updateQuestionEUByIdQuery = async (
   let answer: any;
 
   if (setClause.length === 0) {
-    // No fields to update, just fetch the existing answer
+    // No fields to update, just fetch the existing answer; the save still
+    // reviews work copied from a use case on upgrade.
     const result = await sequelize.query(
-      `SELECT * FROM answers_eu WHERE organization_id = :organizationId AND id = :id`,
+      `UPDATE answers_eu SET copied_from_project_id = NULL
+        WHERE organization_id = :organizationId AND id = :id RETURNING *`,
       {
         replacements: { organizationId, id },
         mapToModel: true,
@@ -1564,7 +1592,8 @@ export const updateQuestionEUByIdQuery = async (
     answer = Array.isArray(result[0]) && result[0].length > 0 ? result[0][0] : (result[0] as any);
     if (!answer) return null;
   } else {
-    const query = `UPDATE answers_eu SET ${setClause.join(", ")} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
+    // A save is the review of work copied from a use case on upgrade.
+    const query = `UPDATE answers_eu SET ${setClause.join(", ")}, copied_from_project_id = NULL WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
 
     updateQuestion.organizationId = organizationId;
     updateQuestion.id = id;

@@ -28,6 +28,11 @@ import {
   getControlsByControlCategoryId,
 } from "../../../../application/repository/control_eu_act.repository";
 import { radiusPx, palette as vwPalette } from "../../../themes/palette";
+import {
+  isCopiedForReview,
+  matchesEuAiActStatusFilter,
+} from "../../../../application/constants/frameworks";
+import { EuAiActReviewBadge } from "../../../components/EuAiActCopiedNote";
 import { scoreColor } from "../../../themes/chartTheme";
 
 interface Column {
@@ -93,9 +98,9 @@ const ControlsTable: React.FC<ControlsTableProps> = ({
           dueDateFilter: dueDateFilter,
         });
 
-        const filteredControls = response.filter((control: Control) => {
-          return control.status?.toLowerCase() === statusFilter || statusFilter === "";
-        });
+        const filteredControls = response.filter((control: Control) =>
+          matchesEuAiActStatusFilter(control, statusFilter),
+        );
 
         if (ownerFilter || approverFilter || dueDateFilter || statusFilter) {
           setFilteredControlsCount?.(filteredControls.length);
@@ -318,6 +323,11 @@ const ControlsTable: React.FC<ControlsTableProps> = ({
                           {`(${control.description})`}
                         </Typography>
                       </Typography>
+                      {isCopiedForReview(control) && (
+                        <Box component="span" sx={{ ml: "8px", verticalAlign: "middle" }}>
+                          <EuAiActReviewBadge item={control} />
+                        </Box>
+                      )}
                     </TableCell>
                     <TableCell sx={styles.cell} key={`owner-${control.id}`}>
                       <Typography component="span" variant="body2">

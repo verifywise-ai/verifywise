@@ -25,7 +25,7 @@ import {
 import { toRiskCalendarDate } from "./riskCalendarDate.utils";
 import { storedRiskCategories } from "./riskCategory.utils";
 import { recordProjectRiskDeletion } from "./projectRiskChangeHistory.utils";
-import { getStructureById } from "../structures";
+import { EU_AI_ACT_ORGANIZATION_FRAMEWORK_ID, getStructureById } from "../structures";
 import { unlinkRiskFromAllPoliciesQuery } from "./policyLinkedObject.utils";
 import {
   accessibleProjectIdSql,
@@ -1461,25 +1461,33 @@ export const archiveRisksInBulkQuery = async (
  */
 type RiskMappingTable = { risksTable: string; implCol: string; implIdsSql: string };
 
+/**
+ * The EU AI Act junctions. EU AI Act (organization) keeps its rows in the same
+ * tables, so both frameworks use them; :pfIds tells the two apart.
+ */
+const EU_AI_ACT_RISK_MAPPING_TABLES: RiskMappingTable[] = [
+  {
+    risksTable: "answers_eu__risks",
+    implCol: "answer_id",
+    implIdsSql: `SELECT ae.id FROM answers_eu ae JOIN assessments a ON ae.assessment_id = a.id AND ae.organization_id = :organizationId AND a.organization_id = :organizationId WHERE a.projects_frameworks_id IN (:pfIds)`,
+  },
+  {
+    risksTable: "controls_eu__risks",
+    implCol: "control_id",
+    implIdsSql: `SELECT c.id FROM controls_eu c WHERE c.projects_frameworks_id IN (:pfIds) AND c.organization_id = :organizationId`,
+  },
+  {
+    risksTable: "subcontrols_eu__risks",
+    implCol: "subcontrol_id",
+    implIdsSql: `SELECT sc.id FROM subcontrols_eu sc JOIN controls_eu c ON c.id = sc.control_id AND c.organization_id = :organizationId WHERE sc.organization_id = :organizationId AND c.projects_frameworks_id IN (:pfIds)`,
+  },
+];
+
 const BUILT_IN_RISK_MAPPING_TABLES: Record<number, RiskMappingTable[]> = {
   // EU AI Act
-  1: [
-    {
-      risksTable: "answers_eu__risks",
-      implCol: "answer_id",
-      implIdsSql: `SELECT ae.id FROM answers_eu ae JOIN assessments a ON ae.assessment_id = a.id AND ae.organization_id = :organizationId AND a.organization_id = :organizationId WHERE a.projects_frameworks_id IN (:pfIds)`,
-    },
-    {
-      risksTable: "controls_eu__risks",
-      implCol: "control_id",
-      implIdsSql: `SELECT c.id FROM controls_eu c WHERE c.projects_frameworks_id IN (:pfIds) AND c.organization_id = :organizationId`,
-    },
-    {
-      risksTable: "subcontrols_eu__risks",
-      implCol: "subcontrol_id",
-      implIdsSql: `SELECT sc.id FROM subcontrols_eu sc JOIN controls_eu c ON c.id = sc.control_id AND c.organization_id = :organizationId WHERE sc.organization_id = :organizationId AND c.projects_frameworks_id IN (:pfIds)`,
-    },
-  ],
+  1: EU_AI_ACT_RISK_MAPPING_TABLES,
+  // EU AI Act (organization)
+  [EU_AI_ACT_ORGANIZATION_FRAMEWORK_ID]: EU_AI_ACT_RISK_MAPPING_TABLES,
   // ISO 42001
   2: [
     {

@@ -23,6 +23,8 @@ export type SubcontrolEU = {
   // NOTE: evidence_files and feedback_files are now stored in file_entity_links table
   control_id: number; // when control is created, its id will be stored and assign here as FK
   subcontrol_meta_id: number;
+  /** The use case this row's work was copied from on upgrade; cleared on save. */
+  copied_from_project_id?: number | null;
   created_at?: Date;
 };
 
@@ -106,6 +108,13 @@ export class SubcontrolEUModel extends Model<SubcontrolEU> {
     defaultValue: false,
   })
   is_demo?: boolean;
+
+  /** The use case this row's work was copied from on upgrade; cleared on save. */
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+  })
+  copied_from_project_id?: number | null;
 
   @Column({
     type: DataType.DATE,

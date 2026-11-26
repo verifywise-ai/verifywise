@@ -1711,5 +1711,9 @@
   "Serious": "Schwerwiegend",
   "Very serious": "Sehr schwerwiegend",
   "key must be a non-empty string": "key muss eine nicht leere Zeichenkette sein",
-  "Readiness score not found": "Bereitschaftswert nicht gefunden"
+  "Readiness score not found": "Bereitschaftswert nicht gefunden",
+  "EU AI Act organization-wide obligations moved": "Organisationsweite Pflichten des EU AI Act verschoben",
+  "Prohibited practices, AI literacy, the quality management system and other organization-wide EU AI Act obligations now live once in EU AI Act (organization) on \"{project}\" instead of on each use case. Review them on the Frameworks page.": "Verbotene Praktiken, KI-Kompetenz, das Qualitätsmanagementsystem und die weiteren organisationsweiten Pflichten des EU AI Act werden jetzt einmal in EU AI Act (Organisation) in „{project}“ geführt statt in jedem Anwendungsfall. Prüfen Sie sie auf der Seite „Frameworks“.",
+  "Prohibited practices, AI literacy, the quality management system and other organization-wide EU AI Act obligations now live once in EU AI Act (organization) on \"{project}\" instead of on each use case. 1 item was copied from your use cases; review it on the Frameworks page.": "Verbotene Praktiken, KI-Kompetenz, das Qualitätsmanagementsystem und die weiteren organisationsweiten Pflichten des EU AI Act werden jetzt einmal in EU AI Act (Organisation) in „{project}“ geführt statt in jedem Anwendungsfall. 1 Eintrag wurde aus Ihren Anwendungsfällen übernommen; prüfen Sie ihn auf der Seite „Frameworks“.",
+  "Prohibited practices, AI literacy, the quality management system and other organization-wide EU AI Act obligations now live once in EU AI Act (organization) on \"{project}\" instead of on each use case. {copied} items were copied from your use cases; review them on the Frameworks page.": "Verbotene Praktiken, KI-Kompetenz, das Qualitätsmanagementsystem und die weiteren organisationsweiten Pflichten des EU AI Act werden jetzt einmal in EU AI Act (Organisation) in „{project}“ geführt statt in jedem Anwendungsfall. {copied} Einträge wurden aus Ihren Anwendungsfällen übernommen; prüfen Sie sie auf der Seite „Frameworks“."
 }

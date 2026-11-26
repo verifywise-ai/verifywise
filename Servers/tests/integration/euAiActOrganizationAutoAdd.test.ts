@@ -184,8 +184,8 @@ describe("EU AI Act (organization) is added when a use case gets EU AI Act", () 
     expect(res.status).toBe(201);
 
     const [organizationalProject] = await organizationalProjects(orgId);
-    // The Editor owns the project they caused, so they can open it.
-    expect(organizationalProject.owner).toBe(editorId);
+    // The organization's first Admin owns it, not the Editor who caused it.
+    expect(organizationalProject.owner).toBe(adminId);
     const [alert] = alerts();
     expect(alerts()).toHaveLength(1);
     expect(alert.recipientIds).toEqual([adminId, secondAdminId, editorId].sort((x, y) => x - y));
@@ -361,11 +361,19 @@ describe("migration", () => {
   }
 
   it("attaches it once, with its controls and assessment, to every organization with an EU AI Act use case", async () => {
-    // No organizational project: one is created, owned by the first EU use case's owner.
+    // No organizational project: one is created, owned by the first Admin,
+    // not by the Editor who owns the first EU use case.
     const orgA = await createTestOrganization();
+    const editorA = await createTestUser(orgA, 3, `bf-ed-${Date.now()}@test.com`, "Pw123456!");
     const ownerA = await createTestUser(orgA, 1, `bf-a-${Date.now()}@test.com`, "Pw123456!");
-    await euUseCase(orgA, ownerA);
+    await createTestUser(orgA, 1, `bf-a2-${Date.now()}@test.com`, "Pw123456!");
+    await euUseCase(orgA, editorA);
     await euUseCase(orgA, null);
+
+    // No Admin: the owner of the first EU use case owns it.
+    const orgD = await createTestOrganization();
+    const editorD = await createTestUser(orgD, 3, `bf-d-${Date.now()}@test.com`, "Pw123456!");
+    await euUseCase(orgD, editorD);
 
     // An organizational project already exists: it gets the framework.
     const orgB = await createTestOrganization();
@@ -403,12 +411,15 @@ describe("migration", () => {
       }),
     ]);
     expect(await organizationalProjects(orgC)).toEqual([]);
+    expect(await organizationalProjects(orgD)).toEqual([
+      expect.objectContaining({ owner: editorD, has_framework: true }),
+    ]);
 
     const [{ links }] = await select<{ links: number }>(
       `SELECT COUNT(*)::int AS links FROM projects_frameworks
         WHERE framework_id = :frameworkId AND organization_id IN (:orgs)`,
-      { frameworkId: EU_AI_ACT_ORGANIZATION, orgs: [orgA, orgB, orgC] },
+      { frameworkId: EU_AI_ACT_ORGANIZATION, orgs: [orgA, orgB, orgC, orgD] },
     );
-    expect(links).toBe(2);
+    expect(links).toBe(3);
   });
 });

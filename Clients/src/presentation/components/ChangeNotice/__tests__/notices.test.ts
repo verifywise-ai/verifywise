@@ -29,8 +29,8 @@ const strings = (e: (typeof CHANGE_NOTICES)[number]): string[] =>
   ].filter((s): s is string => Boolean(s));
 
 describe("CHANGE_NOTICES", () => {
-  it("has the seven shipped entries", () => {
-    expect(CHANGE_NOTICES).toHaveLength(7);
+  it("has the eight shipped entries", () => {
+    expect(CHANGE_NOTICES).toHaveLength(8);
   });
 
   it("uses unique ids that the server accepts", () => {

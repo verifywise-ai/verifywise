@@ -35,3 +35,25 @@ export const EU_AI_ACT_ORGANIZATION_QUESTIONS: Record<number, Record<number, num
   8: { 1: [1, 2, 3] }, // AI values, AI governance framework, self-assessment schedule
   11: { 1: [1] }, // Who ensures AI systems adhere to the organization's values
 };
+
+/**
+ * The in-app notice each Admin gets once the organization-wide EU AI Act
+ * obligations moved to EU AI Act (organization) and the work done on them in
+ * use cases was copied over (migration 20261126150000). The message depends on
+ * how many controls and questions were copied: none, one or several.
+ */
+export const EU_AI_ACT_ORGANIZATION_MOVED_NOTICE = {
+  titleKey: "EU AI Act organization-wide obligations moved",
+  none: {
+    messageKey:
+      'Prohibited practices, AI literacy, the quality management system and other organization-wide EU AI Act obligations now live once in EU AI Act (organization) on "{project}" instead of on each use case. Review them on the Frameworks page.',
+  },
+  one: {
+    messageKey:
+      'Prohibited practices, AI literacy, the quality management system and other organization-wide EU AI Act obligations now live once in EU AI Act (organization) on "{project}" instead of on each use case. 1 item was copied from your use cases; review it on the Frameworks page.',
+  },
+  many: {
+    messageKey:
+      'Prohibited practices, AI literacy, the quality management system and other organization-wide EU AI Act obligations now live once in EU AI Act (organization) on "{project}" instead of on each use case. {copied} items were copied from your use cases; review them on the Frameworks page.',
+  },
+} as const;

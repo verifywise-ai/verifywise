@@ -16,7 +16,7 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import { useCanCheck } from "../../../../application/hooks/useCan";
 import { useSearchParams } from "react-router";
 import { text, palette as vwPalette } from "../../../themes/palette";
-import InfoBox from "../../../components/InfoBox";
+import OrganizationObligationsStatus from "./OrganizationObligationsStatus";
 import EuAiActTrackers, { EuAiActTrackerTab } from "../EuAiActTrackers";
 
 export const FRAMEWORK_IDS = {
@@ -298,12 +298,7 @@ const ProjectFrameworks = ({
 
     return (
       <>
-        <Box sx={{ mb: 4 }}>
-          <InfoBox
-            storageKey="eu-ai-act-organization-controls"
-            message="The organization-wide EU AI Act obligations (prohibited practices, AI literacy, quality management system and company-level policies) are not part of this use case. When EU AI Act is added to a use case, EU AI Act (organization) is added once to the organizational project, which is created if the organization has none, and Admins are notified. Fill in its controls on the Frameworks page. It can't be removed while a use case has EU AI Act."
-          />
-        </Box>
+        <OrganizationObligationsStatus />
         <EuAiActTrackers
           project={project}
           frameworkId={FRAMEWORK_IDS.EU_AI_ACT}

@@ -797,6 +797,10 @@ export const de: Record<string, string> = {
     "Ergebnisse, die alle in Ihrer Organisation sehen. Eine Berechnung jetzt teilt das Ergebnis.",
   "Results only you can see. Calculating now keeps the result to yourself.":
     "Ergebnisse, die nur Sie sehen. Eine Berechnung jetzt behält das Ergebnis für Sie.",
+  "Organization-wide obligations (prohibited practices, AI literacy, quality management system): {done}/{total} requirements done, {answered}/{questions} questions answered":
+    "Organisationsweite Pflichten (verbotene Praktiken, KI-Kompetenz, Qualitätsmanagementsystem): {done}/{total} Anforderungen erledigt, {answered}/{questions} Fragen beantwortet",
+  "Organization-wide obligations (prohibited practices, AI literacy, quality management system) are tracked once for the organization on the Frameworks page by your Admins.":
+    "Organisationsweite Pflichten (verbotene Praktiken, KI-Kompetenz, Qualitätsmanagementsystem) werden von Ihren Admins einmal für die gesamte Organisation auf der Seite „Rahmenwerke“ verfolgt.",
 };
 
 export const fr: Record<string, string> = {
@@ -1590,6 +1594,10 @@ export const fr: Record<string, string> = {
     "Résultats visibles par toute votre organisation. Calculer maintenant partage le résultat.",
   "Results only you can see. Calculating now keeps the result to yourself.":
     "Résultats que vous seul voyez. Calculer maintenant garde le résultat pour vous.",
+  "Organization-wide obligations (prohibited practices, AI literacy, quality management system): {done}/{total} requirements done, {answered}/{questions} questions answered":
+    "Obligations à l'échelle de l'organisation (pratiques interdites, maîtrise de l'IA, système de management de la qualité) : {done}/{total} exigences terminées, {answered}/{questions} questions répondues",
+  "Organization-wide obligations (prohibited practices, AI literacy, quality management system) are tracked once for the organization on the Frameworks page by your Admins.":
+    "Les obligations à l'échelle de l'organisation (pratiques interdites, maîtrise de l'IA, système de management de la qualité) sont suivies une seule fois pour l'organisation par vos administrateurs, sur la page Référentiels.",
 };
 
 export const es: Record<string, string> = {
@@ -2379,4 +2387,8 @@ export const es: Record<string, string> = {
     "Resultados que ve toda su organización. Calcular ahora comparte el resultado.",
   "Results only you can see. Calculating now keeps the result to yourself.":
     "Resultados que solo usted ve. Calcular ahora guarda el resultado para usted.",
+  "Organization-wide obligations (prohibited practices, AI literacy, quality management system): {done}/{total} requirements done, {answered}/{questions} questions answered":
+    "Obligaciones de toda la organización (prácticas prohibidas, alfabetización en IA, sistema de gestión de la calidad): {done}/{total} requisitos completados, {answered}/{questions} preguntas respondidas",
+  "Organization-wide obligations (prohibited practices, AI literacy, quality management system) are tracked once for the organization on the Frameworks page by your Admins.":
+    "Sus administradores gestionan las obligaciones de toda la organización (prácticas prohibidas, alfabetización en IA, sistema de gestión de la calidad) una sola vez para la organización, en la página Marcos.",
 };

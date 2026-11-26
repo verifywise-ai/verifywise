@@ -8,12 +8,15 @@ import { EU_AI_ACT_ORGANIZATION_FRAMEWORK_ID } from "../structures";
 import { getDeadlineAdminIdsQuery } from "./deadline.utils";
 import { notifyEuAiActOrganizationAdded } from "../services/inAppNotification.service";
 import logger from "./logger/fileLogger";
+import { ADMIN_ROLE_ID } from "../constants/roles";
 
 /**
  * Attach EU AI Act (organization) to the organization's organizational project
  * once EU AI Act is on one of its use cases. Idempotent: does nothing when an
  * organizational project already has it. Creates the organizational project
- * when the organization has none. Demo use cases do not trigger it. Once the
+ * when the organization has none, owned by the organization's first Admin
+ * (earliest joined), else the user who enabled EU AI Act, else the use case's
+ * owner. Demo use cases do not trigger it. Once the
  * transaction commits, the organization's Admins, the user who enabled EU AI
  * Act and the organizational project's owner get an in-app notification.
  *
@@ -73,7 +76,20 @@ export const ensureEuAiActOrganizationFrameworkQuery = async (
       `SELECT name FROM organizations WHERE id = :organizationId;`,
       { replacements: { organizationId }, type: QueryTypes.SELECT, transaction },
     )) as Array<{ name: string }>;
-    const owner = actorUserId ?? useCase.owner;
+    // The organization's first Admin owns it; the user who enabled EU AI Act
+    // is recorded as its creator.
+    const [firstAdmin] = (await sequelize.query(
+      `SELECT user_id FROM organization_members
+        WHERE organization_id = :organizationId AND role_id = :adminRoleId
+        ORDER BY joined_at, user_id
+        LIMIT 1;`,
+      {
+        replacements: { organizationId, adminRoleId: ADMIN_ROLE_ID },
+        type: QueryTypes.SELECT,
+        transaction,
+      },
+    )) as Array<{ user_id: number }>;
+    const owner = firstAdmin?.user_id ?? actorUserId ?? useCase.owner;
     const created = await createNewProjectQuery(
       {
         project_title: organization.name,
@@ -84,7 +100,7 @@ export const ensureEuAiActOrganizationFrameworkQuery = async (
       [],
       [],
       organizationId,
-      owner,
+      actorUserId,
       transaction,
     );
     organizationalProject = {

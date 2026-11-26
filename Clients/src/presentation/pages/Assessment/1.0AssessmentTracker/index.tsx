@@ -26,7 +26,10 @@ import { Question } from "../../../../domain/types/Question";
 import { Subtopic } from "../../../../domain/types/Subtopic";
 import { useSearchParams } from "react-router";
 import { brand, background, radiusPx } from "../../../themes/palette";
-import { FRAMEWORK_IDS } from "../../../../application/constants/frameworks";
+import {
+  FRAMEWORK_IDS,
+  matchesEuAiActStatusFilter,
+} from "../../../../application/constants/frameworks";
 
 const AssessmentTracker = ({
   project,
@@ -168,11 +171,8 @@ const AssessmentTracker = ({
   const filteredSubtopics = assessmentSubtopics
     ? assessmentSubtopics.map((subtopic: any) => ({
         ...subtopic,
-        questions: subtopic.questions.filter(
-          (question: Question) =>
-            !statusFilter ||
-            statusFilter === "all" ||
-            question.status.toLowerCase() === statusFilter,
+        questions: subtopic.questions.filter((question: Question) =>
+          matchesEuAiActStatusFilter(question, statusFilter),
         ),
       }))
     : [];

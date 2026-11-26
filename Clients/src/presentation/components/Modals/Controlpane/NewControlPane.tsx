@@ -24,6 +24,7 @@ import dayjs from "dayjs";
 import Select from "../../Inputs/Select";
 import DatePicker from "../../Inputs/Datepicker";
 import { Control } from "../../../../domain/types/Control";
+import { Subcontrol } from "../../../../domain/types/Subcontrol";
 import { FileData } from "../../../../domain/types/File";
 import Alert from "../../Alert";
 import CustomizableToast from "../../Toast";
@@ -53,6 +54,7 @@ import { useSearchParams } from "react-router";
 import { getFileById } from "../../../../application/repository/file.repository";
 import { getEntityById } from "../../../../application/repository/entity.repository";
 import { textStyles } from "../../../themes/typography";
+import { EuAiActCopiedNote } from "../../EuAiActCopiedNote";
 
 // Input styles matching other drawers
 export const inputStyles = {
@@ -877,17 +879,30 @@ const NewControlPane = ({
         const responseData =
           response.data?.data?.response || response.data?.response || response.data;
 
+        // Saving clears the "copied, review" marker on the server; drop it here too.
+        const clearCopied = { copied_from_project_id: null, copied_from_use_case: null };
+
         // Update controlData with the response if available
         if (responseData?.subControls) {
           const updatedControl = {
             ...controlData,
-            subControls: responseData.subControls,
+            ...clearCopied,
+            subControls: responseData.subControls.map((sc: Subcontrol) => ({
+              ...sc,
+              ...clearCopied,
+            })),
           };
           setControlData(updatedControl);
 
           // Re-initialize form data from updated controlData
           const newFormData = initializeSubcontrolFormData();
           setSubcontrolFormData(newFormData);
+        } else {
+          setControlData((prev) => ({
+            ...prev,
+            ...clearCopied,
+            subControls: prev.subControls?.map((sc) => ({ ...sc, ...clearCopied })),
+          }));
         }
 
         // Notify parent components to refresh data
@@ -929,6 +944,11 @@ const NewControlPane = ({
 
   const currentSubcontrol = controlData.subControls?.[selectedSubcontrolIndex];
   const currentFormData = currentSubcontrol?.id ? subcontrolFormData[currentSubcontrol.id] : null;
+  // The drawer header already says when the whole control was copied; a
+  // subcontrol only repeats it when it was copied on its own.
+  const subcontrolCopiedFrom = controlData.copied_from_use_case
+    ? null
+    : currentSubcontrol?.copied_from_use_case;
 
   const innerTabs = [
     {
@@ -1021,11 +1041,16 @@ const NewControlPane = ({
                 fontSize: "16px",
                 fontWeight: 600,
                 color: text.primary,
-                mb: controlData.description ? 1.5 : 0,
+                mb: controlData.description || controlData.copied_from_use_case ? 1.5 : 0,
               }}
             >
               {`${controlCategoryId}.${controlData.order_no} ${controlData.title}`}
             </Typography>
+            {controlData.copied_from_use_case && (
+              <Box sx={{ mb: controlData.description ? "12px" : 0 }}>
+                <EuAiActCopiedNote useCase={controlData.copied_from_use_case} />
+              </Box>
+            )}
             {/* Control Description Panel */}
             {controlData.description && (
               <Stack
@@ -1198,12 +1223,17 @@ const NewControlPane = ({
                     fontSize: "16px",
                     fontWeight: 600,
                     color: text.primary,
-                    mb: currentSubcontrol.description ? 1.5 : 0,
+                    mb: currentSubcontrol.description || subcontrolCopiedFrom ? 1.5 : 0,
                   }}
                 >
                   {`${controlCategoryId}.${controlData.order_no}.${currentSubcontrol.order_no}`}{" "}
                   {currentSubcontrol.title}
                 </Typography>
+                {subcontrolCopiedFrom && (
+                  <Box sx={{ mb: currentSubcontrol.description ? "12px" : 0 }}>
+                    <EuAiActCopiedNote useCase={subcontrolCopiedFrom} />
+                  </Box>
+                )}
                 {/* Description Panel */}
                 {currentSubcontrol.description && (
                   <Stack

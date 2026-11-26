@@ -13,6 +13,8 @@ import useUsers from "../../../../application/hooks/useUsers";
 import {
   EU_AI_ACT_ASSESSMENT_STATUS_OPTIONS,
   EU_AI_ACT_CONTROL_STATUS_OPTIONS,
+  EU_AI_ACT_NEEDS_REVIEW_OPTION,
+  FRAMEWORK_IDS,
 } from "../../../../application/constants/frameworks";
 import { Project } from "../../../../domain/types/Project";
 
@@ -64,6 +66,17 @@ const EuAiActTrackers = ({
     (tab) => tab.value !== "readiness" || Boolean(readinessFrameworkType),
   );
 
+  // EU AI Act (organization) also filters on the upgrade's "copied, review" marker.
+  const statusOptions = useMemo(() => {
+    const base =
+      tracker === "compliance"
+        ? EU_AI_ACT_CONTROL_STATUS_OPTIONS
+        : EU_AI_ACT_ASSESSMENT_STATUS_OPTIONS;
+    return frameworkId === FRAMEWORK_IDS.EU_AI_ACT_ORGANIZATION
+      ? [...base, EU_AI_ACT_NEEDS_REVIEW_OPTION]
+      : base;
+  }, [tracker, frameworkId]);
+
   const userOptions = useMemo(
     () =>
       users.map((user: any) => ({
@@ -79,11 +92,7 @@ const EuAiActTrackers = ({
         statusFilter={statusFilter}
         onStatusChange={setStatusFilter}
         showStatusFilter={tracker === "compliance" || tracker === "assessment"}
-        statusOptions={
-          tracker === "compliance"
-            ? EU_AI_ACT_CONTROL_STATUS_OPTIONS
-            : EU_AI_ACT_ASSESSMENT_STATUS_OPTIONS
-        }
+        statusOptions={statusOptions}
         ownerFilter={ownerFilter}
         onOwnerChange={setOwnerFilter}
         approverFilter={approverFilter}

@@ -1704,5 +1704,9 @@
   "Serious": "Serious",
   "Very serious": "Very serious",
   "key must be a non-empty string": "key must be a non-empty string",
-  "Readiness score not found": "Readiness score not found"
+  "Readiness score not found": "Readiness score not found",
+  "EU AI Act organization-wide obligations moved": "EU AI Act organization-wide obligations moved",
+  "Prohibited practices, AI literacy, the quality management system and other organization-wide EU AI Act obligations now live once in EU AI Act (organization) on \"{project}\" instead of on each use case. Review them on the Frameworks page.": "Prohibited practices, AI literacy, the quality management system and other organization-wide EU AI Act obligations now live once in EU AI Act (organization) on \"{project}\" instead of on each use case. Review them on the Frameworks page.",
+  "Prohibited practices, AI literacy, the quality management system and other organization-wide EU AI Act obligations now live once in EU AI Act (organization) on \"{project}\" instead of on each use case. 1 item was copied from your use cases; review it on the Frameworks page.": "Prohibited practices, AI literacy, the quality management system and other organization-wide EU AI Act obligations now live once in EU AI Act (organization) on \"{project}\" instead of on each use case. 1 item was copied from your use cases; review it on the Frameworks page.",
+  "Prohibited practices, AI literacy, the quality management system and other organization-wide EU AI Act obligations now live once in EU AI Act (organization) on \"{project}\" instead of on each use case. {copied} items were copied from your use cases; review them on the Frameworks page.": "Prohibited practices, AI literacy, the quality management system and other organization-wide EU AI Act obligations now live once in EU AI Act (organization) on \"{project}\" instead of on each use case. {copied} items were copied from your use cases; review them on the Frameworks page."
 }

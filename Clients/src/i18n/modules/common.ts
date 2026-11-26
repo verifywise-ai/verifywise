@@ -4696,6 +4696,9 @@ export const de: Record<string, string> = {
   "Manage approval workflows": "Genehmigungsabläufe verwalten",
   "The workflow could not be saved.": "Der Ablauf konnte nicht gespeichert werden.",
   "(archived)": "(archiviert)",
+  "Copied from {useCase} when this moved to the organization. Review it, then save.":
+    "Aus {useCase} kopiert, als dies in die Organisation verschoben wurde. Prüfen Sie es und speichern Sie dann.",
+  "Copied, needs review": "Kopiert, Prüfung nötig",
 };
 
 export const fr: Record<string, string> = {
@@ -9398,6 +9401,9 @@ export const fr: Record<string, string> = {
   "Manage approval workflows": "Gérer les flux d'approbation",
   "The workflow could not be saved.": "Le flux n'a pas pu être enregistré.",
   "(archived)": "(archivé)",
+  "Copied from {useCase} when this moved to the organization. Review it, then save.":
+    "Copié depuis {useCase} lors du passage au niveau de l'organisation. Vérifiez-le, puis enregistrez.",
+  "Copied, needs review": "Copié, à vérifier",
 };
 
 export const es: Record<string, string> = {
@@ -14096,4 +14102,7 @@ export const es: Record<string, string> = {
   "Manage approval workflows": "Gestionar flujos de aprobación",
   "The workflow could not be saved.": "No se pudo guardar el flujo.",
   "(archived)": "(archivado)",
+  "Copied from {useCase} when this moved to the organization. Review it, then save.":
+    "Copiado de {useCase} cuando esto pasó a la organización. Revíselo y luego guarde.",
+  "Copied, needs review": "Copiado, pendiente de revisión",
 };

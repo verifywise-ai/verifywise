@@ -25,8 +25,9 @@
  *        Frameworks page shows (newest first: created_at DESC, id ASC), demo
  *        ones skipped since deleting the demo data removes them;
  *      - an organization with no such project gets one, named after the
- *        organization and owned by the owner of its first EU AI Act use case
- *        (lowest id; NULL when that use case has an external owner);
+ *        organization and owned by its first Admin (earliest joined), else by
+ *        the owner of its first EU AI Act use case (lowest id; NULL when that
+ *        use case has an external owner);
  *      - its rows are the ones createEUAIActOrganizationFrameworkQuery
  *        (utils/eu.utils.ts) creates: a "Waiting" controls_eu row per moved
  *        control and subcontrols_eu row per subcontrol of it, and an
@@ -49,6 +50,8 @@ const {
 } = require("../../dist/structures");
 
 const EU_AI_ACT_FRAMEWORK_ID = 1;
+/** organization_members.role_id of an Admin. */
+const ADMIN_ROLE_ID = 1;
 
 /** Marks the listed rows of an EU AI Act struct table as moved; throws unless all matched. */
 async function markMoved(sequelize, { table, keys, fromJoins, keyColumns }, transaction) {
@@ -129,21 +132,30 @@ async function attachToOrganizations(sequelize, transaction) {
            (organization_id, uc_id, project_title, owner, start_date, geography,
             is_organizational, last_updated)
          SELECT o.id, 'UC-' || nextval('verifywise.project_uc_id_seq'), o.name,
-                (SELECT p.owner FROM verifywise.projects p
-                   JOIN verifywise.projects_frameworks pf
-                     ON pf.project_id = p.id AND pf.organization_id = p.organization_id
-                  WHERE p.organization_id = o.id
-                    AND pf.framework_id = :euFrameworkId
-                    AND p.is_organizational = false
-                    AND p.is_demo = false
-                  ORDER BY p.id
-                  LIMIT 1),
+                COALESCE(
+                  (SELECT m.user_id FROM verifywise.organization_members m
+                    WHERE m.organization_id = o.id AND m.role_id = :adminRoleId
+                    ORDER BY m.joined_at, m.user_id
+                    LIMIT 1),
+                  (SELECT p.owner FROM verifywise.projects p
+                     JOIN verifywise.projects_frameworks pf
+                       ON pf.project_id = p.id AND pf.organization_id = p.organization_id
+                    WHERE p.organization_id = o.id
+                      AND pf.framework_id = :euFrameworkId
+                      AND p.is_organizational = false
+                      AND p.is_demo = false
+                    ORDER BY p.id
+                    LIMIT 1)),
                 NOW(), 1, true, NOW()
            FROM verifywise.organizations o
           WHERE o.id = :organizationId
          RETURNING id;`,
         {
-          replacements: { organizationId, euFrameworkId: EU_AI_ACT_FRAMEWORK_ID },
+          replacements: {
+            organizationId,
+            euFrameworkId: EU_AI_ACT_FRAMEWORK_ID,
+            adminRoleId: ADMIN_ROLE_ID,
+          },
           transaction,
         },
       );

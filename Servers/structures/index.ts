@@ -29,6 +29,7 @@ export * from "./types";
 export {
   EU_AI_ACT_ORGANIZATION_CONTROLS,
   EU_AI_ACT_ORGANIZATION_FRAMEWORK_ID,
+  EU_AI_ACT_ORGANIZATION_MOVED_NOTICE,
   EU_AI_ACT_ORGANIZATION_QUESTIONS,
 } from "./EU-AI-Act-Organization/euAiActOrganization";
 
