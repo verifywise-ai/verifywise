@@ -377,6 +377,7 @@
   "Either project_id or framework_id must be provided": "Either project_id or framework_id must be provided",
   "Email alerts must be true or false": "Email alerts must be true or false",
   "Email already exists": "Email already exists",
+  "Email and password are required": "Email and password are required",
   "Email does not match the original submission.": "Email does not match the original submission.",
   "email is required": "email is required",
   "Email is required": "Email is required",
