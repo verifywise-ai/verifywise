@@ -1152,6 +1152,7 @@
   "rows must be a list of 1 to 1000 rows": "rows doit être une liste de 1 à 1000 lignes",
   "rule and facts are required": "rule et facts sont requis",
   "Rule deleted successfully": "Règle supprimée avec succès",
+  "Rule actions must be a list of actions with a type": "Les actions de la règle doivent être une liste d'actions avec un type",
   "Rule not found": "Règle introuvable",
   "Rules array is required": "Le tableau de règles est requis",
   "Rules must be an array": "Les règles doivent être un tableau",
