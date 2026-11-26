@@ -112,10 +112,13 @@ private rows, or both.
 
 Visibility is only ever `public` or `private`: the calculate endpoints
 normalize it, and a check constraint on all three tables enforces it.
-Migration `20261126130000-readiness-visibility-cleanup` turned older values
-(such as `all`, which matched no filter) into `public`, and aligned each
-control score's visibility with its framework score in the same scope, so a
-calculation's rows always share one visibility.
+Migration `20261126130000-readiness-visibility-cleanup` cleaned older rows,
+failing closed: values differing only in case or spacing take the value they
+spell; any other value (such as `all`, which matched no filter) becomes
+`private` so its owner can see and delete it (`public` when the row has no
+creator); and a calculation whose framework and control rows disagree becomes
+`private` as a whole if any of them is. A calculation's rows now always share
+one visibility.
 
 `DELETE /api/v1/readiness/scores/:id` removes one calculation: the framework
 score, the control scores in the same scope (organization, framework, project,
