@@ -22,6 +22,7 @@ import {
   getAssessmentCompletionQuery,
   pruneControlScoresQuery,
   getReadinessCalculationQuery,
+  getOwnCalculationVisibilityQuery,
   deleteReadinessCalculationQuery,
 } from "../utils/readiness.utils";
 import { trackAIContent } from "../middleware/aiContentTracker.middleware";
@@ -30,9 +31,28 @@ import { toId } from "../utils/validations/validation.utils";
 
 const fileName = "readiness.ctrl.ts";
 
-/** A calculation is private only when asked for; anything else is public. */
-function toVisibility(value: unknown): "public" | "private" {
-  return value === "private" ? "private" : "public";
+/** The visibility a calculation asked for, or null when it named none. */
+function requestedVisibility(value: unknown): "public" | "private" | null {
+  return value === "private" || value === "public" ? value : null;
+}
+
+/**
+ * The visibility to save a calculation with: the one asked for, else that of
+ * the person's existing calculation (so recalculating never shares a private
+ * result unasked), else public.
+ */
+async function resolveVisibility(
+  requested: "public" | "private" | null,
+  frameworkType: string,
+  organizationId: number,
+  projectId: number | null,
+  userId: number | null,
+): Promise<"public" | "private"> {
+  if (requested) return requested;
+  return (
+    (await getOwnCalculationVisibilityQuery(frameworkType, organizationId, projectId, userId)) ??
+    "public"
+  );
 }
 
 /**
@@ -110,7 +130,7 @@ export async function calculateAll(req: Request, res: Response) {
   try {
     const organizationId = req.organizationId!;
     const projectId = req.body.project_id ? Number(req.body.project_id) : null;
-    const visibility = toVisibility(req.body.visibility);
+    const requested = requestedVisibility(req.body.visibility);
     const userId = req.userId ? Number(req.userId) : null;
     const frameworkTypes = ["eu_ai_act", "iso_42001"];
     const results: any[] = [];
@@ -126,6 +146,7 @@ export async function calculateAll(req: Request, res: Response) {
       // a real zero for a framework nobody is being measured against —
       // calculateForFramework 404s on the same condition.
       if (controls.length === 0) continue;
+      const visibility = await resolveVisibility(requested, fw, organizationId, projectId, userId);
 
       const controlScores: Array<{
         control_id: number;
@@ -230,7 +251,7 @@ export async function calculateForFramework(req: Request, res: Response) {
   try {
     const organizationId = req.organizationId!;
     const projectId = req.body.project_id ? Number(req.body.project_id) : null;
-    const visibility = toVisibility(req.body.visibility);
+    const requested = requestedVisibility(req.body.visibility);
     const userId = req.userId ? Number(req.userId) : null;
 
     const controls = await getApplicableControlsWithRequirementsQuery(
@@ -241,6 +262,13 @@ export async function calculateForFramework(req: Request, res: Response) {
     if (controls.length === 0) {
       return res.status(404).json(STATUS_CODE[404](req.t!("No controls found for framework")));
     }
+    const visibility = await resolveVisibility(
+      requested,
+      frameworkType,
+      organizationId,
+      projectId,
+      userId,
+    );
 
     const controlScores: Array<{
       control_id: number;

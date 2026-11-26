@@ -791,8 +791,8 @@ export const de: Record<string, string> = {
   "Results everyone in your organization can see":
     "Ergebnisse, die alle in Ihrer Organisation sehen",
   "Results only you can see": "Ergebnisse, die nur Sie sehen",
-  "Public results and your private ones. Calculating now shares the result.":
-    "Öffentliche Ergebnisse und Ihre privaten. Eine Berechnung jetzt teilt das Ergebnis.",
+  "Public results and your private ones. Calculating now keeps each result's visibility, and a new result is public.":
+    "Öffentliche Ergebnisse und Ihre privaten. Eine Berechnung jetzt behält die Sichtbarkeit jedes Ergebnisses bei, ein neues Ergebnis ist öffentlich.",
   "Results everyone in your organization can see. Calculating now shares the result.":
     "Ergebnisse, die alle in Ihrer Organisation sehen. Eine Berechnung jetzt teilt das Ergebnis.",
   "Results only you can see. Calculating now keeps the result to yourself.":
@@ -1584,8 +1584,8 @@ export const fr: Record<string, string> = {
   "Results everyone in your organization can see":
     "Résultats visibles par toute votre organisation",
   "Results only you can see": "Résultats que vous seul voyez",
-  "Public results and your private ones. Calculating now shares the result.":
-    "Résultats publics et vos résultats privés. Calculer maintenant partage le résultat.",
+  "Public results and your private ones. Calculating now keeps each result's visibility, and a new result is public.":
+    "Résultats publics et vos résultats privés. Calculer maintenant conserve la visibilité de chaque résultat, et un nouveau résultat est public.",
   "Results everyone in your organization can see. Calculating now shares the result.":
     "Résultats visibles par toute votre organisation. Calculer maintenant partage le résultat.",
   "Results only you can see. Calculating now keeps the result to yourself.":
@@ -2373,8 +2373,8 @@ export const es: Record<string, string> = {
   "Public results and your private ones": "Resultados públicos y sus resultados privados",
   "Results everyone in your organization can see": "Resultados que ve toda su organización",
   "Results only you can see": "Resultados que solo usted ve",
-  "Public results and your private ones. Calculating now shares the result.":
-    "Resultados públicos y sus resultados privados. Calcular ahora comparte el resultado.",
+  "Public results and your private ones. Calculating now keeps each result's visibility, and a new result is public.":
+    "Resultados públicos y sus resultados privados. Calcular ahora mantiene la visibilidad de cada resultado, y un resultado nuevo es público.",
   "Results everyone in your organization can see. Calculating now shares the result.":
     "Resultados que ve toda su organización. Calcular ahora comparte el resultado.",
   "Results only you can see. Calculating now keeps the result to yourself.":

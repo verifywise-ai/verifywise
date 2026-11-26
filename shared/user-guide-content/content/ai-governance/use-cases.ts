@@ -158,7 +158,7 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'AI readiness scores how ready each control is for an audit. All, Public and Private filter the results: public ones everyone in your organization can see, private ones only you can see. Calculate readiness saves a private result when Private is selected and a public one otherwise, and recalculating switches an existing result to that choice. To remove a result, use the delete button on its card. You can delete your own results, and an Admin can also delete anyone\'s public result.',
+      text: 'AI readiness scores how ready each control is for an audit. All, Public and Private filter the results: public ones everyone in your organization can see, private ones only you can see. With Private selected, Calculate readiness saves a private result, and with Public a public one; an existing result switches to that choice. With All selected, an existing result keeps its visibility and a new one is public. To remove a result, use the delete button on its card. You can delete your own results, and an Admin can also delete anyone\'s public result.',
     },
     {
       type: 'heading',

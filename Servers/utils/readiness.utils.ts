@@ -609,6 +609,32 @@ export async function getAssessmentCompletionQuery(
   }
 }
 
+/**
+ * The visibility of this person's existing calculation of a framework in a
+ * scope, or null when there is none. A calculation that does not name a
+ * visibility keeps this one, so recalculating never shares a private result
+ * by accident.
+ */
+export async function getOwnCalculationVisibilityQuery(
+  frameworkType: string,
+  organizationId: number,
+  projectId: number | null,
+  createdBy: number | null,
+): Promise<"public" | "private" | null> {
+  const [rows] = await sequelize.query(
+    `SELECT visibility FROM framework_readiness_scores
+      WHERE organization_id = :organizationId
+        AND framework_type = :frameworkType
+        AND COALESCE(project_id, 0) = COALESCE(:projectId::int, 0)
+        AND COALESCE(created_by, 0) = COALESCE(:createdBy::int, 0)
+      LIMIT 1`,
+    { replacements: { organizationId, frameworkType, projectId, createdBy } },
+  );
+  const visibility = (rows as Array<{ visibility: string }>)[0]?.visibility;
+  if (visibility === "private") return "private";
+  return visibility === undefined ? null : "public";
+}
+
 /** The identifying columns of one readiness calculation. */
 export interface ReadinessCalculation {
   id: number;
@@ -637,8 +663,8 @@ export async function getReadinessCalculationQuery(
 
 /**
  * Delete one readiness calculation: the framework score, the control scores
- * it was built from and the history points it recorded with the same
- * visibility. Every row is matched on the same scope as the upserts
+ * it was built from and every history point it recorded, whatever visibility
+ * each was recorded with (a recalculation can switch it). Every row is matched on the same scope as the upserts
  * (framework, use case, person, organization), so another person's
  * calculation, or the organization-wide one, is never touched.
  */
@@ -652,7 +678,6 @@ export async function deleteReadinessCalculationQuery(
     frameworkType: calculation.framework_type,
     projectId: calculation.project_id,
     createdBy: calculation.created_by,
-    visibility: calculation.visibility,
   };
   // The ::int casts give a NULL bind a type inside COALESCE (see pruneControlScoresQuery).
   const sameScope = `organization_id = :organizationId
@@ -669,9 +694,9 @@ export async function deleteReadinessCalculationQuery(
       replacements,
       transaction,
     });
-    await sequelize.query(
-      `DELETE FROM readiness_history WHERE ${sameScope} AND visibility = :visibility`,
-      { replacements, transaction },
-    );
+    await sequelize.query(`DELETE FROM readiness_history WHERE ${sameScope}`, {
+      replacements,
+      transaction,
+    });
   });
 }

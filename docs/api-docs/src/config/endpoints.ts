@@ -13687,10 +13687,18 @@ export const v1V1readinessEndpoints: Endpoint[] = [
   {
     method: 'DELETE',
     path: '/v1/readiness/scores/{id}',
-    summary: "Delete Calculation",
+    summary: "Delete a readiness calculation",
+    description: "Deletes one framework readiness score with its control scores and history points. The person who ran it may delete it; deleting someone else's public calculation requires readiness.admin. Someone else's private calculation answers 404.",
     requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The framework readiness score ID" },
+    ],
     responses: [
       { status: 200, description: "Success" },
+      { status: 400, description: "Invalid ID" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Insufficient permissions" },
+      { status: 404, description: "Readiness score not found" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "v1: V1/Readiness",

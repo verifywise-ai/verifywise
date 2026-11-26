@@ -29,6 +29,7 @@ import {
   pruneControlScoresQuery,
   getReadinessCalculationQuery,
   deleteReadinessCalculationQuery,
+  getOwnCalculationVisibilityQuery,
 } from "./readiness.utils";
 import { getVisibleEuCategoryIdsForProject } from "./eu.utils";
 
@@ -448,7 +449,9 @@ describe("deleteReadinessCalculationQuery", () => {
     }
     expect(controlSql).toContain("DELETE FROM control_readiness_scores");
     expect(historySql).toContain("DELETE FROM readiness_history");
-    expect(historySql).toContain("visibility = :visibility");
+    // Every history point of the calculation, whichever visibility it was
+    // recorded with: a recalculation can switch it.
+    expect(historySql).not.toContain("visibility");
     for (const [, options] of mockQuery.mock.calls) {
       expect(options.transaction).toBe("tx");
       expect(options.replacements).toMatchObject({
@@ -456,8 +459,33 @@ describe("deleteReadinessCalculationQuery", () => {
         frameworkType: "eu_ai_act",
         projectId: 49,
         createdBy: 9,
-        visibility: "public",
       });
     }
+  });
+});
+
+describe("getOwnCalculationVisibilityQuery", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("reads the person's calculation in the scope", async () => {
+    mockQuery.mockResolvedValueOnce([[{ visibility: "private" }]]);
+    expect(await getOwnCalculationVisibilityQuery("eu_ai_act", 42, 49, 9)).toBe("private");
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("FROM framework_readiness_scores");
+    expect(sql).toContain("COALESCE(project_id, 0) = COALESCE(:projectId::int, 0)");
+    expect(sql).toContain("COALESCE(created_by, 0) = COALESCE(:createdBy::int, 0)");
+    expect(options.replacements).toEqual({
+      organizationId: 42,
+      frameworkType: "eu_ai_act",
+      projectId: 49,
+      createdBy: 9,
+    });
+  });
+
+  it("answers null when there is none and public for anything not private", async () => {
+    mockQuery.mockResolvedValueOnce([[]]);
+    expect(await getOwnCalculationVisibilityQuery("eu_ai_act", 42, null, 9)).toBeNull();
+    mockQuery.mockResolvedValueOnce([[{ visibility: "all" }]]);
+    expect(await getOwnCalculationVisibilityQuery("eu_ai_act", 42, null, 9)).toBe("public");
   });
 });

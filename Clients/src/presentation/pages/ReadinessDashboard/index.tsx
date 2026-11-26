@@ -40,7 +40,7 @@ import type { ReadinessLevel } from "../../../domain/interfaces/i.readiness";
 
 // On this page the selected chip also decides how a new calculation is saved.
 const VISIBILITY_HINTS = {
-  all: "Public results and your private ones. Calculating now shares the result.",
+  all: "Public results and your private ones. Calculating now keeps each result's visibility, and a new result is public.",
   public: "Results everyone in your organization can see. Calculating now shares the result.",
   private: "Results only you can see. Calculating now keeps the result to yourself.",
 };
@@ -132,16 +132,21 @@ function toTime(value?: string | null): number {
  * framework_readiness_scores keeps one row per user — the upsert conflict target
  * includes created_by — so a framework a teammate has also calculated comes back
  * more than once. Readiness is a property of the use case, not of whoever pressed
- * the button, so show the most recent row per framework. The full series stays in
- * the trend card, which reads the separate readiness_history table.
+ * the button, so show one row per framework: the viewer's own calculation when
+ * they have one (so they can always see, and delete, what they ran), else the most
+ * recent. The full series stays in the trend card, which reads the separate
+ * readiness_history table.
  */
-function latestPerFramework(rows: any[]): any[] {
+function latestPerFramework(rows: any[], userId: number | null): any[] {
+  const isOwn = (row: any) => userId !== null && row.created_by === userId;
   const latest = new Map<string, any>();
   for (const row of rows) {
     const current = latest.get(row.framework_type);
-    if (!current || toTime(row.calculated_at) > toTime(current.calculated_at)) {
-      latest.set(row.framework_type, row);
-    }
+    const wins =
+      !current ||
+      (isOwn(row) && !isOwn(current)) ||
+      (isOwn(row) === isOwn(current) && toTime(row.calculated_at) > toTime(current.calculated_at));
+    if (wins) latest.set(row.framework_type, row);
   }
   return [...latest.values()];
 }
@@ -189,7 +194,8 @@ export default function ReadinessDashboard({
       (isReadinessAdmin && fw.visibility === "public"));
   const confirmDelete = () => {
     if (!pendingDelete) return;
-    deleteCalculation.mutate(pendingDelete.id, { onSettled: () => setPendingDelete(null) });
+    // Stays open on failure, so the person can retry from the same place.
+    deleteCalculation.mutate(pendingDelete.id, { onSuccess: () => setPendingDelete(null) });
   };
 
   // Only the framework this view is pinned to — an org-wide card row inside a
@@ -200,11 +206,13 @@ export default function ReadinessDashboard({
     const scoped = frameworkType
       ? scores.filter((fw: any) => fw.framework_type === frameworkType)
       : scores;
-    return latestPerFramework(scoped);
-  }, [scores, frameworkType]);
+    return latestPerFramework(scoped, userId);
+  }, [scores, frameworkType, userId]);
 
   const handleCalculate = () => {
-    const visibility = visFilter === "private" ? "private" : "public";
+    // "All" names no visibility: an existing calculation keeps its own, a new
+    // one is public. Only an explicit Public or Private changes it.
+    const visibility = visFilter === "all" ? undefined : visFilter;
     if (isScoped && frameworkType) {
       triggerCalculateFramework.mutate({ frameworkType, projectId, visibility });
     } else {

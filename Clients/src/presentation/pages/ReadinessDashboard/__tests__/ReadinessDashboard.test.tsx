@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
@@ -184,7 +184,9 @@ describe("ReadinessDashboard", () => {
     const user = userEvent.setup();
     renderWithProviders(<ReadinessDashboard />);
     await user.click(screen.getByText("Calculate readiness"));
-    expect(mutate).toHaveBeenCalledWith({ visibility: "public" });
+    // The default All chip names no visibility, so an existing calculation
+    // keeps its own and a private one is never shared unasked.
+    expect(mutate).toHaveBeenCalledWith({ visibility: undefined });
   });
 
   it("shows calculating state on button when pending", () => {
@@ -244,6 +246,34 @@ describe("ReadinessDashboard", () => {
       await user.click(screen.getByRole("button", { name: "Delete" }));
       expect(mockDelete).toHaveBeenCalledWith(7, expect.any(Object));
     });
+
+    it("keeps the dialog open when the delete fails and closes it once it succeeds", async () => {
+      const user = userEvent.setup();
+      renderCard({ created_by: 1, visibility: "public" });
+      await user.click(screen.getByTestId("readiness-delete-7"));
+      await user.click(screen.getByRole("button", { name: "Delete" }));
+      // A failed mutation never calls onSuccess.
+      expect(screen.getByText("Delete this calculation?")).toBeInTheDocument();
+      const [, options] = mockDelete.mock.calls[0];
+      act(() => options.onSuccess());
+      await waitFor(() =>
+        expect(screen.queryByText("Delete this calculation?")).not.toBeInTheDocument(),
+      );
+    });
+
+    it("shows your own calculation over a colleague's newer one, so you can delete it", () => {
+      mockScores.mockReturnValue({
+        data: [
+          card({ id: 7, created_by: 1, avg_score: 41, calculated_at: "2026-11-01T10:00:00.000Z" }),
+          card({ id: 8, created_by: 2, avg_score: 88, calculated_at: "2026-11-20T10:00:00.000Z" }),
+        ],
+        isLoading: false,
+      });
+      renderWithProviders(<ReadinessDashboard projectId={1} frameworkType="eu_ai_act" />);
+      expect(screen.getByText("41")).toBeInTheDocument();
+      expect(screen.queryByText("88")).not.toBeInTheDocument();
+      expect(screen.getByTestId("readiness-delete-7")).toBeInTheDocument();
+    });
   });
 
   describe("scoped to a use case and framework", () => {
@@ -281,7 +311,7 @@ describe("ReadinessDashboard", () => {
       expect(mutate).toHaveBeenCalledWith({
         frameworkType: "iso_42001",
         projectId: 7,
-        visibility: "public",
+        visibility: undefined,
       });
     });
   });
