@@ -21,10 +21,19 @@ import {
   getApplicableControlsWithRequirementsQuery,
   getAssessmentCompletionQuery,
   pruneControlScoresQuery,
+  getReadinessCalculationQuery,
+  deleteReadinessCalculationQuery,
 } from "../utils/readiness.utils";
 import { trackAIContent } from "../middleware/aiContentTracker.middleware";
+import { roleHasPermission } from "../utils/rolePermissions.utils";
+import { toId } from "../utils/validations/validation.utils";
 
 const fileName = "readiness.ctrl.ts";
+
+/** A calculation is private only when asked for; anything else is public. */
+function toVisibility(value: unknown): "public" | "private" {
+  return value === "private" ? "private" : "public";
+}
 
 /**
  * Calculate readiness for a single control — take the caller's requirement
@@ -101,7 +110,7 @@ export async function calculateAll(req: Request, res: Response) {
   try {
     const organizationId = req.organizationId!;
     const projectId = req.body.project_id ? Number(req.body.project_id) : null;
-    const visibility = req.body.visibility || "public";
+    const visibility = toVisibility(req.body.visibility);
     const userId = req.userId ? Number(req.userId) : null;
     const frameworkTypes = ["eu_ai_act", "iso_42001"];
     const results: any[] = [];
@@ -221,7 +230,7 @@ export async function calculateForFramework(req: Request, res: Response) {
   try {
     const organizationId = req.organizationId!;
     const projectId = req.body.project_id ? Number(req.body.project_id) : null;
-    const visibility = req.body.visibility || "public";
+    const visibility = toVisibility(req.body.visibility);
     const userId = req.userId ? Number(req.userId) : null;
 
     const controls = await getApplicableControlsWithRequirementsQuery(
@@ -531,6 +540,52 @@ export async function getHistory(req: Request, res: Response) {
   } catch (error) {
     logStructured("error", "failed to get history", functionName, fileName);
     logger.error("Error in getHistory:", error);
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+/**
+ * DELETE /api/v1/readiness/scores/:id
+ * Delete one readiness calculation (framework score, its control scores and
+ * its history points). Allowed for the person who ran it; a role holding
+ * readiness.admin may also delete other people's public calculations. A
+ * score of another organization, or another person's private one, answers 404.
+ */
+export async function deleteCalculation(req: Request, res: Response) {
+  const functionName = "deleteCalculation";
+  const id = toId(req.params.id);
+  if (isNaN(id) || id <= 0) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid ID")));
+  }
+
+  try {
+    const organizationId = req.organizationId!;
+    const calculation = await getReadinessCalculationQuery(id, organizationId);
+    if (!calculation) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("Readiness score not found")));
+    }
+
+    const userId = req.userId ? Number(req.userId) : null;
+    const isOwner = userId !== null && calculation.created_by === userId;
+    if (!isOwner) {
+      // Someone else's private calculation is never visible to the caller, so
+      // it answers as missing, even to an admin.
+      if (calculation.visibility === "private") {
+        return res.status(404).json(STATUS_CODE[404](req.t!("Readiness score not found")));
+      }
+      const isAdmin =
+        !!req.role && (await roleHasPermission(organizationId, req.role, "readiness.admin"));
+      if (!isAdmin) {
+        return res.status(403).json(STATUS_CODE[403](req.t!("Insufficient permissions")));
+      }
+    }
+
+    await deleteReadinessCalculationQuery(calculation, organizationId);
+    logStructured("successful", `readiness calculation ${id} deleted`, functionName, fileName);
+    return res.status(200).json(STATUS_CODE[200]({ id }));
+  } catch (error) {
+    logStructured("error", `failed to delete readiness calculation ${id}`, functionName, fileName);
+    logger.error("Error in deleteCalculation:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }

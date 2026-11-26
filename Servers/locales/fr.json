@@ -1701,5 +1701,6 @@
   "Minor": "Mineur",
   "Serious": "Grave",
   "Very serious": "Très grave",
-  "key must be a non-empty string": "key doit être une chaîne non vide"
+  "key must be a non-empty string": "key doit être une chaîne non vide",
+  "Readiness score not found": "Score de préparation introuvable"
 }

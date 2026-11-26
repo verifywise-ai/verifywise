@@ -5,7 +5,9 @@ import { getVisibleEuCategoryIdsForProject } from "./eu.utils";
 
 /**
  * Upsert a control readiness score.
- * Uses ON CONFLICT on (control_id, framework_type, organization_id) to update.
+ * One row per control, framework, use case and person. A recalculation
+ * overwrites the row, visibility included: the latest run decides whether
+ * the score is public or private.
  */
 export async function upsertControlScoreQuery(
   controlId: number,
@@ -47,6 +49,7 @@ export async function upsertControlScoreQuery(
          overall_score = EXCLUDED.overall_score,
          readiness_level = EXCLUDED.readiness_level,
          recommendations = EXCLUDED.recommendations,
+         visibility = EXCLUDED.visibility,
          calculated_at = NOW()
        RETURNING *`,
       {
@@ -178,6 +181,7 @@ export async function upsertFrameworkScoreQuery(
          at_risk_count = EXCLUDED.at_risk_count,
          not_started_count = EXCLUDED.not_started_count,
          weakest_controls = EXCLUDED.weakest_controls,
+         visibility = EXCLUDED.visibility,
          calculated_at = NOW()
        RETURNING *`,
       {
@@ -603,4 +607,71 @@ export async function getAssessmentCompletionQuery(
     logger.error("Error getting assessment completion:", error);
     throw error;
   }
+}
+
+/** The identifying columns of one readiness calculation. */
+export interface ReadinessCalculation {
+  id: number;
+  framework_type: string;
+  project_id: number | null;
+  created_by: number | null;
+  visibility: string;
+}
+
+/**
+ * One framework readiness score of this organization, or null. A score of
+ * another organization is null too, so a caller cannot tell it exists.
+ */
+export async function getReadinessCalculationQuery(
+  id: number,
+  organizationId: number,
+): Promise<ReadinessCalculation | null> {
+  const [rows] = await sequelize.query(
+    `SELECT id, framework_type, project_id, created_by, visibility
+       FROM framework_readiness_scores
+      WHERE id = :id AND organization_id = :organizationId`,
+    { replacements: { id, organizationId } },
+  );
+  return ((rows as ReadinessCalculation[])[0] ?? null) as ReadinessCalculation | null;
+}
+
+/**
+ * Delete one readiness calculation: the framework score, the control scores
+ * it was built from and the history points it recorded with the same
+ * visibility. Every row is matched on the same scope as the upserts
+ * (framework, use case, person, organization), so another person's
+ * calculation, or the organization-wide one, is never touched.
+ */
+export async function deleteReadinessCalculationQuery(
+  calculation: ReadinessCalculation,
+  organizationId: number,
+): Promise<void> {
+  const replacements = {
+    id: calculation.id,
+    organizationId,
+    frameworkType: calculation.framework_type,
+    projectId: calculation.project_id,
+    createdBy: calculation.created_by,
+    visibility: calculation.visibility,
+  };
+  // The ::int casts give a NULL bind a type inside COALESCE (see pruneControlScoresQuery).
+  const sameScope = `organization_id = :organizationId
+         AND framework_type = :frameworkType
+         AND COALESCE(project_id, 0) = COALESCE(:projectId::int, 0)
+         AND COALESCE(created_by, 0) = COALESCE(:createdBy::int, 0)`;
+  await sequelize.transaction(async (transaction) => {
+    await sequelize.query(
+      `DELETE FROM framework_readiness_scores
+        WHERE id = :id AND organization_id = :organizationId`,
+      { replacements, transaction },
+    );
+    await sequelize.query(`DELETE FROM control_readiness_scores WHERE ${sameScope}`, {
+      replacements,
+      transaction,
+    });
+    await sequelize.query(
+      `DELETE FROM readiness_history WHERE ${sameScope} AND visibility = :visibility`,
+      { replacements, transaction },
+    );
+  });
 }

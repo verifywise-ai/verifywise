@@ -170,7 +170,7 @@ function SuggestedRisksSection({
           >
             <Box sx={{ display: "flex", justifyContent: "space-between", gap: "12px" }}>
               <Box sx={{ display: "flex", flexDirection: "column", gap: "4px", minWidth: 0 }}>
-                <Typography sx={{ fontSize: "12px", color: theme.palette.text.tertiary }}>
+                <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
                   {risk.source === "ai" ? "AI-suggested" : "From the risk catalog"}
                 </Typography>
                 <Typography

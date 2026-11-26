@@ -88,7 +88,7 @@ function DimensionBars({ dimensions }: { dimensions: DimensionBar[] }) {
                 backgroundColor: BAND_COLORS[item.band],
               }}
             />
-            <Typography sx={{ fontSize: "12px", color: theme.palette.text.accent }}>
+            <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
               {item.label}
             </Typography>
           </Box>

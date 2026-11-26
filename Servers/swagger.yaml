@@ -8094,6 +8094,8 @@ tags:
   -
     name: 'v1: V1/Projects'
   -
+    name: 'v1: V1/Readiness'
+  -
     name: 'v1: V1/Report Runs'
   -
     name: 'v1: V1/Report Templates'
@@ -30443,6 +30445,20 @@ paths:
       tags:
         - 'v1: V1/Projects'
       operationId: resubmitUseCaseApproval
+      security:
+        -
+          bearerAuth: []
+  '/v1/readiness/scores/{id}':
+    delete:
+      summary: 'Delete Calculation'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Readiness'
+      operationId: deleteCalculation
       security:
         -
           bearerAuth: []

@@ -62,7 +62,7 @@ export function EditorSection({
             {title}
           </Typography>
           {summary && (
-            <Typography sx={{ fontSize: "11px", color: theme.palette.text.accent }}>
+            <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
               {summary}
             </Typography>
           )}

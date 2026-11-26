@@ -1694,5 +1694,6 @@
   "Minor": "Minor",
   "Serious": "Serious",
   "Very serious": "Very serious",
-  "key must be a non-empty string": "key must be a non-empty string"
+  "key must be a non-empty string": "key must be a non-empty string",
+  "Readiness score not found": "Readiness score not found"
 }
