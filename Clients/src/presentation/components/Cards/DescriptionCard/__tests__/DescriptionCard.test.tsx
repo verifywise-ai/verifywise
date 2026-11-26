@@ -26,4 +26,13 @@ describe("DescriptionCard", () => {
     );
     expect(container.querySelector("[data-testid]")).not.toBeInTheDocument();
   });
+
+  it("keeps line breaks in the body", () => {
+    renderWithProviders(
+      <DescriptionCard title="Paragraphs" body={"First paragraph.\n\nSecond paragraph."} />,
+    );
+    const body = screen.getByText(/First paragraph\./);
+    expect(body).toHaveStyle({ whiteSpace: "pre-line" });
+    expect(body.textContent).toBe("First paragraph.\n\nSecond paragraph.");
+  });
 });
