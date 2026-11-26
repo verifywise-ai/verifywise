@@ -11608,13 +11608,8 @@ paths:
               schema:
                 type: object
                 properties:
-                  message:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      organization_framework_added:
-                        type: boolean
+                  message: {type: string}
+                  data: {type: object, properties: {organization_framework_added: {type: boolean}}}
         '400':
           description: 'EU AI Act (organization) is added automatically'
         '401':
