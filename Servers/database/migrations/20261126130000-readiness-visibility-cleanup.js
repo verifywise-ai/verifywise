@@ -36,6 +36,9 @@ module.exports = {
         );
       }
 
+      // uq_fw_readiness_full (framework, project, creator, organization; not
+      // visibility) allows one framework row per scope, so each control row
+      // matches at most one.
       await queryInterface.sequelize.query(
         `UPDATE verifywise.control_readiness_scores c
             SET visibility = f.visibility
