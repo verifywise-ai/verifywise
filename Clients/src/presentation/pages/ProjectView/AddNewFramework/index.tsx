@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { Box, Typography, Stack, Button } from "@mui/material";
 import { Check as CheckGreenIcon, Shield as ShieldIcon } from "lucide-react";
 import { getFrameworkBadgePath } from "../../../tools/frameworkBadge";
 import StandardModal from "../../../components/Modals/StandardModal";
+import SearchBox from "../../../components/Search/SearchBox";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import {
   accent,
@@ -36,6 +38,7 @@ import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
 import { useExtensions } from "../../../../application/contexts/Extensions.context";
 import ImportedFrameworksSection from "./ImportedFrameworksSection";
+import { matchesFrameworkSearch } from "./frameworkSearch";
 // Governance OS prompt imports removed while the module is not broadly released.
 // The module remains reachable by direct URL for authorized users.
 
@@ -62,7 +65,34 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
   const [alert, setAlert] = useState<AlertProps | null>(null);
   const [frameworkToRemove, setFrameworkToRemove] = useState<Framework | null>(null);
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [wasOpen, setWasOpen] = useState(open);
+  // Height of the unfiltered list, held while searching so the centred modal
+  // doesn't shrink and move the search box under the user's typing.
+  const [heldHeight, setHeldHeight] = useState<number | undefined>();
+  const listRef = useRef<HTMLDivElement>(null);
   const { isEnabled } = useExtensions();
+  const { t } = useTranslation();
+
+  // Start each opening with the full list (reset during render, not in an effect).
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (!open) setSearchQuery("");
+  }
+
+  const isSearching = searchQuery.trim() !== "";
+
+  const handleSearchChange = (value: string) => {
+    if (!isSearching && value.trim() !== "") {
+      setHeldHeight(listRef.current?.offsetHeight);
+    }
+    setSearchQuery(value);
+  };
+
+  const visibleFrameworks = useMemo(
+    () => frameworks.filter((fw) => matchesFrameworkSearch(searchQuery, fw.name, fw.description)),
+    [frameworks, searchQuery],
+  );
   // Imported frameworks attach to use cases only, and only while the extension is on.
   const showImported = open && isEnabled("framework-import") && !project.is_organizational;
 
@@ -161,7 +191,11 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
         </>
       }
     >
-      <Stack spacing={6}>
+      <Stack
+        ref={listRef}
+        spacing={6}
+        sx={{ minHeight: isSearching && heldHeight ? `${heldHeight}px` : undefined }}
+      >
         {alert && (
           <Alert
             variant={alert.variant}
@@ -172,6 +206,18 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
           />
         )}
         {isLoading && <CustomizableToast title="Processing..." />}
+        <SearchBox
+          placeholder={t("Search frameworks")}
+          value={searchQuery}
+          onChange={handleSearchChange}
+          inputProps={{ "aria-label": t("Search frameworks") }}
+        />
+        {/* With imported frameworks shown, the section says it once both lists are empty. */}
+        {isSearching && visibleFrameworks.length === 0 && !showImported && (
+          <Typography sx={frameworkCardDescriptionStyle}>
+            {t("No frameworks match your search.")}
+          </Typography>
+        )}
         <Box
           sx={{
             display: "grid",
@@ -180,7 +226,7 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
             alignItems: "stretch",
           }}
         >
-          {frameworks.map((fw) => {
+          {visibleFrameworks.map((fw) => {
             const isAdded = isFrameworkAdded(fw);
             const lockedReason = isAdded ? lockedFrameworks?.[Number(fw.id)] : undefined;
             const badgePath = getFrameworkBadgePath(fw.name);
@@ -278,6 +324,8 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
         {showImported && (
           <ImportedFrameworksSection
             project={project}
+            searchQuery={searchQuery}
+            builtInMatchCount={visibleFrameworks.length}
             disabled={isLoading}
             onBusyChange={setIsLoading}
             onResult={showToast}

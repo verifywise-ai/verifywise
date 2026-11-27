@@ -90,7 +90,7 @@ const DrawerFrame: React.FC<DrawerFrameProps> = ({
         <Divider />
 
         <TabContext value={activeTab}>
-          <Box sx={{ padding: "0 20px" }}>
+          <Box sx={{ padding: "16px 20px 0" }}>
             <TabBar tabs={tabs} activeTab={activeTab} onChange={onTabChange} />
           </Box>
           {children}

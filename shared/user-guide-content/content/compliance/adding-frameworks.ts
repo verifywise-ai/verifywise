@@ -148,7 +148,7 @@ export const addingFrameworksContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The dialog only lists organization-level frameworks. Your frameworks then appear on the **Requirements and Controls** tab; use the switcher at the top of the tab to move between them. The page also has **Dashboard**, **Framework risks**, **Linked models** and **Settings** tabs.',
+      text: 'The dialog only lists organization-level frameworks. Type in the search box at the top to filter them by name or description. Your frameworks then appear on the **Requirements and Controls** tab; use the switcher at the top of the tab to move between them. The page also has **Dashboard**, **Framework risks**, **Linked models** and **Settings** tabs.',
     },
     {
       type: 'callout',
@@ -179,7 +179,7 @@ export const addingFrameworksContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The dialog only lists use case-level frameworks. You can also pick frameworks when you create a use case, in the **Applicable regulations (optional)** field.',
+      text: 'The dialog only lists use case-level frameworks. Type in the search box at the top to filter them by name or description. You can also pick frameworks when you create a use case, in the **Applicable regulations (optional)** field.',
     },
     {
       type: 'heading',

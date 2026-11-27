@@ -222,6 +222,57 @@ describe("AddFrameworkModal", () => {
     ).toBeInTheDocument();
   });
 
+  it("filters framework cards by name and description", () => {
+    renderWithProviders(
+      <AddFrameworkModal open={true} onClose={vi.fn()} frameworks={frameworks} project={project} />,
+    );
+    const search = screen.getByRole("textbox", { name: "Search frameworks" });
+
+    fireEvent.change(search, { target: { value: "  iso " } });
+    expect(screen.getByText("ISO 42001")).toBeInTheDocument();
+    expect(screen.queryByText("EU AI Act")).not.toBeInTheDocument();
+
+    fireEvent.change(search, { target: { value: "act DESCRIPTION" } });
+    expect(screen.getByText("EU AI Act")).toBeInTheDocument();
+    expect(screen.queryByText("ISO 42001")).not.toBeInTheDocument();
+
+    fireEvent.change(search, { target: { value: "hipaa" } });
+    expect(screen.getByText("No frameworks match your search.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add" })).not.toBeInTheDocument();
+  });
+
+  it("doesn't say nothing matches before anything is typed", () => {
+    renderWithProviders(
+      <AddFrameworkModal open={true} onClose={vi.fn()} frameworks={[]} project={project} />,
+    );
+
+    expect(screen.queryByText("No frameworks match your search.")).not.toBeInTheDocument();
+  });
+
+  it("clears the search when the modal is reopened", () => {
+    const { rerender } = renderWithProviders(
+      <AddFrameworkModal open={true} onClose={vi.fn()} frameworks={frameworks} project={project} />,
+    );
+    fireEvent.change(screen.getByRole("textbox", { name: "Search frameworks" }), {
+      target: { value: "iso" },
+    });
+
+    rerender(
+      <AddFrameworkModal
+        open={false}
+        onClose={vi.fn()}
+        frameworks={frameworks}
+        project={project}
+      />,
+    );
+    rerender(
+      <AddFrameworkModal open={true} onClose={vi.fn()} frameworks={frameworks} project={project} />,
+    );
+
+    expect(screen.getByRole("textbox", { name: "Search frameworks" })).toHaveValue("");
+    expect(screen.getByText("EU AI Act")).toBeInTheDocument();
+  });
+
   it("calls onClose when Done is clicked", () => {
     const onClose = vi.fn();
     renderWithProviders(
