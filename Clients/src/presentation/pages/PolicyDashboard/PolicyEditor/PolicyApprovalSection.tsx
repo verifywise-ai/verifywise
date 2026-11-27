@@ -305,7 +305,7 @@ export function PolicyApprovalSection({
             </Typography>
           )}
 
-          {withdrawError && <Alert variant="error" body={withdrawError} isToast={false} />}
+          {withdrawError && <Alert variant="error" body={withdrawError} inline />}
         </>,
       )}
 
@@ -341,11 +341,7 @@ export function PolicyApprovalSection({
             />
           )}
           {submitMutation.isError && (
-            <Alert
-              variant="error"
-              body={errorMessage(submitMutation.error, genericError)}
-              isToast={false}
-            />
+            <Alert variant="error" body={errorMessage(submitMutation.error, genericError)} inline />
           )}
         </Stack>
       </StandardModal>
@@ -380,7 +376,7 @@ export function PolicyApprovalSection({
             <Alert
               variant="error"
               body={errorMessage(approveMutation.error, genericError)}
-              isToast={false}
+              inline
             />
           )}
         </Stack>

@@ -10,7 +10,63 @@ export const FRAMEWORK_IDS = {
   ISO_42001: 2,
   ISO_27001: 3,
   NIST_AI_RMF: 4,
+  // Added to the organizational project by the server when a use case gets
+  // EU AI Act; never offered in an "add framework" list.
+  EU_AI_ACT_ORGANIZATION: 29,
 } as const;
+
+/** The Frameworks page's ?framework= value for EU AI Act (organization); notification links use it. */
+export const EU_AI_ACT_ORGANIZATION_SLUG = "eu-ai-act-organization";
+
+/** Status filter options of EU AI Act requirements (use case, or EU AI Act (organization)). */
+export const EU_AI_ACT_CONTROL_STATUS_OPTIONS = [
+  { value: "waiting", label: "Waiting" },
+  { value: "in progress", label: "In progress" },
+  { value: "done", label: "Done" },
+];
+
+/** Status filter options of an EU AI Act assessment (use case, or EU AI Act (organization)). */
+export const EU_AI_ACT_ASSESSMENT_STATUS_OPTIONS = [
+  { value: "not started", label: "Not started" },
+  { value: "in progress", label: "In progress" },
+  { value: "done", label: "Done" },
+];
+
+/**
+ * Extra status filter value on EU AI Act (organization): items the upgrade copied
+ * from a use case and nobody has saved since.
+ */
+export const EU_AI_ACT_NEEDS_REVIEW_FILTER = "needs review";
+export const EU_AI_ACT_NEEDS_REVIEW_OPTION = {
+  value: EU_AI_ACT_NEEDS_REVIEW_FILTER,
+  label: "Copied, needs review",
+};
+
+type CopiedMarker = {
+  copied_from_project_id?: number | null;
+  copied_from_use_case?: string | null;
+};
+
+/** True when an EU AI Act (organization) item still carries the "copied, review" marker. */
+export const isCopiedForReview = (item?: CopiedMarker | null): boolean =>
+  Boolean(item?.copied_from_use_case || item?.copied_from_project_id);
+
+/** Applies an EU AI Act status filter, including the "needs review" value. */
+export const matchesEuAiActStatusFilter = (
+  item: CopiedMarker & { status?: string | null },
+  statusFilter?: string,
+): boolean => {
+  if (!statusFilter || statusFilter === "all") return true;
+  if (statusFilter === EU_AI_ACT_NEEDS_REVIEW_FILTER) return isCopiedForReview(item);
+  return item.status?.toLowerCase() === statusFilter.toLowerCase();
+};
+
+/** Shown when enabling EU AI Act on a use case also added EU AI Act (organization). */
+export const EU_AI_ACT_ORGANIZATION_ADDED_MESSAGE =
+  "EU AI Act (organization) was added for the organization's own obligations. Admins fill it in on the Frameworks page.";
+
+/** Why EU AI Act (organization) can't be removed while a use case has EU AI Act. */
+export const EU_AI_ACT_ORGANIZATION_LOCKED_REASON = "Required while a use case has EU AI Act";
 
 export const FRAMEWORK_NAMES = {
   EU_AI_ACT: "EU AI Act",

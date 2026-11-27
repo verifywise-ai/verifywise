@@ -69,6 +69,12 @@ export interface UseCaseApprovalWorkflow {
   /** False once the workflow is archived; null when none is attached. */
   workflow_is_active: boolean | null;
   approval_status: "pending" | "rejected" | null;
+  /**
+   * The caller has write access to this use case, by the rule the server's
+   * write guard applies (Admin, owner, member, or a group attached to it).
+   * Says nothing about the useCase.edit permission.
+   */
+  viewer_can_write: boolean;
 }
 
 /**

@@ -18,6 +18,7 @@ export type QuestionStructEU = {
   evidence_required: boolean; // gets assigned from the structure
   is_required: boolean; // gets assigned from the structure
   subtopic_id: number; // when subtopic is created, its id will be stored and assign here as FK
+  moved_to_framework_id?: number | null; // set when the question moved to another framework (EU AI Act (organization), id 29)
 };
 
 @Table({
@@ -76,6 +77,9 @@ export class QuestionStructEUModel extends Model<QuestionStructEU> {
     type: DataType.NUMBER,
   })
   subtopic_id!: number;
+
+  @Column({ type: DataType.INTEGER, allowNull: true })
+  moved_to_framework_id?: number | null;
 
   @Column({
     type: DataType.BOOLEAN,

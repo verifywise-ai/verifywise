@@ -10,7 +10,7 @@ vi.mock("./computeClient", () => ({
   })),
 }));
 
-import { generatePoints } from "./engine";
+import { generatePoints, generateRange } from "./engine";
 import { FleetModel } from "./types";
 
 const model: FleetModel = {
@@ -43,5 +43,22 @@ describe("engine (compute-backed)", () => {
       expect(Number.isFinite(p.value)).toBe(true);
       expect(p.at).toBe("2026-06-28T00:00:00.000Z");
     }
+  });
+
+  it("generateRange walks one UTC day at a time and emits five points per day", () => {
+    const start = new Date("2026-06-01T00:00:00.000Z");
+    const pts = generateRange(model, start, 3);
+    expect(pts).toHaveLength(15);
+    for (let d = 0; d < 3; d++) {
+      const at = new Date(start.getTime() + d * 86_400_000).toISOString();
+      const day = pts.filter((p) => p.at === at);
+      expect(day).toHaveLength(5);
+      expect(day.filter((p) => p.segment === "overall")).toHaveLength(4);
+      expect(day.filter((p) => p.segment === "subprime" && p.metric === "gini")).toHaveLength(1);
+    }
+  });
+
+  it("generateRange with zero days returns no points", () => {
+    expect(generateRange(model, new Date("2026-06-01T00:00:00.000Z"), 0)).toEqual([]);
   });
 });

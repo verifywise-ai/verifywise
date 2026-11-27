@@ -10,7 +10,7 @@ export const addingFrameworksContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise comes with 28 compliance frameworks: EU AI Act, ISO 42001, ISO 27001 and NIST AI RMF, plus 24 more bundled frameworks covering privacy, security, sector rules and AI ethics. Every framework is available to every organization. There is nothing to enable or install; you add the ones you need.',
+      text: 'VerifyWise comes with 29 compliance frameworks: EU AI Act, ISO 42001, ISO 27001 and NIST AI RMF, plus 25 more bundled frameworks covering privacy, security, sector rules and AI ethics. Every framework is available to every organization. There is nothing to enable or install; you add the ones you need.',
     },
     {
       type: 'paragraph',
@@ -48,6 +48,7 @@ export const addingFrameworksContent: ArticleContent = {
         { name: 'EN 18286' },
         { name: 'UAE Personal Data Protection Law' },
         { name: 'Saudi Arabia Personal Data Protection Law' },
+        { name: 'Saudi National AI Index (NAII)' },
         { name: 'Qatar Personal Data Privacy Law' },
         { name: 'Bahrain Personal Data Protection Law' },
         { name: 'Quebec Law 25 Compliance Framework' },
@@ -78,6 +79,57 @@ export const addingFrameworksContent: ArticleContent = {
         { name: 'Colorado Artificial Intelligence Act Framework' },
         { name: 'EN 18286 AI systems' },
       ],
+    },
+    {
+      type: 'heading',
+      id: 'saudi-naii',
+      level: 2,
+      text: 'Saudi National AI Index (NAII)',
+    },
+    {
+      type: 'paragraph',
+      text: 'The Saudi National AI Index is published by the Saudi Data and AI Authority (SDAIA, document SDAIA-P123, May 2025). It measures how ready a government entity is to adopt AI. In VerifyWise it is an organization-level framework with 7 sub-pillars and 23 domains, matching the index one to one:',
+    },
+    {
+      type: 'table',
+      columns: [
+        { key: 'subPillar', label: 'Sub-pillar', width: '35%' },
+        { key: 'domains', label: 'Domains', width: '65%' },
+      ],
+      rows: [
+        { subPillar: 'Directions: Strategy', domains: 'Planning and performance, Initiatives, Budget' },
+        { subPillar: 'Directions: Governance', domains: 'Frameworks and policies, Regulatory enablement, Reliability and safety, Regulatory compliance' },
+        { subPillar: 'Enablers: Data', domains: 'Availability and accessibility, Quality and integration, Reliability' },
+        { subPillar: 'Enablers: Infrastructure', domains: 'Technical standards, Availability and monitoring, Operational resilience' },
+        { subPillar: 'Enablers: Human capabilities', domains: 'Headcount and diversity, Professional development, Academic collaboration, Job stability' },
+        { subPillar: 'Outputs: Applications', domains: 'Development and deployment, Privacy and security, Operation and management' },
+        { subPillar: 'Outputs: Impact', domains: 'Operational efficiency, Employee productivity, Service quality and improvement' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'SDAIA scores each entity on 6 adoption levels. VerifyWise tracks the status of each domain and does not calculate this level, because SDAIA does not publish the weight of each domain.',
+    },
+    {
+      type: 'table',
+      columns: [
+        { key: 'level', label: 'Level', width: '35%' },
+        { key: 'score', label: 'Score', width: '65%' },
+      ],
+      rows: [
+        { level: '0: Absence of capabilities', score: '0% to 4.9%' },
+        { level: '1: Establishing', score: '5% to 24.9%' },
+        { level: '2: Activated', score: '25% to 49.9%' },
+        { level: '3: Managed', score: '50% to 79.9%' },
+        { level: '4: Excellence', score: '80% to 94.9%' },
+        { level: '5: Pioneer', score: '95% to 100%' },
+      ],
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      title: 'Questions are guidance',
+      text: "SDAIA shares its questionnaire only with the entities it assesses. The questions and evidence examples in each domain's drawer are VerifyWise guidance, written from SDAIA's domain descriptions. Attach the evidence SDAIA asks for to each domain so it is ready for the assessment.",
     },
     {
       type: 'heading',
@@ -140,6 +192,7 @@ export const addingFrameworksContent: ArticleContent = {
       items: [
         { bold: 'No duplicates', text: 'A framework can only be added once to the same organization or use case.' },
         { bold: 'Type must match', text: 'Organization-level frameworks go on the Frameworks page, use case-level frameworks go on use cases. You can\'t mix them.' },
+        { bold: 'EU AI Act (organization)', text: 'Added for you, not from the dialog. It is the part of EU AI Act that applies to the organization as a whole, shown with the same requirements and assessments screens and numbers as EU AI Act. The first time a use case gets EU AI Act, VerifyWise adds EU AI Act (organization) to the Frameworks page, and creates the organization-level project if there is none. While a use case has EU AI Act, it can\'t be removed and the organization-level project can\'t be deleted.' },
         { bold: 'Pending approval', text: 'While a use case has a pending approval request, you can\'t add or remove its frameworks. VerifyWise shows "This use case has a pending approval request…" until the approval process is complete.' },
         { bold: 'Starting point', text: 'Adding a framework creates all of its requirements with the status "Not started".' },
       ],
@@ -168,7 +221,7 @@ export const addingFrameworksContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'In any of the 24 bundled frameworks, click a requirement to open its drawer. The drawer has four tabs:',
+      text: 'In any of the 25 bundled frameworks, click a requirement to open its drawer. The drawer has four tabs:',
     },
     {
       type: 'bullet-list',
@@ -192,7 +245,7 @@ export const addingFrameworksContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'info',
-      text: 'Generated reports include the 24 bundled frameworks through the Framework requirements section, alongside EU AI Act, ISO 42001, ISO 27001 and NIST AI RMF. See Generating reports for how to select it.',
+      text: 'Generated reports include the 25 bundled frameworks through the Framework requirements section, alongside EU AI Act, ISO 42001, ISO 27001 and NIST AI RMF. See Generating reports for how to select it.',
     },
     {
       type: 'heading',

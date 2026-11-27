@@ -1229,6 +1229,8 @@ export const de: Record<string, string> = {
   "Enter surname": "Nachname eingeben",
   "Enter task title": "Aufgabentitel eingeben",
   "Enter text here...": "Text hier eingeben...",
+  "Combine filters with": "Filter verknüpfen mit",
+  "Remove filter": "Filter entfernen",
   "Enter text...": "Text eingeben...",
   "Enter the API key value": "API-Schlüsselwert eingeben",
   "Enter the bearer token": "Bearer-Token eingeben",
@@ -4577,6 +4579,8 @@ export const de: Record<string, string> = {
     "Schulungszuweisungen, Gruppen und benutzerdefinierte Rollen sowie Framework-Import",
   "A new look, a Home page, OSFI E-23, EN 18286 and risk approvals":
     "Ein neues Erscheinungsbild, eine Startseite, OSFI E-23, EN 18286 und Risikofreigaben",
+  "Vendor research, framework requirements in reports and use case approvals":
+    "Lieferantenrecherche, Framework-Anforderungen in Berichten und Freigaben für Anwendungsfälle",
   // Unified sidebar (phase 2)
   "Record": "Erfassen",
   "Workspace": "Arbeitsbereich",
@@ -4692,6 +4696,13 @@ export const de: Record<string, string> = {
   "Manage approval workflows": "Genehmigungsabläufe verwalten",
   "The workflow could not be saved.": "Der Ablauf konnte nicht gespeichert werden.",
   "(archived)": "(archiviert)",
+  "Copied from {useCase} when this moved to the organization. Review it, then save.":
+    "Aus {useCase} kopiert, als dies in die Organisation verschoben wurde. Prüfen Sie es und speichern Sie dann.",
+  "Copied from a use case when this moved to the organization. Review it, then save.":
+    "Aus einem Anwendungsfall kopiert, als dies in die Organisation verschoben wurde. Prüfen Sie es und speichern Sie dann.",
+  "EU AI Act (organization) was added for the organization's own obligations. Admins fill it in on the Frameworks page.":
+    "EU AI Act (Organisation) wurde für die eigenen Pflichten der Organisation hinzugefügt. Admins füllen es auf der Seite Frameworks aus.",
+  "Copied, needs review": "Kopiert, Prüfung nötig",
 };
 
 export const fr: Record<string, string> = {
@@ -5925,6 +5936,8 @@ export const fr: Record<string, string> = {
   "Enter surname": "Saisir le nom de famille",
   "Enter task title": "Saisir le titre de la tâche",
   "Enter text here...": "Saisir du texte ici...",
+  "Combine filters with": "Combiner les filtres avec",
+  "Remove filter": "Supprimer le filtre",
   "Enter text...": "Saisir du texte...",
   "Enter the API key value": "Saisir la valeur de la clé API",
   "Enter the bearer token": "Saisir le jeton bearer",
@@ -9271,6 +9284,8 @@ export const fr: Record<string, string> = {
     "Affectation des formations, groupes et rôles personnalisés, et import de référentiels",
   "A new look, a Home page, OSFI E-23, EN 18286 and risk approvals":
     "Une nouvelle apparence, une page d'accueil, OSFI E-23, EN 18286 et l'approbation des risques",
+  "Vendor research, framework requirements in reports and use case approvals":
+    "Recherche sur les fournisseurs, exigences des référentiels dans les rapports et approbation des cas d'usage",
 
   "Request": "Requête",
   // Unified sidebar (phase 2)
@@ -9390,6 +9405,13 @@ export const fr: Record<string, string> = {
   "Manage approval workflows": "Gérer les flux d'approbation",
   "The workflow could not be saved.": "Le flux n'a pas pu être enregistré.",
   "(archived)": "(archivé)",
+  "Copied from {useCase} when this moved to the organization. Review it, then save.":
+    "Copié depuis {useCase} lors du passage au niveau de l'organisation. Vérifiez-le, puis enregistrez.",
+  "Copied from a use case when this moved to the organization. Review it, then save.":
+    "Copié depuis un cas d'usage lors du passage au niveau de l'organisation. Vérifiez-le, puis enregistrez.",
+  "EU AI Act (organization) was added for the organization's own obligations. Admins fill it in on the Frameworks page.":
+    "EU AI Act (organisation) a été ajouté pour les obligations propres de l'organisation. Les administrateurs le remplissent sur la page Frameworks.",
+  "Copied, needs review": "Copié, à vérifier",
 };
 
 export const es: Record<string, string> = {
@@ -10621,6 +10643,8 @@ export const es: Record<string, string> = {
   "Enter surname": "Introduce los apellidos",
   "Enter task title": "Introduce el título de la tarea",
   "Enter text here...": "Introduce el texto aquí...",
+  "Combine filters with": "Combinar filtros con",
+  "Remove filter": "Quitar filtro",
   "Enter text...": "Introduce texto...",
   "Enter the API key value": "Introduce el valor de la API key",
   "Enter the bearer token": "Introduce el bearer token",
@@ -13968,6 +13992,8 @@ export const es: Record<string, string> = {
     "Asignación de formaciones, grupos y roles personalizados, e importación de marcos",
   "A new look, a Home page, OSFI E-23, EN 18286 and risk approvals":
     "Un nuevo aspecto, una página de inicio, OSFI E-23, EN 18286 y aprobación de riesgos",
+  "Vendor research, framework requirements in reports and use case approvals":
+    "Investigación de proveedores, requisitos de marcos en los informes y aprobación de casos de uso",
   // Unified sidebar (phase 2)
   "Record": "Registrar",
   "Workspace": "Espacio de trabajo",
@@ -14084,4 +14110,11 @@ export const es: Record<string, string> = {
   "Manage approval workflows": "Gestionar flujos de aprobación",
   "The workflow could not be saved.": "No se pudo guardar el flujo.",
   "(archived)": "(archivado)",
+  "Copied from {useCase} when this moved to the organization. Review it, then save.":
+    "Copiado de {useCase} cuando esto pasó a la organización. Revíselo y luego guarde.",
+  "Copied from a use case when this moved to the organization. Review it, then save.":
+    "Copiado de un caso de uso cuando esto pasó a la organización. Revíselo y luego guarde.",
+  "EU AI Act (organization) was added for the organization's own obligations. Admins fill it in on the Frameworks page.":
+    "EU AI Act (organización) se añadió para las obligaciones propias de la organización. Los administradores lo completan en la página Frameworks.",
+  "Copied, needs review": "Copiado, pendiente de revisión",
 };

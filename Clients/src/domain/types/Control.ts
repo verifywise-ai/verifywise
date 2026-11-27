@@ -16,6 +16,10 @@ export type Control = {
   numberOfSubcontrols?: number;
   numberOfDoneSubcontrols?: number;
   subControls?: Subcontrol[];
+  /** Set when this EU AI Act (organization) control was copied from a use case's work; cleared on save. */
+  copied_from_project_id?: number | null;
+  /** That use case, for example "Credit scoring (UC-12)". */
+  copied_from_use_case?: string | null;
   /** @deprecated Control-level risks removed. Use subcontrol-level risks instead. */
   risks?: number[];
 };

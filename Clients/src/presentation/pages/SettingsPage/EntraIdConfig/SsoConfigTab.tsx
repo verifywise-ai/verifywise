@@ -193,7 +193,7 @@ const SsoConfigTab: React.FC = () => {
       <Alert
         variant="info"
         body={`Need help finding these values? Visit Azure Portal → Microsoft Entra ID → App registrations → [Your App]. Under Authentication → Redirect URIs, register exactly this URL: ${window.location.origin}/auth/microsoft/callback`}
-        sx={{ position: "static" }}
+        inline
         isToast={false}
       />
       <Box sx={{ height: "16px" }} />

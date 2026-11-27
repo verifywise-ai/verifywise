@@ -324,6 +324,18 @@ describe("deleteRiskMappingsForProjectFrameworksQuery", () => {
     expect(deletesFrom("answers_eu__risks")).toHaveLength(0);
   });
 
+  it("deletes EU AI Act (organization) mappings from the EU AI Act tables", async () => {
+    arrangeFrameworks([29]);
+
+    await deleteRiskMappingsForProjectFrameworksQuery(7, [11, 12], 4, TX);
+
+    for (const table of ["answers_eu__risks", "controls_eu__risks", "subcontrols_eu__risks"]) {
+      const calls = deletesFrom(table);
+      expect(calls).toHaveLength(1);
+      expectScoped(calls[0]);
+    }
+  });
+
   it("matches EU control mappings on controls_eu ids, not subcontrol ids", async () => {
     arrangeFrameworks([1]);
 

@@ -25,8 +25,10 @@ import {
   assignFrameworkToProject,
   deleteEntityById,
 } from "../../../../application/repository/entity.repository";
+import CustomException from "../../../../infrastructure/exceptions/customException";
 import { logEngine } from "../../../../application/tools/log.engine";
 import { handleAlert } from "../../../../application/tools/alertUtils";
+import { EU_AI_ACT_ORGANIZATION_ADDED_MESSAGE } from "../../../../application/constants/frameworks";
 import Alert from "../../../components/Alert";
 import { AlertProps } from "../../../types/alert.types";
 import CustomizableToast from "../../../components/Toast";
@@ -44,6 +46,8 @@ interface AddFrameworkModalProps {
   project: Project;
   /** "removeImported" carries no framework id: imported frameworks are not in the frameworks table. */
   onFrameworksChanged?: (action: "add" | "remove" | "removeImported", frameworkId?: number) => void;
+  /** Added frameworks that can't be removed now, by id, with the reason shown instead of Remove. */
+  lockedFrameworks?: Record<number, string>;
 }
 
 const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
@@ -52,6 +56,7 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
   frameworks,
   project,
   onFrameworksChanged,
+  lockedFrameworks,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [alert, setAlert] = useState<AlertProps | null>(null);
@@ -73,7 +78,11 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
         projectId: String(project.id),
       });
       if (response.status === 200 || response.status === 201) {
-        showToast("success", "Framework added successfully");
+        if (response.data?.data?.organization_framework_added) {
+          showToast("info", EU_AI_ACT_ORGANIZATION_ADDED_MESSAGE);
+        } else {
+          showToast("success", "Framework added successfully");
+        }
         if (onFrameworksChanged) onFrameworksChanged("add");
 
         // Governance OS enable prompt is disabled while the module is not broadly
@@ -105,12 +114,18 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
       } else {
         showToast("error", "Failed to remove framework. Please try again.");
       }
-    } catch (_error) {
+    } catch (error) {
       logEngine({
         type: "error",
         message: "An error occurred while removing the framework.",
       });
-      showToast("error", "An unexpected error occurred. Please try again.");
+      // A refusal (400, e.g. EU AI Act (organization) still required) says why.
+      showToast(
+        "error",
+        error instanceof CustomException && error.status === 400
+          ? error.message
+          : "An unexpected error occurred. Please try again.",
+      );
     } finally {
       setIsLoading(false);
       setIsRemoveModalOpen(false);
@@ -167,6 +182,7 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
         >
           {frameworks.map((fw) => {
             const isAdded = isFrameworkAdded(fw);
+            const lockedReason = isAdded ? lockedFrameworks?.[Number(fw.id)] : undefined;
             const badgePath = getFrameworkBadgePath(fw.name);
             return (
               <Box key={fw.id} sx={frameworkCardStyle}>
@@ -211,7 +227,9 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
                 </Box>
                 <Typography sx={frameworkCardDescriptionStyle}>{fw.description}</Typography>
                 <Box display="flex" justifyContent="flex-end" mt={2}>
-                  {isAdded ? (
+                  {lockedReason ? (
+                    <Typography sx={frameworkCardDescriptionStyle}>{lockedReason}</Typography>
+                  ) : isAdded ? (
                     <Button
                       variant="outlined"
                       size="small"

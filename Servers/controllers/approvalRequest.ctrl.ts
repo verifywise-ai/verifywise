@@ -52,15 +52,14 @@ import {
   sendInAppNotification,
   buildEntityUrl,
 } from "../services/inAppNotification.service";
+import { approvalLinkedEntity, approvalRequestPath } from "../utils/approvalLinks.utils";
 import { notifyRequesterStepCompleted } from "../services/notification.service";
 import { notifyFirstStepApprovers } from "../services/approvalRequestNotification.service";
-import {
-  NotificationType,
-  NotificationEntityType,
-} from "../domain.layer/interfaces/i.notification";
+import { NotificationType } from "../domain.layer/interfaces/i.notification";
 import { EMAIL_TEMPLATES } from "../constants/emailTemplates";
 
 import { translateError } from "../utils/i18n.utils";
+import { frontendBaseUrl } from "../utils/frontendUrl.utils";
 
 /**
  * Reads an admin override (`override: true` + `step_number`, validated by
@@ -213,7 +212,8 @@ export async function createApprovalRequest(req: Request, res: Response): Promis
     // requests notify the requester instead of the step-1 approvers
     (async () => {
       try {
-        const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+        const baseUrl = frontendBaseUrl();
+        const requestEntityId = Number(entity_id) || null;
 
         if (autoApproval.autoApproved) {
           await notifyApprovalAutoApproved(
@@ -223,6 +223,7 @@ export async function createApprovalRequest(req: Request, res: Response): Promis
             autoApproval.riskLevel!,
             autoApproval.threshold!,
             baseUrl,
+            entity_type === "use_case" ? requestEntityId : null,
           );
           return;
         }
@@ -235,6 +236,10 @@ export async function createApprovalRequest(req: Request, res: Response): Promis
           workflow: workflow as any,
           workflowSteps,
           baseUrl,
+          entity:
+            entity_type && requestEntityId
+              ? { type: String(entity_type), id: requestEntityId }
+              : undefined,
         });
       } catch (notifyError) {
         console.error("Failed to send approval request notifications:", notifyError);
@@ -445,7 +450,7 @@ export async function approveRequest(req: Request, res: Response): Promise<any> 
     if (notificationInfo) {
       (async () => {
         try {
-          const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+          const baseUrl = frontendBaseUrl();
 
           // Get approver name
           const approverResult = await sequelize.query<{ name: string; surname: string }>(
@@ -524,6 +529,7 @@ export async function approveRequest(req: Request, res: Response): Promise<any> 
                   approver_name: approverName,
                   workflow_name: workflow?.workflow_title,
                 },
+                { type: notificationInfo.entityType, id: notificationInfo.entityId },
               );
             }
           } else if (notificationInfo.type === "requester_approved") {
@@ -661,7 +667,7 @@ export async function rejectRequest(req: Request, res: Response): Promise<any> {
     if (notificationInfo && notificationInfo.type === "requester_rejected") {
       (async () => {
         try {
-          const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+          const baseUrl = frontendBaseUrl();
 
           // Get rejector name
           const rejectorResult = await sequelize.query<{ name: string; surname: string }>(
@@ -687,19 +693,14 @@ export async function rejectRequest(req: Request, res: Response): Promise<any> {
           // A rejected policy or use case links to that item, where the
           // requester sees the outcome and can resubmit it (a policy after
           // editing, a use case with "Resubmit for approval"). Other entities
-          // keep the approval-workflows link.
-          const linkedEntityId = notificationInfo.entityId ?? null;
-          const linkedEntity = !linkedEntityId
-            ? null
-            : notificationInfo.entityType === "policy"
-              ? NotificationEntityType.POLICY
-              : notificationInfo.entityType === "use_case"
-                ? NotificationEntityType.USE_CASE
-                : null;
-          const requestUrl =
-            linkedEntity && linkedEntityId
-              ? `${baseUrl}${buildEntityUrl(linkedEntity, linkedEntityId)}`
-              : `${baseUrl}/approval-workflows`;
+          // link to the request in the approvals modal.
+          const linked = approvalLinkedEntity(
+            notificationInfo.entityType,
+            notificationInfo.entityId,
+          );
+          const requestUrl = linked
+            ? `${baseUrl}${buildEntityUrl(linked.type, linked.id)}`
+            : `${baseUrl}${approvalRequestPath(requestId)}`;
 
           // Send rejection notification
           await sendInAppNotification(
@@ -713,8 +714,8 @@ export async function rejectRequest(req: Request, res: Response): Promise<any> {
               // the request's id pointed at an unrelated use case. The
               // column's enum does not cover every approval entity type, so
               // they are left empty rather than mapped.
-              entity_type: linkedEntity ?? undefined,
-              entity_id: linkedEntity && linkedEntityId ? linkedEntityId : undefined,
+              entity_type: linked?.type,
+              entity_id: linked?.id,
               entity_name: notificationInfo.requestName,
               action_url: requestUrl,
             },

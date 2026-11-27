@@ -265,6 +265,7 @@ export const createPendingFrameworksForApprovedUseCase = async (
       enableAiDataInsertion,
       organizationId,
       transaction,
+      changedBy,
     );
   }
 

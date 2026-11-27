@@ -26,6 +26,7 @@ import { checkedUseCaseId } from "../middleware/projectAccess.middleware";
 
 import { translateError } from "../utils/i18n.utils";
 import { toId } from "../utils/validations/validation.utils";
+import { frontendBaseUrl } from "../utils/frontendUrl.utils";
 // Note: Files are only unlinked from evidence_links, not deleted from file manager
 // This allows the same file to be used as evidence in multiple places
 
@@ -53,7 +54,7 @@ async function notifyNistAiRmfAssignment(
   // Only notify if assigned to a new user
   if (newUserId && newUserId !== oldUserId) {
     const assignerName = await getUserNameById(req.userId!);
-    const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const baseUrl = frontendBaseUrl();
 
     // Query for function type, category info, subcategory index and description
     // Uses struct tables for hierarchy data

@@ -22,6 +22,7 @@ import {
   getComplianceProgress,
   getControlsByControlCategoryId,
 } from "../../../../application/repository/control_eu_act.repository";
+import { FRAMEWORK_IDS } from "../../../../application/constants/frameworks";
 
 const ComplianceTracker = ({
   project,
@@ -29,19 +30,23 @@ const ComplianceTracker = ({
   ownerFilter,
   approverFilter,
   dueDateFilter,
+  frameworkId = FRAMEWORK_IDS.EU_AI_ACT,
 }: {
   project: Project;
   statusFilter?: string;
   ownerFilter?: string;
   approverFilter?: string;
   dueDateFilter?: string;
+  /** EU AI Act on a use case, or EU AI Act (organization) on the organizational project. */
+  frameworkId?: number;
 }) => {
   const [searchParams] = useSearchParams();
   const controlId = searchParams.get("controlId");
 
   const currentProjectId = project?.id;
-  const currentProjectFramework = project.framework?.filter((p) => p.framework_id === 1)[0]
-    ?.project_framework_id;
+  const currentProjectFramework = project.framework?.filter(
+    (p) => p.framework_id === frameworkId,
+  )[0]?.project_framework_id;
   const [complianceData, setComplianceData] = useState<ComplianceData>();
   const [controlCategories, setControlCategories] = useState<ControlCategoryModel[]>();
   const [error, setError] = useState<unknown>(null);

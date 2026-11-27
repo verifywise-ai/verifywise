@@ -18,4 +18,8 @@ export type Subcontrol = {
   evidence_files?: FileData[];
   feedback_files?: FileData[];
   risks?: number[];
+  /** Set when this EU AI Act (organization) item was copied from a use case's work; cleared on save. */
+  copied_from_project_id?: number | null;
+  /** That use case, for example "Credit scoring (UC-12)". */
+  copied_from_use_case?: string | null;
 };

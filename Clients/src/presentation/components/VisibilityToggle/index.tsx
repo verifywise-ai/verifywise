@@ -1,6 +1,7 @@
 import React from "react";
 import { ToggleButton, ToggleButtonGroup, useTheme, Stack } from "@mui/material";
 import { Globe, Lock, Eye } from "lucide-react";
+import VWTooltip from "../VWTooltip";
 
 export type VisibilityValue = "public" | "private";
 export type VisibilityFilterValue = "all" | "public" | "private";
@@ -8,19 +9,31 @@ export type VisibilityFilterValue = "all" | "public" | "private";
 interface VisibilityChipsProps {
   value: VisibilityFilterValue;
   onChange: (value: VisibilityFilterValue) => void;
+  /** Per-option tooltip text, for a page where the choice also does something. */
+  hints?: Partial<Record<VisibilityFilterValue, string>>;
 }
 
-const OPTIONS: { value: VisibilityFilterValue; label: string; Icon: typeof Eye }[] = [
-  { value: "all", label: "All", Icon: Eye },
-  { value: "public", label: "Public", Icon: Globe },
-  { value: "private", label: "Private", Icon: Lock },
+const OPTIONS: {
+  value: VisibilityFilterValue;
+  label: string;
+  hint: string;
+  Icon: typeof Eye;
+}[] = [
+  { value: "all", label: "All", hint: "Public results and your private ones", Icon: Eye },
+  {
+    value: "public",
+    label: "Public",
+    hint: "Results everyone in your organization can see",
+    Icon: Globe,
+  },
+  { value: "private", label: "Private", hint: "Results only you can see", Icon: Lock },
 ];
 
 /**
  * Visibility selector using MUI ToggleButtonGroup — matches the app-wide
  * button group pattern (same styling family as ViewToggle).
  */
-export function VisibilityChips({ value, onChange }: VisibilityChipsProps) {
+export function VisibilityChips({ value, onChange, hints }: VisibilityChipsProps) {
   const theme = useTheme();
 
   const handleChange = (
@@ -63,10 +76,14 @@ export function VisibilityChips({ value, onChange }: VisibilityChipsProps) {
     >
       {OPTIONS.map((opt) => (
         <ToggleButton key={opt.value} value={opt.value} disableRipple>
-          <Stack direction="row" alignItems="center" spacing={0.75}>
-            <opt.Icon size={14} />
-            <span>{opt.label}</span>
-          </Stack>
+          {/* On the label, not the button: ToggleButtonGroup must see its
+              ToggleButtons as direct children to mark the selected one. */}
+          <VWTooltip content={hints?.[opt.value] ?? opt.hint} placement="top" maxWidth={240}>
+            <Stack direction="row" alignItems="center" spacing={0.75}>
+              <opt.Icon size={14} />
+              <span>{opt.label}</span>
+            </Stack>
+          </VWTooltip>
         </ToggleButton>
       ))}
     </ToggleButtonGroup>

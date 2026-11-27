@@ -157,6 +157,10 @@ export const useCasesContent: ArticleContent = {
       text: 'Split into two sub-tabs. Controls tracks progress against each framework\'s requirements. Assessments tracks questionnaire-style evaluations. Completion percentages update automatically as you work through items.',
     },
     {
+      type: 'paragraph',
+      text: 'AI readiness scores how ready each control is for an audit. All, Public and Private filter the results: public ones everyone in your organization can see, private ones only you can see. With Private selected, Calculate readiness saves a private result, and with Public a public one; an existing result switches to that choice. With All selected, an existing result keeps its visibility and a new one is public. To remove a result, use the delete button on its card. You can delete your own results, and an Admin can also delete anyone\'s public result.',
+    },
+    {
       type: 'heading',
       id: 'ce-marking-tab',
       level: 3,
@@ -328,7 +332,7 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Anyone who can edit the use case and works on it (its owner, a team member, or an Admin) can resubmit it. You do not need to manage approval workflows, because the workflow stays the same. The option appears only after a rejection and only while the workflow is still active. If the workflow has been archived, or can no longer review use cases, ask someone who manages approval workflows to change it. The resubmission shows up in the use case\'s history.',
+      text: 'Anyone who can edit the use case and works on it (its owner, a team member, a member of a group attached to it, or an Admin) can resubmit it. You do not need to manage approval workflows, because the workflow stays the same. The option appears only after a rejection and only while the workflow is still active. If the workflow has been archived, or can no longer review use cases, ask someone who manages approval workflows to change it. The resubmission shows up in the use case\'s history.',
     },
     {
       type: 'heading',
@@ -343,7 +347,7 @@ export const useCasesContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'In review', text: 'An approval request is open, or an intake request is waiting for a decision. Intake requests are listed under the search bar, and **Review** opens the submission. People who can manage intake forms see every request; everyone else sees only the requests they submitted. The search covers them too, but the export leaves them out. The use case is created only when the request is approved. It then arrives as planned. Rejected and superseded requests are not shown. Days in review count from the first time a request was submitted.' },
+        { bold: 'In review', text: 'An approval request is open, or an intake request is waiting for a decision. Intake requests are listed under the search bar, and **Review** opens the submission. The use cases waiting for a decision follow under their own Use cases heading when intake requests are listed. People who can manage intake forms see every request; everyone else sees only the requests they submitted. The search covers them too, but the export leaves them out. The use case is created only when the request is approved. It then arrives as planned. Rejected and superseded requests are not shown. Days in review count from the first time a request was submitted.' },
         { bold: 'Planned', text: 'Approved, or created without an approval workflow, but not in use yet.' },
         { bold: 'Live', text: 'In use. The owner recorded a go-live date.' },
         { bold: 'Retired', text: 'No longer in use. It stays in the inventory with its history.' },

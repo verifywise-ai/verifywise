@@ -78,7 +78,10 @@ import { getAutocompleteStyles } from "../../../utils/inputStyles";
 import { useStyles } from "./styles";
 import { GEOGRAPHY_ITEMS } from "../../../../application/constants/geography";
 import { startDateCalendarDay } from "../../../tools/isoDateToString";
-import { includesEuAiAct } from "../../../../application/constants/frameworks";
+import {
+  EU_AI_ACT_ORGANIZATION_ADDED_MESSAGE,
+  includesEuAiAct,
+} from "../../../../application/constants/frameworks";
 
 // Every level the server accepts, so a use case classified by intake, MCP or
 // the API loads with its level. `name` is the label; `value` is what is stored.
@@ -536,12 +539,21 @@ const ProjectSettings = React.memo(
                     [prop]: newValue,
                   };
 
-                  setAlert({
-                    variant: "success",
-                    body: "Framework added successfully",
-                    isToast: true,
-                    visible: true,
-                  });
+                  setAlert(
+                    response.data?.data?.organization_framework_added
+                      ? {
+                          variant: "info",
+                          body: EU_AI_ACT_ORGANIZATION_ADDED_MESSAGE,
+                          isToast: true,
+                          visible: true,
+                        }
+                      : {
+                          variant: "success",
+                          body: "Framework added successfully",
+                          isToast: true,
+                          visible: true,
+                        },
+                  );
 
                   // Trigger refresh after successful framework addition
                   triggerRefresh(true);
@@ -974,6 +986,7 @@ const ProjectSettings = React.memo(
                     label=""
                     width={400}
                     type="description"
+                    rows={6}
                     value={values.description}
                     onChange={handleOnTextFieldChange("description")}
                     sx={{
@@ -994,6 +1007,7 @@ const ProjectSettings = React.memo(
                     label=""
                     width={400}
                     type="description"
+                    rows={6}
                     value={values.goal}
                     onChange={handleOnTextFieldChange("goal")}
                     sx={{

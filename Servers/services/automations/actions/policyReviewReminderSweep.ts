@@ -9,6 +9,7 @@ import { notifyPolicyReviewReminder } from "../../inAppNotification.service";
 import { sendSlackNotification } from "../../slack/slackNotificationService";
 import { SlackNotificationRoutingType } from "../../../domain.layer/enums/slack.enum";
 import logger from "../../../utils/logger/fileLogger";
+import { frontendBaseUrl } from "../../../utils/frontendUrl.utils";
 
 /**
  * Daily policy review reminder sweep (P-H3, P-M2). Replaces the old 8 AM email
@@ -77,7 +78,7 @@ const sendSlackReminder = async (
 export async function runPolicyReviewReminderSweep(
   organizationId: number,
 ): Promise<PolicyReviewReminderSweepSummary> {
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const baseUrl = frontendBaseUrl();
   const reminders = await findPolicyRemindersDueQuery(organizationId);
 
   let notified = 0;

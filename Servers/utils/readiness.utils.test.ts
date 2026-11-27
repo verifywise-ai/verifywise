@@ -2,6 +2,7 @@ const mockQuery = jest.fn();
 jest.mock("../database/db", () => ({
   sequelize: {
     query: (...args: any[]) => mockQuery(...args),
+    transaction: (fn: (t: unknown) => unknown) => fn("tx"),
   },
 }));
 
@@ -26,6 +27,9 @@ import {
   upsertFrameworkScoreQuery,
   getWeakestControlsQuery,
   pruneControlScoresQuery,
+  getReadinessCalculationQuery,
+  deleteReadinessCalculationQuery,
+  getOwnCalculationVisibilityQuery,
 } from "./readiness.utils";
 import { getVisibleEuCategoryIdsForProject } from "./eu.utils";
 
@@ -220,6 +224,18 @@ describe("getAssessmentCompletionQuery", () => {
     expect(sql).toContain("pf.organization_id = a.organization_id");
   });
 
+  it("counts a question only in the framework it belongs to", async () => {
+    mockQuery.mockResolvedValueOnce([[{ total: "10", done: "5" }]]);
+
+    await getAssessmentCompletionQuery(1, 7);
+
+    // A use case's old answers to the questions moved to EU AI Act
+    // (organization) are not counted; the organizational project's are.
+    expect(mockQuery.mock.calls[0][0]).toContain(
+      "COALESCE(q.moved_to_framework_id, 1) = pf.framework_id",
+    );
+  });
+
   it("covers the whole organization when no project is given", async () => {
     mockQuery.mockResolvedValueOnce([[{ total: "10", done: "5" }]]);
 
@@ -252,6 +268,8 @@ describe("upsertControlScoreQuery", () => {
     const [sql, options] = mockQuery.mock.calls[0];
     expect(sql).toContain("requirements_score");
     expect(sql).toContain("requirements_score = EXCLUDED.requirements_score");
+    // A recalculation sets the visibility it was asked for, not the first run's.
+    expect(sql).toContain("visibility = EXCLUDED.visibility");
     expect(options.replacements).toMatchObject({ requirements: 75, overallScore: 74 });
   });
 
@@ -294,6 +312,7 @@ describe("upsertFrameworkScoreQuery", () => {
     const [sql, options] = mockQuery.mock.calls[0];
     expect(sql).toContain("controls_avg_score");
     expect(sql).toContain("assessment_score");
+    expect(sql).toContain("visibility = EXCLUDED.visibility");
     expect(options.replacements).toMatchObject({
       avgScore: 54,
       controlsAvgScore: 60,
@@ -400,5 +419,105 @@ describe("getWeakestControlsQuery", () => {
     expect(sql).toContain("evidence_count_score");
     expect(sql).toContain("evidence_recency_score");
     expect(sql).toContain("recommendations");
+  });
+});
+
+describe("getReadinessCalculationQuery", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("reads the score within the organization only", async () => {
+    mockQuery.mockResolvedValueOnce([[{ id: 5, visibility: "public" }]]);
+    expect(await getReadinessCalculationQuery(5, 42)).toEqual({ id: 5, visibility: "public" });
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("organization_id = :organizationId");
+    expect(options.replacements).toEqual({ id: 5, organizationId: 42 });
+  });
+
+  it("returns null when no row matches", async () => {
+    mockQuery.mockResolvedValueOnce([[]]);
+    expect(await getReadinessCalculationQuery(5, 7)).toBeNull();
+  });
+});
+
+describe("deleteReadinessCalculationQuery", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockQuery.mockResolvedValue([[]]);
+  });
+
+  it("deletes the score, its control scores and its history points, scoped to one person", async () => {
+    await deleteReadinessCalculationQuery(
+      { id: 5, framework_type: "eu_ai_act", project_id: 49, created_by: 9, visibility: "public" },
+      42,
+      { ownPrivateRows: true },
+    );
+    expect(mockQuery).toHaveBeenCalledTimes(3);
+    const [scoreSql, controlSql, historySql] = mockQuery.mock.calls.map((c) => c[0] as string);
+    expect(scoreSql).toContain("DELETE FROM framework_readiness_scores");
+    expect(scoreSql).toContain("id = :id AND organization_id = :organizationId");
+    for (const sql of [controlSql, historySql]) {
+      expect(sql).toContain("organization_id = :organizationId");
+      expect(sql).toContain("COALESCE(project_id, 0) = COALESCE(:projectId::int, 0)");
+      expect(sql).toContain("COALESCE(created_by, 0) = COALESCE(:createdBy::int, 0)");
+    }
+    expect(controlSql).toContain("DELETE FROM control_readiness_scores");
+    expect(historySql).toContain("DELETE FROM readiness_history");
+    // Every history point of the calculation, whichever visibility it was
+    // recorded with: a recalculation can switch it.
+    expect(historySql).not.toContain("visibility");
+    expect(controlSql).not.toContain("visibility");
+    for (const [, options] of mockQuery.mock.calls) {
+      expect(options.transaction).toBe("tx");
+      expect(options.replacements).toMatchObject({
+        organizationId: 42,
+        frameworkType: "eu_ai_act",
+        projectId: 49,
+        createdBy: 9,
+      });
+    }
+  });
+});
+
+describe("deleteReadinessCalculationQuery for someone else's public calculation", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockQuery.mockResolvedValue([[]]);
+  });
+
+  it("leaves the person's private control scores and history points alone", async () => {
+    await deleteReadinessCalculationQuery(
+      { id: 5, framework_type: "eu_ai_act", project_id: 49, created_by: 9, visibility: "public" },
+      42,
+      { ownPrivateRows: false },
+    );
+    const [, controlSql, historySql] = mockQuery.mock.calls.map((c) => c[0] as string);
+    expect(controlSql).toContain("AND visibility = 'public'");
+    expect(historySql).toContain("AND visibility = 'public'");
+  });
+});
+
+describe("getOwnCalculationVisibilityQuery", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("reads the person's calculation in the scope", async () => {
+    mockQuery.mockResolvedValueOnce([[{ visibility: "private" }]]);
+    expect(await getOwnCalculationVisibilityQuery("eu_ai_act", 42, 49, 9)).toBe("private");
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("FROM framework_readiness_scores");
+    expect(sql).toContain("COALESCE(project_id, 0) = COALESCE(:projectId::int, 0)");
+    expect(sql).toContain("COALESCE(created_by, 0) = COALESCE(:createdBy::int, 0)");
+    expect(options.replacements).toEqual({
+      organizationId: 42,
+      frameworkType: "eu_ai_act",
+      projectId: 49,
+      createdBy: 9,
+    });
+  });
+
+  it("answers null when there is none and public for anything not private", async () => {
+    mockQuery.mockResolvedValueOnce([[]]);
+    expect(await getOwnCalculationVisibilityQuery("eu_ai_act", 42, null, 9)).toBeNull();
+    mockQuery.mockResolvedValueOnce([[{ visibility: "all" }]]);
+    expect(await getOwnCalculationVisibilityQuery("eu_ai_act", 42, null, 9)).toBe("public");
   });
 });

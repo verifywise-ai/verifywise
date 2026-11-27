@@ -8094,6 +8094,8 @@ tags:
   -
     name: 'v1: V1/Projects'
   -
+    name: 'v1: V1/Readiness'
+  -
     name: 'v1: V1/Report Runs'
   -
     name: 'v1: V1/Report Templates'
@@ -8543,6 +8545,12 @@ paths:
                 properties:
                   message: {type: string, example: Accepted}
                   data: {type: object, properties: {token: {type: string, description: 'JWT access token (absent when requiresOrganizationSelection)'}, isSuperAdmin: {type: boolean, description: 'Whether the user has a super_admins row'}, onboarding_status: {type: string, description: 'Organization onboarding status (not present for a pure super-admin)', example: completed}, is_org_creator: {type: boolean, description: 'Whether user is the first admin of the org (not present for a pure super-admin)'}, requiresOrganizationSelection: {type: boolean, description: 'Present and true when the user belongs to several organizations'}, organizations: {type: array, description: 'The organizations to choose from', items: {type: object, properties: {id: {type: integer}, name: {type: string}, role_name: {type: string}}}}, selectionToken: {type: string, description: 'Exchange at POST /users/login/select-organization; valid for 5 minutes'}}}
+        '400':
+          description: 'Email or password missing, empty, or not a string'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
         '401':
           description: 'Invalid email or password'
           content:
@@ -9904,6 +9912,8 @@ paths:
                 properties:
                   message: {type: string, example: Accepted}
                   data: {type: boolean, example: true}
+        '400':
+          description: 'The project holds EU AI Act (organization) while a use case has EU AI Act'
         '404':
           description: 'Project not found'
           content:
@@ -11589,6 +11599,7 @@ paths:
         - Frameworks
       summary: 'Add Framework To Project'
       operationId: addFrameworkToProject
+      description: 'Adding EU AI Act (1) to a non-demo use case also adds EU AI Act (organization) (29) to the organizational project, creating that project when the organization has none; organization_framework_added says whether this request did. Framework 29 itself can''t be added by hand (400).'
       security:
         -
           bearerAuth: []
@@ -11598,8 +11609,17 @@ paths:
             schema:
               type: object
       responses:
-        '201':
-          description: 'Created successfully'
+        '200':
+          description: 'Framework added'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {organization_framework_added: {type: boolean}}}
+        '400':
+          description: 'EU AI Act (organization) is added automatically'
         '401':
           description: Unauthorized
         '500':
@@ -11616,6 +11636,8 @@ paths:
       responses:
         '200':
           description: 'Deleted successfully'
+        '400':
+          description: 'EU AI Act (organization) can''t be removed while a non-demo use case has EU AI Act'
         '401':
           description: Unauthorized
         '500':
@@ -11644,7 +11666,7 @@ paths:
           name: frameworkId
           in: path
           required: true
-          description: 'Framework id (the bundled frameworks use ids 5-28)'
+          description: 'Framework id (the bundled frameworks use ids 5-28 and 30)'
           schema:
             type: integer
         -
@@ -11678,7 +11700,7 @@ paths:
           name: frameworkId
           in: path
           required: true
-          description: 'Framework id (the bundled frameworks use ids 5-28)'
+          description: 'Framework id (the bundled frameworks use ids 5-28 and 30)'
           schema:
             type: integer
         -
@@ -11712,7 +11734,7 @@ paths:
           name: frameworkId
           in: path
           required: true
-          description: 'Framework id (the bundled frameworks use ids 5-28)'
+          description: 'Framework id (the bundled frameworks use ids 5-28 and 30)'
           schema:
             type: integer
         -
@@ -11755,7 +11777,7 @@ paths:
           name: frameworkId
           in: path
           required: true
-          description: 'Framework id (the bundled frameworks use ids 5-28)'
+          description: 'Framework id (the bundled frameworks use ids 5-28 and 30)'
           schema:
             type: integer
         -
@@ -11827,7 +11849,7 @@ paths:
           name: frameworkId
           in: path
           required: true
-          description: 'Framework id (the bundled frameworks use ids 5-28)'
+          description: 'Framework id (the bundled frameworks use ids 5-28 and 30)'
           schema:
             type: integer
         -
@@ -11869,6 +11891,7 @@ paths:
         - 'EU AI Act'
       summary: 'Get Controls By Control Category Id'
       operationId: getControlsByControlCategoryId
+      description: 'On EU AI Act (organization) (framework 29), a row whose work was copied from a use case on upgrade carries copied_from_project_id (that use case) and copied_from_use_case ("<title> (<UC id>)"). The label is null unless the caller can see that use case: Admins see every one, other roles one they own, are a member of or reach through a group. Saving the row clears both.'
       security:
         -
           bearerAuth: []
@@ -11908,6 +11931,7 @@ paths:
         - 'EU AI Act'
       summary: 'Get Assessments By Project Id'
       operationId: getAssessmentsByProjectId
+      description: 'On EU AI Act (organization) (framework 29), a row whose work was copied from a use case on upgrade carries copied_from_project_id (that use case) and copied_from_use_case ("<title> (<UC id>)"). The label is null unless the caller can see that use case: Admins see every one, other roles one they own, are a member of or reach through a group. Saving the row clears both.'
       security:
         -
           bearerAuth: []
@@ -11953,6 +11977,7 @@ paths:
         - 'EU AI Act'
       summary: 'Get Compliances By Project Id'
       operationId: getCompliancesByProjectId
+      description: 'On EU AI Act (organization) (framework 29), a row whose work was copied from a use case on upgrade carries copied_from_project_id (that use case) and copied_from_use_case ("<title> (<UC id>)"). The label is null unless the caller can see that use case: Admins see every one, other roles one they own, are a member of or reach through a group. Saving the row clears both.'
       security:
         -
           bearerAuth: []
@@ -12076,6 +12101,7 @@ paths:
         - 'EU AI Act'
       summary: 'Get Topic By Id'
       operationId: getTopicById
+      description: 'On EU AI Act (organization) (framework 29), a row whose work was copied from a use case on upgrade carries copied_from_project_id (that use case) and copied_from_use_case ("<title> (<UC id>)"). The label is null unless the caller can see that use case: Admins see every one, other roles one they own, are a member of or reach through a group. Saving the row clears both.'
       security:
         -
           bearerAuth: []
@@ -12092,6 +12118,7 @@ paths:
         - 'EU AI Act'
       summary: 'Get Control By Id'
       operationId: getControlById
+      description: 'On EU AI Act (organization) (framework 29), a row whose work was copied from a use case on upgrade carries copied_from_project_id (that use case) and copied_from_use_case ("<title> (<UC id>)"). The label is null unless the caller can see that use case: Admins see every one, other roles one they own, are a member of or reach through a group. Saving the row clears both.'
       security:
         -
           bearerAuth: []
@@ -28289,7 +28316,7 @@ paths:
         '202':
           description: 'Deleted. Body data: { deleted: true, archived_risk_ids: number[] } (empty unless archiving was asked for)'
         '400':
-          description: 'Invalid id, or archive_risks_linked_only_here missing, repeated or not true/false'
+          description: 'Invalid id, or archive_risks_linked_only_here missing, repeated or not true/false, or the project holds EU AI Act (organization) while a use case has EU AI Act'
         '403':
           description: 'No useCase.edit permission, no write access to the use case, or archiving asked without risks.edit'
         '404':
@@ -30373,7 +30400,7 @@ paths:
   '/v1/projects/{id}/approval-workflow':
     get:
       summary: 'Get a use case''s approval workflow'
-      description: 'The approval workflow attached to the use case (its id, title and whether it is still active; an archived workflow keeps its title; a stored workflow that cannot be found in the organization comes back with its id, a null title and workflow_is_active false) and the status of the latest approval request: pending, rejected, or null when there is none open or rejected (approved and withdrawn requests read as null). All workflow fields are null when no workflow is attached. Change the workflow with PATCH /api/v1/projects/{id} and approval_workflow_id. Anyone who may read the use case may read this.'
+      description: 'The approval workflow attached to the use case (its id, title and whether it is still active; an archived workflow keeps its title; a stored workflow that cannot be found in the organization comes back with its id, a null title and workflow_is_active false) and the status of the latest approval request: pending, rejected, or null when there is none open or rejected (approved and withdrawn requests read as null). All workflow fields are null when no workflow is attached. Change the workflow with PATCH /api/v1/projects/{id} and approval_workflow_id. viewer_can_write says whether the caller has write access to the use case, so a client can offer POST /api/v1/projects/{id}/resubmit-approval to those it accepts (it also needs useCase.edit). Anyone who may read the use case may read this.'
       parameters:
         -
           name: id
@@ -30391,7 +30418,7 @@ paths:
                 type: object
                 properties:
                   message: {type: string}
-                  data: {type: object, properties: {approval_workflow_id: {type: integer, nullable: true}, workflow_title: {type: string, nullable: true}, workflow_is_active: {type: boolean, nullable: true, description: 'False when the workflow has been archived or cannot be found in the organization'}, approval_status: {type: string, enum: [pending, rejected], nullable: true}}}
+                  data: {type: object, properties: {approval_workflow_id: {type: integer, nullable: true}, workflow_title: {type: string, nullable: true}, workflow_is_active: {type: boolean, nullable: true, description: 'False when the workflow has been archived or cannot be found in the organization'}, approval_status: {type: string, enum: [pending, rejected], nullable: true}, viewer_can_write: {type: boolean, description: 'True when the caller has write access to this use case, by the rule the use case write routes apply (Admin, owner, member, or a member of a group attached to the use case). Says nothing about the useCase.edit permission.'}}}
         '400':
           description: 'The id is not a positive integer'
         '403':
@@ -30443,6 +30470,37 @@ paths:
       tags:
         - 'v1: V1/Projects'
       operationId: resubmitUseCaseApproval
+      security:
+        -
+          bearerAuth: []
+  '/v1/readiness/scores/{id}':
+    delete:
+      summary: 'Delete a readiness calculation'
+      description: 'Deletes one framework readiness score with its control scores and history points. The person who ran it may delete it; deleting someone else''s public calculation requires readiness.admin. Someone else''s private calculation answers 404.'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          description: 'The framework readiness score ID'
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: 'Invalid ID'
+        '401':
+          description: Unauthorized
+        '403':
+          description: 'Insufficient permissions'
+        '404':
+          description: 'Readiness score not found'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Readiness'
+      operationId: deleteCalculation
       security:
         -
           bearerAuth: []

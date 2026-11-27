@@ -1,4 +1,5 @@
 import { useState } from "react";
+import CustomException from "../../../../infrastructure/exceptions/customException";
 import { Box, Collapse, Stack, Typography } from "@mui/material";
 import { ChevronDown } from "lucide-react";
 import ConfirmationModal from "../../Dialogs/ConfirmationModal";
@@ -82,9 +83,14 @@ function DeleteUseCaseModal({
         id: projectId,
         archiveRisksLinkedOnlyHere: willArchive,
       });
-    } catch {
-      // The server rolled back the archive and the delete together.
-      setDeleteError(t("The use case could not be deleted. Nothing was changed. Try again."));
+    } catch (error) {
+      // The server rolled back the archive and the delete together. A refusal
+      // (400, e.g. the project holds EU AI Act (organization)) says why.
+      setDeleteError(
+        error instanceof CustomException && error.status === 400
+          ? error.message
+          : t("The use case could not be deleted. Nothing was changed. Try again."),
+      );
       // The linked risks may have changed since the dialog opened.
       void refetch();
       setIsWorking(false);

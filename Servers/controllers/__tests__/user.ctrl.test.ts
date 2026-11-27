@@ -690,6 +690,36 @@ describe("user.ctrl", () => {
       await loginUser(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
     });
+    it.each([
+      ["an empty body", {}],
+      ["no email", { password: "pass" }],
+      ["a blank email", { email: "  ", password: "pass" }],
+      ["a non-string email", { email: ["a@b.com"], password: "pass" }],
+      ["no password", { email: "a@b.com" }],
+      ["an empty password", { email: "a@b.com", password: "" }],
+      ["a non-string password", { email: "a@b.com", password: { $ne: "" } }],
+    ])("should return 400 without a lookup for %s", async (_label, body) => {
+      const req = createReq({ body });
+      const res = createRes();
+      await loginUser(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "Bad Request",
+        data: "Email and password are required",
+      });
+      expect(mockGetByEmail).not.toHaveBeenCalled();
+    });
+    it("should return 400 when the body is missing", async () => {
+      const req = createReq({ body: undefined });
+      const res = createRes();
+      await loginUser(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "Bad Request",
+        data: "Email and password are required",
+      });
+      expect(mockGetByEmail).not.toHaveBeenCalled();
+    });
   });
 
   describe("resetPassword", () => {

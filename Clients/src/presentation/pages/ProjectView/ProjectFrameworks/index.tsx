@@ -1,42 +1,29 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useDispatch } from "react-redux";
-import { Box, Tab, Alert } from "@mui/material";
-import TabList from "@mui/lab/TabList";
-import TabPanel from "@mui/lab/TabPanel";
-import TabContext from "@mui/lab/TabContext";
-import { tabStyle, tabPanelStyle } from "../V1.0ProjectView/style";
+import { Box, Alert } from "@mui/material";
 import CustomizableSkeleton from "../../../components/Skeletons";
-import ComplianceTracker from "../../../pages/ComplianceTracker/1.0ComplianceTracker";
 import GenericFramework from "../../../pages/Framework/Generic";
 import { Project } from "../../../../domain/types/Project";
 import { Framework } from "../../../../domain/types/Framework";
-import AssessmentTracker from "../../Assessment/1.0AssessmentTracker";
-import ReadinessDashboard from "../../ReadinessDashboard";
 import useFrameworks from "../../../../application/hooks/useFrameworks";
 import AddFrameworkModal from "../AddNewFramework";
 import useMultipleOnScreen from "../../../../application/hooks/useMultipleOnScreen";
 import { setComponentVisibility } from "../../../../application/redux/ui/uiSlice";
 import { ButtonToggle } from "../../../components/button-toggle";
 
-import { containerStyle, headerContainerStyle, tabListStyle } from "./styles";
+import { containerStyle, headerContainerStyle } from "./styles";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { useCanCheck } from "../../../../application/hooks/useCan";
-import { TabFilterBar } from "../../../components/FrameworkFilter/TabFilterBar";
 import { useSearchParams } from "react-router";
-import useUsers from "../../../../application/hooks/useUsers";
 import { text, palette as vwPalette } from "../../../themes/palette";
+import OrganizationObligationsStatus from "./OrganizationObligationsStatus";
+import EuAiActTrackers, { EuAiActTrackerTab } from "../EuAiActTrackers";
 
 export const FRAMEWORK_IDS = {
   EU_AI_ACT: 1,
 } as const;
 
-const TRACKER_TABS = [
-  { label: "Requirements", value: "compliance" },
-  { label: "Assessments", value: "assessment" },
-  { label: "AI readiness", value: "readiness" },
-] as const;
-
-type TrackerTab = (typeof TRACKER_TABS)[number]["value"];
+type TrackerTab = EuAiActTrackerTab;
 
 /** Toggle values for imported frameworks; bundled ones keep their index ("0", "1", ...). */
 const IMPORTED_TOGGLE_PREFIX = "imp-";
@@ -79,7 +66,6 @@ const ProjectFrameworks = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
-  const { users } = useUsers();
 
   const dispatch = useDispatch();
   const can = useCanCheck();
@@ -232,11 +218,6 @@ const ProjectFrameworks = ({
     [isEUAIAct, readinessFrameworkType],
   );
 
-  const tabs = useMemo(
-    () => TRACKER_TABS.filter((tab) => isTabAvailable(tab.value)),
-    [isTabAvailable],
-  );
-
   // Selecting a framework that doesn't offer the active tab (or landing on it via
   // ?subtab=) removes it — fall back to Requirements so the panel is never blank.
   useEffect(() => {
@@ -244,43 +225,6 @@ const ProjectFrameworks = ({
       setTracker("compliance");
     }
   }, [tracker, isTabAvailable]);
-
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [applicabilityFilter, setApplicabilityFilter] = useState<string>("all");
-  const [ownerFilter, setOwnerFilter] = useState<string>("");
-  const [approverFilter, setApproverFilter] = useState<string>("");
-  const [dueDateFilter, setDueDateFilter] = useState<string>("");
-
-  const euAIActStatusOptions = [
-    { value: "waiting", label: "Waiting" },
-    { value: "in progress", label: "In progress" },
-    { value: "done", label: "Done" },
-  ];
-
-  const euAIActAssessmentsOptions = [
-    { value: "not started", label: "Not started" },
-    { value: "in progress", label: "In progress" },
-    { value: "done", label: "Done" },
-  ];
-
-  const statusOptions = isEUAIAct
-    ? tracker === "compliance"
-      ? euAIActStatusOptions
-      : euAIActAssessmentsOptions
-    : [];
-
-  // User options for owner and approver filters
-  const userOptions = useMemo(() => {
-    return users.map((user: any) => ({
-      value: user.id?.toString() || "",
-      label: `${user.name} ${user.surname}`,
-    }));
-  }, [users]);
-
-  useEffect(() => {
-    setStatusFilter("");
-    setApplicabilityFilter("");
-  }, [tracker]);
 
   // Render built-in framework content
   const renderBuiltInContent = useCallback(() => {
@@ -354,101 +298,24 @@ const ProjectFrameworks = ({
 
     return (
       <>
-        <TabFilterBar
-          statusFilter={statusFilter}
-          onStatusChange={setStatusFilter}
-          applicabilityFilter={applicabilityFilter}
-          onApplicabilityChange={setApplicabilityFilter}
-          showStatusFilter={tracker === "compliance" || tracker === "assessment"}
-          showApplicabilityFilter={false}
-          statusOptions={statusOptions}
-          ownerFilter={ownerFilter}
-          onOwnerChange={setOwnerFilter}
-          approverFilter={approverFilter}
-          onApproverChange={setApproverFilter}
-          dueDateFilter={dueDateFilter}
-          onDueDateChange={setDueDateFilter}
-          showOwnerFilter={tracker === "compliance"}
-          showApproverFilter={tracker === "compliance"}
-          showDueDateFilter={tracker === "compliance"}
-          ownerOptions={userOptions}
-          approverOptions={userOptions}
+        <OrganizationObligationsStatus />
+        <EuAiActTrackers
+          project={project}
+          frameworkId={FRAMEWORK_IDS.EU_AI_ACT}
+          tracker={tracker}
+          onTrackerChange={setTracker}
+          readinessFrameworkType={readinessFrameworkType}
+          requirementsTabRef={refs[0]}
         />
-        <TabContext value={tracker}>
-          <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 1 }}>
-            <TabList
-              onChange={(_, v) => setTracker(v)}
-              TabIndicatorProps={{ style: { backgroundColor: "brand.primary" } }}
-              sx={tabListStyle}
-            >
-              {tabs.map((tab) => (
-                <Tab
-                  key={tab.value}
-                  sx={tabStyle}
-                  label={tab.label}
-                  value={tab.value}
-                  disableRipple
-                  data-joyride-id={tab.value === "compliance" ? "compliance-heading" : undefined}
-                  ref={tab.value === "compliance" ? refs[0] : undefined}
-                />
-              ))}
-            </TabList>
-          </Box>
-          {isEUAIAct ? (
-            <>
-              <TabPanel value="compliance" sx={tabPanelStyle}>
-                <ComplianceTracker
-                  project={project}
-                  statusFilter={statusFilter}
-                  ownerFilter={ownerFilter}
-                  approverFilter={approverFilter}
-                  dueDateFilter={dueDateFilter}
-                />
-              </TabPanel>
-              <TabPanel value="assessment" sx={tabPanelStyle}>
-                <AssessmentTracker project={project} statusFilter={statusFilter} />
-              </TabPanel>
-            </>
-          ) : (
-            <TabPanel value="compliance" sx={tabPanelStyle}>
-              <ComplianceTracker
-                project={project}
-                statusFilter={statusFilter}
-                ownerFilter={ownerFilter}
-                approverFilter={approverFilter}
-                dueDateFilter={dueDateFilter}
-              />
-            </TabPanel>
-          )}
-          {readinessFrameworkType && (
-            // Tighter top padding than the sibling panels: readiness opens with a
-            // right-aligned control strip, so the default 20px reads as dead space.
-            <TabPanel value="readiness" sx={{ ...tabPanelStyle, pt: 6 }}>
-              <ReadinessDashboard
-                projectId={Number(project.id)}
-                frameworkType={readinessFrameworkType}
-              />
-            </TabPanel>
-          )}
-        </TabContext>
       </>
     );
   }, [
-    statusFilter,
-    applicabilityFilter,
-    ownerFilter,
-    approverFilter,
-    dueDateFilter,
     isEUAIAct,
     readinessFrameworkType,
     tracker,
-    statusOptions,
-    userOptions,
-    tabs,
     refs,
     project,
     selectedFrameworkId,
-    tabListStyle,
     projectFrameworks.length,
     loading,
     isManagingFrameworksDisabled,

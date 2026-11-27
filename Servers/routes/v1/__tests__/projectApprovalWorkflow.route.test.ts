@@ -93,9 +93,58 @@ describe("GET /api/v1/projects/:id/approval-workflow", () => {
       workflow_title: null,
       workflow_is_active: null,
     });
+    // Read access only (a workflow approver or task assignee): the guard lets
+    // the read through, and the write rule refuses.
+    accessQuery.mockResolvedValue("denied");
     const res = await get("Auditor");
     expect(res.status).toBe(200);
-    expect(accessQuery).not.toHaveBeenCalled();
+    expect(readAccessQuery).toHaveBeenCalledWith(12, { userId: 9, role: "Auditor" }, 42);
+    // The write rule runs once, in the controller for the flag, never as the guard.
+    expect(accessQuery).toHaveBeenCalledTimes(1);
+    expect(res.body.data.viewer_can_write).toBe(false);
+  });
+
+  it("still answers with viewer_can_write false when the write-access lookup fails", async () => {
+    workflowQuery.mockResolvedValue({
+      approval_workflow_id: 4,
+      workflow_title: "Model risk review",
+      workflow_is_active: true,
+    });
+    statusQuery.mockResolvedValue("rejected");
+    accessQuery.mockRejectedValue(new Error("db timeout"));
+    const res = await get("Editor");
+    expect(res.status).toBe(200);
+    expect(res.body.data.approval_status).toBe("rejected");
+    expect(res.body.data.viewer_can_write).toBe(false);
+  });
+
+  it('sets viewer_can_write by the write rule requireProjectAccess(..., "write") applies', async () => {
+    // getProjectAccessQuery is the rule the resubmit route's guard uses; it is
+    // "allowed" for an Admin, the owner, a member, or a member of a group
+    // attached to the use case.
+    workflowQuery.mockResolvedValue({
+      approval_workflow_id: 4,
+      workflow_title: "Model risk review",
+      workflow_is_active: true,
+    });
+    statusQuery.mockResolvedValue("rejected");
+    const res = await get("Editor", "7");
+    expect(res.status).toBe(200);
+    expect(res.body.data.viewer_can_write).toBe(true);
+    expect(accessQuery).toHaveBeenCalledWith(12, { userId: 9, role: "Editor" }, 7);
+  });
+
+  it("answers viewer_can_write false for a reader the write rule refuses", async () => {
+    workflowQuery.mockResolvedValue({
+      approval_workflow_id: 4,
+      workflow_title: "Model risk review",
+      workflow_is_active: true,
+    });
+    statusQuery.mockResolvedValue("rejected");
+    accessQuery.mockResolvedValue("denied");
+    const res = await get("Reviewer");
+    expect(res.status).toBe(200);
+    expect(res.body.data.viewer_can_write).toBe(false);
   });
 
   it("answers 404 for a use case in another organization", async () => {
@@ -107,6 +156,7 @@ describe("GET /api/v1/projects/:id/approval-workflow", () => {
     expect(res.status).toBe(404);
     expect(workflowQuery).toHaveBeenCalledWith(12, 7);
     expect(statusQuery).not.toHaveBeenCalled();
+    expect(accessQuery).not.toHaveBeenCalled();
   });
 
   it("returns the attached workflow and the approval status, scoped to the organization", async () => {
@@ -123,6 +173,7 @@ describe("GET /api/v1/projects/:id/approval-workflow", () => {
       workflow_title: "Model risk review",
       workflow_is_active: true,
       approval_status: "pending",
+      viewer_can_write: true,
     });
     expect(workflowQuery).toHaveBeenCalledWith(12, 7);
     expect(statusQuery).toHaveBeenCalledWith(12, "use_case", 7);
@@ -141,6 +192,7 @@ describe("GET /api/v1/projects/:id/approval-workflow", () => {
       workflow_title: "Old review",
       workflow_is_active: false,
       approval_status: "rejected",
+      viewer_can_write: true,
     });
   });
 
@@ -157,6 +209,7 @@ describe("GET /api/v1/projects/:id/approval-workflow", () => {
       workflow_title: null,
       workflow_is_active: null,
       approval_status: null,
+      viewer_can_write: true,
     });
   });
 

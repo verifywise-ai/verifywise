@@ -109,7 +109,7 @@ export const aiAppsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Employees can also request an app through an intake form of type AI app. Requests waiting for a decision are listed at the top of the In review tab and included in its count. **Review** opens the request. Approving it creates the app as Approved and Planned, with the approver as owner. The name, description and departments come from the requester\'s answers.',
+      text: 'Employees can also request an app through an intake form of type AI app. Requests waiting for a decision are listed at the top of the In review tab and included in its count. The apps under review follow under their own AI apps heading when requests are listed. **Review** opens the request. Approving it creates the app as Approved and Planned, with the approver as owner. The name, description and departments come from the requester\'s answers.',
     },
     {
       type: 'image',

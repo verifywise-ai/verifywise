@@ -21,6 +21,10 @@ import { getUserLanguage } from "../utils/userPreference.utils";
 import { deadlineNoticeKey } from "../utils/deadline.utils";
 import { formatReviewDate } from "../utils/policyReviewDate.utils";
 import { incidentPagePath } from "../utils/incidentLinks.utils";
+import { approvalLinkedEntity, approvalRequestPath } from "../utils/approvalLinks.utils";
+import { frontendBaseUrl } from "../utils/frontendUrl.utils";
+import { EU_AI_ACT_ORGANIZATION_FRAMEWORK_ID } from "../structures/EU-AI-Act-Organization/euAiActOrganization";
+import { structItemInFrameworkSql } from "../utils/euAiActStructItem.sql";
 
 /**
  * Build a frontend-compatible URL for a given entity type and id.
@@ -288,9 +292,79 @@ function getEntityTypeLabel(entityType: string): string {
 }
 
 /**
- * Build URL for entities - queries DB for parent context when needed
+ * Where an EU AI Act item opens: a use case's EU AI Act on its project page,
+ * EU AI Act (organization) on the Frameworks page. The caller appends the
+ * subtab and item parameters.
  */
-async function buildEntityUrlAsync(
+export const euAiActLocation = (
+  baseUrl: string,
+  row: { project_id: number; framework_id: number },
+): string =>
+  Number(row.framework_id) === EU_AI_ACT_ORGANIZATION_FRAMEWORK_ID
+    ? `${baseUrl}/framework?framework=eu-ai-act-organization`
+    : `${baseUrl}/project-view?projectId=${row.project_id}&tab=frameworks&framework=eu-ai-act`;
+
+/**
+ * SQL: the organizational project's projects_frameworks row of the framework a
+ * moved EU AI Act item (struct alias) now belongs to, as `org`, joined only when
+ * the row (on `pf`) is a use case's hidden row for such an item. A demo
+ * organizational project comes after a real one.
+ */
+const movedEuAiActItemSql = (struct: string) => `
+  LEFT JOIN LATERAL (
+    SELECT opf.id AS pf_id, opf.project_id, opf.framework_id
+      FROM projects_frameworks opf
+      JOIN projects op ON op.id = opf.project_id AND op.organization_id = opf.organization_id
+     WHERE opf.organization_id = :organizationId
+       AND opf.framework_id = ${struct}.moved_to_framework_id
+       AND op.is_organizational = true
+     ORDER BY op.is_demo, op.created_at DESC, op.id
+     LIMIT 1
+  ) org ON NOT (${structItemInFrameworkSql(struct, "pf.framework_id")})`;
+
+/** An EU AI Act row and, when it is hidden, the organizational row of the same item. */
+type EuAiActRowLocation = {
+  project_id: number;
+  framework_id: number;
+  hidden: boolean;
+  org_project_id: number | null;
+  org_framework_id: number | null;
+};
+
+/**
+ * Where a row's link goes: the row itself, or for a use case's hidden row of
+ * an item that moved to EU AI Act (organization), the organizational project's
+ * row of that item (its ids, given as `moved`). Null when a hidden row has no
+ * organizational counterpart.
+ */
+export const euAiActLinkTarget = <T extends Record<string, unknown>>(
+  baseUrl: string,
+  row: EuAiActRowLocation,
+  own: T,
+  moved: { [K in keyof T]: T[K] | null },
+): { location: string; ids: T } | null => {
+  if (!row.hidden) return { location: euAiActLocation(baseUrl, row), ids: own };
+  if (
+    row.org_project_id === null ||
+    row.org_framework_id === null ||
+    Object.values(moved).some((id) => id === null || id === undefined)
+  ) {
+    return null;
+  }
+  return {
+    location: euAiActLocation(baseUrl, {
+      project_id: row.org_project_id,
+      framework_id: row.org_framework_id,
+    }),
+    ids: moved as T,
+  };
+};
+
+/**
+ * Build URL for entities - queries DB for parent context when needed.
+ * Task links in emails go through here too (buildEntityLinksHtml).
+ */
+export async function buildEntityUrlAsync(
   baseUrl: string,
   entityType: string,
   entityId: number,
@@ -386,56 +460,108 @@ async function buildEntityUrlAsync(
 
     case "eu_control": {
       // EU AI Act controls - need project_id via projects_frameworks join
-      const result = await sequelize.query<{ project_id: number }>(
-        `SELECT pf.project_id
+      const [row] = await sequelize.query<EuAiActRowLocation & { org_control_id: number | null }>(
+        `SELECT pf.project_id, pf.framework_id, NOT (${structItemInFrameworkSql("cs", "pf.framework_id")}) AS hidden,
+                org.project_id AS org_project_id, org.framework_id AS org_framework_id,
+                oc.id AS org_control_id
          FROM controls_eu c
          JOIN projects_frameworks pf ON c.projects_frameworks_id = pf.id AND pf.organization_id = c.organization_id
+         JOIN controls_struct_eu cs ON cs.id = c.control_meta_id
+         ${movedEuAiActItemSql("cs")}
+         LEFT JOIN controls_eu oc ON oc.organization_id = :organizationId
+           AND oc.projects_frameworks_id = org.pf_id AND oc.control_meta_id = c.control_meta_id
          WHERE c.organization_id = :organizationId AND c.id = :entityId`,
         { replacements: { organizationId, entityId }, type: QueryTypes.SELECT },
       );
-      if (result[0]) {
-        return `${baseUrl}/project-view?projectId=${result[0].project_id}&tab=frameworks&framework=eu-ai-act&subtab=compliance&controlId=${entityId}`;
-      }
-      return null;
+      const target =
+        row &&
+        euAiActLinkTarget(baseUrl, row, { controlId: entityId }, { controlId: row.org_control_id });
+      return target
+        ? `${target.location}&subtab=compliance&controlId=${target.ids.controlId}`
+        : null;
     }
 
     case "eu_subcontrol": {
       // EU AI Act subcontrols - need project_id via controls_eu and projects_frameworks join
-      const result = await sequelize.query<{ project_id: number; control_id: number }>(
-        `SELECT pf.project_id, sc.control_id
+      const [row] = await sequelize.query<
+        EuAiActRowLocation & {
+          control_id: number;
+          org_control_id: number | null;
+          org_subcontrol_id: number | null;
+        }
+      >(
+        `SELECT pf.project_id, pf.framework_id, sc.control_id,
+                NOT (${structItemInFrameworkSql("cs", "pf.framework_id")}) AS hidden,
+                org.project_id AS org_project_id, org.framework_id AS org_framework_id,
+                osc.control_id AS org_control_id, osc.id AS org_subcontrol_id
          FROM subcontrols_eu sc
          JOIN controls_eu c ON sc.control_id = c.id AND c.organization_id = sc.organization_id
          JOIN projects_frameworks pf ON c.projects_frameworks_id = pf.id AND pf.organization_id = c.organization_id
+         JOIN controls_struct_eu cs ON cs.id = c.control_meta_id
+         ${movedEuAiActItemSql("cs")}
+         LEFT JOIN LATERAL (
+           SELECT s2.id, s2.control_id
+             FROM subcontrols_eu s2
+             JOIN controls_eu c2 ON c2.id = s2.control_id AND c2.organization_id = s2.organization_id
+            WHERE s2.organization_id = :organizationId AND c2.projects_frameworks_id = org.pf_id
+              AND s2.subcontrol_meta_id = sc.subcontrol_meta_id
+            LIMIT 1
+         ) osc ON true
          WHERE sc.organization_id = :organizationId AND sc.id = :entityId`,
         { replacements: { organizationId, entityId }, type: QueryTypes.SELECT },
       );
-      if (result[0]) {
-        return `${baseUrl}/project-view?projectId=${result[0].project_id}&tab=frameworks&framework=eu-ai-act&subtab=compliance&controlId=${result[0].control_id}&subControlId=${entityId}`;
-      }
-      return null;
+      const target =
+        row &&
+        euAiActLinkTarget(
+          baseUrl,
+          row,
+          { controlId: row.control_id, subControlId: entityId },
+          { controlId: row.org_control_id, subControlId: row.org_subcontrol_id },
+        );
+      return target
+        ? `${target.location}&subtab=compliance&controlId=${target.ids.controlId}&subControlId=${target.ids.subControlId}`
+        : null;
     }
 
     case "eu_assessment": {
       // EU AI Act assessment - need project_id, question_id, and topic_id for navigation
       // Frontend uses topicId to select tab and questionId to scroll to question
-      const result = await sequelize.query<{
-        project_id: number;
-        question_id: number;
-        topic_id: number;
-      }>(
-        `SELECT pf.project_id, ae.question_id, st.topic_id
+      const [row] = await sequelize.query<
+        EuAiActRowLocation & { question_id: number; topic_id: number; org_answer_id: number | null }
+      >(
+        `SELECT pf.project_id, pf.framework_id, ae.question_id, st.topic_id,
+                NOT (${structItemInFrameworkSql("q", "pf.framework_id")}) AS hidden,
+                org.project_id AS org_project_id, org.framework_id AS org_framework_id,
+                oa.id AS org_answer_id
          FROM answers_eu ae
          JOIN assessments a ON ae.assessment_id = a.id AND a.organization_id = ae.organization_id
          JOIN projects_frameworks pf ON a.projects_frameworks_id = pf.id AND pf.organization_id = a.organization_id
          JOIN questions_struct_eu q ON ae.question_id = q.id
          JOIN subtopics_struct_eu st ON q.subtopic_id = st.id
+         ${movedEuAiActItemSql("q")}
+         LEFT JOIN LATERAL (
+           SELECT a2.id
+             FROM answers_eu a2
+             JOIN assessments s2 ON s2.id = a2.assessment_id AND s2.organization_id = a2.organization_id
+            WHERE a2.organization_id = :organizationId AND s2.projects_frameworks_id = org.pf_id
+              AND a2.question_id = ae.question_id
+            LIMIT 1
+         ) oa ON true
          WHERE ae.organization_id = :organizationId AND ae.id = :entityId`,
         { replacements: { organizationId, entityId }, type: QueryTypes.SELECT },
       );
-      if (result[0]?.project_id && result[0]?.question_id) {
-        return `${baseUrl}/project-view?projectId=${result[0].project_id}&tab=frameworks&framework=eu-ai-act&subtab=assessment&topicId=${result[0].topic_id}&questionId=${result[0].question_id}`;
-      }
-      return null;
+      if (!row?.project_id || !row?.question_id) return null;
+      // The question is the same item in either framework; only the answer
+      // row differs, so a hidden one needs an organizational answer to exist.
+      const target = euAiActLinkTarget(
+        baseUrl,
+        row,
+        { questionId: row.question_id },
+        { questionId: row.org_answer_id === null ? null : row.question_id },
+      );
+      return target
+        ? `${target.location}&subtab=assessment&topicId=${row.topic_id}&questionId=${target.ids.questionId}`
+        : null;
     }
 
     case "iso42001_assessment": {
@@ -803,9 +929,9 @@ export const notifyApprovalRequested = async (
   requesterName: string,
   baseUrl: string,
   /**
-   * The request's entity, when it is not a use case. For a policy, `useCase.id`
-   * is the approval request id: the notification names the policy and links
-   * to the approval workflows page opened on that request (the same
+   * The request's entity (`useCase.id` is the approval request id). A use
+   * case links to its page; a policy, or anything without a page, links to
+   * the approval workflows page opened on the request (the same
    * `/approval-workflows?request=<id>` link the Home queue uses), where the
    * approver decides.
    */
@@ -813,10 +939,11 @@ export const notifyApprovalRequested = async (
 ): Promise<void> => {
   const approver = await getUserById(approverId);
 
-  const isPolicy = entity?.type === "policy";
-  const actionUrl = isPolicy
-    ? `/approval-workflows?request=${useCase.id}`
-    : buildEntityUrl(NotificationEntityType.USE_CASE, useCase.id);
+  const linked = approvalLinkedEntity(entity?.type, entity?.id);
+  const actionUrl =
+    linked?.type === NotificationEntityType.USE_CASE
+      ? buildEntityUrl(linked.type, linked.id)
+      : approvalRequestPath(useCase.id);
 
   await sendInAppNotification(
     organizationId,
@@ -825,8 +952,8 @@ export const notifyApprovalRequested = async (
       type: NotificationType.APPROVAL_REQUESTED,
       title: `Approval requested - Step ${useCase.stepNumber}`,
       message: `${requesterName} needs your approval for: ${useCase.name}`,
-      entity_type: isPolicy ? NotificationEntityType.POLICY : NotificationEntityType.USE_CASE,
-      entity_id: isPolicy ? entity!.id : useCase.id,
+      entity_type: linked?.type,
+      entity_id: linked?.id,
       entity_name: useCase.name,
       action_url: actionUrl,
       metadata: { stepNumber: useCase.stepNumber },
@@ -854,6 +981,7 @@ export const notifyApprovalRequested = async (
 export const notifyApprovalComplete = async (
   organizationId: number,
   requesterId: number,
+  /** `id` is the approval request id; the item's own id is `entityId`. */
   useCase: {
     id: number;
     name: string;
@@ -878,7 +1006,7 @@ export const notifyApprovalComplete = async (
   // approval workflow, just add a row here.
   const labelFor = (
     et?: string,
-  ): { label: string; entity: NotificationEntityType; url: string; entityId?: number } => {
+  ): { label: string; entity?: NotificationEntityType; url: string; entityId?: number } => {
     switch (et) {
       case "policy":
         if (entityId) {
@@ -898,7 +1026,7 @@ export const notifyApprovalComplete = async (
         return {
           label: "AI action",
           entity: NotificationEntityType.AI_ACTION,
-          url: `/approval-requests/${useCase.id}`,
+          url: approvalRequestPath(useCase.id),
         };
       case "model_inventory":
       case "model":
@@ -919,13 +1047,33 @@ export const notifyApprovalComplete = async (
           entity: NotificationEntityType.VENDOR,
           url: `/vendors`,
         };
+      case "file":
+        return {
+          label: "File",
+          entity: NotificationEntityType.FILE,
+          url: approvalRequestPath(useCase.id),
+        };
       case "use_case":
-      default:
+      case undefined:
+        // useCase.id is the request id: link the use case itself when its id
+        // is known, otherwise the request.
+        if (entityId) {
+          return {
+            label: "Use case",
+            entity: NotificationEntityType.USE_CASE,
+            url: buildEntityUrl(NotificationEntityType.USE_CASE, entityId),
+            entityId,
+          };
+        }
         return {
           label: "Use case",
           entity: NotificationEntityType.USE_CASE,
-          url: `/use-cases/${useCase.id}`,
+          url: approvalRequestPath(useCase.id),
         };
+      default:
+        // Any other entity: its id says nothing about a use case, so the
+        // notice names no entity and opens the request.
+        return { label: "Request", url: approvalRequestPath(useCase.id) };
     }
   };
 
@@ -939,7 +1087,7 @@ export const notifyApprovalComplete = async (
       title: `${label} fully approved`,
       message: `Your ${label.toLowerCase()} "${useCase.name}" has been fully approved`,
       entity_type: entity,
-      entity_id: linkedId ?? useCase.id,
+      entity_id: linkedId,
       entity_name: useCase.name,
       action_url: url,
     },
@@ -970,9 +1118,13 @@ export const notifyApprovalAutoApproved = async (
   riskLevel: string,
   threshold: string,
   baseUrl: string,
+  /** The use case's own id; `useCase.id` is the approval request id. */
+  useCaseId?: number | null,
 ): Promise<void> => {
   const requester = await getUserById(requesterId);
-  const url = `/use-cases/${useCase.id}`;
+  const url = useCaseId
+    ? buildEntityUrl(NotificationEntityType.USE_CASE, useCaseId)
+    : approvalRequestPath(useCase.id);
 
   await sendInAppNotification(
     organizationId,
@@ -982,7 +1134,7 @@ export const notifyApprovalAutoApproved = async (
       title: "Use case auto-approved",
       message: `Your use case "${useCase.name}" was auto-approved: risk level "${riskLevel}" is at or below the workflow threshold "${threshold}"`,
       entity_type: NotificationEntityType.USE_CASE,
-      entity_id: useCase.id,
+      entity_id: useCaseId ?? undefined,
       entity_name: useCase.name,
       action_url: url,
       metadata: { auto_approved: true, risk_level: riskLevel, threshold },
@@ -1801,6 +1953,40 @@ export const notifyLifecycleConfirmationDue = async (
 };
 
 /**
+ * Tell the recipients that EU AI Act (organization) was added to the
+ * organizational project because a use case got EU AI Act, and that the
+ * project was created for it when the organization had none. In-app only;
+ * keyed so each recipient reads it in their language.
+ */
+export const notifyEuAiActOrganizationAdded = async (
+  organizationId: number,
+  recipientIds: number[],
+  added: { projectId: number; projectTitle: string; useCaseTitle: string; projectCreated: boolean },
+): Promise<void> => {
+  for (const recipientId of recipientIds) {
+    await sendInAppNotification(
+      organizationId,
+      {
+        user_id: recipientId,
+        type: NotificationType.SYSTEM,
+        titleKey: added.projectCreated
+          ? "Organizational project created"
+          : "EU AI Act (organization) added",
+        messageKey: added.projectCreated
+          ? 'EU AI Act was enabled on "{useCase}", so the organizational project "{project}" was created with EU AI Act (organization). Fill in its organization-level controls on the Frameworks page.'
+          : 'EU AI Act was enabled on "{useCase}", so EU AI Act (organization) was added to "{project}". Fill in its organization-level controls on the Frameworks page.',
+        messageVars: { useCase: added.useCaseTitle, project: added.projectTitle },
+        entity_type: NotificationEntityType.PROJECT,
+        entity_id: added.projectId,
+        entity_name: added.projectTitle,
+        action_url: "/framework",
+      },
+      false,
+    );
+  }
+};
+
+/**
  * One summary of the AI app assessments a bulk run left for this owner (#5258).
  * Awaits the in-app row, which rejects if it can't be stored. The email joins
  * the rate-limited queue un-awaited, at about 600ms each it would otherwise
@@ -1825,7 +2011,7 @@ export const notifyAiAppAssessmentsAssigned = async (
     action_url: actionUrl,
   });
 
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const baseUrl = frontendBaseUrl();
   notificationService
     .sendEmailWithTemplate(owner.email, title, EMAIL_TEMPLATES.AI_APP_ASSESSMENTS_ASSIGNED, {
       summary_title: title,

@@ -79,7 +79,7 @@ function QuestionCard({
           {question.text}
         </Typography>
         {question.articleRef && (
-          <Typography sx={{ fontSize: "12px", color: theme.palette.text.tertiary, mt: "2px" }}>
+          <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary, mt: "2px" }}>
             {question.articleRef}
           </Typography>
         )}
@@ -89,7 +89,7 @@ function QuestionCard({
           </Typography>
         )}
         {question.inputType === "multi_select" && (
-          <Typography sx={{ fontSize: "12px", color: theme.palette.text.accent, mt: "8px" }}>
+          <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary, mt: "8px" }}>
             Select all that apply
           </Typography>
         )}
@@ -227,7 +227,7 @@ export function EuAiActQuestionnaireDrawer({
       <Box sx={{ flex: 1, overflowY: "auto", p: "20px" }}>
         {isLoading && (
           <Stack sx={{ gap: "8px" }} aria-busy="true">
-            <Typography sx={{ fontSize: "12px", color: theme.palette.text.accent }}>
+            <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
               Loading questions...
             </Typography>
             {[0, 1, 2].map((key) => (
@@ -242,7 +242,7 @@ export function EuAiActQuestionnaireDrawer({
         )}
         {isError && !questionnaire && (
           <Stack direction="row" sx={{ alignItems: "center", gap: "8px" }}>
-            <Typography sx={{ fontSize: "12px", color: theme.palette.text.accent }}>
+            <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
               The questions could not be loaded.
             </Typography>
             <CustomizableButton

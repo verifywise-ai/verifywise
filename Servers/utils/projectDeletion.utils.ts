@@ -5,6 +5,7 @@ import {
   withdrawApprovalRequestQuery,
 } from "./approvalRequest.utils";
 import { recordUseCaseDeletion } from "./useCaseChangeHistory.utils";
+import { assertProjectDeletableForEuAiActQuery } from "./euAiActOrganization.utils";
 import {
   archiveRisksInBulkQuery,
   getRisksLinkedOnlyToProjectQuery,
@@ -41,7 +42,8 @@ export interface DeleteProjectOptions {
  * 1. lock the project row (lockProjectForDelete), unless the caller already
  *    holds it — before anything that references the project; if there is no
  *    such project in the organization, stop here (deleted: false) and touch
- *    nothing else;
+ *    nothing else; refuse (ValidationException) the organizational project
+ *    holding EU AI Act (organization) while a use case has EU AI Act;
  * 2. withdraw a pending use-case approval request;
  * 3. record the deletion in the change history (the table has no FK to
  *    projects, so recording first is safe; if the delete then fails the
@@ -78,6 +80,7 @@ export async function deleteProjectWithSideEffects(
     // No such project in this organization: touch nothing else.
     return { deleted: false, withdrawnApprovalId: null, archivedRiskIds: [] };
   }
+  await assertProjectDeletableForEuAiActQuery(projectId, organizationId, transaction);
 
   let withdrawnApprovalId: number | null = null;
   if (withdrawApproval) {

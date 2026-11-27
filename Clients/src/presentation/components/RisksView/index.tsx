@@ -54,7 +54,6 @@ const RisksView = ({
   const [showCustomizableSkeleton, setShowCustomizableSkeleton] = useState<boolean>(false);
 
   // New state for enhanced risk visualization
-  const [selectedRisk, setSelectedRisk] = useState<RiskModel | null>(null);
   const [filteredRisks, setFilteredRisks] = useState<RiskModel[]>([]);
   const [activeFilters, setActiveFilters] = useState<IFilterState | null>(null);
 
@@ -172,10 +171,6 @@ const RisksView = ({
     setCurrentPage(page);
   };
 
-  const handleRiskSelect = (risk: RiskModel) => {
-    setSelectedRisk(risk);
-  };
-
   const handleRiskFilterChange = (filtered: RiskModel[], filters: IFilterState) => {
     setFilteredRisks(filtered);
     setActiveFilters(filters);
@@ -263,11 +258,9 @@ const RisksView = ({
           <RiskFilters risks={projectRisks} onFilterChange={handleRiskFilterChange} />
 
           {/* Risk Visualization Section */}
-          <RiskVisualizationTabs
-            risks={filteredRisks}
-            selectedRisk={selectedRisk}
-            onRiskSelect={handleRiskSelect}
-          />
+          {/* No selection handler: picking a cell or a risk here changed
+              nothing on the page, so the cells must not look clickable. */}
+          <RiskVisualizationTabs risks={filteredRisks} />
         </Stack>
         <br />
         <Stack

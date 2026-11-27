@@ -180,6 +180,42 @@ describe("recomputeAssessmentForLevel", () => {
     expect(a).toMatchObject({ finalScore: 30, rulesOnly: true });
   });
 
+  describe("a form with no LLM key", () => {
+    const keyword = {
+      overallScore: 55,
+      dimensions: [{ key: "data_sensitivity", label: "Data sensitivity", weight: 0.2, score: 55 }],
+    };
+    const noKey = (overrides: Partial<IRiskAssessmentV2> = {}) =>
+      assessment({ status: "ai_not_configured", ai: null, keyword, ...overrides });
+
+    it("re-floors the keyword score: the higher of it and the new minimum", () => {
+      expect(recomputeAssessmentForLevel(noKey(), "Limited risk")).toMatchObject({
+        ruleMinimum: 30,
+        finalScore: 55,
+        source: "keyword",
+        rulesOnly: false,
+        tier: "High",
+        keyword,
+      });
+      expect(recomputeAssessmentForLevel(noKey(), "Prohibited")).toMatchObject({
+        finalScore: 90,
+        source: "rule_minimum",
+        rulesOnly: false,
+        tier: "Critical",
+      });
+      expect(recomputeAssessmentForLevel(noKey(), null)).toMatchObject({
+        notRuleChecked: true,
+        finalScore: 55,
+        source: "keyword",
+      });
+    });
+
+    it("ignores a keyword score unless the form has no key", () => {
+      const a = recomputeAssessmentForLevel(noKey({ status: "ai_failed" }), "Limited risk");
+      expect(a).toMatchObject({ finalScore: 30, source: "rule_minimum", rulesOnly: true });
+    });
+  });
+
   it("no level means not rule-checked", () => {
     const a = recomputeAssessmentForLevel(assessment(), null);
     expect(a).toMatchObject({ notRuleChecked: true, ruleMinimum: null, finalScore: 75 });

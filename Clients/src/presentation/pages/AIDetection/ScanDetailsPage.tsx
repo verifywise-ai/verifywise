@@ -144,7 +144,7 @@ export default function ScanDetailsPage() {
       {canEditStatus && isLatestScan === false && (
         <Alert
           variant="info"
-          isToast={false}
+          inline
           body={t(
             "This is not the repository's latest scan. Status changes here apply to this scan only and are not kept in later scans.",
           )}

@@ -44,8 +44,10 @@ jest.mock("../../utils/useCaseOrgSettings.utils", () => ({
     default_framework_ids: [],
   }),
 }));
-jest.mock("../../utils/framework.utils", () => ({ addFrameworkToProjectQuery: async () => true }));
-jest.mock("../../utils/eu.utils", () => ({ createEUFrameworkQuery: jest.fn() }));
+jest.mock("../../utils/framework.utils", () => ({
+  addFrameworkToProjectQuery: async () => true,
+  buildProjectFrameworkQuery: jest.fn(),
+}));
 jest.mock("../../utils/modelInventory.utils", () => ({ createNewModelInventoryQuery: jest.fn() }));
 jest.mock("../../domain.layer/models/modelInventory/modelInventory.model", () => ({
   ModelInventoryModel: { createNewModelInventory: jest.fn((x: unknown) => x) },

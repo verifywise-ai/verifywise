@@ -4,7 +4,7 @@ import fs from "fs";
 import path from "path";
 import { generateInviteToken, ONE_HOUR_MS } from "../utils/jwt.utils";
 import { storeOneTimeToken } from "../utils/oneTimeToken.utils";
-import { frontEndUrl } from "../config/constants";
+import { frontendBaseUrl } from "../utils/frontendUrl.utils";
 import { invite } from "../controllers/vwmailer.ctrl";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import { getUserByEmailQuery } from "../utils/user.utils";
@@ -64,7 +64,7 @@ router.post("/reset-password", passwordResetEmailLimiter, async (req: Request, r
       });
 
       // Data to be replaced in the template
-      const url = `${frontEndUrl}/set-new-password?${new URLSearchParams({ token }).toString()}`;
+      const url = `${frontendBaseUrl()}/set-new-password?${new URLSearchParams({ token }).toString()}`;
 
       const data = { name: name, email, url };
 

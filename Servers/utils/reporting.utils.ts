@@ -10,6 +10,7 @@ import { IProjectsMembers } from "../domain.layer/interfaces/i.projectMember";
 import { projectVisibilitySql } from "./projectVisibility.utils";
 import { deleteObjectOnCommit } from "../services/storage/transactionRegistry";
 import { StorageObjectRef } from "../services/storage/types";
+import { structItemInFrameworkSql } from "./euAiActStructItem.sql";
 
 /**
  * Retrieves all project risk data from the `projectrisks` table,
@@ -216,14 +217,26 @@ export const getAssessmentReportQuery = async (
             q.id AS question_id, q.question AS question, q.order_no AS question_order,
             a.id AS answer_id, a.answer AS answer, a.status AS status
        FROM topics_struct_eu t
-       LEFT JOIN subtopics_struct_eu st ON st.topic_id = t.id
+       JOIN subtopics_struct_eu st ON st.topic_id = t.id
        LEFT JOIN questions_struct_eu q ON q.subtopic_id = st.id
+                                      AND ${structItemInFrameworkSql("q", ":framework_id")}
        LEFT JOIN answers_eu a ON a.question_id = q.id
                              AND a.organization_id = :organizationId
                              AND a.assessment_id = :assessment_id
+      -- A subtopic, and so a topic, with no question in this framework (all
+      -- moved to EU AI Act (organization), or none moved there) is not part of
+      -- its assessment.
+      WHERE EXISTS (
+        SELECT 1 FROM questions_struct_eu fq
+         WHERE fq.subtopic_id = st.id AND ${structItemInFrameworkSql("fq", ":framework_id")}
+      )
       ORDER BY t.order_no, t.id, st.order_no, st.id, q.order_no, q.id`,
     {
-      replacements: { organizationId, assessment_id: assessmentIdValue ?? null },
+      replacements: {
+        organizationId,
+        assessment_id: assessmentIdValue ?? null,
+        framework_id: frameworkId,
+      },
       type: QueryTypes.SELECT,
     },
   )) as any[];
@@ -362,9 +375,11 @@ export const getComplianceReportQuery = async (
        FROM controls_eu c
        JOIN controls_struct_eu cs ON cs.id = c.control_meta_id
        JOIN controlcategories_struct_eu ccs ON ccs.id = cs.control_category_id
+       JOIN projects_frameworks pf ON pf.organization_id = c.organization_id AND pf.id = c.projects_frameworks_id
       WHERE c.organization_id = :organizationId
         AND c.projects_frameworks_id = :projects_frameworks_id
         AND cs.control_category_id IN (:visibleCategoryIds)
+        AND ${structItemInFrameworkSql("cs", "pf.framework_id")}
       ORDER BY ccs.order_no, cs.order_no, c.id`,
     {
       replacements: {

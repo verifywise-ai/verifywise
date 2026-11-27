@@ -16,6 +16,7 @@ export type ControlStructEU = {
   implementation_details?: string; // won't get any values, will be filled by user
   control_category_id: number; // when control category is created, its id will be stored and assign here as FK
   article?: string;
+  moved_to_framework_id?: number | null; // set when the control moved to another framework (EU AI Act (organization), id 29)
   roles?: Role[];
   riskTiers?: RiskTier[];
 };
@@ -66,6 +67,9 @@ export class ControlStructEUModel extends Model<ControlStructEU> {
 
   @Column({ type: DataType.TEXT })
   article?: string;
+
+  @Column({ type: DataType.INTEGER, allowNull: true })
+  moved_to_framework_id?: number | null;
 
   // roles and riskTiers inherit from the parent controlcategories_struct_eu
   // via its junction tables; not stored on this table.

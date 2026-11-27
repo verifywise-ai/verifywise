@@ -46,6 +46,10 @@ jest.mock("../useCaseChangeHistory.utils", () => ({
   recordUseCaseCreation: jest.fn(),
   trackUseCaseChanges: jest.fn(),
 }));
+jest.mock("../euAiActOrganization.utils", () => ({
+  ensureEuAiActOrganizationFrameworkQuery: jest.fn().mockResolvedValue(true),
+  assertEuAiActOrganizationRemovableQuery: jest.fn(),
+}));
 jest.mock("../../services/projects/approvalRequest.service", () => ({
   createUseCaseApprovalRequest: jest.fn().mockResolvedValue(null),
   // Creation checks the picked workflow before saving; treat it as usable.
@@ -58,9 +62,11 @@ import { createUseCaseService } from "../../services/useCase.service";
 import { createPendingFrameworksForApprovedUseCase } from "../approvalRequest.utils";
 import { frameworkResultKey, hasFrameworkBuilder } from "../framework.utils";
 import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
+import { ensureEuAiActOrganizationFrameworkQuery } from "../euAiActOrganization.utils";
 
 const mockQuery = sequelize.query as unknown as jest.Mock;
 const mockCreate = createNewProjectQuery as unknown as jest.Mock;
+const mockEnsure = ensureEuAiActOrganizationFrameworkQuery as unknown as jest.Mock;
 const transaction = {} as any;
 const ctx = { userId: 7, organizationId: 3 };
 
@@ -105,7 +111,13 @@ describe("createUseCaseService builds every picked framework", () => {
 
     expect(mockBuilders[1]).toHaveBeenCalledWith(42, undefined, 3, transaction);
     expect(mockBuilders[24]).toHaveBeenCalledWith(42, undefined, 3, transaction);
-    expect(frameworks).toEqual({ eu: { eu: true }, hipaa: { l2Rows: 35, l3Rows: 0 } });
+    // EU AI Act also attaches EU AI Act (organization), as the creator.
+    expect(mockEnsure).toHaveBeenCalledTimes(1);
+    expect(mockEnsure).toHaveBeenCalledWith(42, 3, 7, transaction);
+    expect(frameworks).toEqual({
+      eu: { eu: true, organization_framework_added: true },
+      hipaa: { l2Rows: 35, l3Rows: 0 },
+    });
   });
 
   it("passes enable_ai_data_insertion to bundled builders as to core ones", async () => {
@@ -168,6 +180,7 @@ describe("createPendingFrameworksForApprovedUseCase builds every pending framewo
 
     expect(linkInserts()).toEqual([1, 24]);
     expect(mockBuilders[1]).toHaveBeenCalledWith(42, true, 3, transaction);
+    expect(mockEnsure).toHaveBeenCalledWith(42, 3, 7, transaction);
     expect(mockBuilders[24]).toHaveBeenCalledWith(42, true, 3, transaction);
     const clear = mockQuery.mock.calls.find(([sql]) =>
       String(sql).includes("SET pending_frameworks = NULL"),

@@ -97,11 +97,43 @@ can only ever remove rows that same recalculation would have overwritten. One
 user's run cannot destroy another user's scores, and a project-scoped run
 cannot destroy the organization-wide (`project_id IS NULL`) rows.
 
+## Visibility and deleting a calculation
+
+Each framework score has a `visibility`, `public` or `private`. Visibility is
+not part of the `ON CONFLICT` keys, so a recalculation by the same user in the
+same scope overwrites the row and its controls; the upserts set
+`visibility = EXCLUDED.visibility`, so the choice made at recalculation sticks.
+A calculate request without a visibility (the page's All chip) keeps the
+person's existing calculation's visibility, or saves public when there is
+none (`resolveVisibility` in the controller), so recalculating never shares a
+private result unasked.
+The list filter (`buildVisibilityFilter`) returns public rows, the caller's own
+private rows, or both.
+
+Visibility is only ever `public` or `private`: the calculate endpoints
+normalize it, and a check constraint on all three tables enforces it.
+Migration `20261126130000-readiness-visibility-cleanup` cleaned older rows,
+failing closed: values differing only in case or spacing take the value they
+spell; any other value (such as `all`, which matched no filter) becomes
+`private` so its owner can see and delete it (`public` when the row has no
+creator); and a calculation whose framework and control rows disagree becomes
+`private` as a whole if any of them is. A calculation's rows now always share
+one visibility.
+
+`DELETE /api/v1/readiness/scores/:id` removes one calculation: the framework
+score, the control scores in the same scope (organization, framework, project,
+creator) and the history points in that scope, in one transaction. The
+person who ran it removes rows of both visibilities (a recalculation can
+switch it); an admin deleting someone else's public calculation removes only
+public rows, so that person's private rows stay. The person who ran it may delete it; anyone else needs
+`readiness.admin` (built-in Admin) and may delete only public calculations.
+Someone else's private calculation answers 404, as if it did not exist.
+
 ## Key files
 
 | Purpose | Path |
 |---|---|
 | Formula and weights | `Servers/advisor/scoring/readinessCalculator.ts` |
-| Calculation pipeline | `Servers/controllers/readiness.ctrl.ts` |
+| Calculation pipeline and delete | `Servers/controllers/readiness.ctrl.ts`, `Servers/routes/v1/readiness.route.ts` |
 | Queries and persistence | `Servers/utils/readiness.utils.ts` |
 | UI | `Clients/src/presentation/pages/ReadinessDashboard/` |

@@ -23,6 +23,8 @@ export type ControlEU = {
   implementation_details?: string | null;
   control_meta_id: number; // when control category is created, its id will be stored and assign here as FK
   projects_frameworks_id: number; // FK to the project table
+  /** The use case this row's work was copied from on upgrade; cleared on save. */
+  copied_from_project_id?: number | null;
   numberOfSubcontrols?: number;
   numberOfDoneSubcontrols?: number;
   subControls?: SubcontrolEU[];
@@ -97,6 +99,13 @@ export class ControlEUModel extends Model<ControlEU> {
     defaultValue: false,
   })
   is_demo?: boolean;
+
+  /** The use case this row's work was copied from on upgrade; cleared on save. */
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+  })
+  copied_from_project_id?: number | null;
 
   @Column({
     type: DataType.DATE,

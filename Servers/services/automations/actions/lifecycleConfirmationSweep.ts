@@ -9,6 +9,7 @@ import {
 import { notifyLifecycleConfirmationDue } from "../../inAppNotification.service";
 import { notifyExternalOwnerConfirmationDue } from "../../externalOwnerNotification.service";
 import logger from "../../../utils/logger/fileLogger";
+import { frontendBaseUrl } from "../../../utils/frontendUrl.utils";
 
 /**
  * Daily "still live?" sweep (#5187).
@@ -42,7 +43,7 @@ export async function runLifecycleConfirmationSweep(
   organizationId: number,
   entity: LifecycleEntityConfig,
 ): Promise<LifecycleSweepSummary> {
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  const baseUrl = frontendBaseUrl();
   const { confirmation_interval_days: intervalDays } =
     await getLifecycleOrgSettings(organizationId);
   const rows = await findConfirmationsDue(entity, organizationId, intervalDays);

@@ -33,6 +33,7 @@ export const BUILTIN_UI_PERMISSIONS = {
   "policy.edit": EDITOR,
   "training.edit": EDITOR,
   "training.admin": ADMIN,
+  "readiness.admin": ADMIN,
   "organization.admin": ADMIN,
   "llmKeys.admin": ADMIN,
   "apiKeys.admin": ADMIN,

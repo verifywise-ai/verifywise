@@ -7,6 +7,7 @@ jest.mock("../../../tools/mjmlCompiler", () => ({
 import { deliverReport } from "../reportDeliveryService";
 import { uploadFile } from "../../../utils/fileUpload.utils";
 import { sendAutomationEmail } from "../../emailService";
+import { compileMjmlToHtml } from "../../../tools/mjmlCompiler";
 
 const artifact = {
   content: Buffer.from("PDFDATA"),
@@ -18,6 +19,41 @@ const ctx = { organizationId: 42, userId: 9, runId: 5 };
 beforeEach(() => jest.clearAllMocks());
 
 describe("deliverReport", () => {
+  describe("download link address", () => {
+    const saved = { api: process.env.API_PUBLIC_URL, app: process.env.FRONTEND_URL };
+    afterEach(() => {
+      for (const [key, value] of [
+        ["API_PUBLIC_URL", saved.api],
+        ["FRONTEND_URL", saved.app],
+      ] as const) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    });
+    const linkSent = async (): Promise<string> => {
+      (uploadFile as jest.Mock).mockResolvedValue({ id: 100 });
+      (sendAutomationEmail as jest.Mock).mockResolvedValue(undefined);
+      await deliverReport(
+        { saveToStorage: true, sendEmailLink: true, recipients: ["a@example.com"] },
+        artifact,
+        ctx,
+      );
+      return JSON.stringify((compileMjmlToHtml as jest.Mock).mock.calls[0][1]);
+    };
+
+    it("uses API_PUBLIC_URL, since the link is an API address", async () => {
+      process.env.API_PUBLIC_URL = "https://api.example.com";
+      process.env.FRONTEND_URL = "https://app.example.com";
+      expect(await linkSent()).toContain("https://api.example.com/api/reporting/runs/5/download");
+    });
+
+    it("uses FRONTEND_URL when API_PUBLIC_URL is not set", async () => {
+      delete process.env.API_PUBLIC_URL;
+      process.env.FRONTEND_URL = "https://app.example.com";
+      expect(await linkSent()).toContain("https://app.example.com/api/reporting/runs/5/download");
+    });
+  });
+
   it("actually sends an email when sendEmailLink is enabled", async () => {
     (uploadFile as jest.Mock).mockResolvedValue({ id: 100 });
     (sendAutomationEmail as jest.Mock).mockResolvedValue(undefined);

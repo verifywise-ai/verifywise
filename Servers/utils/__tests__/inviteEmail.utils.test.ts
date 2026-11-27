@@ -4,7 +4,7 @@ jest.mock("../jwt.utils", () => ({
   generateInviteTokenUntil: jest.fn().mockReturnValue("mock-token-123"),
 }));
 
-jest.mock("../../config/constants", () => ({ frontEndUrl: "https://app.example.com" }));
+jest.mock("../frontendUrl.utils", () => ({ frontendBaseUrl: () => "https://app.example.com" }));
 
 jest.mock("../../services/emailService", () => ({
   sendEmail: jest.fn<() => Promise<any>>().mockResolvedValue({ messageId: "msg-123" }),

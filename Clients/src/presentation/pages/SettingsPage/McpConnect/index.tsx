@@ -277,9 +277,7 @@ const McpConnect: React.FC<McpConnectProps> = ({ disabledReason }) => {
 
   return (
     <Stack gap={theme.spacing(8)} sx={{ pt: 4 }}>
-      {disabledReason && (
-        <Alert variant="info" body={disabledReason} isToast={false} sx={{ position: "static" }} />
-      )}
+      {disabledReason && <Alert variant="info" body={disabledReason} isToast={false} inline />}
 
       <Stack
         direction={{ xs: "column", lg: "row" }}
@@ -300,7 +298,7 @@ const McpConnect: React.FC<McpConnectProps> = ({ disabledReason }) => {
                 body={error}
                 isToast={false}
                 onClick={() => setError(null)}
-                sx={{ position: "static" }}
+                inline
               />
             </Box>
           )}
@@ -319,7 +317,7 @@ const McpConnect: React.FC<McpConnectProps> = ({ disabledReason }) => {
               variant="info"
               body="Downloading revokes the token issued to you here last time. Anything set up with the previous file, on this machine or another, stops working immediately."
               isToast={false}
-              sx={{ position: "static" }}
+              inline
             />
             <Box sx={{ maxWidth: 200 }}>
               <Select

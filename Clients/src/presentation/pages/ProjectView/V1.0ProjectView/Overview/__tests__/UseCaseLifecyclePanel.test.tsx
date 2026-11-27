@@ -48,12 +48,19 @@ let mockAttached: {
   workflow_title: string | null;
   workflow_is_active: boolean | null;
   approval_status: "pending" | "rejected" | null;
+  viewer_can_write: boolean;
 } = {
   approval_workflow_id: null,
   workflow_title: null,
   workflow_is_active: null,
   approval_status: null,
+  viewer_can_write: true,
 };
+// The endpoint's viewer_can_write: the server's write rule for this use case.
+let mockCanWrite = true;
+beforeEach(() => {
+  mockCanWrite = true;
+});
 const mockGetAttached = vi.fn();
 vi.mock("../../../../../../application/repository/project.repository", () => ({
   updateProject: (...args: unknown[]) => mockUpdateProject(...args),
@@ -85,6 +92,7 @@ const project = (overrides: Partial<Project> = {}): Project => {
     workflow_title: workflowId ? (active?.workflow_title ?? "Old review") : null,
     workflow_is_active: workflowId ? Boolean(active) : null,
     approval_status: overrides.approval_status ?? null,
+    viewer_can_write: mockCanWrite,
   };
   return {
     id: 7,
@@ -755,24 +763,9 @@ describe("UseCaseLifecyclePanel resubmit for approval", () => {
     expect(screen.queryByTestId("lifecycle-workflow-resubmit")).toBeNull();
   });
 
-  // The server allows useCase.edit plus write access: members, not only the
-  // owner.
-  it("offers it to a member with useCase.edit who does not own the use case", async () => {
-    mockUserId = 2;
-    renderWithProviders(
-      <UseCaseLifecyclePanel
-        project={project({
-          approval_workflow_id: 3,
-          approval_status: "rejected",
-          members: ["2"],
-        })}
-      />,
-    );
-    expect(await screen.findByTestId("lifecycle-workflow-resubmit")).toBeInTheDocument();
-  });
-
-  it("offers it to an Admin who is neither owner nor member", async () => {
-    mockRole = "Admin";
+  // Write access comes from the server (viewer_can_write), so it includes a
+  // user who writes only through a group attached to the use case.
+  it("offers it when the server says the user can write, though neither owner, member nor Admin", async () => {
     mockUserId = 2;
     renderWithProviders(
       <UseCaseLifecyclePanel
@@ -783,15 +776,47 @@ describe("UseCaseLifecyclePanel resubmit for approval", () => {
   });
 
   // Task assignees and workflow approvers can open the use case but only read
-  // it; the server answers 403 to their resubmit.
-  it("does not offer it to an editor without write access to this use case", async () => {
-    mockUserId = 2;
+  // it; the server answers 403 to their resubmit and viewer_can_write false.
+  it("does not offer it when the server says the user cannot write, even to the owner", async () => {
+    mockCanWrite = false;
     renderWithProviders(
       <UseCaseLifecyclePanel
-        project={project({ approval_workflow_id: 3, approval_status: "rejected", members: [] })}
+        project={project({ approval_workflow_id: 3, approval_status: "rejected" })}
       />,
     );
     expect(await screen.findByText("Model risk review")).toBeInTheDocument();
+    expect(screen.queryByTestId("lifecycle-workflow-resubmit")).toBeNull();
+  });
+
+  // Write access follows the owner and members, so a save that changes them
+  // re-reads viewer_can_write instead of trusting the cached answer.
+  it("hides it after a save takes away the user's write access", async () => {
+    const { rerender } = renderWithProviders(
+      <UseCaseLifecyclePanel
+        project={project({ approval_workflow_id: 3, approval_status: "rejected" })}
+      />,
+    );
+    expect(await screen.findByTestId("lifecycle-workflow-resubmit")).toBeInTheDocument();
+    expect(mockGetAttached).toHaveBeenCalledTimes(1);
+
+    mockCanWrite = false;
+    rerender(
+      <UseCaseLifecyclePanel
+        project={project({ approval_workflow_id: 3, approval_status: "rejected", owner: 2 })}
+      />,
+    );
+    await waitFor(() => expect(screen.queryByTestId("lifecycle-workflow-resubmit")).toBeNull());
+    expect(mockGetAttached).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not offer it when the approval workflow could not be loaded", async () => {
+    mockGetAttached.mockRejectedValue(new Error("network"));
+    renderWithProviders(
+      <UseCaseLifecyclePanel
+        project={project({ approval_workflow_id: 3, approval_status: "rejected" })}
+      />,
+    );
+    expect(await screen.findByText("Could not load the approval workflow.")).toBeInTheDocument();
     expect(screen.queryByTestId("lifecycle-workflow-resubmit")).toBeNull();
   });
 

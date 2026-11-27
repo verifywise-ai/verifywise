@@ -1,6 +1,6 @@
 import { notificationService } from "../notificationService";
 import { getUserByIdQuery } from "../../utils/user.utils";
-import { frontEndUrl } from "../../config/constants";
+import { frontendBaseUrl } from "../../utils/frontendUrl.utils";
 import { EMAIL_TEMPLATES } from "../../constants/emailTemplates";
 import { logProcessing, logSuccess, logFailure } from "../../utils/logger/logHelper";
 
@@ -112,7 +112,7 @@ async function sendProjectNotification(
       templateData = {
         project_name: data.projectName,
         admin_name: adminUser.name,
-        project_url: `${frontEndUrl}/project-view?projectId=${data.projectId}`,
+        project_url: `${frontendBaseUrl()}/project-view?projectId=${data.projectId}`,
       };
     } else {
       // For user_added and role_changed_to_admin
@@ -134,7 +134,7 @@ async function sendProjectNotification(
       templateData = {
         project_name: data.projectName,
         actor_name: actorUser.name,
-        project_url: `${frontEndUrl}/project-view?projectId=${data.projectId}`,
+        project_url: `${frontendBaseUrl()}/project-view?projectId=${data.projectId}`,
         user_name: user.name,
       };
     }

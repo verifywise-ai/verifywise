@@ -29,8 +29,7 @@ import {
 } from "../../domain.layer/interfaces/i.postMarketMonitoring";
 import { enqueueAutomationAction } from "../automations/automationProducer";
 import logger from "../../utils/logger/fileLogger";
-
-const BASE_URL = process.env.BASE_URL || "http://localhost:5173";
+import { frontendBaseUrl } from "../../utils/frontendUrl.utils";
 
 /**
  * Calculate next due date based on frequency settings
@@ -60,10 +59,15 @@ function calculateNextDueDate(
   return dueDate;
 }
 
+/** The use case's Monitoring tab. */
+function monitoringTabLink(projectId: number): string {
+  return `${frontendBaseUrl()}/project-view?projectId=${projectId}&tab=monitoring`;
+}
+
 /**
  * Build notification data for email
  */
-function buildNotificationData(
+export function buildNotificationData(
   cycle: IPMMCycleWithDetails,
   config: any,
   organizationName: string,
@@ -84,7 +88,10 @@ function buildNotificationData(
       day: "numeric",
     }),
     days_remaining: daysRemaining,
-    monitoring_link: `${BASE_URL}/project/${config.project_id}/post-market-monitoring`,
+    // The stakeholder is asked to fill in this cycle's questionnaire.
+    monitoring_link: cycle.id
+      ? `${frontendBaseUrl()}/monitoring/cycle/${cycle.id}`
+      : monitoringTabLink(config.project_id),
     organization_name: organizationName,
   };
 }
@@ -92,7 +99,7 @@ function buildNotificationData(
 /**
  * Build escalation data for email
  */
-function buildEscalationData(
+export function buildEscalationData(
   cycle: IPMMCycleWithDetails,
   config: any,
   organizationName: string,
@@ -105,6 +112,8 @@ function buildEscalationData(
 
   return {
     ...notificationData,
+    // The escalation contact follows up on the use case, not the form.
+    monitoring_link: monitoringTabLink(config.project_id),
     escalation_contact_name: (config as any).escalation_contact_name || "Admin",
     escalation_contact_email: (config as any).escalation_contact_email || "",
     days_overdue: daysOverdue,

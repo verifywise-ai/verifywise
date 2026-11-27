@@ -13,6 +13,7 @@ import {
   NotificationEntityType,
 } from "../../../domain.layer/interfaces/i.notification";
 import logger from "../../../utils/logger/fileLogger";
+import { frontendBaseUrl } from "../../../utils/frontendUrl.utils";
 
 /**
  * Deadline & SLA escalation — nightly sweep.
@@ -194,7 +195,7 @@ async function sendSlackLeg(
 export async function runDeadlineEscalationSweep(
   organizationId: number,
 ): Promise<DeadlineSweepSummary> {
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  const baseUrl = frontendBaseUrl();
   let scanned = 0;
   let emailed = 0;
   let slacked = 0;

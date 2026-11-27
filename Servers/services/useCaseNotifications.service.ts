@@ -25,6 +25,7 @@ import {
 import { notifyExternalOwnerAssigned } from "./externalOwnerNotification.service";
 import { notifyUserAssigned, notifyApprovalAutoApproved } from "./inAppNotification.service";
 import { ProjectModel } from "../domain.layer/models/project/project.model";
+import { frontendBaseUrl } from "../utils/frontendUrl.utils";
 
 type UseCaseApprovalResult = Awaited<ReturnType<typeof createUseCaseApprovalRequest>>;
 
@@ -33,8 +34,6 @@ export interface NoticeLogContext {
   functionName: string;
   fileName: string;
 }
-
-const baseUrl = () => process.env.FRONTEND_URL || "http://localhost:3000";
 
 const PROJECT_ROLES: Record<number, ProjectRole> = {
   1: "admin",
@@ -88,7 +87,8 @@ export function notifyUseCaseApprovalOutcome(
       { id: approvalResult.request.id!, name: approvalResult.request.request_name },
       approvalResult.riskLevel!,
       approvalResult.threshold!,
-      baseUrl(),
+      frontendBaseUrl(),
+      useCase.id,
     ).catch((error) => {
       console.error("Failed to send auto-approval notification:", error);
     });
@@ -182,7 +182,7 @@ export async function notifyUseCaseCreated(
           entityUrl: `/project-view?projectId=${useCase.id}`,
         },
         assignerName ?? UNKNOWN_ASSIGNER,
-        baseUrl(),
+        frontendBaseUrl(),
       ).catch((err) => console.error("Failed to send owner notification:", err));
     } else if (useCase.external_owner_email) {
       // Email only: an external owner has no in-app notifications. Awaited
@@ -240,7 +240,7 @@ export async function notifyUseCaseUpdated(
           entityUrl: `/project-view?projectId=${useCaseId}`,
         },
         assignerName,
-        baseUrl(),
+        frontendBaseUrl(),
       ).catch((err) => console.error("Failed to send owner notification:", err));
     }
 

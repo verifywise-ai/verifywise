@@ -2,10 +2,10 @@
 
 ## Overview
 
-VerifyWise ships 28 compliance frameworks, all available to every organization. None of them needs to be installed or enabled.
+VerifyWise ships 29 compliance frameworks, all available to every organization. None of them needs to be installed or enabled.
 
 - **4 core frameworks** (ids 1–4): EU AI Act, ISO 42001, ISO 27001 and NIST AI RMF. Each has hand-built tables, endpoints and pages. Most of this document describes these.
-- **24 bundled frameworks** (ids 5–28): SOC 2, GDPR, HIPAA and others. They are declared in the structure registry (`Servers/structures/`) and served by generic endpoints and a generic UI. See [Bundled frameworks (ids 5–28)](#bundled-frameworks-ids-528).
+- **25 bundled frameworks** (ids 5–28 and 30): SOC 2, GDPR, HIPAA and others. They are declared in the structure registry (`Servers/structures/`) and served by generic endpoints and a generic UI. See [Bundled frameworks (ids 5–28 and 30)](#bundled-frameworks-ids-528-and-30).
 
 - **Imported frameworks**: an organization's own frameworks, imported from Excel through the `framework-import` extension. They are stored per organization outside the bundled catalog, and use cases assess them like the bundled ones. See [Imported frameworks](#imported-frameworks).
 
@@ -19,7 +19,7 @@ All frameworks share the same patterns for progress tracking, status management 
 | ISO 42001 | 2 | AI management system |
 | ISO 27001 | 3 | Information security management |
 | NIST AI RMF | 4 | AI risk management |
-| 24 bundled frameworks | 5–28 | See [Bundled frameworks](#bundled-frameworks-ids-528) |
+| 25 bundled frameworks | 5–28, 30 | See [Bundled frameworks](#bundled-frameworks-ids-528-and-30) |
 
 ## Framework Structures
 
@@ -50,6 +50,52 @@ Topics (Assessment)
 11. Post-market monitoring by providers
 12. Reporting serious incidents
 13. General-purpose AI models
+
+#### Organization-wide obligations (EU AI Act (organization))
+
+Some EU AI Act obligations fall on the organization, not on one AI system. They are tracked once per organization, on the organizational project, as **EU AI Act (organization)** (framework id 29, organization level), not once per use case. Framework 29 is not a separate structure: it is these EU AI Act controls and assessment questions, in the EU AI Act's own tables, shown with the EU AI Act's own screens (`EuAiActTrackers`, `Clients/src/presentation/pages/ProjectView/EuAiActTrackers`, which renders both a use case's EU AI Act and the Frameworks page's EU AI Act (organization)). Their text and numbers are the EU AI Act's, so an obligation has the same number on both pages.
+
+Controls (`EU_AI_ACT_ORGANIZATION_CONTROLS`, `Servers/structures/EU-AI-Act-Organization/euAiActOrganization.ts`, by category and control `order_no`), 18 controls with 42 subcontrols:
+
+- 0 Prohibited AI practices (Art. 5): all 8 controls
+- 1 AI literacy (Art. 4): both controls
+- 6.1, 6.2 AI Act compliance policies and guidelines, and AI risk response planning (Art. 26)
+- 7.1 Fundamental rights impact assessment process development (Art. 27)
+- 10.2 The process to respond to national authority requests (Art. 71)
+- 15 Quality management system (Art. 17): all 3 controls
+- 17.1 The authorized representative in the Union (Art. 22)
+
+Assessment questions (`EU_AI_ACT_ORGANIZATION_QUESTIONS`, by topic, subtopic and question `order_no`): 5.1.2 (how the organization communicates its AI values externally), 8.1.1–8.1.3 (its documented AI values, its AI governance framework, its self-assessment and certification schedule) and 11.1.1 (who ensures AI systems follow its values).
+
+`controls_struct_eu.moved_to_framework_id` and `questions_struct_eu.moved_to_framework_id` are 29 on these items. An item belongs to the framework it moved to, else to the EU AI Act: `structItemInFrameworkSql` (`Servers/utils/euAiActStructItem.sql.ts`) is the one place that rule is written, and every query that tells them apart uses it (`structItemInEuAiActSql` is its EU AI Act case). So:
+
+- **Building.** `createEUFrameworkQuery` and `deleteProjectFrameworkEUQuery` (`utils/eu.utils.ts`) take the framework id. For framework 1 they build or remove a use case's controls, subcontrols and assessment for the items still in the EU AI Act; for framework 29 (`createEUAIActOrganizationFrameworkQuery`, `deleteProjectFrameworkEUAIActOrganizationQuery`, wired into `frameworkAdditionMap` / `frameworkDeletionMap`) the same rows for the moved items. Its evidence uses the EU AI Act's file sources and links.
+- **Reading.** The requirements, assessments, progress and report-section queries scoped to a project framework, and readiness's assessment completion, read the items of its framework. A use case's EU AI Act no longer lists or counts the moved items, and framework 29 lists only them. Framework 29 shows all its categories, whatever the project's risk classification (`getVisibleEuCategoryIdsForProject` applies the tier and role filter to framework 1 only). The EU AI Act catalogue (`GET /eu-ai-act/controlCategories` without a project framework, `GET /eu-ai-act/topics`) leaves out categories and topics whose items all moved, and the assessment tree leaves out subtopics and topics with no question of its framework. Reports give framework 29 the EU AI Act compliance and assessment sections, and the Frameworks page dashboard shows its EU AI Act requirements progress.
+- **Existing data.** Rows a use case already had for the moved items stay in `controls_eu` / `subcontrols_eu` / `answers_eu`, hidden and unchanged; migration `20261126150000` copies their work to framework 29 once (below). The File Manager does not show their file links (`HIDDEN_EU_AI_ACT_LINK_SQL`, `utils/files/attachLinkProjections.ts`), and a notification or task email link to one opens the organizational project's row of the same item (`buildEntityUrlAsync`, `services/inAppNotification.service.ts`), or nothing when there is none. Task links stay on them. Risk-link graphs and coverage scans (`utils/riskLink.utils.ts`) still read those rows. Removing a risk's link to framework 1 or 29 deletes its mappings to either framework's rows (`deleteRiskMappingsForProjectFrameworksQuery`).
+- **Copied, review it.** `controls_eu` / `subcontrols_eu` / `answers_eu.copied_from_project_id` is the use case a framework-29 row's work was copied from on upgrade. The tracker reads return it with `copied_from_use_case` ("<title> (<UC id>)"). Any save of the row (`updateControlEUByIdQuery`, `updateSubcontrolEUByIdQuery`, `updateQuestionEUByIdQuery`) clears it.
+- **Who sees the use case name.** `copied_from_use_case` goes through `projectVisibilitySql` (`copiedFromJoinSql`, `utils/eu.utils.ts`). Admins and super admins get it for every use case. Other roles get it only for a use case they own, are a member of or reach through a group. For other viewers the label is null while `copied_from_project_id` is returned, so the drawer note reads "Copied from a use case when this moved to the organization. Review it, then save." A loader called without a viewer (the advisor, seeding) returns no label at all. The five reads in `eu.ctrl.ts` that return these rows (`getAssessmentsByProjectId`, `getCompliancesByProjectId`, `getTopicById`, `getControlById`, `getControlsByControlCategoryId`) pass `{ userId, role }`.
+- **Known gap.** The column is `ON DELETE SET NULL`. Deleting the source use case therefore also clears the review mark on rows no user has reviewed yet. A separate `needs_review` flag would keep it.
+
+Framework 29 is never added by hand. `buildProjectFrameworkQuery` (`utils/framework.utils.ts`), which every path that enables EU AI Act on a use case goes through (creation, approval of pending frameworks, "add framework", intake approval), calls `ensureEuAiActOrganizationFrameworkQuery` (`utils/euAiActOrganization.utils.ts`) in the same transaction:
+
+- Demo use cases (`is_demo`) don't trigger it, and the demo data seeder doesn't add framework 29.
+- If a non-demo organizational project already has framework 29, nothing happens (idempotent). An advisory lock per organization keeps two concurrent enables from both creating it.
+- Otherwise it goes on the organizational project the Frameworks page shows (`created_at DESC, id ASC`, first), skipping demo ones, since deleting the demo data removes them. If the organization has none, one is created, named after the organization and owned by its first Admin (earliest `organization_members.joined_at`, then lowest `user_id`), else the user who enabled EU AI Act, else the use case owner; the user who enabled it is its creator.
+- The response says whether this call added it: `organization_framework_added` on `POST /frameworks/toProject` and on `frameworks.eu` of `POST /projects`. The client then shows a toast, and the use case's EU AI Act Requirements tab shows a notice pointing to the Frameworks page.
+- After the outermost transaction commits (a savepoint's own hook would run before that), every Admin of the organization plus the organizational project's owner get one in-app notification (`notifyEuAiActOrganizationAdded`, type `system`, linking to `/framework`): "Organizational project created" when the project was made for it, "EU AI Act (organization) added" otherwise. A non-Admin who enabled EU AI Act gets no notification, because they are not a member of that project and the link would not open for them. Their toast says that Admins fill it in on the Frameworks page. A failed notification is logged and does not undo the add.
+
+Adding framework 29 by hand is refused (400): `addFrameworkToProjectQuery` and `createNewProjectQuery` reject it, and the client leaves it out of the add lists. Removing it is refused (400) while any non-demo use case has EU AI Act. Deleting the organizational project that holds it is refused (400) under the same condition (`assertProjectDeletableForEuAiActQuery`, called by `deleteProjectWithSideEffects`, the one delete path); the delete dialog shows the reason.
+
+Migration `20261119235846-add-eu-ai-act-organization-framework.js` is the whole change: it inserts frameworks row 29, sets `moved_to_framework_id` on the listed controls and questions, and attaches framework 29, with its rows, to every organization that already had EU AI Act on a non-demo use case, by the rules above, without notifications. It is idempotent.
+
+Migration `20261126150000-eu-ai-act-organization-copy-forward.js` then copies the work, for each organization whose non-demo organizational project has framework 29:
+
+- **Fields.** Each framework-29 row no user has worked on (default status, every user field empty, not copied before) takes the work of the best hidden row of the same item among the organization's non-demo use cases. Subcontrols and answers rank by status first (Done, then In progress, then Waiting / Not started), then a row with any work, then the latest change-history entry, then the highest id. A control's status is derived from its subcontrols, so controls rank on their own fields and links only. Users who left the organization are left out of owner, reviewer or approver. Copied controls and subcontrols get a system "Copied from use case" change-history entry. Every copied row gets `copied_from_project_id`.
+- **Links.** Each framework-29 subcontrol or answer gets every evidence or feedback file link of the hidden rows of its item. Each control, subcontrol or answer gets every risk link of those rows. Rows a user already filled in get them too, because the File Manager no longer shows links to hidden rows.
+- **Controls already worked on.** When one of its subcontrols was copied, such a control keeps its own fields. Its status is derived again, as `saveControls` does, and it is marked for review with that subcontrol's use case.
+- **Notification.** Every Admin gets one in-app notification in their language, saying how many items were copied and linking to `/framework?framework=eu-ai-act-organization`.
+
+Hidden rows are not changed, and task links remain on them. A re-run copies nothing.
 
 ### ISO 42001 / ISO 27001
 
@@ -480,7 +526,7 @@ DELETE /frameworks/fromProject?frameworkId=2&projectId=5
 
 Calls `frameworkDeletionMap[frameworkId]` and deletes all of that project's implementation data for the framework (status, assignments, risk links, evidence links). The UI asks for confirmation ("Confirm framework removal") first.
 
-## Bundled frameworks (ids 5–28)
+## Bundled frameworks (ids 5–28 and 30)
 
 These frameworks shipped as plugins until PR #4443 (August 2026). They are now core and are declared in TypeScript:
 
@@ -492,7 +538,7 @@ These frameworks shipped as plugins until PR #4443 (August 2026). They are now c
 
 Names and flags come from each structure's `seed.name` and `seed.is_organizational`.
 
-**Organization-level (14)**: added under **Frameworks → Manage frameworks → Add/remove frameworks**
+**Organization-level (15)**: added under **Frameworks → Manage frameworks → Add/remove frameworks**
 
 | ID | Key | Name | Levels |
 |----|-----|------|--------|
@@ -510,6 +556,7 @@ Names and flags come from each structure's `seed.name` and `seed.is_organization
 | 25 | `nist-csf` | NIST Cybersecurity Framework | 3 |
 | 26 | `osfi-e23` | OSFI E-23 Model Risk Management | 2 |
 | 27 | `en-18286` | EN 18286 | 2 |
+| 30 | `saudi-naii` | Saudi National AI Index (NAII) | 2 |
 
 **Use-case-level (10)**: added from a use case's **Frameworks/regulations** tab
 
@@ -526,9 +573,11 @@ Names and flags come from each structure's `seed.name` and `seed.is_organization
 | 24 | `hipaa` | HIPAA Security Rule Framework | 3 |
 | 28 | `en-18286-ai-systems` | EN 18286 AI systems | 2 |
 
-Total: 4 core + 24 bundled = **28 frameworks**.
+Total: 4 core + 25 bundled = **29 frameworks**. Id 29 is EU AI Act (organization), which is not a registry framework (see [Organization-wide obligations](#organization-wide-obligations-eu-ai-act-organization)).
 
 EN 18286 is split into two frameworks: `en-18286` (id 27, organization level: clauses 4–7, 9.6, 9.7 and 10) and `en-18286-ai-systems` (id 28, use-case level: clause 8 and 9.1–9.5, tracked per AI system). The standard defines one QMS; the split follows the organization / AI system division Modulos uses. Both were added after the August 2026 migrations, by `20261110121006-add-en-18286-framework.js`, which skips each framework whose `frameworks` row the `20260805*` migrations already created.
+
+The Saudi National AI Index (`saudi-naii`, id 30, organization level) follows SDAIA-P123 version 1 (May 2025) one to one: level 1 is the sub-pillar, titled "<pillar>: <sub-pillar>" (7), and level 2 is the domain (23). Titles and descriptions follow SDAIA's document. SDAIA shares its questionnaire only with assessed entities, so each domain's `questions` and `evidence_examples` are VerifyWise guidance, and the user guide says so. SDAIA's six adoption levels (0 absence of capabilities to 5 pioneer) come from weighted domain scores whose weights are not published, so VerifyWise does not calculate a level; the levels are explained in the framework description and the user guide. `structures/__tests__/saudiNaii.structure.test.ts` pins the 7 × 23 hierarchy. It was added by `20261126211629-add-saudi-naii-framework.js`, which skips when the `20260805*` migrations already created it.
 
 ### Tables
 
@@ -567,7 +616,7 @@ The **Notes** tab uses `notesAttachedTo = "<FRAMEWORK_TYPE>_<ENTITY_TYPE>"` (e.g
 
 ### Reporting
 
-Generated reports cover bundled frameworks (ids 5–28) through the `frameworkRequirements` section: per framework, requirement progress by group with owners, due dates and evidence. See [Reporting](./reporting.md#framework-requirements-section). Imported (Excel) frameworks are not covered.
+Generated reports cover bundled frameworks (ids 5–28 and 30) through the `frameworkRequirements` section: per framework, requirement progress by group with owners, due dates and evidence. See [Reporting](./reporting.md#framework-requirements-section). Imported (Excel) frameworks are not covered.
 
 ### Known gaps
 
@@ -642,7 +691,7 @@ An imported framework cannot be deleted while a use case uses it: the delete ans
 | `routes/iso-42001.route.ts` | ISO 42001 routes |
 | `routes/nist-ai-rmf.route.ts` | NIST routes |
 | `routes/eu-ai-act.route.ts` | EU AI Act routes |
-| `structures/index.ts`, `structures/<Name>/*.structure.ts` | Bundled framework registry (ids 5–28) |
+| `structures/index.ts`, `structures/<Name>/*.structure.ts` | Bundled framework registry (ids 5–28 and 30) |
 | `utils/frameworkRegistry.utils.ts` | Add/remove bundled frameworks on a project |
 | `routes/frameworkImpl.route.ts`, `controllers/frameworkImpl.ctrl.ts`, `utils/frameworkImpl.utils.ts` | Generic implementation endpoints |
 | `types/framework.type.ts` | `frameworkAdditionMap` / `frameworkDeletionMap` by framework id |

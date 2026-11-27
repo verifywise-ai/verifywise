@@ -332,7 +332,8 @@ the router sends a config-change event with `action: "enforcement_mode_changed"`
 `newMode` and the camelCase fields the backend's `notifyConfigChange`
 (`Servers/services/aiGateway/aiGatewayNotifications.ts`) reads. Other admins get "Agent key mode
 changed": *Agent key "x" switched to monitor only by Jane Doe.* A relative `actionUrl` is
-prefixed with `FRONTEND_URL` there. A PATCH that also changes other fields sends the generic
+prefixed with `frontendBaseUrl()` (`Servers/utils/frontendUrl.utils.ts`: `FRONTEND_URL`, else
+`http://localhost:5173`) there. A PATCH that also changes other fields sends the generic
 `updated` event as well; a same-value PATCH sends only `updated`.
 
 **New audit statuses.** `would_block` (a guardrail block or mask hit on the hook; a guardrail

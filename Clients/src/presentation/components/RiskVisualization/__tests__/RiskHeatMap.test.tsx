@@ -125,4 +125,15 @@ describe("RiskHeatMap cell selection", () => {
 
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
+  it("shows a pointer on a populated cell only when a click does something", () => {
+    const risk = asRisks([{ id: 1, risk_name: "Bias", likelihood: "Possible", severity: "Major" }]);
+    const cell = () => screen.getByText("L15").closest("div") as HTMLElement;
+
+    const { unmount } = renderWithProviders(<RiskHeatMap risks={risk} />);
+    expect(getComputedStyle(cell()).cursor).toBe("default");
+    unmount();
+
+    renderWithProviders(<RiskHeatMap risks={risk} onRiskSelect={vi.fn()} />);
+    expect(getComputedStyle(cell()).cursor).toBe("pointer");
+  });
 });

@@ -159,6 +159,7 @@ const Monitoring: React.FC = () => {
             variant={alert.variant}
             body={alert.body}
             isToast={false}
+            inline
             onClick={() => setAlert(null)}
           />
         </Box>

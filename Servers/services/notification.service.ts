@@ -1,12 +1,14 @@
 // import redisClient from "../database/redis";
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
-import { sendInAppNotification } from "./inAppNotification.service";
+import { buildEntityUrl, sendInAppNotification } from "./inAppNotification.service";
+import { approvalLinkedEntity, approvalRequestPath } from "../utils/approvalLinks.utils";
 import {
   NotificationType,
   NotificationEntityType,
 } from "../domain.layer/interfaces/i.notification";
 import { EMAIL_TEMPLATES } from "../constants/emailTemplates";
+import { frontendBaseUrl } from "../utils/frontendUrl.utils";
 
 interface Notification {
   title: string;
@@ -15,6 +17,18 @@ interface Notification {
   entityId: number;
   entityType?: string;
 }
+
+/**
+ * A notice sent with a full email context. It names an entity only when it
+ * has one: an approval request id is never stored as an entity id, since
+ * that pointed the notice at an unrelated use case.
+ */
+type ContextNotification = Omit<Notification, "entityId" | "entityType"> & {
+  entityType?: NotificationEntityType;
+  entityId?: number;
+  /** Frontend path the in-app notice opens. */
+  actionUrl?: string;
+};
 
 // Map legacy notification types to new NotificationType enum
 const mapNotificationType = (type: Notification["type"]): NotificationType => {
@@ -96,7 +110,7 @@ export const sendNotification = async (
 export const sendNotificationWithContext = async (
   organizationId: number,
   userId: number,
-  notification: Notification,
+  notification: ContextNotification,
   templateVariables: Record<string, string>,
 ): Promise<void> => {
   try {
@@ -123,10 +137,10 @@ export const sendNotificationWithContext = async (
         type: mapNotificationType(notification.type),
         title: notification.title,
         message: notification.message,
-        entity_type:
-          (notification.entityType as NotificationEntityType) || NotificationEntityType.USE_CASE,
+        entity_type: notification.entityType,
         entity_id: notification.entityId,
         entity_name: notification.title,
+        action_url: notification.actionUrl,
       },
       true, // Send email notification
       {
@@ -237,9 +251,9 @@ export const notifyStepApprovers = async (
       `Notifying ${approvers.length} approvers for Step ${stepNumber} of request: ${requestName}`,
     );
 
-    // Build approval URL
-    const baseUrl = process.env.FRONTEND_URL || "https://app.ai";
-    const approvalUrl = `${baseUrl}/approval-requests/${requestId}`;
+    // The approver decides in the approvals modal, opened on this request.
+    const requestPath = approvalRequestPath(requestId);
+    const approvalUrl = `${frontendBaseUrl()}${requestPath}`;
 
     // Send notification to each approver with full context
     const notificationPromises = approvers.map((approver) =>
@@ -250,8 +264,7 @@ export const notifyStepApprovers = async (
           title: "New Approval Request",
           message: `${requestName} - You are an approver for Step ${stepNumber}`,
           type: "approval_request",
-          entityId: requestId,
-          entityType: "use_case",
+          actionUrl: requestPath,
         },
         {
           step_number: String(stepNumber),
@@ -273,58 +286,9 @@ export const notifyStepApprovers = async (
 };
 
 /**
- * Notify the requester when their request is fully approved
- */
-export const notifyRequesterApproved = async (
-  organizationId: number,
-  requesterId: number,
-  requestId: number,
-  requestName: string,
-  context?: {
-    requester_name?: string;
-    total_steps?: number;
-  },
-): Promise<void> => {
-  try {
-    // Fetch context if not provided
-    let requesterName = context?.requester_name || "User";
-    let totalSteps = context?.total_steps || 1;
-
-    if (!context) {
-      const fetchedContext = await getApprovalContext(organizationId, requestId);
-      if (fetchedContext) {
-        requesterName = fetchedContext.requester_name;
-        totalSteps = fetchedContext.total_steps;
-      }
-    }
-
-    const baseUrl = process.env.FRONTEND_URL || "https://app.ai";
-    const useCaseUrl = `${baseUrl}/approval-requests/${requestId}`;
-
-    await sendNotificationWithContext(
-      organizationId,
-      requesterId,
-      {
-        title: "Request Approved",
-        message: `Your request "${requestName}" has been approved`,
-        type: "approval_complete",
-        entityId: requestId,
-      },
-      {
-        requester_name: requesterName,
-        use_case_name: requestName,
-        total_steps: String(totalSteps),
-        use_case_url: useCaseUrl,
-      },
-    );
-  } catch (error) {
-    console.error("Error notifying requester of approval:", error);
-    throw error;
-  }
-};
-
-/**
- * Notify the requester when their request is rejected
+ * Notify the requester when their request is rejected. Both callers reject a
+ * request because its file or policy was deleted, so the notice links to the
+ * request, not to the item.
  */
 export const notifyRequesterRejected = async (
   organizationId: number,
@@ -348,8 +312,8 @@ export const notifyRequesterRejected = async (
       }
     }
 
-    const baseUrl = process.env.FRONTEND_URL || "https://app.ai";
-    const requestUrl = `${baseUrl}/approval-requests/${requestId}`;
+    const requestPath = approvalRequestPath(requestId);
+    const requestUrl = `${frontendBaseUrl()}${requestPath}`;
 
     await sendNotificationWithContext(
       organizationId,
@@ -358,7 +322,7 @@ export const notifyRequesterRejected = async (
         title: "Request Rejected",
         message: `Your request "${requestName}" has been rejected`,
         type: "approval_rejected",
-        entityId: requestId,
+        actionUrl: requestPath,
       },
       {
         requester_name: requesterName,
@@ -375,7 +339,9 @@ export const notifyRequesterRejected = async (
 };
 
 /**
- * Notify the requester when a step in their approval request is completed
+ * Notify the requester when a step in their approval request is completed.
+ * A use case or policy request links to that item; any other request links
+ * to the request itself.
  */
 export const notifyRequesterStepCompleted = async (
   organizationId: number,
@@ -389,6 +355,8 @@ export const notifyRequesterStepCompleted = async (
     approver_name: string;
     workflow_name?: string;
   },
+  /** The request's entity (`approval_requests.entity_type` / `entity_id`). */
+  entity?: { type?: string | null; id?: number | null },
 ): Promise<void> => {
   try {
     // Fetch requester name if not available
@@ -398,8 +366,11 @@ export const notifyRequesterStepCompleted = async (
       requesterName = fetchedContext.requester_name;
     }
 
-    const baseUrl = process.env.FRONTEND_URL || "https://app.ai";
-    const requestUrl = `${baseUrl}/approval-requests/${requestId}`;
+    const linked = approvalLinkedEntity(entity?.type, entity?.id);
+    const actionUrl = linked
+      ? buildEntityUrl(linked.type, linked.id)
+      : approvalRequestPath(requestId);
+    const requestUrl = `${frontendBaseUrl()}${actionUrl}`;
 
     // Use sendInAppNotification directly with the step completion template
     await sendInAppNotification(
@@ -409,9 +380,10 @@ export const notifyRequesterStepCompleted = async (
         type: NotificationType.APPROVAL_APPROVED,
         title: "Approval Progress Update",
         message: `Step ${context.completed_step} of "${requestName}" has been approved by ${context.approver_name}`,
-        entity_type: NotificationEntityType.USE_CASE,
-        entity_id: requestId,
+        entity_type: linked?.type,
+        entity_id: linked?.id,
         entity_name: requestName,
+        action_url: actionUrl,
       },
       true, // Send email notification
       {

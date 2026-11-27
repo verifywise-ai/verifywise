@@ -30,7 +30,16 @@ const mockNotify = notifyApprovalStepOverdueEscalation as jest.Mock;
 const mockOrgs = getAllOrganizationsQuery as jest.Mock;
 const mockLogger = logger as unknown as { info: jest.Mock; error: jest.Mock };
 
-const BASE_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+// A fixed address, so the expected links do not come from the helper under test.
+const BASE_URL = "https://vw.test";
+const ORIGINAL_FRONTEND_URL = process.env.FRONTEND_URL;
+beforeAll(() => {
+  process.env.FRONTEND_URL = BASE_URL;
+});
+afterAll(() => {
+  if (ORIGINAL_FRONTEND_URL === undefined) delete process.env.FRONTEND_URL;
+  else process.env.FRONTEND_URL = ORIGINAL_FRONTEND_URL;
+});
 
 const overdueRow = (overrides: Partial<OverdueApprovalStepRow> = {}): OverdueApprovalStepRow => ({
   request_step_id: 101,

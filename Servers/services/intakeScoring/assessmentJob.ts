@@ -24,9 +24,11 @@ import {
   getEligibleReviewerIdsQuery,
   getIntakeFormByIdQuery,
   getSubmissionByIdQuery,
+  getSubmissionsMissingKeywordScoreQuery,
   getSubmissionsNeedingAssessmentQuery,
   setLiveChecksAiQuery,
   updateSubmissionAssessmentV2Query,
+  saveBackfilledKeywordScoreQuery,
   updateSubmissionSuggestionsQuery,
 } from "../../utils/intakeForm.utils";
 import {
@@ -47,6 +49,7 @@ import {
   toLiveCheckLanguage,
 } from "../intakeLiveChecks/aiChecks";
 import { visibleScoringAnswers } from "../intakeLiveChecks/answers";
+import { keywordScoreFor } from "../intakeRiskScoring.service";
 import { routeSubmission } from "../intakeRouting/routingService";
 import { laneAssigneeIds } from "../intakeRouting/routingRules";
 import { trySendSubmitterConfirmation } from "../intakeConfirmation/confirmation";
@@ -72,12 +75,14 @@ export interface AssessmentDeps {
   /** The form's LLM key as a model, or null when the organization has no such key. */
   getModel: (llmKeyId: number, organizationId: number) => Promise<Model | null>;
   saveAssessment: typeof updateSubmissionAssessmentV2Query;
+  saveBackfilledKeyword: typeof saveBackfilledKeywordScoreQuery;
   saveSuggestions: typeof updateSubmissionSuggestionsQuery;
   saveLiveChecksAi: typeof setLiveChecksAiQuery;
   claimNotification: typeof claimSubmissionNotificationQuery;
   getEligibleIds: typeof getEligibleReviewerIdsQuery;
   sendNotification: typeof sendNewSubmissionAdminNotification;
   listNeedingAssessment: typeof getSubmissionsNeedingAssessmentQuery;
+  listMissingKeywordScore: typeof getSubmissionsMissingKeywordScoreQuery;
   enqueue: typeof enqueueIntakeAssessment;
   routeSubmission: typeof routeSubmission;
   /**
@@ -102,12 +107,14 @@ const defaultDeps: AssessmentDeps = {
     return row ? createModelFromKey(row as unknown as LLMKeyRow) : null;
   },
   saveAssessment: updateSubmissionAssessmentV2Query,
+  saveBackfilledKeyword: saveBackfilledKeywordScoreQuery,
   saveSuggestions: updateSubmissionSuggestionsQuery,
   saveLiveChecksAi: setLiveChecksAiQuery,
   claimNotification: claimSubmissionNotificationQuery,
   getEligibleIds: getEligibleReviewerIdsQuery,
   sendNotification: sendNewSubmissionAdminNotification,
   listNeedingAssessment: getSubmissionsNeedingAssessmentQuery,
+  listMissingKeywordScore: getSubmissionsMissingKeywordScoreQuery,
   enqueue: enqueueIntakeAssessment,
   routeSubmission,
   confirmSubmitter: (organizationId, submissionId, lang) =>
@@ -211,6 +218,14 @@ function useCaseInputFor(submission: IIntakeSubmission, form: IIntakeForm): UseC
   };
 }
 
+/** The basic keyword score of a submission, for a form with no LLM key; null when nothing matched. */
+function keywordFor(
+  submission: IIntakeSubmission,
+  form: IIntakeForm,
+): NonNullable<IRiskAssessmentV2["keyword"]> | null {
+  return keywordScoreFor(submission.data as Record<string, unknown>, form.schema);
+}
+
 async function runScoringStage(
   ctx: StageContext,
   startedAt: string,
@@ -248,14 +263,18 @@ async function runScoringStage(
     error = result.error;
   }
 
+  // A form with no LLM key gets the basic keyword score in the AI median's place.
+  const keyword = status === "ai_not_configured" ? keywordFor(ctx.submission, ctx.form) : null;
   const combined = combineScore({
     ruleMinimum,
     aiMedian: status === "complete" ? (ai?.median ?? null) : null,
+    keywordScore: keyword?.overallScore ?? null,
   });
   const assessment: IRiskAssessmentV2 = {
     ...base,
     status,
     ai,
+    keyword,
     finalScore: combined.finalScore,
     source: combined.source,
     rulesOnly: combined.rulesOnly,
@@ -629,11 +648,20 @@ function hasPendingStage(submission: IIntakeSubmission): boolean {
   );
 }
 
-/** "64 (High)", "at least 70 (rules only)" or "No score yet", in the email's language. */
+/**
+ * "64 (High)", "40 (Medium, keyword score)", "at least 70 (rules only)" or
+ * "No score yet", in the email's language.
+ */
 export function scoreTextFor(assessment: IRiskAssessmentV2 | null, lang?: string): string {
   if (!assessment || assessment.finalScore === null) return translate(lang, "No score yet");
   if (assessment.rulesOnly) {
     return translate(lang, "at least {score} (rules only)", { score: assessment.finalScore });
+  }
+  if (assessment.source === "keyword") {
+    return translate(lang, "{score} ({band}, keyword score)", {
+      score: assessment.finalScore,
+      band: translate(lang, bandFor(assessment.finalScore)),
+    });
   }
   return translate(lang, "{score} ({band})", {
     score: assessment.finalScore,
@@ -738,6 +766,61 @@ export async function sendIntakeNotificationOnce(
 }
 
 /**
+ * Add the basic keyword score to pending submissions scored without an LLM
+ * key before it existed. No AI call is made; decided submissions are left
+ * alone, and a submission that already has a keyword score is skipped, so a
+ * second run changes nothing. The save only lands while the stored
+ * assessment is still the keyword-less "ai_not_configured" one, so a newer
+ * assessment saved meanwhile wins. A submission already in a lane keeps it
+ * (nobody's queue changes mid-review); only an unrouted one is routed.
+ * Returns how many submissions were updated.
+ */
+async function backfillKeywordScores(d: AssessmentDeps): Promise<number> {
+  let rows: Awaited<ReturnType<AssessmentDeps["listMissingKeywordScore"]>>;
+  try {
+    rows = await d.listMissingKeywordScore();
+  } catch (error) {
+    // Never hold up the rest of the backfill.
+    logger.error(`Intake backfill could not list keyword scores to add: ${errorMessage(error)}`);
+    return 0;
+  }
+  let updated = 0;
+  for (const row of rows) {
+    try {
+      const submission = await d.getSubmission(row.id, row.organizationId);
+      const assessment = submission?.riskAssessment ?? null;
+      if (
+        !submission ||
+        submission.status !== IntakeSubmissionStatus.PENDING ||
+        !isAssessmentV2(assessment) ||
+        assessment.status !== "ai_not_configured" ||
+        assessment.keyword
+      ) {
+        continue;
+      }
+      const form = await d.getForm(submission.formId, row.organizationId);
+      if (!form) continue;
+      const keyword = keywordFor(submission, form);
+      // Nothing matched: no score to add, and the row stays as it is.
+      if (!keyword) continue;
+      const rescored = recomputeAssessmentForLevel(
+        { ...assessment, keyword },
+        assessment.classificationLevel,
+      );
+      const saved = await d.saveBackfilledKeyword(row.id, rescored, row.organizationId);
+      if (!saved) continue;
+      if (!submission.routing) await routeSettled(d, row.id, row.organizationId);
+      updated += 1;
+    } catch (error) {
+      logger.error(
+        `Intake backfill could not add a keyword score to submission ${row.id}: ${errorMessage(error)}`,
+      );
+    }
+  }
+  return updated;
+}
+
+/**
  * Queue the stages each pending submission still needs: legacy submissions
  * and jobs lost while pending. Never re-runs a settled stage. A lost email
  * goes out with the re-run, or at once when both stages have settled. The
@@ -747,6 +830,10 @@ export async function sendIntakeNotificationOnce(
  */
 export async function backfillIntakeAssessments(deps?: Partial<AssessmentDeps>): Promise<number> {
   const d = withDefaults(deps);
+  const keywordScored = await backfillKeywordScores(d);
+  if (keywordScored > 0) {
+    logger.info(`Intake backfill: keyword score added to ${keywordScored} submission(s)`);
+  }
   const rows = await d.listNeedingAssessment();
   let queued = 0;
   for (const row of rows) {

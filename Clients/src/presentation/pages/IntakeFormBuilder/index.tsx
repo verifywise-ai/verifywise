@@ -982,7 +982,7 @@ export function IntakeFormBuilder() {
                       textColor={palette.status.info.text}
                     />
                     {isDirty && (
-                      <Typography sx={{ color: theme.palette.text.accent, fontSize: "11px" }}>
+                      <Typography sx={{ color: theme.palette.text.secondary, fontSize: "13px" }}>
                         Unsaved
                       </Typography>
                     )}
@@ -1343,8 +1343,8 @@ export function IntakeFormBuilder() {
                                         <Typography
                                           component="span"
                                           sx={{
-                                            fontSize: 11,
-                                            color: theme.palette.text.accent,
+                                            fontSize: 13,
+                                            color: theme.palette.text.secondary,
                                             ml: "4px",
                                           }}
                                         >
@@ -1504,8 +1504,8 @@ export function IntakeFormBuilder() {
                           />
                           <Typography
                             sx={{
-                              fontSize: "11px",
-                              color: theme.palette.text.accent,
+                              fontSize: "13px",
+                              color: theme.palette.text.secondary,
                               mt: "4px",
                             }}
                           >
@@ -1560,15 +1560,15 @@ export function IntakeFormBuilder() {
                           />
                           <Typography
                             sx={{
-                              fontSize: "11px",
-                              color: theme.palette.text.accent,
+                              fontSize: "13px",
+                              color: theme.palette.text.secondary,
                               mt: "6px",
                               lineHeight: 1.4,
                             }}
                           >
                             {activeLlmKeyId
                               ? "Used to score submissions and suggest risks. You can also generate suggested questions and field guidance text with AI."
-                              : "Used to score submissions and suggest risks. Without a key, reviewers see the rule-based classification only. Add a key in Settings > LLM keys."}
+                              : "Used to score submissions and suggest risks. Without a key, submissions get a basic keyword score and no suggested risks. Add a key in Settings > LLM keys."}
                           </Typography>
                         </Box>
 
@@ -1611,7 +1611,7 @@ export function IntakeFormBuilder() {
                                 Suggested questions
                               </Typography>
                               <Typography
-                                sx={{ fontSize: "11px", color: theme.palette.text.accent }}
+                                sx={{ fontSize: "13px", color: theme.palette.text.secondary }}
                               >
                                 Show AI-suggested questions while building the form
                               </Typography>

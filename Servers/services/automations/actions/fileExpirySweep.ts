@@ -3,6 +3,7 @@ import { sequelize } from "../../../database/db";
 import { getAllOrganizationsQuery } from "../../../utils/organization.utils";
 import { notifyFileExpiring } from "../../inAppNotification.service";
 import logger from "../../../utils/logger/fileLogger";
+import { frontendBaseUrl } from "../../../utils/frontendUrl.utils";
 
 /**
  * Files — daily expiry sweep.
@@ -40,7 +41,7 @@ export interface FileExpirySweepSummary {
 export async function runFileExpirySweep(
   organizationId: number,
 ): Promise<{ summary: FileExpirySweepSummary; rows: ExpiringFileRow[] }> {
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  const baseUrl = frontendBaseUrl();
 
   const rows = (await sequelize.query(
     `SELECT id,

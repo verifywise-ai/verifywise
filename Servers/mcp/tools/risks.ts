@@ -33,6 +33,7 @@ import logger from "../../utils/logger/fileLogger";
 import { requireOrganization } from "../scope";
 import { resolveFrameworkIds } from "../frameworks";
 import { result, type ToolDef } from "../tool";
+import { frontendBaseUrl } from "../../utils/frontendUrl.utils";
 
 const LIKELIHOODS = ["Rare", "Unlikely", "Possible", "Likely", "Almost Certain"] as const;
 const SEVERITIES = ["Negligible", "Minor", "Moderate", "Major", "Catastrophic"] as const;
@@ -101,7 +102,7 @@ async function notifyRiskOwnerAssigned(
         entityUrl: `/risk-management?riskId=${risk.id}`,
       },
       assignerName,
-      process.env.FRONTEND_URL || "http://localhost:3000",
+      frontendBaseUrl(),
       { description: risk.risk_description },
     );
   } catch (error) {

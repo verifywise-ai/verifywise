@@ -41,6 +41,7 @@ import {
   recordMultipleFieldChanges,
   recordEntityDeletion,
 } from "../utils/changeHistory.base.utils";
+import { frontendBaseUrl } from "../utils/frontendUrl.utils";
 
 export async function createTask(req: Request, res: Response): Promise<any> {
   logProcessing({
@@ -140,7 +141,7 @@ export async function createTask(req: Request, res: Response): Promise<any> {
           const creatorName = creator ? `${creator.name} ${creator.surname}`.trim() : "Someone";
 
           // Get base URL from env or default
-          const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+          const baseUrl = frontendBaseUrl();
 
           // Use entity links from request body if provided (frontend knows the current state)
           let entityLinksForEmail: ITaskEntityLinkForEmail[] = [];
@@ -597,7 +598,7 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
         const updaterName = updater ? `${updater.name} ${updater.surname}`.trim() : "Someone";
 
         // Get base URL from env or default
-        const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+        const baseUrl = frontendBaseUrl();
 
         // Use entity links from request body if provided (for immediate notification),
         // otherwise fall back to fetching from DB

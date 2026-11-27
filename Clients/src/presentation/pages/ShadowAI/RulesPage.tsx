@@ -62,6 +62,7 @@ import {
   useSortedRows,
   SortableTableHead,
 } from "./constants";
+import { ruleActionsLabel } from "./ruleActions";
 import { palette, radiusPx } from "../../themes/palette";
 import { pageOfLabel } from "../../components/Table/pageOfLabel";
 
@@ -520,16 +521,7 @@ export default function RulesPage() {
                       )}
                     </Stack>
                     <Typography sx={{ fontSize: 12, color: palette.text.disabled }}>
-                      Actions:{" "}
-                      {Array.isArray(rule.actions)
-                        ? rule.actions
-                            .map((a: { type: string }) => a.type.replace(/_/g, " "))
-                            .join(", ")
-                        : rule.actions && typeof rule.actions === "object"
-                          ? Object.keys(rule.actions)
-                              .map((k) => k.replace(/_/g, " "))
-                              .join(", ")
-                          : "None"}
+                      Actions: {ruleActionsLabel(rule.actions)}
                     </Typography>
                   </Stack>
                 </Paper>

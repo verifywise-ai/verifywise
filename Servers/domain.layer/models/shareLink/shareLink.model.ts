@@ -2,6 +2,7 @@ import { Column, DataType, ForeignKey, Model, Table, BeforeCreate } from "sequel
 import { IShareLink } from "../../interfaces/i.shareLink";
 import { UserModel } from "../user/user.model";
 import crypto from "crypto";
+import { frontendBaseUrl } from "../../../utils/frontendUrl.utils";
 
 @Table({
   tableName: "share_links",
@@ -105,7 +106,7 @@ export class ShareLinkModel extends Model<ShareLinkModel> implements IShareLink 
    * Get the full shareable URL
    */
   getShareableUrl(baseUrl?: string): string {
-    const url = baseUrl || process.env.FRONTEND_URL || "http://localhost:5173";
+    const url = baseUrl || frontendBaseUrl();
     return `${url}/shared/${this.resource_type}s/${this.share_token}`;
   }
 

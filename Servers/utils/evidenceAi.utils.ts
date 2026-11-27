@@ -3,6 +3,7 @@ import { buildVisibilityFilterForEvidence } from "./visibility.utils";
 import { buildFileAccessFilter } from "./fileUpload.utils";
 import type { QualityGrade } from "../domain.layer/interfaces/i.evidenceAi";
 import { logStructured } from "./logger/fileLogger";
+import { structItemInEuAiActSql } from "./euAiActStructItem.sql";
 
 /**
  * Who may replace a file's stored analysis (one row per file).
@@ -293,11 +294,19 @@ type EvidenceLinkSource = {
 
 const EVIDENCE_REQUIREMENT_SOURCES: Record<
   string,
-  { structTable: string; titleColumn: string; linkSources: EvidenceLinkSource[] }
+  {
+    structTable: string;
+    titleColumn: string;
+    /** Extra condition on the struct rows (alias `cs`) that are requirements. */
+    structFilter?: string;
+    linkSources: EvidenceLinkSource[];
+  }
 > = {
   eu_ai_act: {
     structTable: "controls_struct_eu",
     titleColumn: "title",
+    // Controls moved to EU AI Act (organization) are no longer EU AI Act requirements.
+    structFilter: structItemInEuAiActSql("cs"),
     linkSources: [
       { entityType: "control", requirementId: "fel.entity_id" },
       {
@@ -484,7 +493,7 @@ export const getEvidenceGapsQuery = async (
            ON eaa.file_id = rl.file_id AND eaa.organization_id = :organizationId
          GROUP BY rl.requirement_id
        ) stats ON stats.requirement_id = cs.id
-       WHERE cs.${source.titleColumn} IS NOT NULL
+       WHERE cs.${source.titleColumn} IS NOT NULL${source.structFilter ? ` AND ${source.structFilter}` : ""}
        ORDER BY COALESCE(stats.evidence_count, 0) ASC, COALESCE(stats.adequate_count, 0) ASC`,
       { replacements: { organizationId, fwType: fw, lowGrades, projectId: projectId ?? null } },
     );

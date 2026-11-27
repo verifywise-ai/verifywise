@@ -1,6 +1,20 @@
 import { useMemo, useState } from "react";
-import { Box, Typography, Stack, Tab, Tabs, Card, CardContent, useTheme } from "@mui/material";
-import { ShieldCheck, RefreshCw } from "lucide-react";
+import {
+  Box,
+  Typography,
+  Stack,
+  Tab,
+  Tabs,
+  Card,
+  CardContent,
+  IconButton,
+  useTheme,
+} from "@mui/material";
+import { ShieldCheck, RefreshCw, Trash2, Lock } from "lucide-react";
+import VWTooltip from "../../components/VWTooltip";
+import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
+import { useAuth } from "../../../application/hooks/useAuth";
+import { useCan } from "../../../application/hooks/useCan";
 import { VisibilityChips } from "../../components/VisibilityToggle";
 import type { VisibilityFilterValue } from "../../components/VisibilityToggle";
 import { cardStyles, layoutStyles } from "../../themes/components";
@@ -20,8 +34,16 @@ import {
   useReadinessHistory,
   useTriggerCalculateAll,
   useTriggerCalculateFramework,
+  useDeleteReadinessCalculation,
 } from "../../../application/hooks/useReadiness";
 import type { ReadinessLevel } from "../../../domain/interfaces/i.readiness";
+
+// On this page the selected chip also decides how a new calculation is saved.
+const VISIBILITY_HINTS = {
+  all: "Public results and your private ones. Calculating now keeps each result's visibility, and a new result is public.",
+  public: "Results everyone in your organization can see. Calculating now shares the result.",
+  private: "Results only you can see. Calculating now keeps the result to yourself.",
+};
 
 const FRAMEWORK_TABS = [
   { value: "eu_ai_act", label: "EU AI Act" },
@@ -110,16 +132,21 @@ function toTime(value?: string | null): number {
  * framework_readiness_scores keeps one row per user — the upsert conflict target
  * includes created_by — so a framework a teammate has also calculated comes back
  * more than once. Readiness is a property of the use case, not of whoever pressed
- * the button, so show the most recent row per framework. The full series stays in
- * the trend card, which reads the separate readiness_history table.
+ * the button, so show one row per framework: the viewer's own calculation when
+ * they have one (so they can always see, and delete, what they ran), else the most
+ * recent. The full series stays in the trend card, which reads the separate
+ * readiness_history table.
  */
-function latestPerFramework(rows: any[]): any[] {
+function latestPerFramework(rows: any[], userId: number | null): any[] {
+  const isOwn = (row: any) => userId !== null && row.created_by === userId;
   const latest = new Map<string, any>();
   for (const row of rows) {
     const current = latest.get(row.framework_type);
-    if (!current || toTime(row.calculated_at) > toTime(current.calculated_at)) {
-      latest.set(row.framework_type, row);
-    }
+    const wins =
+      !current ||
+      (isOwn(row) && !isOwn(current)) ||
+      (isOwn(row) === isOwn(current) && toTime(row.calculated_at) > toTime(current.calculated_at));
+    if (wins) latest.set(row.framework_type, row);
   }
   return [...latest.values()];
 }
@@ -155,6 +182,21 @@ export default function ReadinessDashboard({
   const triggerCalculateAll = useTriggerCalculateAll();
   const triggerCalculateFramework = useTriggerCalculateFramework();
   const triggerCalculate = isScoped ? triggerCalculateFramework : triggerCalculateAll;
+  const deleteCalculation = useDeleteReadinessCalculation();
+  const { userId } = useAuth();
+  const isReadinessAdmin = useCan("readiness.admin");
+  const [pendingDelete, setPendingDelete] = useState<{ id: number; name: string } | null>(null);
+  // Your own calculation, or (for an admin) someone else's public one. The
+  // server applies the same rule.
+  const canDelete = (fw: any) =>
+    typeof fw.id === "number" &&
+    ((userId !== null && fw.created_by === userId) ||
+      (isReadinessAdmin && fw.visibility === "public"));
+  const confirmDelete = () => {
+    if (!pendingDelete) return;
+    // Stays open on failure, so the person can retry from the same place.
+    deleteCalculation.mutate(pendingDelete.id, { onSuccess: () => setPendingDelete(null) });
+  };
 
   // Only the framework this view is pinned to — an org-wide card row inside a
   // single use case's framework tab would misrepresent the numbers. Both the
@@ -164,11 +206,13 @@ export default function ReadinessDashboard({
     const scoped = frameworkType
       ? scores.filter((fw: any) => fw.framework_type === frameworkType)
       : scores;
-    return latestPerFramework(scoped);
-  }, [scores, frameworkType]);
+    return latestPerFramework(scoped, userId);
+  }, [scores, frameworkType, userId]);
 
   const handleCalculate = () => {
-    const visibility = visFilter === "private" ? "private" : "public";
+    // "All" names no visibility: an existing calculation keeps its own, a new
+    // one is public. Only an explicit Public or Private changes it.
+    const visibility = visFilter === "all" ? undefined : visFilter;
     if (isScoped && frameworkType) {
       triggerCalculateFramework.mutate({ frameworkType, projectId, visibility });
     } else {
@@ -206,16 +250,48 @@ export default function ReadinessDashboard({
                 "&:hover": { borderColor: getLevelColor(level) },
               }}
             >
-              <Typography
-                sx={{
-                  fontSize: 12,
-                  color: textColors.secondary,
-                  fontWeight: 500,
-                  mb: "8px",
-                }}
+              <Stack
+                direction="row"
+                alignItems="center"
+                justifyContent="space-between"
+                sx={{ gap: "8px", mb: "8px", minHeight: "24px" }}
               >
-                {formatFrameworkName(fw.framework_type)}
-              </Typography>
+                <Stack direction="row" alignItems="center" sx={{ gap: "6px" }}>
+                  <Typography sx={{ fontSize: 13, color: textColors.secondary, fontWeight: 500 }}>
+                    {formatFrameworkName(fw.framework_type)}
+                  </Typography>
+                  {fw.visibility === "private" && (
+                    <VWTooltip content="Only you can see this calculation" placement="top">
+                      <Stack
+                        direction="row"
+                        alignItems="center"
+                        sx={{ gap: "4px", color: textColors.secondary }}
+                      >
+                        <Lock size={12} />
+                        <Typography sx={{ fontSize: 13 }}>Private</Typography>
+                      </Stack>
+                    </VWTooltip>
+                  )}
+                </Stack>
+                {canDelete(fw) && (
+                  <VWTooltip content="Delete this calculation" placement="top">
+                    <IconButton
+                      size="small"
+                      aria-label="Delete this calculation"
+                      data-testid={`readiness-delete-${fw.id}`}
+                      onClick={() =>
+                        setPendingDelete({
+                          id: fw.id,
+                          name: formatFrameworkName(fw.framework_type),
+                        })
+                      }
+                      sx={{ p: "4px", color: textColors.secondary }}
+                    >
+                      <Trash2 size={14} strokeWidth={1.5} />
+                    </IconButton>
+                  </VWTooltip>
+                )}
+              </Stack>
               <Stack direction="row" alignItems="center" sx={{ gap: "8px" }}>
                 <Typography
                   sx={{
@@ -240,12 +316,12 @@ export default function ReadinessDashboard({
                   const { label, color, countKey } = LEVEL_CONFIG[lvl];
                   const count = fw[countKey] ?? 0;
                   return (
-                    <Typography key={label} sx={{ fontSize: 11, color: textColors.accent }}>
+                    <Typography key={label} sx={{ fontSize: 13, color: textColors.secondary }}>
                       <Box
                         component="span"
                         sx={{
                           fontWeight: 500,
-                          color: count > 0 ? color : textColors.accent,
+                          color: count > 0 ? color : textColors.secondary,
                         }}
                       >
                         {count}
@@ -299,7 +375,7 @@ export default function ReadinessDashboard({
           </Box>
         )}
         <Stack direction="row" alignItems="center" sx={{ gap: "8px", flexShrink: 0 }}>
-          <VisibilityChips value={visFilter} onChange={setVisFilter} />
+          <VisibilityChips value={visFilter} onChange={setVisFilter} hints={VISIBILITY_HINTS} />
           <CustomizableButton
             variant="contained"
             color="primary"
@@ -373,6 +449,24 @@ export default function ReadinessDashboard({
           <WeakControlsList controls={weakest ?? []} isLoading={weakestLoading} />
         </CardContent>
       </Card>
+
+      <ConfirmationModal
+        isOpen={pendingDelete !== null}
+        title="Delete this calculation?"
+        body={
+          <Typography fontSize={13} color={textColors.secondary}>
+            The {pendingDelete?.name} readiness score, its control scores and its history points are
+            removed. Calculate again to get a new score.
+          </Typography>
+        }
+        cancelText="Cancel"
+        proceedText="Delete"
+        proceedButtonColor="error"
+        proceedButtonVariant="contained"
+        isLoading={deleteCalculation.isPending}
+        onCancel={() => setPendingDelete(null)}
+        onProceed={confirmDelete}
+      />
     </Box>
   );
 }

@@ -233,7 +233,7 @@ describe("addFrameworkToProject", () => {
 
     expect(mockHasPending).toHaveBeenCalledWith(2, "use_case", 1);
     expect(mockFrameworkModel.findByIdWithValidation).toHaveBeenCalledWith(1);
-    expect(mockAdd).toHaveBeenCalledWith(1, 2, 1, transaction);
+    expect(mockAdd).toHaveBeenCalledWith(1, 2, 1, transaction, 1);
     expect(transaction.commit).toHaveBeenCalled();
     expect(transaction.rollback).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(200);
@@ -300,7 +300,7 @@ describe("addFrameworkToProject", () => {
 
     expect(mockHasPending).toHaveBeenCalledWith(2, "use_case", 1);
     expect(mockFrameworkModel.findByIdWithValidation).toHaveBeenCalledWith(1);
-    expect(mockAdd).toHaveBeenCalledWith(1, 2, 1, transaction);
+    expect(mockAdd).toHaveBeenCalledWith(1, 2, 1, transaction, 1);
     expect(transaction.rollback).toHaveBeenCalled();
     expect(transaction.commit).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(500);

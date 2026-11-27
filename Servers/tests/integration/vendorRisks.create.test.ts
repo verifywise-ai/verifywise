@@ -18,6 +18,7 @@ import { createTestVendor } from "../factories";
 // Imported after the harness, which loads ./setup: these resolve to the mocks it registers.
 import { notifyUserAssigned } from "../../services/inAppNotification.service";
 import { automationQueue } from "../../services/automations/automationProducer";
+import { frontendBaseUrl } from "../../utils/frontendUrl.utils";
 
 const BASE = "/api/vendorRisks";
 
@@ -178,7 +179,7 @@ describe("POST /api/vendorRisks", () => {
       "SELECT name, surname FROM users WHERE id = :id",
       { id: owner.userId },
     );
-    const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const baseUrl = frontendBaseUrl();
 
     const res = await owner.request
       .post(BASE)

@@ -24,8 +24,15 @@ import nistCsfStructure from "./NIST-CSF/nist-csf.structure";
 import osfiE23Structure from "./OSFI-E-23/osfi-e23.structure";
 import en18286Structure from "./EN-18286/en-18286.structure";
 import en18286AiSystemsStructure from "./EN-18286/en-18286-ai-systems.structure";
+import saudiNaiiStructure from "./Saudi-NAII/saudi-naii.structure";
 
 export * from "./types";
+export {
+  EU_AI_ACT_ORGANIZATION_CONTROLS,
+  EU_AI_ACT_ORGANIZATION_FRAMEWORK_ID,
+  EU_AI_ACT_ORGANIZATION_MOVED_NOTICE,
+  EU_AI_ACT_ORGANIZATION_QUESTIONS,
+} from "./EU-AI-Act-Organization/euAiActOrganization";
 
 /**
  * Registry of the 24 migrated frameworks. Built-ins (EU AI Act, ISO 42001,
@@ -57,6 +64,7 @@ export const FRAMEWORK_STRUCTURES: FrameworkStructure[] = [
   osfiE23Structure,
   en18286Structure,
   en18286AiSystemsStructure,
+  saudiNaiiStructure,
 ];
 
 const BY_KEY = new Map<string, FrameworkStructure>();

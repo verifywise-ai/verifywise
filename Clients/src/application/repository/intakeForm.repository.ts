@@ -180,6 +180,11 @@ export interface RiskAssessmentV2 {
     max: number | null;
     reasons: AiReason[];
   } | null;
+  /** Basic keyword score; set only when status is "ai_not_configured" (no LLM key). */
+  keyword?: {
+    overallScore: number;
+    dimensions: Array<{ key: string; label: string; weight: number; score: number }>;
+  } | null;
   finalScore: number | null;
   source: ScoreSource | null;
   rulesOnly: boolean;

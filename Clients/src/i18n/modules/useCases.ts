@@ -94,6 +94,17 @@ export const de: Record<string, string> = {
   "Median": "Median",
   "Range": "Spanne",
   "No AI scores": "Keine KI-Bewertungen",
+  "The keyword score set this score.": "Die Stichwortbewertung hat diesen Wert bestimmt.",
+  "The rule minimum set this score. The keyword score was lower.":
+    "Das Regelminimum hat diesen Wert bestimmt. Die Stichwortbewertung war niedriger.",
+  "Basic keyword score": "Einfache Stichwortbewertung",
+  "No LLM key was available when this was scored, so the score comes from matching keywords in the answers. With an LLM key on the form, new submissions get a much more accurate score and suggested risks.":
+    "Beim Bewerten war kein LLM-Schlüssel verfügbar, daher beruht der Wert auf Stichwörtern in den Antworten. Mit einem LLM-Schlüssel im Formular erhalten neue Einreichungen einen deutlich genaueren Wert und Risikovorschläge.",
+  "Keyword score": "Stichwortbewertung",
+  "Weighted average of six risk dimensions, from keywords in the answers. No LLM key was available when this was scored.":
+    "Gewichteter Durchschnitt aus sechs Risikodimensionen, ermittelt aus Stichwörtern in den Antworten. Beim Bewerten war kein LLM-Schlüssel verfügbar.",
+  "The final score is the higher of the rule minimum and the keyword score.":
+    "Der endgültige Wert ist der höhere von Regelminimum und Stichwortbewertung.",
   "Reasons": "Gründe",
   "Band override": "Manuelle Stufe",
   "Suggesting risks…": "Risiken werden vorgeschlagen…",
@@ -120,8 +131,8 @@ export const de: Record<string, string> = {
     "Die Fragen zum EU AI Act sind deaktiviert. Einreichungen erhalten keine regelbasierte Einstufung nach dem EU AI Act, daher hat ihr Risikowert kein regelbasiertes Minimum und wird als „nicht regelbasiert geprüft“ markiert. Anwendungsfälle, die aus diesem Formular genehmigt werden, erhalten ebenfalls keine Einstufung nach dem EU AI Act.",
   "Used to score submissions and suggest risks. You can also generate suggested questions and field guidance text with AI.":
     "Wird verwendet, um Einreichungen zu bewerten und Risiken vorzuschlagen. Sie können mit KI auch Fragenvorschläge und Hilfetexte für Felder erstellen.",
-  "Used to score submissions and suggest risks. Without a key, reviewers see the rule-based classification only. Add a key in Settings > LLM keys.":
-    "Wird verwendet, um Einreichungen zu bewerten und Risiken vorzuschlagen. Ohne Schlüssel sehen Prüfer nur die regelbasierte Einstufung. Fügen Sie einen Schlüssel unter Einstellungen > LLM-Schlüssel hinzu.",
+  "Used to score submissions and suggest risks. Without a key, submissions get a basic keyword score and no suggested risks. Add a key in Settings > LLM keys.":
+    "Wird verwendet, um Einreichungen zu bewerten und Risiken vorzuschlagen. Ohne Schlüssel erhalten Einreichungen eine einfache Stichwortbewertung und keine Risikovorschläge. Fügen Sie einen Schlüssel unter Einstellungen > LLM-Schlüssel hinzu.",
   "High-risk roles *": "Hochrisiko-Rollen *",
   "Not a high-risk role:": "Keine Hochrisiko-Rolle:",
   "Roles:": "Rollen:",
@@ -772,6 +783,24 @@ export const de: Record<string, string> = {
     "{count} Risiko ist nur mit diesem Anwendungsfall verknüpft. Nach dem Löschen können alle in der Organisation es sehen.",
   "{count} risks are linked only to this use case. After you delete it, everyone in the organization can see them.":
     "{count} Risiken sind nur mit diesem Anwendungsfall verknüpft. Nach dem Löschen können alle in der Organisation sie sehen.",
+  "Delete this calculation": "Diese Berechnung löschen",
+  "Delete this calculation?": "Diese Berechnung löschen?",
+  "Only you can see this calculation": "Nur Sie sehen diese Berechnung",
+  "Could not delete the calculation": "Die Berechnung konnte nicht gelöscht werden",
+  "Public results and your private ones": "Öffentliche Ergebnisse und Ihre privaten",
+  "Results everyone in your organization can see":
+    "Ergebnisse, die alle in Ihrer Organisation sehen",
+  "Results only you can see": "Ergebnisse, die nur Sie sehen",
+  "Public results and your private ones. Calculating now keeps each result's visibility, and a new result is public.":
+    "Öffentliche Ergebnisse und Ihre privaten. Eine Berechnung jetzt behält die Sichtbarkeit jedes Ergebnisses bei, ein neues Ergebnis ist öffentlich.",
+  "Results everyone in your organization can see. Calculating now shares the result.":
+    "Ergebnisse, die alle in Ihrer Organisation sehen. Eine Berechnung jetzt teilt das Ergebnis.",
+  "Results only you can see. Calculating now keeps the result to yourself.":
+    "Ergebnisse, die nur Sie sehen. Eine Berechnung jetzt behält das Ergebnis für Sie.",
+  "Organization-wide obligations (prohibited practices, AI literacy, quality management system): {done}/{total} requirements done, {answered}/{questions} questions answered":
+    "Organisationsweite Pflichten (verbotene Praktiken, KI-Kompetenz, Qualitätsmanagementsystem): {done}/{total} Anforderungen erledigt, {answered}/{questions} Fragen beantwortet",
+  "Organization-wide obligations (prohibited practices, AI literacy, quality management system) are tracked once for the organization on the Frameworks page by your Admins.":
+    "Organisationsweite Pflichten (verbotene Praktiken, KI-Kompetenz, Qualitätsmanagementsystem) werden von Ihren Admins einmal für die gesamte Organisation auf der Seite „Rahmenwerke“ verfolgt.",
 };
 
 export const fr: Record<string, string> = {
@@ -866,6 +895,17 @@ export const fr: Record<string, string> = {
   "Median": "Médiane",
   "Range": "Plage",
   "No AI scores": "Aucun score de l'IA",
+  "The keyword score set this score.": "Le score par mots-clés a fixé ce score.",
+  "The rule minimum set this score. The keyword score was lower.":
+    "Le minimum des règles a fixé ce score. Le score par mots-clés était plus bas.",
+  "Basic keyword score": "Score de base par mots-clés",
+  "No LLM key was available when this was scored, so the score comes from matching keywords in the answers. With an LLM key on the form, new submissions get a much more accurate score and suggested risks.":
+    "Aucune clé LLM n'était disponible lors de l'évaluation : le score provient des mots-clés trouvés dans les réponses. Avec une clé LLM sur le formulaire, les nouvelles soumissions obtiennent un score bien plus précis et des suggestions de risques.",
+  "Keyword score": "Score par mots-clés",
+  "Weighted average of six risk dimensions, from keywords in the answers. No LLM key was available when this was scored.":
+    "Moyenne pondérée de six dimensions de risque, à partir des mots-clés des réponses. Aucune clé LLM n'était disponible lors de l'évaluation.",
+  "The final score is the higher of the rule minimum and the keyword score.":
+    "Le score final est le plus élevé entre le minimum des règles et le score par mots-clés.",
   "Reasons": "Raisons",
   "Band override": "Niveau modifié",
   "Suggesting risks…": "Suggestion des risques…",
@@ -892,8 +932,8 @@ export const fr: Record<string, string> = {
     "Les questions sur l'AI Act de l'UE sont désactivées. Les soumissions n'obtiendront pas de classification fondée sur les règles de l'AI Act de l'UE : leur score de risque n'a donc pas de minimum fondé sur les règles et est marqué « non vérifié par les règles ». Les cas d'usage approuvés depuis ce formulaire n'obtiendront pas non plus de classification selon l'AI Act de l'UE.",
   "Used to score submissions and suggest risks. You can also generate suggested questions and field guidance text with AI.":
     "Sert à évaluer les soumissions et à suggérer des risques. Vous pouvez aussi générer avec l'IA des questions suggérées et des textes d'aide pour les champs.",
-  "Used to score submissions and suggest risks. Without a key, reviewers see the rule-based classification only. Add a key in Settings > LLM keys.":
-    "Sert à évaluer les soumissions et à suggérer des risques. Sans clé, les réviseurs ne voient que la classification fondée sur les règles. Ajoutez une clé dans Paramètres > Clés LLM.",
+  "Used to score submissions and suggest risks. Without a key, submissions get a basic keyword score and no suggested risks. Add a key in Settings > LLM keys.":
+    "Sert à évaluer les soumissions et à suggérer des risques. Sans clé, les soumissions obtiennent un score de base par mots-clés et aucune suggestion de risques. Ajoutez une clé dans Paramètres > Clés LLM.",
   "High-risk roles *": "Rôles à haut risque *",
   "Not a high-risk role:": "Pas un rôle à haut risque :",
   "Roles:": "Rôles :",
@@ -1540,6 +1580,24 @@ export const fr: Record<string, string> = {
     "{count} risque est lié uniquement à ce cas d'usage. Après la suppression, tous les membres de l'organisation pourront le voir.",
   "{count} risks are linked only to this use case. After you delete it, everyone in the organization can see them.":
     "{count} risques sont liés uniquement à ce cas d'usage. Après la suppression, tous les membres de l'organisation pourront les voir.",
+  "Delete this calculation": "Supprimer ce calcul",
+  "Delete this calculation?": "Supprimer ce calcul ?",
+  "Only you can see this calculation": "Vous seul voyez ce calcul",
+  "Could not delete the calculation": "Impossible de supprimer le calcul",
+  "Public results and your private ones": "Résultats publics et vos résultats privés",
+  "Results everyone in your organization can see":
+    "Résultats visibles par toute votre organisation",
+  "Results only you can see": "Résultats que vous seul voyez",
+  "Public results and your private ones. Calculating now keeps each result's visibility, and a new result is public.":
+    "Résultats publics et vos résultats privés. Calculer maintenant conserve la visibilité de chaque résultat, et un nouveau résultat est public.",
+  "Results everyone in your organization can see. Calculating now shares the result.":
+    "Résultats visibles par toute votre organisation. Calculer maintenant partage le résultat.",
+  "Results only you can see. Calculating now keeps the result to yourself.":
+    "Résultats que vous seul voyez. Calculer maintenant garde le résultat pour vous.",
+  "Organization-wide obligations (prohibited practices, AI literacy, quality management system): {done}/{total} requirements done, {answered}/{questions} questions answered":
+    "Obligations à l'échelle de l'organisation (pratiques interdites, maîtrise de l'IA, système de management de la qualité) : {done}/{total} exigences terminées, {answered}/{questions} questions répondues",
+  "Organization-wide obligations (prohibited practices, AI literacy, quality management system) are tracked once for the organization on the Frameworks page by your Admins.":
+    "Les obligations à l'échelle de l'organisation (pratiques interdites, maîtrise de l'IA, système de management de la qualité) sont suivies une seule fois pour l'organisation par vos administrateurs, sur la page Référentiels.",
 };
 
 export const es: Record<string, string> = {
@@ -1634,6 +1692,17 @@ export const es: Record<string, string> = {
   "Median": "Mediana",
   "Range": "Rango",
   "No AI scores": "Sin puntuaciones de la IA",
+  "The keyword score set this score.": "La puntuación por palabras clave fijó esta puntuación.",
+  "The rule minimum set this score. The keyword score was lower.":
+    "El mínimo de las reglas fijó esta puntuación. La puntuación por palabras clave fue menor.",
+  "Basic keyword score": "Puntuación básica por palabras clave",
+  "No LLM key was available when this was scored, so the score comes from matching keywords in the answers. With an LLM key on the form, new submissions get a much more accurate score and suggested risks.":
+    "No había ninguna clave LLM disponible al puntuar, así que la puntuación sale de las palabras clave de las respuestas. Con una clave LLM en el formulario, los nuevos envíos obtienen una puntuación mucho más precisa y riesgos sugeridos.",
+  "Keyword score": "Puntuación por palabras clave",
+  "Weighted average of six risk dimensions, from keywords in the answers. No LLM key was available when this was scored.":
+    "Media ponderada de seis dimensiones de riesgo, a partir de las palabras clave de las respuestas. No había ninguna clave LLM disponible al puntuar.",
+  "The final score is the higher of the rule minimum and the keyword score.":
+    "La puntuación final es la más alta entre el mínimo de las reglas y la puntuación por palabras clave.",
   "Reasons": "Motivos",
   "Band override": "Banda modificada",
   "Suggesting risks…": "Sugiriendo riesgos…",
@@ -1659,8 +1728,8 @@ export const es: Record<string, string> = {
     "Las preguntas de la Ley de IA de la UE están desactivadas. Los envíos no obtendrán una clasificación basada en reglas de la Ley de IA de la UE, así que su puntuación de riesgo no tiene un mínimo basado en reglas y se marca como «sin comprobación de reglas». Los casos de uso aprobados desde este formulario tampoco obtendrán una clasificación de la Ley de IA de la UE.",
   "Used to score submissions and suggest risks. You can also generate suggested questions and field guidance text with AI.":
     "Se usa para puntuar envíos y sugerir riesgos. También puedes generar con IA preguntas sugeridas y textos de ayuda para los campos.",
-  "Used to score submissions and suggest risks. Without a key, reviewers see the rule-based classification only. Add a key in Settings > LLM keys.":
-    "Se usa para puntuar envíos y sugerir riesgos. Sin clave, los revisores solo ven la clasificación basada en reglas. Añade una clave en Configuración > Claves LLM.",
+  "Used to score submissions and suggest risks. Without a key, submissions get a basic keyword score and no suggested risks. Add a key in Settings > LLM keys.":
+    "Se usa para puntuar envíos y sugerir riesgos. Sin clave, los envíos reciben una puntuación básica por palabras clave y ningún riesgo sugerido. Añade una clave en Configuración > Claves LLM.",
   "High-risk roles *": "Roles de alto riesgo *",
   "Not a high-risk role:": "No es un rol de alto riesgo:",
   "Roles:": "Roles:",
@@ -2305,4 +2374,21 @@ export const es: Record<string, string> = {
     "{count} riesgo está vinculado solo a este caso de uso. Después de eliminarlo, todos en la organización podrán verlo.",
   "{count} risks are linked only to this use case. After you delete it, everyone in the organization can see them.":
     "{count} riesgos están vinculados solo a este caso de uso. Después de eliminarlo, todos en la organización podrán verlos.",
+  "Delete this calculation": "Eliminar este cálculo",
+  "Delete this calculation?": "¿Eliminar este cálculo?",
+  "Only you can see this calculation": "Solo usted ve este cálculo",
+  "Could not delete the calculation": "No se pudo eliminar el cálculo",
+  "Public results and your private ones": "Resultados públicos y sus resultados privados",
+  "Results everyone in your organization can see": "Resultados que ve toda su organización",
+  "Results only you can see": "Resultados que solo usted ve",
+  "Public results and your private ones. Calculating now keeps each result's visibility, and a new result is public.":
+    "Resultados públicos y sus resultados privados. Calcular ahora mantiene la visibilidad de cada resultado, y un resultado nuevo es público.",
+  "Results everyone in your organization can see. Calculating now shares the result.":
+    "Resultados que ve toda su organización. Calcular ahora comparte el resultado.",
+  "Results only you can see. Calculating now keeps the result to yourself.":
+    "Resultados que solo usted ve. Calcular ahora guarda el resultado para usted.",
+  "Organization-wide obligations (prohibited practices, AI literacy, quality management system): {done}/{total} requirements done, {answered}/{questions} questions answered":
+    "Obligaciones de toda la organización (prácticas prohibidas, alfabetización en IA, sistema de gestión de la calidad): {done}/{total} requisitos completados, {answered}/{questions} preguntas respondidas",
+  "Organization-wide obligations (prohibited practices, AI literacy, quality management system) are tracked once for the organization on the Frameworks page by your Admins.":
+    "Sus administradores gestionan las obligaciones de toda la organización (prácticas prohibidas, alfabetización en IA, sistema de gestión de la calidad) una sola vez para la organización, en la página Marcos.",
 };
