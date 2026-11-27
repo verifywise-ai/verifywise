@@ -11891,6 +11891,7 @@ paths:
         - 'EU AI Act'
       summary: 'Get Controls By Control Category Id'
       operationId: getControlsByControlCategoryId
+      description: 'On EU AI Act (organization) (framework 29), a row whose work was copied from a use case on upgrade carries copied_from_project_id (that use case) and copied_from_use_case ("<title> (<UC id>)"). The label is null unless the caller can see that use case: Admins see every one, other roles one they own, are a member of or reach through a group. Saving the row clears both.'
       security:
         -
           bearerAuth: []
@@ -11930,6 +11931,7 @@ paths:
         - 'EU AI Act'
       summary: 'Get Assessments By Project Id'
       operationId: getAssessmentsByProjectId
+      description: 'On EU AI Act (organization) (framework 29), a row whose work was copied from a use case on upgrade carries copied_from_project_id (that use case) and copied_from_use_case ("<title> (<UC id>)"). The label is null unless the caller can see that use case: Admins see every one, other roles one they own, are a member of or reach through a group. Saving the row clears both.'
       security:
         -
           bearerAuth: []
@@ -11975,6 +11977,7 @@ paths:
         - 'EU AI Act'
       summary: 'Get Compliances By Project Id'
       operationId: getCompliancesByProjectId
+      description: 'On EU AI Act (organization) (framework 29), a row whose work was copied from a use case on upgrade carries copied_from_project_id (that use case) and copied_from_use_case ("<title> (<UC id>)"). The label is null unless the caller can see that use case: Admins see every one, other roles one they own, are a member of or reach through a group. Saving the row clears both.'
       security:
         -
           bearerAuth: []
@@ -12098,6 +12101,7 @@ paths:
         - 'EU AI Act'
       summary: 'Get Topic By Id'
       operationId: getTopicById
+      description: 'On EU AI Act (organization) (framework 29), a row whose work was copied from a use case on upgrade carries copied_from_project_id (that use case) and copied_from_use_case ("<title> (<UC id>)"). The label is null unless the caller can see that use case: Admins see every one, other roles one they own, are a member of or reach through a group. Saving the row clears both.'
       security:
         -
           bearerAuth: []
@@ -12114,6 +12118,7 @@ paths:
         - 'EU AI Act'
       summary: 'Get Control By Id'
       operationId: getControlById
+      description: 'On EU AI Act (organization) (framework 29), a row whose work was copied from a use case on upgrade carries copied_from_project_id (that use case) and copied_from_use_case ("<title> (<UC id>)"). The label is null unless the caller can see that use case: Admins see every one, other roles one they own, are a member of or reach through a group. Saving the row clears both.'
       security:
         -
           bearerAuth: []

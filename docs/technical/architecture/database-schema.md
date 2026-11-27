@@ -493,6 +493,17 @@ CREATE TABLE frameworks (
 - NIST-AI-RMF
 - CE-Marking
 
+#### EU AI Act (organization) columns
+
+EU AI Act (organization), framework 29, reuses the EU AI Act tables. Two pairs of columns tell its rows apart:
+
+| Column | Type | Meaning |
+|--------|------|---------|
+| `controls_struct_eu.moved_to_framework_id`, `questions_struct_eu.moved_to_framework_id` | `INTEGER` → `frameworks.id`, `ON DELETE SET NULL` | 29 on the controls and questions that belong to EU AI Act (organization); null on the rest of the EU AI Act. Added by migration `20261119235846`. |
+| `controls_eu.copied_from_project_id`, `subcontrols_eu.copied_from_project_id`, `answers_eu.copied_from_project_id` | `INTEGER` → `projects.id`, `ON DELETE SET NULL` | The use case a framework-29 row's work was copied from on upgrade. A save of the row clears it. Added by migration `20261126150000`. |
+
+Rules and queries: [Compliance frameworks](../domains/compliance-frameworks.md#organization-wide-obligations-eu-ai-act-organization).
+
 ---
 
 ### Model Inventories
@@ -835,6 +846,11 @@ approval_step_approvers.workflow_step_id → approval_workflow_steps.id
 approval_step_approvers.user_id → users.id
 approval_requests.workflow_id → approval_workflows.id
 approval_requests.requested_by → users.id
+controls_struct_eu.moved_to_framework_id → frameworks.id
+questions_struct_eu.moved_to_framework_id → frameworks.id
+controls_eu.copied_from_project_id → projects.id
+subcontrols_eu.copied_from_project_id → projects.id
+answers_eu.copied_from_project_id → projects.id
 ```
 
 ### Recommended Indexes
