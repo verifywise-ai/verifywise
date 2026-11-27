@@ -487,10 +487,11 @@ describe("EU AI Act (organization) copy-forward migration", () => {
     expect(await buildEntityUrlAsync(base, "eu_subcontrol", org.sub1.id, orgId)).toBe(
       `${organizationPage}&subtab=compliance&controlId=${org.control.id}&subControlId=${org.sub1.id}`,
     );
-    expect(await buildEntityUrlAsync(base, "eu_assessment", a.answer, orgId)).toMatch(
-      new RegExp(
-        `^${organizationPage.replace(/[?]/g, "\\?")}&subtab=assessment&topicId=\\d+&questionId=${items.question}$`,
-      ),
+    const assessmentUrl = (await buildEntityUrlAsync(base, "eu_assessment", a.answer, orgId)) ?? "";
+    const assessmentPrefix = `${organizationPage}&subtab=assessment&topicId=`;
+    expect(assessmentUrl.startsWith(assessmentPrefix)).toBe(true);
+    expect(assessmentUrl.slice(assessmentPrefix.length)).toMatch(
+      new RegExp(`^\\d+&questionId=${items.question}$`),
     );
 
     // A re-run changes nothing.

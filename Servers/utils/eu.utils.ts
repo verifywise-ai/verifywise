@@ -890,7 +890,8 @@ export const getComplianceEUByProjectIdQuery = async (
        JOIN controls_struct_eu cs ON cs.id = c.control_meta_id
        JOIN projects_frameworks pf ON pf.organization_id = c.organization_id AND pf.id = c.projects_frameworks_id
       WHERE c.organization_id = :organizationId AND c.projects_frameworks_id = :projects_frameworks_id
-        AND ${structItemInFrameworkSql("cs", "pf.framework_id")}`,
+        AND ${structItemInFrameworkSql("cs", "pf.framework_id")}
+      ORDER BY cs.order_no, c.id`,
     {
       replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
     },
