@@ -512,6 +512,15 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     tables: ["extension_enablements"],
     baseRoute: "/api/extensions/:key",
   },
+  {
+    // MCP sign-in (mcp/oauth.ts). A connection and the code that creates it
+    // belong to one user in the organization of the session that allowed it;
+    // connections are listed and revoked per user, and an access token is
+    // accepted only for its grant's user and organization.
+    name: "mcp-oauth-connections",
+    tables: ["oauth_grants", "oauth_authorization_codes"],
+    baseRoute: "/api/v1/oauth/connections",
+  },
 ];
 
 /** Flat set of all tenant-scoped tables declared in the registry. */

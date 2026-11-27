@@ -66,8 +66,8 @@ export const de: Record<string, string> = {
   "Could not send your answer.": "Ihre Antwort konnte nicht gesendet werden.",
   "Disconnect": "Trennen",
   "No clients signed in yet.": "Noch keine Clients angemeldet.",
-  "Only Admins and super admins can connect an MCP client. Log in with such an account, or decline.":
-    "Nur Admins und Super Admins können einen MCP-Client verbinden. Melden Sie sich mit einem solchen Konto an oder lehnen Sie ab.",
+  "Only Admins and super admins can connect an MCP client. Log in with such an account, or cancel.":
+    "Nur Admins und Super Admins können einen MCP-Client verbinden. Melden Sie sich mit einem solchen Konto an oder brechen Sie ab.",
   "Check it worked": "Prüfen, ob es funktioniert hat",
   "Your command appears here once it is created.":
     "Ihr Befehl erscheint hier, sobald er erstellt wurde.",
@@ -161,8 +161,8 @@ export const fr: Record<string, string> = {
   "Could not send your answer.": "Impossible d'envoyer votre réponse.",
   "Disconnect": "Déconnecter",
   "No clients signed in yet.": "Aucun client connecté pour l'instant.",
-  "Only Admins and super admins can connect an MCP client. Log in with such an account, or decline.":
-    "Seuls les Admins et les super admins peuvent connecter un client MCP. Connectez-vous avec un tel compte, ou refusez.",
+  "Only Admins and super admins can connect an MCP client. Log in with such an account, or cancel.":
+    "Seuls les Admins et les super admins peuvent connecter un client MCP. Connectez-vous avec un tel compte, ou annulez.",
   "Check it worked": "Vérifier que cela fonctionne",
   "Your command appears here once it is created.": "Votre commande apparaît ici une fois créée.",
   "Tools it adds": "Outils ajoutés",
@@ -253,8 +253,8 @@ export const es: Record<string, string> = {
   "Could not send your answer.": "No se pudo enviar tu respuesta.",
   "Disconnect": "Desconectar",
   "No clients signed in yet.": "Aún no hay clientes conectados.",
-  "Only Admins and super admins can connect an MCP client. Log in with such an account, or decline.":
-    "Solo los Admins y los super admins pueden conectar un cliente MCP. Inicia sesión con una cuenta así o rechaza.",
+  "Only Admins and super admins can connect an MCP client. Log in with such an account, or cancel.":
+    "Solo los Admins y los super admins pueden conectar un cliente MCP. Inicia sesión con una cuenta así o cancela.",
   "Check it worked": "Comprobar que funcionó",
   "Your command appears here once it is created.": "Tu comando aparecerá aquí una vez creado.",
   "Tools it adds": "Herramientas que añade",
