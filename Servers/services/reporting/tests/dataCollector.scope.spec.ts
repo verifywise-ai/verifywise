@@ -129,6 +129,62 @@ describe("createScopedDataCollector — organization scope", () => {
     expect(data.sections.clausesAndAnnexes!.clauses).toHaveLength(1);
   });
 
+  it("summarises each ISO 42001 clause and annex from the rows under it", async () => {
+    mockClauses.mockResolvedValue([
+      {
+        id: 1,
+        clause_id: 4,
+        title: "Context",
+        subClauses: [
+          { id: 7, subclause_id: "4.1", title: "Organization", status: "Implemented" },
+          { id: 8, subclause_id: "4.2", title: "Parties", status: "Draft" },
+        ],
+      },
+    ]);
+    mockAnnexes.mockResolvedValue([
+      {
+        id: 1,
+        annex_no: 5,
+        title: "Policies",
+        annexCategories: [
+          { id: 3, order_no: 1, title: "Policy", status: "Audited", is_applicable: true },
+          { id: 4, order_no: 2, title: "Review", status: "Not started", is_applicable: false },
+        ],
+      },
+    ]);
+
+    const collector = createScopedDataCollector(10, 5, "organization", [ISO]);
+    const data = await collector.collectAllData(["clausesAndAnnexes"]);
+    const [clause] = data.sections.clausesAndAnnexes!.clauses;
+    const [annex] = data.sections.clausesAndAnnexes!.annexes;
+
+    expect(clause.status).toBe("In progress (1/2)");
+    expect(clause.subClauses.map((sc) => sc.subClauseId)).toEqual(["4.1", "4.2"]);
+    expect(annex.annexId).toBe("A.5");
+    expect(annex.status).toBe("Implemented (1/1)");
+    expect(annex.controls.map((c) => [c.controlId, c.isApplicable])).toEqual([
+      ["A.5.1", true],
+      ["A.5.2", false],
+    ]);
+  });
+
+  it("falls back to row ids when an ISO 42001 annex has no number", async () => {
+    mockAnnexes.mockResolvedValue([
+      {
+        id: 3,
+        title: "Unnumbered",
+        annexCategories: [{ id: 9, order_no: 1, title: "x", status: "Draft" }],
+      },
+    ]);
+
+    const collector = createScopedDataCollector(10, 5, "organization", [ISO]);
+    const data = await collector.collectAllData(["clausesAndAnnexes"]);
+    const [annex] = data.sections.clausesAndAnnexes!.annexes;
+
+    expect(annex.annexId).toBe("Annex 3");
+    expect(annex.controls[0].controlId).toBe("AC-9");
+  });
+
   it("collects an organization-wide section once, not once per pairing", async () => {
     const { sequelize } = require("../../../database/db");
     const collector = createScopedDataCollector(10, 5, "organization", [EU, EU_SECOND, ISO]);

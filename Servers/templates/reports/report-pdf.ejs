@@ -780,6 +780,16 @@ const isE23 = typeof e23 !== 'undefined' && !!e23;
            both land in this section. See the compliance table above. */
         var clauseUseCases = sections.clausesAndAnnexes.clauses.some(function (c) { return c.useCase; });
         var annexUseCases = sections.clausesAndAnnexes.annexes.some(function (a) { return a.useCase; });
+        /* Clause and annex rows carry a summary ("In progress (3/7)"), the rows
+           under them an ISO status (Not started ... Implemented, Audited). */
+        var isoChipClass = function (status, isApplicable) {
+          if (isApplicable === false) return 'chip-default';
+          var v = String(status || '').toLowerCase();
+          if (v.indexOf('implemented') === 0 || v.indexOf('audited') === 0) return 'chip-success';
+          if (v === 'needs rework') return 'chip-error';
+          if (v === '-' || v.indexOf('not started') === 0 || v === 'unknown') return 'chip-default';
+          return 'chip-warning';
+        };
       %>
       <% if (sections.clausesAndAnnexes.clauses.length > 0) { %>
       <h4 class="section-subtitle">Clauses</h4>
@@ -797,9 +807,17 @@ const isE23 = typeof e23 !== 'undefined' && !!e23;
           <tr>
             <% if (clauseUseCases) { %><td><%= clause.useCase || '-' %></td><% } %>
             <td><strong><%= clause.clauseId %></strong></td>
-            <td><%= clause.title %></td>
-            <td><span class="chip chip-<%= clause.status === 'Compliant' ? 'success' : clause.status === 'In Progress' ? 'warning' : 'default' %>"><%= clause.status %></span></td>
+            <td><strong><%= clause.title %></strong></td>
+            <td><span class="chip <%= isoChipClass(clause.status) %>"><%= clause.status %></span></td>
           </tr>
+          <% (clause.subClauses || []).forEach(function(sub) { %>
+          <tr>
+            <% if (clauseUseCases) { %><td></td><% } %>
+            <td style="padding-left: 20px;"><%= sub.subClauseId %></td>
+            <td style="padding-left: 20px;"><%= sub.title %></td>
+            <td><span class="chip <%= isoChipClass(sub.status) %>"><%= sub.status %></span></td>
+          </tr>
+          <% }); %>
           <% }); %>
         </tbody>
       </table>
@@ -821,9 +839,17 @@ const isE23 = typeof e23 !== 'undefined' && !!e23;
           <tr>
             <% if (annexUseCases) { %><td><%= annex.useCase || '-' %></td><% } %>
             <td><strong><%= annex.annexId %></strong></td>
-            <td><%= annex.title %></td>
-            <td><span class="chip chip-<%= annex.status === 'Compliant' ? 'success' : annex.status === 'In Progress' ? 'warning' : 'default' %>"><%= annex.status %></span></td>
+            <td><strong><%= annex.title %></strong></td>
+            <td><span class="chip <%= isoChipClass(annex.status) %>"><%= annex.status %></span></td>
           </tr>
+          <% (annex.controls || []).forEach(function(control) { %>
+          <tr>
+            <% if (annexUseCases) { %><td></td><% } %>
+            <td style="padding-left: 20px;"><%= control.controlId %></td>
+            <td style="padding-left: 20px;"><%= control.title %></td>
+            <td><span class="chip <%= isoChipClass(control.status, control.isApplicable) %>"><%= control.isApplicable === false ? 'Not applicable' : control.status %></span></td>
+          </tr>
+          <% }); %>
           <% }); %>
         </tbody>
       </table>

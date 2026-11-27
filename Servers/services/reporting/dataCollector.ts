@@ -49,6 +49,7 @@ import {
   getAnnexesReportQueryISO27001,
 } from "../../utils/reporting.utils";
 import { isoDate } from "./dateUtils";
+import { summarizeIsoStatus } from "./isoStatusSummary";
 import { FrameworkTarget, ReportScope, resolveFrameworkTargets } from "./reportScope";
 import {
   collectFrameworkRequirements,
@@ -1372,29 +1373,50 @@ export class ReportDataCollector {
         : await getAnnexesReportQuery(projectFrameworkId, this.organizationId);
 
       return {
-        clauses: (clauses as any[]).map((clause) => ({
-          id: clause.id,
-          clauseId: clause.clause_id || `Clause ${clause.id}`,
-          title: clause.title || "Untitled Clause",
-          status: clause.status || "Unknown",
-          subClauses: (clause.subClauses || []).map((sc: any) => ({
+        clauses: (clauses as any[]).map((clause) => {
+          const subClauses = (clause.subClauses || []).map((sc: any) => ({
             id: sc.id,
+            subClauseId: sc.subclause_id ? String(sc.subclause_id) : "",
             title: sc.title || "Untitled Sub-Clause",
             status: sc.status || "Unknown",
-          })),
-        })),
-        annexes: (annexes as any[]).map((annex) => ({
-          id: annex.id,
-          annexId: annex.annex_id || `Annex ${annex.id}`,
-          title: annex.title || "Untitled Annex",
-          status: annex.status || "Unknown",
-          controls: (annex.annexCategories || []).map((ac: any) => ({
+          }));
+          return {
+            id: clause.id,
+            clauseId: clause.clause_id || `Clause ${clause.id}`,
+            title: clause.title || "Untitled Clause",
+            // Clause rows have no status column: summarise their subclauses.
+            status: summarizeIsoStatus(subClauses),
+            subClauses,
+          };
+        }),
+        annexes: (annexes as any[]).map((annex) => {
+          // ISO 42001 annex categories are numbered by their order within the
+          // annex (A.5 + order 1 = A.5.1), as the Annex screen shows them;
+          // ISO 27001 controls carry their own id.
+          const annexNumber = annex.annex_no ?? annex.order_no;
+          const annexPrefix = isIso27001
+            ? `${annex.arrangement || "A"}.${annex.order_no}`
+            : `A.${annexNumber}`;
+          const hasPrefix = isIso27001 ? annex.order_no != null : annexNumber != null;
+          const controls = (annex.annexCategories || []).map((ac: any) => ({
             id: ac.id,
-            controlId: ac.control_id || `AC-${ac.id}`,
+            controlId:
+              ac.control_id ||
+              (hasPrefix && ac.order_no != null ? `${annexPrefix}.${ac.order_no}` : `AC-${ac.id}`),
             title: ac.title || "Untitled Control",
             status: ac.status || "Unknown",
-          })),
-        })),
+            // Only ISO 42001 annex categories can be excluded.
+            isApplicable: ac.is_applicable !== false,
+          }));
+          return {
+            id: annex.id,
+            annexId: annex.annex_id || (hasPrefix ? annexPrefix : `Annex ${annex.id}`),
+            title: annex.title || "Untitled Annex",
+            // Annex rows have no status column: summarise their controls.
+            status: summarizeIsoStatus(controls),
+            controls,
+          };
+        }),
       };
     } catch (error) {
       console.error("[ReportDataCollector] Error collecting clauses and annexes:", error);

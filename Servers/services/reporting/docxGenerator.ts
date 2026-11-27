@@ -843,6 +843,8 @@ function createComplianceSection(
 
   // Clauses and Annexes (ISO) - matches PDF structure with sub-headers
   if (sections.clausesAndAnnexes) {
+    // An em space sets the subclause and control titles in under their clause or annex.
+    const ISO_SUB_ROW_INDENT = "\u2003";
     elements.push(createSubsectionHeader("Clauses and annexes"));
 
     if (reportData.aiSummaries?.sectionSummaries?.["clausesAndAnnexes"]) {
@@ -872,11 +874,20 @@ function createComplianceSection(
       const headers = showClauseUseCase
         ? ["Use case", "Clause ID", "Title", "Status"]
         : ["Clause ID", "Title", "Status"];
-      const rows = sections.clausesAndAnnexes.clauses.map((clause) => [
-        ...(showClauseUseCase ? [clause.useCase || "-"] : []),
-        clause.clauseId,
-        clause.title,
-        clause.status || "-",
+      // Each clause (status summarised from its subclauses), then its subclauses.
+      const rows = sections.clausesAndAnnexes.clauses.flatMap((clause) => [
+        [
+          ...(showClauseUseCase ? [clause.useCase || "-"] : []),
+          clause.clauseId,
+          clause.title,
+          clause.status || "-",
+        ],
+        ...(clause.subClauses ?? []).map((sub) => [
+          ...(showClauseUseCase ? [""] : []),
+          sub.subClauseId,
+          `${ISO_SUB_ROW_INDENT}${sub.title}`,
+          sub.status || "-",
+        ]),
       ]);
       elements.push(createTable(headers, rows));
       elements.push(createTableSpacing());
@@ -901,11 +912,20 @@ function createComplianceSection(
       const headers = showAnnexUseCase
         ? ["Use case", "Annex ID", "Title", "Status"]
         : ["Annex ID", "Title", "Status"];
-      const rows = sections.clausesAndAnnexes.annexes.map((annex) => [
-        ...(showAnnexUseCase ? [annex.useCase || "-"] : []),
-        annex.annexId,
-        annex.title,
-        annex.status || "-",
+      // Each annex (status summarised from its controls), then its controls.
+      const rows = sections.clausesAndAnnexes.annexes.flatMap((annex) => [
+        [
+          ...(showAnnexUseCase ? [annex.useCase || "-"] : []),
+          annex.annexId,
+          annex.title,
+          annex.status || "-",
+        ],
+        ...(annex.controls ?? []).map((control) => [
+          ...(showAnnexUseCase ? [""] : []),
+          control.controlId,
+          `${ISO_SUB_ROW_INDENT}${control.title}`,
+          control.isApplicable === false ? "Not applicable" : control.status || "-",
+        ]),
       ]);
       elements.push(createTable(headers, rows));
       elements.push(createTableSpacing());

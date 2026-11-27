@@ -1,6 +1,6 @@
 # Reporting Domain
 
-> **Last Updated:** 2026-11-23
+> **Last Updated:** 2026-11-27
 
 ## Overview
 
@@ -519,7 +519,7 @@ literal `NULL` and counted as "unowned".
 | modelRisks         | model_risks, model_inventories         | risk_name, risk_level, **status** (there is no `mitigation_status` column), mitigation_plan, target_date                      |
 | compliance         | controls_eu, controlcategories_struct_eu | status, title, owner, due_date, **title** for the control family (the category rows have no `name` column; reading `name` labelled every control "Unknown") |
 | assessment         | assessments, topics, questions         | answer, progress                                                                                                              |
-| clausesAndAnnexes  | subclauses_iso, annexcategories_iso    | status (the `*_struct` parent tables carry none)                                                                              |
+| clausesAndAnnexes  | subclauses_iso, annexcategories_iso (ISO 42001); subclauses_iso27001, annexcontrols_iso27001 (ISO 27001) | status, is_applicable (ISO 42001 annex categories). The `*_struct` clause and annex tables carry no status, so each clause and annex row shows a summary of the rows under it (`isoStatusSummary.ts`: "Implemented (n/n)", "Not started (0/n)", "In progress (d/n)", not-applicable rows left out), and the report lists those rows under it with their ids ("4.1", "A.5.1" from `order_no` as the Annex screen shows it, ISO 27001 `control_id`) |
 | nistSubcategories  | nist_ai_rmf_subcategories + `*_struct` | function, category, status                                                                                                    |
 | frameworkRequirements | the framework's own tables from its structure (`l1`/`l2`/`l3` struct and impl tables, `Servers/structures`), `file_entity_links` + `files` (evidence), the l2/l3 risk link tables + `risks` (live linked risks) | status, owner, due_date, evidence file names |
 | vendors            | vendors, vendors_projects              | vendor_name, review_status, assignee                                                                                          |
@@ -692,7 +692,7 @@ Three standing rendering constraints:
 
 ### Versioning
 
-`ANALYZER_VERSION` (`analyzers/prompts.ts`) is stamped into `report_run_analyses.audit_metadata`; it currently reads `report-analyzer-v9`. **Bump it on any prompt or schema change** — it is how a stored analysis is traced back to the prompt and schema that produced it.
+`ANALYZER_VERSION` (`analyzers/prompts.ts`) is stamped into `report_run_analyses.audit_metadata`; it currently reads `report-analyzer-v10`. **Bump it on any prompt or schema change** — it is how a stored analysis is traced back to the prompt and schema that produced it.
 
 ## PDF Generation
 
@@ -1422,7 +1422,7 @@ When `e23FixItList` is on, one run produces two files in the run's format: the f
 - **Position enforcement.** `enforceE23GapPositions` runs after parsing. A group that is self-assessment only, or that resolves to no known group, becomes `not assessable`. A group holding a requirement a fired rule names cannot be `consistent` and becomes `partly consistent`. A corrected row is kept, not dropped, and each change is stored in the analysis row's `audit_metadata.position_corrections` (`{group, from, to}`), which is present only when something changed.
 - **Formal versus internal inputs.** Analyzers whose output prints in the formal report (`executiveSummary`, `keyFindings`, `e23Gap`) get the formal facts block, in which the fix-it list is reduced to counts, and no fix-it section summary. `recommendedActions` gets the full facts and up to 20 fix-it items (`fixItPromptBlock`) so its actions point at real items. Every prompt of an E-23 run carries the audience line.
 - **Gating.** `e23Gap` is a flag in `AiBlocksConfig`. It is off in `LEGACY_BLOCKS` and `NO_BLOCKS`, and the wizard offers it only for an `osfi_e23` template (`aiBlocksForKind`).
-- **Prior facts.** For an E-23 manual run, `collectPriorFacts` compares against the organization's previous run of the same template. Scheduled runs keep comparing against their own schedule. `FACTS_SCHEMA_VERSION` is 3.
+- **Prior facts.** For an E-23 manual run, `collectPriorFacts` compares against the organization's previous run of the same template. Scheduled runs keep comparing against their own schedule. `FACTS_SCHEMA_VERSION` is 4 (4: ISO annex categories marked not applicable are no longer counted).
 
 Without an LLM key the AI blocks abstain as in any report. At a glance, completeness, MRM status, contradictions and the fix-it list never depend on the LLM.
 
