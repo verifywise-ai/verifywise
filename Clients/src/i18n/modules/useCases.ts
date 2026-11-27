@@ -708,6 +708,10 @@ export const de: Record<string, string> = {
   "Applies when the EU AI Act is added. This tab stays because it holds saved work.":
     "Gilt, wenn die EU-KI-Verordnung hinzugefügt ist. Dieser Tab bleibt, weil er gespeicherte Arbeit enthält.",
   "Add EU AI Act": "EU-KI-Verordnung hinzufügen",
+  "Applies when the EU AI Act is added.": "Gilt, wenn die EU-KI-Verordnung hinzugefügt ist.",
+  "Applies to use cases with the EU AI Act. This tab stays because it holds saved work.":
+    "Gilt für Anwendungsfälle mit der EU-KI-Verordnung. Dieser Tab bleibt, weil er gespeicherte Arbeit enthält.",
+  "Applies to use cases with the EU AI Act.": "Gilt für Anwendungsfälle mit der EU-KI-Verordnung.",
   "ISO 42001 completion status": "Fertigstellungsstatus ISO 42001",
   "Framework not found or could not be removed from the use case":
     "Rahmenwerk nicht gefunden oder konnte nicht aus dem Anwendungsfall entfernt werden",
@@ -1511,6 +1515,11 @@ export const fr: Record<string, string> = {
   "Applies when the EU AI Act is added. This tab stays because it holds saved work.":
     "S'applique lorsque le Règlement IA de l'UE est ajouté. Cet onglet reste affiché car il contient du travail enregistré.",
   "Add EU AI Act": "Ajouter le Règlement IA de l'UE",
+  "Applies when the EU AI Act is added.": "S'applique lorsque le Règlement IA de l'UE est ajouté.",
+  "Applies to use cases with the EU AI Act. This tab stays because it holds saved work.":
+    "S'applique aux cas d'usage soumis au Règlement IA de l'UE. Cet onglet reste affiché car il contient du travail enregistré.",
+  "Applies to use cases with the EU AI Act.":
+    "S'applique aux cas d'usage soumis au Règlement IA de l'UE.",
   "ISO 42001 completion status": "Statut d'achèvement ISO 42001",
   "Framework not found or could not be removed from the use case":
     "Référentiel introuvable ou impossible à retirer du cas d'usage",
@@ -2309,6 +2318,10 @@ export const es: Record<string, string> = {
   "Applies when the EU AI Act is added. This tab stays because it holds saved work.":
     "Se aplica cuando se añade el EU AI Act. Esta pestaña se mantiene porque contiene trabajo guardado.",
   "Add EU AI Act": "Añadir EU AI Act",
+  "Applies when the EU AI Act is added.": "Se aplica cuando se añade el EU AI Act.",
+  "Applies to use cases with the EU AI Act. This tab stays because it holds saved work.":
+    "Se aplica a los casos de uso con el EU AI Act. Esta pestaña se mantiene porque contiene trabajo guardado.",
+  "Applies to use cases with the EU AI Act.": "Se aplica a los casos de uso con el EU AI Act.",
   "ISO 42001 completion status": "Estado de finalización de ISO 42001",
   "Framework not found or could not be removed from the use case":
     "Marco no encontrado o no se pudo quitar del caso de uso",

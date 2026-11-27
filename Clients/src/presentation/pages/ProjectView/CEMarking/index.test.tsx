@@ -87,7 +87,10 @@ describe("CEMarking", () => {
     vi.clearAllMocks();
     mockGetCEMarking.mockResolvedValue(baseData);
     mockUseProjectData.mockReturnValue({
-      project: { goal: "Automate support" },
+      project: {
+        goal: "Automate support",
+        framework: [{ framework_id: 1, project_framework_id: 11 }],
+      },
       error: null,
       isLoading: false,
     });
@@ -176,6 +179,21 @@ describe("CEMarking", () => {
     expect(mockNavigate).toHaveBeenCalledWith(
       "/project-view?projectId=7&tab=frameworks&framework=eu-ai-act",
     );
+  });
+
+  it("offers no EU AI Act checklist link on a use case without the EU AI Act", async () => {
+    mockUseProjectData.mockReturnValue({
+      project: {
+        goal: "Automate support",
+        framework: [{ framework_id: 2, project_framework_id: 12 }],
+      },
+      error: null,
+      isLoading: false,
+    });
+    renderWithProviders(<CEMarking projectId="7" />);
+    await screen.findByText("Classification and scope");
+
+    expect(screen.queryByText("View detailed EU AI Act checklist")).not.toBeInTheDocument();
   });
 
   it("opens the conformity step modal and saves changes", async () => {

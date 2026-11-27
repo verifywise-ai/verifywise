@@ -156,33 +156,52 @@ const VWProjectView = () => {
   const hasEuAiAct = Boolean(
     project?.framework?.some((f) => Number(f.framework_id) === FRAMEWORK_IDS.EU_AI_ACT),
   );
-  // Without the EU AI Act each tab stays only while it holds saved work.
-  // undefined while that is being read.
-  const [euAiActWork, setEuAiActWork] = useState<UseCaseEuAiActWork | undefined>(undefined);
+  // Without the EU AI Act each tab stays only while it holds saved work. The
+  // answer is kept per use case, so a refresh re-checks without the tabs
+  // disappearing in between. confirmed is false when the check failed.
+  const [euAiActWork, setEuAiActWork] = useState<
+    { projectId: number; work: UseCaseEuAiActWork; confirmed: boolean } | undefined
+  >(undefined);
   const needsWorkCheck = Boolean(project) && !hasEuAiAct;
 
   useEffect(() => {
     if (!needsWorkCheck || !numericProjectId) return;
     const controller = new AbortController();
-    setEuAiActWork(undefined);
     getUseCaseEuAiActWork({ id: numericProjectId, signal: controller.signal })
       .then((work) => {
-        if (!controller.signal.aborted) setEuAiActWork(work);
+        if (!controller.signal.aborted) {
+          setEuAiActWork({ projectId: numericProjectId, work, confirmed: true });
+        }
       })
       .catch(() => {
         // Never hide saved work because the check failed: show both tabs.
-        if (!controller.signal.aborted) setEuAiActWork({ fria: true, ce_marking: true });
+        if (!controller.signal.aborted) {
+          setEuAiActWork({
+            projectId: numericProjectId,
+            work: { fria: true, ce_marking: true },
+            confirmed: false,
+          });
+        }
       });
     return () => controller.abort();
   }, [needsWorkCheck, numericProjectId, refreshKey]);
 
-  const isWorkPending = needsWorkCheck && euAiActWork === undefined;
-  const showFria = hasEuAiAct || euAiActWork?.fria === true;
-  const showCeMarking = hasEuAiAct || euAiActWork?.ce_marking === true;
-  // While the check runs, a link to either tab keeps it, so it does not jump
-  // to overview and back.
+  const workForThisUseCase = euAiActWork?.projectId === numericProjectId ? euAiActWork : undefined;
+  // Still deciding: the use case has not loaded, or its check has not answered.
+  const isWorkPending = !project || (needsWorkCheck && workForThisUseCase === undefined);
+  const showFria = hasEuAiAct || workForThisUseCase?.work.fria === true;
+  const showCeMarking = hasEuAiAct || workForThisUseCase?.work.ce_marking === true;
+  // While deciding, a link to either tab keeps it on a skeleton, so it does
+  // not jump to overview and back.
   const keepFriaTab = showFria || (isWorkPending && value === "fria");
   const keepCeMarkingTab = showCeMarking || (isWorkPending && value === "ce-marking");
+  const euAiActOnlyNote = !hasEuAiAct && (
+    <EuAiActOnlyNote
+      projectId={projectId}
+      isOrganizational={Boolean(project?.is_organizational)}
+      workConfirmed={workForThisUseCase?.confirmed !== false}
+    />
+  );
 
   // A link to a tab this use case does not have lands on overview:
   // organizational use cases have no RACI tab, and FRIA and CE marking are
@@ -427,7 +446,7 @@ const VWProjectView = () => {
             <TabPanel value="ce-marking" sx={tabPanelStyle}>
               {project && !isWorkPending ? (
                 <>
-                  {!hasEuAiAct && <EuAiActOnlyNote projectId={projectId} />}
+                  {euAiActOnlyNote}
                   <CEMarking projectId={projectId} />
                 </>
               ) : (
@@ -440,7 +459,7 @@ const VWProjectView = () => {
             <TabPanel value="fria" sx={tabPanelStyle}>
               {project && !isWorkPending ? (
                 <>
-                  {!hasEuAiAct && <EuAiActOnlyNote projectId={projectId} />}
+                  {euAiActOnlyNote}
                   <FriaAssessment projectId={projectId} />
                 </>
               ) : (

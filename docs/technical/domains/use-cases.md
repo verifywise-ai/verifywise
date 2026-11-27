@@ -604,9 +604,17 @@ creates either record. Work means:
 
 A kept tab opens with `EuAiActOnlyNote` ("Applies when the EU AI Act is added"). Its **Add EU AI
 Act** button, shown with `framework.edit`, goes to `?tab=frameworks&addFramework=1`, and
-`ProjectFrameworks` opens the add framework dialog once for that flag. While the check runs, a link
-to either tab keeps it on a skeleton. Once the check is done, a link to a hidden tab lands on
-Overview, as a RACI link does on the organizational use case. If the check fails, both tabs show.
+`ProjectFrameworks` opens the add framework dialog once for that flag, after the user's permissions
+have loaded. The organizational use case cannot take the EU AI Act (the framework add check refuses
+a framework whose `is_organizational` differs from the project's), so its note reads "Applies to use
+cases with the EU AI Act" and has no button. CE marking's "View detailed EU AI Act checklist" link
+shows only with the EU AI Act.
+
+The answer is kept per use case, so a refresh re-checks without the tabs disappearing in between.
+While the use case loads or its first check runs, a link to either tab keeps it on a skeleton. Once
+the check is done, a link to a hidden tab lands on Overview, as a RACI link does on the
+organizational use case. If the check fails, both tabs show, and the note leaves out the claim that
+the tab holds saved work.
 
 #### Frameworks/regulations sub-tabs
 

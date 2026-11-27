@@ -72,7 +72,11 @@ vi.mock("../V1.0ProjectView/LinkedModels", () => ({
   default: () => <div data-testid="linked-models" />,
 }));
 vi.mock("../ProjectSettings", () => ({
-  default: () => <div data-testid="project-settings" />,
+  default: ({ triggerRefresh }: { triggerRefresh: (isTrigger: boolean) => void }) => (
+    <button data-testid="project-settings" onClick={() => triggerRefresh(true)}>
+      Save settings
+    </button>
+  ),
 }));
 vi.mock("../ProjectFrameworks", () => ({
   default: () => <div data-testid="project-frameworks" />,
@@ -90,7 +94,13 @@ vi.mock("../Fria", () => ({
   default: () => <div data-testid="fria" />,
 }));
 vi.mock("../EuAiActOnlyNote", () => ({
-  default: () => <div data-testid="eu-ai-act-only-note" />,
+  default: (props: { isOrganizational: boolean; workConfirmed: boolean }) => (
+    <div
+      data-testid="eu-ai-act-only-note"
+      data-organizational={String(props.isOrganizational)}
+      data-confirmed={String(props.workConfirmed)}
+    />
+  ),
 }));
 vi.mock("../../../components/Skeletons", () => ({
   default: () => <div data-testid="skeleton" />,
@@ -327,6 +337,40 @@ describe("ProjectView (VWProjectView)", () => {
 
       expect(await screen.findByTestId("project-overview")).toBeInTheDocument();
       expect(screen.queryByTestId("ce-marking")).not.toBeInTheDocument();
+    });
+
+    it("keeps a linked tab while the use case itself is still loading", () => {
+      searchParamsMock.value = "projectId=1&tab=fria";
+      projectDataMock.mockReturnValue({ project: null, error: null, isLoading: true });
+      renderWithProviders(<VWProjectView />, { route: "/project-view?projectId=1&tab=fria" });
+
+      expect(screen.getByText("FRIA")).toBeInTheDocument();
+      expect(screen.queryByTestId("project-overview")).not.toBeInTheDocument();
+    });
+
+    it("keeps kept tabs in place while a refresh re-checks", async () => {
+      euAiActWorkMock.mockResolvedValueOnce({ fria: true, ce_marking: false });
+      searchParamsMock.value = "projectId=1&tab=settings";
+      showUseCase([ISO_42001]);
+      renderWithProviders(<VWProjectView />, { route: "/project-view?projectId=1&tab=settings" });
+      expect(await screen.findByText("FRIA")).toBeInTheDocument();
+
+      euAiActWorkMock.mockReturnValue(new Promise(() => {}));
+      fireEvent.click(screen.getByTestId("project-settings"));
+
+      await waitFor(() => expect(euAiActWorkMock).toHaveBeenCalledTimes(2));
+      expect(screen.getByText("FRIA")).toBeInTheDocument();
+    });
+
+    it("tells the note when the check failed and when the use case is organizational", async () => {
+      euAiActWorkMock.mockRejectedValue(new Error("Network Error"));
+      searchParamsMock.value = "projectId=1&tab=fria";
+      showUseCase([EU_AI_ACT_ORGANIZATION], { is_organizational: true });
+      renderWithProviders(<VWProjectView />, { route: "/project-view?projectId=1&tab=fria" });
+
+      const note = await screen.findByTestId("eu-ai-act-only-note");
+      expect(note).toHaveAttribute("data-organizational", "true");
+      expect(note).toHaveAttribute("data-confirmed", "false");
     });
 
     it("keeps a linked tab on a skeleton while the check runs", () => {
