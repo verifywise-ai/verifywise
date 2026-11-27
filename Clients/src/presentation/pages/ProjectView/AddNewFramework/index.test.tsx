@@ -241,6 +241,14 @@ describe("AddFrameworkModal", () => {
     expect(screen.queryByRole("button", { name: "Add" })).not.toBeInTheDocument();
   });
 
+  it("doesn't say nothing matches before anything is typed", () => {
+    renderWithProviders(
+      <AddFrameworkModal open={true} onClose={vi.fn()} frameworks={[]} project={project} />,
+    );
+
+    expect(screen.queryByText("No frameworks match your search.")).not.toBeInTheDocument();
+  });
+
   it("clears the search when the modal is reopened", () => {
     const { rerender } = renderWithProviders(
       <AddFrameworkModal open={true} onClose={vi.fn()} frameworks={frameworks} project={project} />,

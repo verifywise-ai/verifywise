@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { Box, Typography, Stack, Button } from "@mui/material";
 import { Check as CheckGreenIcon, Shield as ShieldIcon } from "lucide-react";
 import { getFrameworkBadgePath } from "../../../tools/frameworkBadge";
@@ -38,6 +38,7 @@ import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
 import { useExtensions } from "../../../../application/contexts/Extensions.context";
 import ImportedFrameworksSection from "./ImportedFrameworksSection";
+import { matchesFrameworkSearch } from "./frameworkSearch";
 // Governance OS prompt imports removed while the module is not broadly released.
 // The module remains reachable by direct URL for authorized users.
 
@@ -65,23 +66,33 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
   const [frameworkToRemove, setFrameworkToRemove] = useState<Framework | null>(null);
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [wasOpen, setWasOpen] = useState(open);
+  // Height of the unfiltered list, held while searching so the centred modal
+  // doesn't shrink and move the search box under the user's typing.
+  const [heldHeight, setHeldHeight] = useState<number | undefined>();
+  const listRef = useRef<HTMLDivElement>(null);
   const { isEnabled } = useExtensions();
   const { t } = useTranslation();
 
-  // Start each opening with the full list.
-  useEffect(() => {
+  // Start each opening with the full list (reset during render, not in an effect).
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (!open) setSearchQuery("");
-  }, [open]);
+  }
 
-  const visibleFrameworks = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) return frameworks;
-    return frameworks.filter(
-      (fw) =>
-        (fw.name ?? "").toLowerCase().includes(query) ||
-        (fw.description ?? "").toLowerCase().includes(query),
-    );
-  }, [frameworks, searchQuery]);
+  const isSearching = searchQuery.trim() !== "";
+
+  const handleSearchChange = (value: string) => {
+    if (!isSearching && value.trim() !== "") {
+      setHeldHeight(listRef.current?.offsetHeight);
+    }
+    setSearchQuery(value);
+  };
+
+  const visibleFrameworks = useMemo(
+    () => frameworks.filter((fw) => matchesFrameworkSearch(searchQuery, fw.name, fw.description)),
+    [frameworks, searchQuery],
+  );
   // Imported frameworks attach to use cases only, and only while the extension is on.
   const showImported = open && isEnabled("framework-import") && !project.is_organizational;
 
@@ -180,10 +191,11 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
         </>
       }
     >
-      {/* Hold the height of the full (scrolling) list so the centred modal
-          doesn't shrink and move the search box while the user types. Matches
-          StandardModal's body maxHeight minus its 20px padding. */}
-      <Stack spacing={6} sx={{ minHeight: "calc(100vh - 280px)" }}>
+      <Stack
+        ref={listRef}
+        spacing={6}
+        sx={{ minHeight: isSearching && heldHeight ? `${heldHeight}px` : undefined }}
+      >
         {alert && (
           <Alert
             variant={alert.variant}
@@ -197,10 +209,11 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
         <SearchBox
           placeholder={t("Search frameworks")}
           value={searchQuery}
-          onChange={setSearchQuery}
+          onChange={handleSearchChange}
           inputProps={{ "aria-label": t("Search frameworks") }}
         />
-        {visibleFrameworks.length === 0 && (
+        {/* With imported frameworks shown, the section says it once both lists are empty. */}
+        {isSearching && visibleFrameworks.length === 0 && !showImported && (
           <Typography sx={frameworkCardDescriptionStyle}>
             {t("No frameworks match your search.")}
           </Typography>
@@ -311,6 +324,8 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
         {showImported && (
           <ImportedFrameworksSection
             project={project}
+            searchQuery={searchQuery}
+            builtInMatchCount={visibleFrameworks.length}
             disabled={isLoading}
             onBusyChange={setIsLoading}
             onResult={showToast}

@@ -15,6 +15,7 @@ import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
 import { background, icon, radiusPx } from "../../../themes/palette";
 import { Project } from "../../../../domain/types/Project";
 import type { ImportedFramework } from "../../../../domain/interfaces/i.frameworkImport";
+import { matchesFrameworkSearch } from "./frameworkSearch";
 import { useImportedFrameworks } from "../../../../application/hooks/useFrameworkImport";
 import {
   useAttachImportedFramework,
@@ -30,6 +31,10 @@ import {
 
 interface ImportedFrameworksSectionProps {
   project: Project;
+  /** The dialog's search; empty shows every imported framework. */
+  searchQuery?: string;
+  /** How many built-in cards match the search, to say "no match" once for both lists. */
+  builtInMatchCount?: number;
   disabled: boolean;
   onBusyChange: (busy: boolean) => void;
   onResult: (variant: "success" | "error", body: string) => void;
@@ -41,6 +46,8 @@ const errorMessage = (error: unknown, fallback: string) =>
 
 const ImportedFrameworksSection: React.FC<ImportedFrameworksSectionProps> = ({
   project,
+  searchQuery = "",
+  builtInMatchCount = 0,
   disabled,
   onBusyChange,
   onResult,
@@ -62,6 +69,11 @@ const ImportedFrameworksSection: React.FC<ImportedFrameworksSectionProps> = ({
   const visible = useMemo(
     () => imported.filter((fw) => fw.is_active || linkByFrameworkId.has(fw.id)),
     [imported, linkByFrameworkId],
+  );
+  const isSearching = searchQuery.trim() !== "";
+  const matching = useMemo(
+    () => visible.filter((fw) => matchesFrameworkSearch(searchQuery, fw.name, fw.description)),
+    [visible, searchQuery],
   );
 
   const isBusy = disabled || attachMutation.isPending || detachMutation.isPending;
@@ -96,6 +108,14 @@ const ImportedFrameworksSection: React.FC<ImportedFrameworksSectionProps> = ({
 
   if (isLoadingImports || isLoadingLinks) return null;
 
+  if (isSearching && matching.length === 0) {
+    return builtInMatchCount === 0 ? (
+      <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+        No frameworks match your search.
+      </Typography>
+    ) : null;
+  }
+
   return (
     <Stack sx={{ gap: "8px" }} data-testid="imported-frameworks-section">
       <Typography sx={{ fontSize: 15, fontWeight: 600 }}>Imported frameworks</Typography>
@@ -116,7 +136,7 @@ const ImportedFrameworksSection: React.FC<ImportedFrameworksSectionProps> = ({
             alignItems: "stretch",
           }}
         >
-          {visible.map((fw) => {
+          {matching.map((fw) => {
             const linkId = linkByFrameworkId.get(fw.id);
             const subtopicCount = fw.topics.reduce((acc, t) => acc + t.subtopics.length, 0);
             return (
