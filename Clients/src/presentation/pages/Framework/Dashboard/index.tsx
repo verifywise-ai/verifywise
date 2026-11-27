@@ -9,7 +9,7 @@ import { Project } from "../../../../domain/types/Project";
 import { Framework } from "../../../../domain/types/Framework";
 import { getEntityById } from "../../../../application/repository/entity.repository";
 import { getComplianceProgress } from "../../../../application/repository/control_eu_act.repository";
-import { FRAMEWORK_IDS } from "../../../../application/constants/frameworks";
+import { FRAMEWORK_IDS, isBundledFrameworkId } from "../../../../application/constants/frameworks";
 import FrameworkProgressCard from "./FrameworkProgressCard";
 import AssignmentStatusCard from "./AssignmentStatusCard";
 import StatusBreakdownCard from "./StatusBreakdownCard";
@@ -571,10 +571,7 @@ const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: Dashb
   // non-organizational so shouldn't appear here anyway.
   // EU AI Act (organization) is the EU AI Act's own controls, not a generic one.
   const genericOrgFrameworks = frameworksData.filter(
-    (f) =>
-      f.frameworkId >= 5 &&
-      f.frameworkId !== FRAMEWORK_IDS.EU_AI_ACT_ORGANIZATION &&
-      f.projectFrameworkId,
+    (f) => isBundledFrameworkId(f.frameworkId) && f.projectFrameworkId,
   );
 
   // Create tabs array: ISO 42001 → NIST AI RMF → ISO 27001 → generics

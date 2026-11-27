@@ -21,6 +21,14 @@ describe("getAvailableSections frameworkRequirements", () => {
     expect(complianceSectionIds(5, false)).toEqual(["frameworkRequirements"]);
   });
 
+  it("offers EU AI Act's sections, not frameworkRequirements, for EU AI Act (organization)", () => {
+    expect(complianceSectionIds(29, true)).toEqual(["controls", "assessmentTracker"]);
+  });
+
+  it("offers frameworkRequirements for bundled frameworks after id 29", () => {
+    expect(complianceSectionIds(30, true)).toEqual(["frameworkRequirements"]);
+  });
+
   it("does not offer frameworkRequirements for core frameworks on use case reports", () => {
     expect(complianceSectionIds(1, false)).not.toContain("frameworkRequirements");
   });
