@@ -42,7 +42,7 @@ Everything is in this repository. There is no separate plugin repository. The fo
 
 ## Project Overview
 
-VerifyWise is an AI governance platform supporting EU AI Act, ISO 42001, ISO 27001, NIST AI RMF, and 24 more built-in frameworks (SOC 2, GDPR, HIPAA, etc.), plus built-in extensions (integrations an Admin enables per organization).
+VerifyWise is an AI governance platform supporting EU AI Act, ISO 42001, ISO 27001, NIST AI RMF, and 25 more built-in frameworks (SOC 2, GDPR, HIPAA, etc.), plus built-in extensions (integrations an Admin enables per organization).
 
 ### Tech Stack
 

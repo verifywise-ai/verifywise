@@ -150,7 +150,7 @@ async function frameworkProgress(
       scope: "organization",
     };
   } else {
-    // One of the 24 bundled frameworks, which track completion through their
+    // One of the 25 bundled frameworks, which track completion through their
     // own structures rather than these tables.
     tracks.note = "This framework does not report progress through the core control tables.";
   }

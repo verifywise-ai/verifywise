@@ -203,38 +203,13 @@ module.exports = {
     }
   },
 
-  async down(queryInterface) {
-    const sequelize = queryInterface.sequelize;
-    const transaction = await sequelize.transaction();
-
-    try {
-      for (const fw of STRUCTURES) {
-        const { id: frameworkId, tables } = fw;
-        await sequelize.query(`DROP TABLE IF EXISTS verifywise.${tables.l2_risks} CASCADE;`, {
-          transaction,
-        });
-        await sequelize.query(`DROP TABLE IF EXISTS verifywise.${tables.l2_impl} CASCADE;`, {
-          transaction,
-        });
-        await sequelize.query(`DROP TYPE IF EXISTS verifywise.enum_${tables.l2_impl}_status;`, {
-          transaction,
-        });
-        await sequelize.query(`DROP TABLE IF EXISTS verifywise.${tables.l2_struct} CASCADE;`, {
-          transaction,
-        });
-        await sequelize.query(`DROP TABLE IF EXISTS verifywise.${tables.l1_struct} CASCADE;`, {
-          transaction,
-        });
-        await sequelize.query(`DELETE FROM verifywise.frameworks WHERE id = :id;`, {
-          replacements: { id: frameworkId },
-          transaction,
-        });
-      }
-
-      await transaction.commit();
-    } catch (err) {
-      await transaction.rollback();
-      throw err;
-    }
-  },
+  /**
+   * No-op on purpose. On a fresh install the 20260805* migrations create the
+   * NAII and up() above does nothing, so dropping the tables here would delete
+   * every organization's NAII work (removing frameworks row 30 cascades
+   * through projects_frameworks) while those migrations still count as
+   * applied. 20261118112519 (OSFI E-23) keeps its down() a no-op for the same
+   * reason.
+   */
+  async down() {},
 };
