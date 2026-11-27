@@ -88,7 +88,7 @@ function ScoreExplainer({
                 {levelReasons.map((r) => (
                   <Typography
                     key={`${r.article}-${r.text}`}
-                    sx={{ fontSize: "12px", color: theme.palette.text.tertiary }}
+                    sx={{ fontSize: "13px", color: theme.palette.text.secondary }}
                   >
                     <span>{r.article}</span>: <span>{r.text}</span>
                   </Typography>
@@ -109,7 +109,7 @@ function ScoreExplainer({
               {view.ruleMinimum === null ? <span>None</span> : <span>{view.ruleMinimum}</span>}
             </Typography>
             {levelChanged && (
-              <Typography sx={{ fontSize: "12px", color: theme.palette.text.tertiary }}>
+              <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
                 Minimum based on your level change
               </Typography>
             )}
@@ -120,7 +120,7 @@ function ScoreExplainer({
               <Box>
                 {heading("Keyword score")}
                 <Typography sx={body}>{keyword.overallScore}</Typography>
-                <Typography sx={{ fontSize: "12px", color: theme.palette.text.tertiary }}>
+                <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
                   Weighted average of six risk dimensions, from keywords in the answers. No LLM key
                   was available when this was scored.
                 </Typography>
@@ -151,7 +151,7 @@ function ScoreExplainer({
                       ))}
                     </Typography>
                     {ai.median !== null && (
-                      <Typography sx={{ fontSize: "12px", color: theme.palette.text.tertiary }}>
+                      <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
                         <span>Median</span> {ai.median} · <span>Range</span> {ai.min}–{ai.max}
                       </Typography>
                     )}
@@ -175,7 +175,7 @@ function ScoreExplainer({
                 {ai.reasons.map((r) => (
                   <Box key={`${r.questionId}-${r.text}`}>
                     <Typography sx={body}>{r.text}</Typography>
-                    <Typography sx={{ fontSize: "12px", color: theme.palette.text.tertiary }}>
+                    <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
                       "{r.excerpt}" ({questionLabels[r.questionId] ?? r.questionId})
                     </Typography>
                   </Box>
@@ -196,7 +196,7 @@ function ScoreExplainer({
                   </>
                 )}
               </Typography>
-              <Typography sx={{ fontSize: "12px", color: theme.palette.text.tertiary }}>
+              <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
                 {override.justification}
               </Typography>
             </Box>

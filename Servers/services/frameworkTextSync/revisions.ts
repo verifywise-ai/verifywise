@@ -1,6 +1,6 @@
 /**
  * Every framework the text sync writes, with its text revision and a
- * fingerprint of the text: the 24 bundled frameworks and the 4 built-ins,
+ * fingerprint of the text: the 25 bundled frameworks and the 4 built-ins,
  * each including its `frameworks` description. Used by
  * scripts/recordFrameworkTextRevisions.ts and
  * structures/__tests__/frameworkTextRevisions.test.ts, which keep a text

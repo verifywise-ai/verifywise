@@ -124,8 +124,8 @@ export function StatCard({
           {subtitle && (
             <Typography
               sx={{
-                fontSize: "10px",
-                color: palette.text.disabled,
+                fontSize: "13px",
+                color: palette.text.secondary,
                 mt: 0.25,
                 fontWeight: 400,
               }}

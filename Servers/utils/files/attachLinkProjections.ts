@@ -1,5 +1,27 @@
 import { sequelize } from "../../database/db";
 import { FILE_GROUP_LABEL_CASE_SQL } from "./fileGroupLabel.sql";
+import { structItemInFrameworkSql } from "../euAiActStructItem.sql";
+
+/**
+ * SQL: the link (`fel`) is to an EU AI Act subcontrol or answer a use case
+ * still has for an item that moved to EU AI Act (organization). Those rows are
+ * hidden, so their links are not shown either.
+ */
+export const HIDDEN_EU_AI_ACT_LINK_SQL = `fel.framework_type = 'eu_ai_act' AND (
+      (fel.entity_type = 'subcontrol' AND EXISTS (
+        SELECT 1 FROM subcontrols_eu s
+          JOIN controls_eu c ON c.id = s.control_id AND c.organization_id = s.organization_id
+          JOIN controls_struct_eu cs ON cs.id = c.control_meta_id
+          JOIN projects_frameworks pf ON pf.id = c.projects_frameworks_id AND pf.organization_id = c.organization_id
+         WHERE s.id = fel.entity_id AND s.organization_id = fel.organization_id
+           AND NOT (${structItemInFrameworkSql("cs", "pf.framework_id")})))
+      OR (fel.entity_type = 'assessment' AND EXISTS (
+        SELECT 1 FROM answers_eu ans
+          JOIN questions_struct_eu q ON q.id = ans.question_id
+          JOIN assessments a ON a.id = ans.assessment_id AND a.organization_id = ans.organization_id
+          JOIN projects_frameworks pf ON pf.id = a.projects_frameworks_id AND pf.organization_id = a.organization_id
+         WHERE ans.id = fel.entity_id AND ans.organization_id = fel.organization_id
+           AND NOT (${structItemInFrameworkSql("q", "pf.framework_id")}))))`;
 
 /**
  * Per-link projection used to render multi-attached files in the UI.
@@ -141,6 +163,7 @@ export async function attachLinkProjections<T extends { id: number | string; sou
       ${FILE_GROUP_LABEL_CASE_SQL} AS group_label
     FROM file_entity_links fel
     WHERE fel.organization_id = :organizationId AND fel.file_id IN (:fileIds)
+      AND NOT (${HIDDEN_EU_AI_ACT_LINK_SQL})
     ORDER BY fel.id ASC`;
 
   const linksResult = (await sequelize.query(linksQuery, {

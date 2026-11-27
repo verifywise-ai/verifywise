@@ -51,6 +51,7 @@ import reportTemplatesRoutes from "./reportTemplates.route";
 import scheduledReportsRoutes from "./scheduledReports.route";
 import reportRunsRoutes from "./reportRuns.route";
 import vendorRisksRoutes from "./vendorRisks.route";
+import readinessRoutes from "./readiness.route";
 import llmKeysRoutes from "./llmKeys.route";
 import tasksRoutes from "./tasks.route";
 import mcpOAuthRoutes from "./mcpOAuth.route";
@@ -151,6 +152,7 @@ router.use("/report-runs", reportRunsRoutes);
 // Reading and restoring deleted vendor risks (vendors audit PR C); the
 // /api/vendorRisks router is frozen.
 router.use("/vendor-risks", vendorRisksRoutes);
+router.use("/readiness", readinessRoutes);
 // LLM key create and update that check the key with its provider first; the
 // legacy /api/llm-keys writes are frozen and save without a check.
 router.use("/llm-keys", llmKeysRoutes);

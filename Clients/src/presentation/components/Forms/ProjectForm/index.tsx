@@ -69,7 +69,7 @@ import {
 import CustomException from "../../../../infrastructure/exceptions/customeException";
 import { applyApprovalWorkflowSelection } from "./approvalWorkflowField";
 import { splitServerErrors } from "./serverErrors";
-import { includesEuAiAct } from "../../../../application/constants/frameworks";
+import { FRAMEWORK_IDS, includesEuAiAct } from "../../../../application/constants/frameworks";
 import { radiusPx } from "../../../themes/palette";
 
 const PROJECT_STATUS_ITEMS = [
@@ -116,6 +116,7 @@ export const ProjectForm = ({
   projectToEdit,
   useStandardModal = false,
   onSubmitRef,
+  onOrganizationFrameworkAdded,
 }: ProjectFormProps) => {
   const theme = useTheme();
   const { setProjectsCache } = useProjectsCache();
@@ -316,7 +317,7 @@ export const ProjectForm = ({
             // fw.name.toLowerCase().includes("iso 42001") ||
             // fw.name.toLowerCase().includes("iso 27001") ||
             // fw.name.toLowerCase().includes("nist ai rmf")
-            fw.is_organizational === true,
+            fw.is_organizational === true && Number(fw.id) !== FRAMEWORK_IDS.EU_AI_ACT_ORGANIZATION,
         )
         .map((fw) => ({
           _id: Number(fw.id),
@@ -591,6 +592,9 @@ export const ProjectForm = ({
             const newProject = res.data.data.project as Project;
             setProjectsCache((prevProjects: Project[]) => [...prevProjects, newProject]);
             targetId = (newProject as { id?: number })?.id;
+            if (res.data.data.frameworks?.eu?.organization_framework_added) {
+              onOrganizationFrameworkAdded?.();
+            }
           }
           // Flush any staged custom field changes (create OR update).
           let cfFlushFailed = false;
@@ -661,6 +665,7 @@ export const ProjectForm = ({
     riskClassificationItems,
     setProjectsCache,
     onClose,
+    onOrganizationFrameworkAdded,
   ]);
 
   // Expose handleSubmit through ref when useStandardModal is true

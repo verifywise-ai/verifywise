@@ -77,6 +77,7 @@ import { buildE23Glance } from "./e23/glance";
 import { E23_FRAMEWORK_ID, E23_KIND } from "./e23/e23Parameters";
 import { QueryTypes } from "sequelize";
 import { effectiveRiskLevelSql, getEffectiveRiskLevel } from "../../utils/riskLevel.utils";
+import { EU_AI_ACT_ORGANIZATION_FRAMEWORK_ID } from "../../structures";
 
 export { isoDate };
 
@@ -426,7 +427,13 @@ export class ReportDataCollector {
     // the report as a SET (frameworkIds, empty meaning all), and never fed a
     // single scalar id here. A 0 matches none of the ids below, so all four
     // sections were silently dropped from the report.
-    const euTargets = targets.filter((t) => t.frameworkId === 1 && !t.isOrganizationalProject);
+    // EU AI Act (organization) is the EU AI Act's organization-wide controls and
+    // questions on the organizational project, so it has the same sections.
+    const euTargets = targets.filter(
+      (t) =>
+        (t.frameworkId === 1 && !t.isOrganizationalProject) ||
+        t.frameworkId === EU_AI_ACT_ORGANIZATION_FRAMEWORK_ID,
+    );
     const isoTargets = targets.filter((t) => t.frameworkId === 2 || t.frameworkId === 3);
     const nistTargets = targets.filter((t) => t.frameworkId === 4);
 
@@ -482,7 +489,7 @@ export class ReportDataCollector {
       sectionNotices.push({ sectionKey: "nistSubcategories", reason: noticeReason });
     }
 
-    // Bundled frameworks (ids 5-28) share one generic section.
+    // Bundled frameworks (ids 5-28 and 30) share one generic section.
     //
     // An E-23 kind run also needs the E-23 (framework 26) requirements for its
     // rules, fix-it list and glance, whether or not the section itself was

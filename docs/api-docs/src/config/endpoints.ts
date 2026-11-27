@@ -3125,6 +3125,7 @@ export const euAiActEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/eu-ai-act/controls/byControlCategoryId/{id}',
     summary: "Get Controls By Control Category Id",
+    description: "On EU AI Act (organization) (framework 29), a row whose work was copied from a use case on upgrade carries copied_from_project_id (that use case) and copied_from_use_case (\"<title> (<UC id>)\"). The label is null unless the caller can see that use case: Admins see every one, other roles one they own, are a member of or reach through a group. Saving the row clears both.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -3152,6 +3153,7 @@ export const euAiActEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/eu-ai-act/assessments/byProjectId/{id}',
     summary: "Get Assessments By Project Id",
+    description: "On EU AI Act (organization) (framework 29), a row whose work was copied from a use case on upgrade carries copied_from_project_id (that use case) and copied_from_use_case (\"<title> (<UC id>)\"). The label is null unless the caller can see that use case: Admins see every one, other roles one they own, are a member of or reach through a group. Saving the row clears both.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -3182,6 +3184,7 @@ export const euAiActEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/eu-ai-act/compliances/byProjectId/{id}',
     summary: "Get Compliances By Project Id",
+    description: "On EU AI Act (organization) (framework 29), a row whose work was copied from a use case on upgrade carries copied_from_project_id (that use case) and copied_from_use_case (\"<title> (<UC id>)\"). The label is null unless the caller can see that use case: Admins see every one, other roles one they own, are a member of or reach through a group. Saving the row clears both.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -3266,6 +3269,7 @@ export const euAiActEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/eu-ai-act/topicById',
     summary: "Get Topic By Id",
+    description: "On EU AI Act (organization) (framework 29), a row whose work was copied from a use case on upgrade carries copied_from_project_id (that use case) and copied_from_use_case (\"<title> (<UC id>)\"). The label is null unless the caller can see that use case: Admins see every one, other roles one they own, are a member of or reach through a group. Saving the row clears both.",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -3278,6 +3282,7 @@ export const euAiActEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/eu-ai-act/controlById',
     summary: "Get Control By Id",
+    description: "On EU AI Act (organization) (framework 29), a row whose work was copied from a use case on upgrade carries copied_from_project_id (that use case) and copied_from_use_case (\"<title> (<UC id>)\"). The label is null unless the caller can see that use case: Admins see every one, other roles one they own, are a member of or reach through a group. Saving the row clears both.",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -5236,9 +5241,11 @@ export const frameworkEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/frameworks/toProject',
     summary: "Add Framework To Project",
+    description: "Adding EU AI Act (1) to a non-demo use case also adds EU AI Act (organization) (29) to the organizational project, creating that project when the organization has none; organization_framework_added says whether this request did. Framework 29 itself can't be added by hand (400).",
     requiresAuth: true,
     responses: [
-      { status: 201, description: "Created successfully" },
+      { status: 200, description: "Framework added" },
+      { status: 400, description: "EU AI Act (organization) is added automatically" },
       { status: 401, description: "Unauthorized" },
       { status: 500, description: "Internal server error" },
     ],
@@ -5251,6 +5258,7 @@ export const frameworkEndpoints: Endpoint[] = [
     requiresAuth: true,
     responses: [
       { status: 200, description: "Deleted successfully" },
+      { status: 400, description: "EU AI Act (organization) can't be removed while a non-demo use case has EU AI Act" },
       { status: 401, description: "Unauthorized" },
       { status: 500, description: "Internal server error" },
     ],
@@ -5263,7 +5271,7 @@ export const frameworkEndpoints: Endpoint[] = [
     description: "Returns the framework metadata (id, key, framework_type, display_name, entity_types, hierarchy_type) and the full structure tree with the project's implementation rows. Generic endpoint for the bundled frameworks declared in Servers/structures.",
     requiresAuth: true,
     parameters: [
-      { name: 'frameworkId', in: 'path', type: 'integer', required: true, description: "Framework id (the bundled frameworks use ids 5-28)" },
+      { name: 'frameworkId', in: 'path', type: 'integer', required: true, description: "Framework id (the bundled frameworks use ids 5-28 and 30)" },
       { name: 'projectId', in: 'path', type: 'integer', required: true, description: "Project (use case) id, or the organizational project id" },
     ],
     responses: [
@@ -5281,7 +5289,7 @@ export const frameworkEndpoints: Endpoint[] = [
     description: "Returns status counts for the framework's implementation rows in the given project.",
     requiresAuth: true,
     parameters: [
-      { name: 'frameworkId', in: 'path', type: 'integer', required: true, description: "Framework id (the bundled frameworks use ids 5-28)" },
+      { name: 'frameworkId', in: 'path', type: 'integer', required: true, description: "Framework id (the bundled frameworks use ids 5-28 and 30)" },
       { name: 'projectFrameworkId', in: 'path', type: 'integer', required: true, description: "projects_frameworks row id linking the framework to the project" },
     ],
     responses: [
@@ -5299,7 +5307,7 @@ export const frameworkEndpoints: Endpoint[] = [
     description: "Returns one implementation row (status, owner, reviewer, approver, due date, notes, evidence).",
     requiresAuth: true,
     parameters: [
-      { name: 'frameworkId', in: 'path', type: 'integer', required: true, description: "Framework id (the bundled frameworks use ids 5-28)" },
+      { name: 'frameworkId', in: 'path', type: 'integer', required: true, description: "Framework id (the bundled frameworks use ids 5-28 and 30)" },
       { name: 'level', in: 'path', type: 'string', required: true, description: "Implementation level: l2 (two-level frameworks) or l3 (leaf level of three-level frameworks)" },
       { name: 'id', in: 'path', type: 'integer', required: true, description: "Implementation row id" },
     ],
@@ -5318,7 +5326,7 @@ export const frameworkEndpoints: Endpoint[] = [
     description: "Multipart form. Fields: status, implementation_description, owner, reviewer, approver, due_date, auditor_feedback, risksMitigated (JSON array), risksDelete (JSON array), delete (JSON array of file ids to detach), user_id; attach evidence as file parts.",
     requiresAuth: true,
     parameters: [
-      { name: 'frameworkId', in: 'path', type: 'integer', required: true, description: "Framework id (the bundled frameworks use ids 5-28)" },
+      { name: 'frameworkId', in: 'path', type: 'integer', required: true, description: "Framework id (the bundled frameworks use ids 5-28 and 30)" },
       { name: 'level', in: 'path', type: 'string', required: true, description: "Implementation level: l2 (two-level frameworks) or l3 (leaf level of three-level frameworks)" },
       { name: 'id', in: 'path', type: 'integer', required: true, description: "Implementation row id" },
     ],
@@ -5350,7 +5358,7 @@ export const frameworkEndpoints: Endpoint[] = [
     description: "Returns the risks linked to one implementation row.",
     requiresAuth: true,
     parameters: [
-      { name: 'frameworkId', in: 'path', type: 'integer', required: true, description: "Framework id (the bundled frameworks use ids 5-28)" },
+      { name: 'frameworkId', in: 'path', type: 'integer', required: true, description: "Framework id (the bundled frameworks use ids 5-28 and 30)" },
       { name: 'level', in: 'path', type: 'string', required: true, description: "Implementation level: l2 (two-level frameworks) or l3 (leaf level of three-level frameworks)" },
       { name: 'id', in: 'path', type: 'integer', required: true, description: "Implementation row id" },
     ],
@@ -9441,6 +9449,7 @@ export const projectEndpoints: Endpoint[] = [
     requiresAuth: true,
     responses: [
       { status: 202, description: "Project deleted successfully" },
+      { status: 400, description: "The project holds EU AI Act (organization) while a use case has EU AI Act" },
       { status: 404, description: "Project not found" },
       { status: 500, description: "Internal server error" },
     ],
@@ -12089,6 +12098,7 @@ export const userEndpoints: Endpoint[] = [
     },
     responses: [
       { status: 202, description: "Authentication successful" },
+      { status: 400, description: "Email or password missing, empty, or not a string" },
       { status: 401, description: "Invalid email or password" },
       { status: 429, description: "Too many login attempts" },
       { status: 500, description: "Internal server error" },
@@ -13637,7 +13647,7 @@ export const v1V1projectsEndpoints: Endpoint[] = [
     ],
     responses: [
       { status: 202, description: "Deleted. Body data: { deleted: true, archived_risk_ids: number[] } (empty unless archiving was asked for)" },
-      { status: 400, description: "Invalid id, or archive_risks_linked_only_here missing, repeated or not true/false" },
+      { status: 400, description: "Invalid id, or archive_risks_linked_only_here missing, repeated or not true/false, or the project holds EU AI Act (organization) while a use case has EU AI Act" },
       { status: 403, description: "No useCase.edit permission, no write access to the use case, or archiving asked without risks.edit" },
       { status: 404, description: "Use case not found in the organization" },
       { status: 500, description: "Internal server error; nothing was archived or deleted" },
@@ -13753,6 +13763,29 @@ export const v1V1projectsEndpoints: Endpoint[] = [
       { status: 500, description: "Internal server error" },
     ],
     tag: "v1: V1/Projects",
+  },
+];
+
+// v1: V1/Readiness endpoints
+export const v1V1readinessEndpoints: Endpoint[] = [
+  {
+    method: 'DELETE',
+    path: '/v1/readiness/scores/{id}',
+    summary: "Delete a readiness calculation",
+    description: "Deletes one framework readiness score with its control scores and history points. The person who ran it may delete it; deleting someone else's public calculation requires readiness.admin. Someone else's private calculation answers 404.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The framework readiness score ID" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "Invalid ID" },
+      { status: 401, description: "Unauthorized" },
+      { status: 403, description: "Insufficient permissions" },
+      { status: 404, description: "Readiness score not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Readiness",
   },
 ];
 
@@ -14752,6 +14785,7 @@ export const allEndpoints = {
   v1V1oauth: v1V1oauthEndpoints,
   v1V1policyTemplates: v1V1policyTemplatesEndpoints,
   v1V1projects: v1V1projectsEndpoints,
+  v1V1readiness: v1V1readinessEndpoints,
   v1V1reportRuns: v1V1reportRunsEndpoints,
   v1V1reportTemplates: v1V1reportTemplatesEndpoints,
   v1V1scheduledReports: v1V1scheduledReportsEndpoints,

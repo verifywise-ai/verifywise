@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
@@ -8,6 +8,8 @@ const mockWeakest = vi.fn();
 const mockHistory = vi.fn();
 const mockTriggerCalculate = vi.fn();
 const mockTriggerCalculateFramework = vi.fn();
+const mockDelete = vi.fn();
+const mockCan = vi.fn();
 
 vi.mock("../../../../application/hooks/useReadiness", () => ({
   useReadinessScores: (...args: any[]) => mockScores(...args),
@@ -16,6 +18,15 @@ vi.mock("../../../../application/hooks/useReadiness", () => ({
   useReadinessHistory: (...args: any[]) => mockHistory(...args),
   useTriggerCalculateAll: (...args: any[]) => mockTriggerCalculate(...args),
   useTriggerCalculateFramework: (...args: any[]) => mockTriggerCalculateFramework(...args),
+  useDeleteReadinessCalculation: () => ({ mutate: mockDelete, isPending: false }),
+}));
+
+vi.mock("../../../../application/hooks/useAuth", () => ({
+  useAuth: () => ({ userId: 1 }),
+}));
+
+vi.mock("../../../../application/hooks/useCan", () => ({
+  useCan: (key: string) => mockCan(key),
 }));
 
 vi.mock("../../../components/ReadinessHeatmap", () => ({
@@ -69,6 +80,7 @@ describe("ReadinessDashboard", () => {
     mockHistory.mockReturnValue({ data: [], isLoading: false });
     mockTriggerCalculate.mockReturnValue(defaultTriggerCalculate);
     mockTriggerCalculateFramework.mockReturnValue({ mutate: vi.fn(), isPending: false });
+    mockCan.mockReturnValue(false);
   });
 
   it("renders the page title and description", () => {
@@ -172,7 +184,9 @@ describe("ReadinessDashboard", () => {
     const user = userEvent.setup();
     renderWithProviders(<ReadinessDashboard />);
     await user.click(screen.getByText("Calculate readiness"));
-    expect(mutate).toHaveBeenCalledWith({ visibility: "public" });
+    // The default All chip names no visibility, so an existing calculation
+    // keeps its own and a private one is never shared unasked.
+    expect(mutate).toHaveBeenCalledWith({ visibility: undefined });
   });
 
   it("shows calculating state on button when pending", () => {
@@ -183,6 +197,83 @@ describe("ReadinessDashboard", () => {
     renderWithProviders(<ReadinessDashboard />);
     expect(screen.getByText("Calculating...")).toBeInTheDocument();
     expect(screen.queryByText("Calculate readiness")).not.toBeInTheDocument();
+  });
+
+  describe("deleting a calculation", () => {
+    const card = (overrides: Record<string, unknown>) => ({
+      id: 7,
+      framework_type: "eu_ai_act",
+      project_id: 1,
+      avg_score: 50,
+      calculated_at: "2026-11-20T10:00:00.000Z",
+      ...overrides,
+    });
+    const renderCard = (overrides: Record<string, unknown>) => {
+      mockScores.mockReturnValue({ data: [card(overrides)], isLoading: false });
+      renderWithProviders(<ReadinessDashboard projectId={1} frameworkType="eu_ai_act" />);
+    };
+
+    it("offers delete on your own calculation and marks a private one", () => {
+      renderCard({ created_by: 1, visibility: "private" });
+      expect(screen.getByTestId("readiness-delete-7")).toBeInTheDocument();
+      expect(screen.getByText("Private")).toBeInTheDocument();
+    });
+
+    it("hides delete on someone else's public calculation without readiness.admin", () => {
+      renderCard({ created_by: 2, visibility: "public" });
+      expect(screen.queryByTestId("readiness-delete-7")).not.toBeInTheDocument();
+      expect(mockCan).toHaveBeenCalledWith("readiness.admin");
+    });
+
+    it("offers delete on someone else's public calculation to readiness.admin", () => {
+      mockCan.mockReturnValue(true);
+      renderCard({ created_by: 2, visibility: "public" });
+      expect(screen.getByTestId("readiness-delete-7")).toBeInTheDocument();
+    });
+
+    it("never offers delete on someone else's private calculation", () => {
+      mockCan.mockReturnValue(true);
+      renderCard({ created_by: 2, visibility: "private" });
+      expect(screen.queryByTestId("readiness-delete-7")).not.toBeInTheDocument();
+    });
+
+    it("deletes only after confirming", async () => {
+      const user = userEvent.setup();
+      renderCard({ created_by: 1, visibility: "public" });
+      await user.click(screen.getByTestId("readiness-delete-7"));
+      expect(mockDelete).not.toHaveBeenCalled();
+      expect(screen.getByText("Delete this calculation?")).toBeInTheDocument();
+      await user.click(screen.getByRole("button", { name: "Delete" }));
+      expect(mockDelete).toHaveBeenCalledWith(7, expect.any(Object));
+    });
+
+    it("keeps the dialog open when the delete fails and closes it once it succeeds", async () => {
+      const user = userEvent.setup();
+      renderCard({ created_by: 1, visibility: "public" });
+      await user.click(screen.getByTestId("readiness-delete-7"));
+      await user.click(screen.getByRole("button", { name: "Delete" }));
+      // A failed mutation never calls onSuccess.
+      expect(screen.getByText("Delete this calculation?")).toBeInTheDocument();
+      const [, options] = mockDelete.mock.calls[0];
+      act(() => options.onSuccess());
+      await waitFor(() =>
+        expect(screen.queryByText("Delete this calculation?")).not.toBeInTheDocument(),
+      );
+    });
+
+    it("shows your own calculation over a colleague's newer one, so you can delete it", () => {
+      mockScores.mockReturnValue({
+        data: [
+          card({ id: 7, created_by: 1, avg_score: 41, calculated_at: "2026-11-01T10:00:00.000Z" }),
+          card({ id: 8, created_by: 2, avg_score: 88, calculated_at: "2026-11-20T10:00:00.000Z" }),
+        ],
+        isLoading: false,
+      });
+      renderWithProviders(<ReadinessDashboard projectId={1} frameworkType="eu_ai_act" />);
+      expect(screen.getByText("41")).toBeInTheDocument();
+      expect(screen.queryByText("88")).not.toBeInTheDocument();
+      expect(screen.getByTestId("readiness-delete-7")).toBeInTheDocument();
+    });
   });
 
   describe("scoped to a use case and framework", () => {
@@ -220,7 +311,7 @@ describe("ReadinessDashboard", () => {
       expect(mutate).toHaveBeenCalledWith({
         frameworkType: "iso_42001",
         projectId: 7,
-        visibility: "public",
+        visibility: undefined,
       });
     });
   });

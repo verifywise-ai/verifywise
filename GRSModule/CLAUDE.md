@@ -62,10 +62,10 @@ Key CLI options:
 ## Testing
 
 ```bash
-pytest tests/
+uv run pytest tests/
 ```
 
-The `tests/` directory currently contains only a `.gitkeep`. No test framework is configured yet.
+Pytest is a dev dependency (`pyproject.toml`, `[tool.pytest.ini_options]`, `testpaths = ["tests"]`). Tests live under `tests/`: pipeline and export checks, plus `render/`, `validate/`, `infer/`, `judge/`, `llm/`, and `ui/`.
 
 ---
 

@@ -207,8 +207,15 @@ export const euAiActContent: ArticleContent = {
         'Transparency and provision of information',
         'Human oversight requirements',
         'Accuracy, robustness and cybersecurity',
-        'Quality management system',
       ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Obligations that fall on your organization as a whole are not repeated in each use case. Prohibited AI practices, AI literacy, the quality management system and the company-wide AI Act policies and processes are in the separate **EU AI Act (organization)** framework, along with the assessment questions about your organization\'s AI values, governance framework and self-assessment schedule. VerifyWise adds it to the **Frameworks** page the first time a use case gets EU AI Act; fill it in there once for the whole organization. It can\'t be added by hand. While a use case has EU AI Act, it can\'t be removed and the organization-level project can\'t be deleted.',
+    },
+    {
+      type: 'paragraph',
+      text: 'If your use cases already had answers for these items before the change, the most complete one for each item was copied into EU AI Act (organization) and marked **Review**. Open the item, check what was copied, and save it to clear the mark. The note on the item names the use case it came from if you can see that use case; if you can\'t, it says only that it came from a use case. The **Copied, needs review** status filter lists the ones left. Only Admins and members of the organization-level project can see and edit EU AI Act (organization).',
     },
     {
       type: 'heading',

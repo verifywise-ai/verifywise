@@ -9,6 +9,7 @@ import type { LLMProvider } from "../../domain.layer/interfaces/i.llmKey";
 import { getUserRoleInOrganization } from "../../utils/userPermission.utils";
 import { roleInfoHasPermission } from "../../utils/rolePermissions.utils";
 import { canUserAccessFile } from "../../utils/fileUpload.utils";
+import { structItemInEuAiActSql } from "../../utils/euAiActStructItem.sql";
 
 export interface AnalyzeDocumentParams {
   file_id: number;
@@ -291,7 +292,7 @@ const matchControls = async (
         `SELECT cs.id, cs.title, cs.description,
                 'eu_ai_act' as framework_type
          FROM controls_struct_eu cs
-         WHERE cs.title IS NOT NULL
+         WHERE cs.title IS NOT NULL AND ${structItemInEuAiActSql("cs")}
          LIMIT 50`,
       );
       controls = controls.concat(euControls);

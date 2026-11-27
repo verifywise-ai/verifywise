@@ -158,6 +158,8 @@ function RiskHeatMap<T extends HeatMapRisk = RiskModel>({
       ? selectedCell.likelihood === cell.likelihood && selectedCell.severity === cell.severity
       : selectedRisk && cell.risks.some((r) => r.id === selectedRisk.id);
     const selectable = Boolean(onCellSelect) && cell.risks.length > 0;
+    // A cell looks clickable only when the page does something with a click.
+    const clickable = Boolean(onCellSelect || onRiskSelect) && cell.risks.length > 0;
     const select = () => {
       if (cell.risks.length === 0) return;
       if (onCellSelect) onCellSelect({ likelihood: cell.likelihood, severity: cell.severity });
@@ -215,16 +217,15 @@ function RiskHeatMap<T extends HeatMapRisk = RiskModel>({
             "flexDirection": "column",
             "alignItems": "center",
             "justifyContent": "center",
-            "cursor": cell.risks.length > 0 ? "pointer" : "default",
+            "cursor": clickable ? "pointer" : "default",
             "transition": "all 0.2s ease-in-out",
-            "&:hover":
-              cell.risks.length > 0
-                ? {
-                    transform: "scale(1.05)",
-                    boxShadow: theme.shadows[4],
-                    borderColor: "brand.primary",
-                  }
-                : {},
+            "&:hover": clickable
+              ? {
+                  transform: "scale(1.05)",
+                  boxShadow: theme.shadows[4],
+                  borderColor: "brand.primary",
+                }
+              : {},
           }}
           onClick={select}
           // Keyboard-reachable only where a click does something for the

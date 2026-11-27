@@ -33,6 +33,7 @@ import RichTextEditor from "../../RichTextEditor";
 import Select from "../../Inputs/Select";
 import Alert from "../../Alert";
 import NotesTab from "../../Notes/NotesTab";
+import { EuAiActCopiedNote } from "../../EuAiActCopiedNote";
 
 import { EUAIActQuestionDrawerProps, EUAIActFormData, EUAIACT_STATUS_OPTIONS } from "./types";
 import { FileData } from "../../../../domain/types/File";
@@ -386,6 +387,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
       >
         <TabPanel value="details" sx={{ padding: "15px 20px", gap: "15px" }}>
           <Stack gap="15px">
+            <EuAiActCopiedNote item={displayQuestion} />
             {displayQuestion?.question && (
               <Stack
                 sx={{

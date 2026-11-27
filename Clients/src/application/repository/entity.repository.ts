@@ -213,7 +213,9 @@ export const assignFrameworkToProject = async ({
   frameworkId: number;
   projectId: string;
 }) => {
-  const response = await apiServices.post(
+  // organization_framework_added: adding EU AI Act also added EU AI Act
+  // (organization) to the organizational project.
+  const response = await apiServices.post<{ data: { organization_framework_added: boolean } }>(
     `/frameworks/toProject?frameworkId=${frameworkId}&projectId=${projectId}`,
     {},
   );

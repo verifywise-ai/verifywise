@@ -504,7 +504,7 @@ A bulk set owner that gives the new owner two or more risks sends one in-app not
 
 `PATCH /projectRisks/bulk` answers `{ updated, changed, action }`. `updated` keeps its original meaning, the number of ids sent; `changed` is the number of risks actually archived or edited. The risk table reports `changed`. The risk added, updated and deleted automations are enqueued after the transaction commits, so a bulk action that rolls back sends none, and the owner notice is sent after the commit too. A bulk action records the risk history snapshots once, after its loop.
 
-Removing a use case or framework from a risk removes the risk's mappings in every framework of that use case: EU AI Act, ISO 42001, ISO 27001, NIST AI RMF, the 24 bundled frameworks, custom frameworks and imported frameworks.
+Removing a use case or framework from a risk removes the risk's mappings in every framework of that use case: EU AI Act, ISO 42001, ISO 27001, NIST AI RMF, the 25 bundled frameworks, custom frameworks and imported frameworks.
 
 ### Archived risks are excluded from
 

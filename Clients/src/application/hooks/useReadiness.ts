@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { showMutationErrorToast } from "./utils/mutationErrorToast";
 import {
   triggerCalculateAll,
   triggerCalculateFramework,
@@ -8,6 +9,7 @@ import {
   getWeakestControls,
   getRecommendations,
   getReadinessHistory,
+  deleteReadinessCalculation,
 } from "../repository/readiness.repository";
 
 export const readinessQueryKeys = {
@@ -153,5 +155,18 @@ export const useTriggerCalculateFramework = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: readinessQueryKeys.all });
     },
+  });
+};
+
+/** Delete one readiness calculation, then refetch every readiness view. */
+export const useDeleteReadinessCalculation = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: number) => deleteReadinessCalculation(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: readinessQueryKeys.all });
+    },
+    onError: (error) => showMutationErrorToast(error, "Could not delete the calculation"),
   });
 };

@@ -74,12 +74,12 @@ export function LiveChecksSection({ liveChecks }: { liveChecks: ILiveChecks | nu
         ))
       )}
       {aiStatus === "pending" && (
-        <Typography sx={{ fontSize: "12px", color: theme.palette.text.tertiary }}>
+        <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
           AI checks still running
         </Typography>
       )}
       {aiStatus === "failed" && (
-        <Typography sx={{ fontSize: "12px", color: theme.palette.text.tertiary }}>
+        <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
           AI checks unavailable
         </Typography>
       )}

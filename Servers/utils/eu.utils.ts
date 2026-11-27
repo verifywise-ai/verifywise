@@ -17,32 +17,48 @@ import { SubtopicStructEUModel } from "../domain.layer/frameworks/EU-AI-Act/subT
 import { TopicStructEUModel } from "../domain.layer/frameworks/EU-AI-Act/topicStructEU.model";
 import { Topics } from "../structures/EU-AI-Act/assessment-tracker/topics.struct";
 import { ControlCategories } from "../structures/EU-AI-Act/compliance-tracker/controlCategories.struct";
+import {
+  EU_AI_ACT_ORGANIZATION_CONTROLS,
+  EU_AI_ACT_ORGANIZATION_FRAMEWORK_ID,
+  EU_AI_ACT_ORGANIZATION_QUESTIONS,
+} from "../structures/EU-AI-Act-Organization/euAiActOrganization";
+import { EU_AI_ACT_FRAMEWORK_ID } from "./validations/projectValidation.utils";
 import { ProjectFrameworksModel } from "../domain.layer/models/projectFrameworks/projectFrameworks.model";
 import { STATUSES_ANSWERS, STATUSES_COMPLIANCE } from "../types/status.type";
 import { AnswerEURisksModel } from "../domain.layer/frameworks/EU-AI-Act/answerEURisks.model";
 import { validateRiskArray } from "./utility.utils";
+import { structItemInEuAiActSql, structItemInFrameworkSql } from "./euAiActStructItem.sql";
 import { getEvidenceFilesForEntities } from "./files/evidenceFiles.utils";
 import { logStructured } from "./logger/fileLogger";
 import { demoDueDate } from "./demoSeedFields";
 import { highRiskRolesArraySql } from "./highRiskRoles.utils";
 import { recordUpdateChanges, writtenValues } from "./changeHistory.base.utils";
+import { ProjectViewer, projectVisibilitySql } from "./projectVisibility.utils";
 
+// Skips the questions moved to EU AI Act (organization), as createNewAnswersEUQuery
+// does, so the two stay paired by position.
 const getDemoAnswers = (): string[] => {
   const answers = [];
   for (let topic of Topics) {
     for (let subTopic of topic.subtopics) {
+      const moved = EU_AI_ACT_ORGANIZATION_QUESTIONS[topic.order_no]?.[subTopic.order_no] ?? [];
       for (let question of subTopic.questions) {
-        answers.push(question.answer);
+        if (!moved.includes(question.order_no)) answers.push(question.answer);
       }
     }
   }
   return answers;
 };
 
+// Skips the controls moved to EU AI Act (organization), as createNewControlsQuery
+// does, so the two stay paired by position.
 const getDemoControls = (): object[] => {
   let controls: object[] = [];
   for (let controlCategory of ControlCategories) {
-    controls = controls.concat([...controlCategory.controls]);
+    const moved = EU_AI_ACT_ORGANIZATION_CONTROLS[controlCategory.order_no] ?? [];
+    controls = controls.concat(
+      controlCategory.controls.filter((control) => !moved.includes(control.order_no)),
+    );
   }
   return controls;
 };
@@ -72,7 +88,11 @@ export const countAnswersEUByProjectId = async (
 }> => {
   const result = await sequelize.query(
     `SELECT COUNT(*) AS "totalAssessments", COUNT(CASE WHEN ans.status = 'Done' THEN 1 END) AS "answeredAssessments" FROM
-      assessments a JOIN answers_eu ans ON a.organization_id = ans.organization_id AND a.id = ans.assessment_id WHERE a.organization_id = :organizationId AND a.projects_frameworks_id = :projects_frameworks_id;`,
+      assessments a JOIN answers_eu ans ON a.organization_id = ans.organization_id AND a.id = ans.assessment_id
+      JOIN questions_struct_eu q ON q.id = ans.question_id
+      JOIN projects_frameworks pf ON pf.organization_id = a.organization_id AND pf.id = a.projects_frameworks_id
+      WHERE a.organization_id = :organizationId AND a.projects_frameworks_id = :projects_frameworks_id
+        AND ${structItemInFrameworkSql("q", "pf.framework_id")};`,
     {
       replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
       type: QueryTypes.SELECT,
@@ -106,9 +126,11 @@ export const countSubControlsEUByProjectId = async (
      JOIN subcontrols_eu sc
        ON c.organization_id = sc.organization_id AND c.id = sc.control_id
      JOIN controls_struct_eu cs ON c.control_meta_id = cs.id
+     JOIN projects_frameworks pf ON pf.organization_id = c.organization_id AND pf.id = c.projects_frameworks_id
      WHERE c.organization_id = :organizationId
        AND c.projects_frameworks_id = :projects_frameworks_id
-       AND cs.control_category_id IN (:visibleCategoryIds);`,
+       AND cs.control_category_id IN (:visibleCategoryIds)
+       AND ${structItemInFrameworkSql("cs", "pf.framework_id")};`,
     {
       replacements: {
         organizationId,
@@ -128,6 +150,7 @@ export const getTopicByIdForProjectQuery = async (
   topicStructId: number,
   projectFrameworkId: number,
   organizationId: number,
+  viewer?: ProjectViewer,
 ): Promise<TopicStructEUModel | null> => {
   const assessmentResult = (await sequelize.query(
     `SELECT id FROM assessments WHERE organization_id = :organizationId AND projects_frameworks_id = :projects_frameworks_id`,
@@ -157,7 +180,13 @@ export const getTopicByIdForProjectQuery = async (
   const subtopicStruct = await getAllSubTopicsQuery(topic.id!, organizationId);
   (topic.dataValues as any).subTopics = subtopicStruct;
   for (let subtopic of subtopicStruct) {
-    const questionAnswers = await getAllQuestionsQuery(subtopic.id!, assessmentId, organizationId);
+    const questionAnswers = await getAllQuestionsQuery(
+      subtopic.id!,
+      assessmentId,
+      organizationId,
+      null,
+      viewer,
+    );
     (subtopic.dataValues as any).questions = [];
     for (let question of questionAnswers) {
       (subtopic.dataValues as any).questions.push({ ...question });
@@ -179,6 +208,34 @@ export const deriveControlStatus = (
 
 // Moved to user.utils; re-exported for existing importers.
 export { findUsersNotInOrganization } from "./user.utils";
+
+/**
+ * SQL for the use case an EU AI Act (organization) row's work was copied from
+ * on upgrade (copied_from_project_id, cleared when a user saves the row): the
+ * join of that project as `cp`, and its label "<title> (<UC id>)", or NULL.
+ *
+ * The label names a use case, so the join only matches one the viewer can see
+ * (projectVisibilitySql); otherwise, and when no viewer is given, the label is
+ * NULL and only copied_from_project_id is returned. The query must bind
+ * :organizationId and the returned replacements.
+ */
+const copiedFromJoinSql = (
+  row: string,
+  viewer: ProjectViewer | undefined,
+): { sql: string; replacements: Record<string, unknown> } => {
+  const visibility = viewer
+    ? projectVisibilitySql("cp", viewer)
+    : { sql: " AND FALSE", replacements: {} };
+  return {
+    sql: `LEFT JOIN projects cp ON cp.id = ${row}.copied_from_project_id AND cp.organization_id = ${row}.organization_id${visibility.sql}`,
+    replacements: visibility.replacements,
+  };
+};
+const COPIED_FROM_USE_CASE_SQL = `CASE WHEN cp.id IS NULL THEN NULL
+       WHEN cp.uc_id IS NULL THEN cp.project_title
+       ELSE cp.project_title || ' (' || cp.uc_id || ')' END`;
+const copiedFromColumnsSql = (row: string) =>
+  `${row}.copied_from_project_id AS copied_from_project_id, ${COPIED_FROM_USE_CASE_SQL} AS copied_from_use_case`;
 
 const getSubControlsCalculations = async (
   controlId: number,
@@ -229,6 +286,7 @@ export const getControlByIdForProjectQuery = async (
   approver: number | undefined,
   dueDateFilter: number | undefined,
   organizationId: number,
+  viewer?: ProjectViewer,
 ): Promise<Partial<ControlEU & ControlStructEUModel> | null> => {
   const controlId = (await sequelize.query(
     `SELECT id FROM controls_eu WHERE organization_id = :organizationId AND control_meta_id = :control_meta_id AND projects_frameworks_id = :projects_frameworks_id`,
@@ -240,7 +298,7 @@ export const getControlByIdForProjectQuery = async (
       },
     },
   )) as [{ id: number }[], number];
-  const controls = await getControlByIdQuery(controlId[0][0].id, organizationId);
+  const controls = await getControlByIdQuery(controlId[0][0].id, organizationId, null, viewer);
   const control = controls[0];
   const subControls = await getSubControlsByIdQuery(
     control.id!,
@@ -248,6 +306,8 @@ export const getControlByIdForProjectQuery = async (
     approver,
     dueDateFilter,
     organizationId,
+    null,
+    viewer,
   );
 
   (control as any).subControls = [];
@@ -272,12 +332,33 @@ export const getAllTopicsQuery = async (
   _organizationId: number,
   transaction: Transaction | null = null,
 ) => {
-  const topicStruct = await sequelize.query(`SELECT * FROM topics_struct_eu;`, {
-    mapToModel: true,
-    model: TopicStructEUModel,
-    ...(transaction && { transaction }),
-  });
+  const topicStruct = await sequelize.query(
+    `SELECT * FROM topics_struct_eu ORDER BY order_no, id;`,
+    {
+      mapToModel: true,
+      model: TopicStructEUModel,
+      ...(transaction && { transaction }),
+    },
+  );
   return topicStruct;
+};
+
+/**
+ * The topics a use case's assessment lists: those with a question still in the
+ * EU AI Act. A topic whose questions all moved to EU AI Act (organization) is
+ * listed by that framework's assessment instead.
+ */
+export const getUseCaseAssessmentTopicsQuery = async () => {
+  return sequelize.query(
+    `SELECT * FROM topics_struct_eu t
+      WHERE EXISTS (
+        SELECT 1 FROM subtopics_struct_eu st
+          JOIN questions_struct_eu q ON q.subtopic_id = st.id
+         WHERE st.topic_id = t.id AND ${structItemInEuAiActSql("q")}
+      )
+      ORDER BY t.order_no, t.id;`,
+    { mapToModel: true, model: TopicStructEUModel },
+  );
 };
 
 export const getAllSubTopicsQuery = async (
@@ -286,7 +367,7 @@ export const getAllSubTopicsQuery = async (
   transaction: Transaction | null = null,
 ) => {
   const subtopicStruct = await sequelize.query(
-    `SELECT * FROM subtopics_struct_eu WHERE topic_id = :topic_id;`,
+    `SELECT * FROM subtopics_struct_eu WHERE topic_id = :topic_id ORDER BY order_no, id;`,
     {
       replacements: { topic_id: topicId },
       mapToModel: true,
@@ -302,7 +383,9 @@ export const getAllQuestionsQuery = async (
   assessmentId: number,
   organizationId: number,
   transaction: Transaction | null = null,
+  viewer?: ProjectViewer,
 ) => {
+  const copiedFrom = copiedFromJoinSql("a", viewer);
   const result = (await sequelize.query(
     `SELECT
       q.id AS question_id,
@@ -321,12 +404,23 @@ export const getAllQuestionsQuery = async (
       a.dropdown_options AS dropdown_options,
       a.status AS status,
       a.created_at AS created_at,
-      a.is_demo AS is_demo
-    FROM questions_struct_eu q JOIN answers_eu a ON q.id = a.question_id WHERE
+      a.is_demo AS is_demo,
+      ${copiedFromColumnsSql("a")}
+    FROM questions_struct_eu q JOIN answers_eu a ON q.id = a.question_id
+      JOIN assessments s ON s.organization_id = a.organization_id AND s.id = a.assessment_id
+      JOIN projects_frameworks pf ON pf.organization_id = s.organization_id AND pf.id = s.projects_frameworks_id
+      ${copiedFrom.sql}
+      WHERE
       a.organization_id = :organizationId AND q.subtopic_id = :subtopic_id AND a.assessment_id = :assessment_id
+        AND ${structItemInFrameworkSql("q", "pf.framework_id")}
       ORDER BY created_at DESC, question_id ASC;`,
     {
-      replacements: { organizationId, subtopic_id: subtopicId, assessment_id: assessmentId },
+      replacements: {
+        organizationId,
+        subtopic_id: subtopicId,
+        assessment_id: assessmentId,
+        ...copiedFrom.replacements,
+      },
       ...(transaction && { transaction }),
     },
   )) as [Partial<QuestionStructEUModel & AnswerEU & { answer_id: number }>[], number];
@@ -361,38 +455,62 @@ export const getAllQuestionsQuery = async (
   return questionAnswers;
 };
 
+/**
+ * The topic -> subtopic -> question tree of one assessment. A subtopic with no
+ * question in the assessment's framework, and a topic left with no subtopic,
+ * are left out: a use case's EU AI Act no longer has the questions moved to EU
+ * AI Act (organization), whose assessment has only those.
+ */
 export const getAssessmentsEUByIdQuery = async (
   assessmentId: number,
   organizationId: number,
   transaction: Transaction | null = null,
+  viewer?: ProjectViewer,
 ) => {
   const topicStruct = await getAllTopicsQuery(organizationId, transaction);
   for (let topic of topicStruct) {
     const subtopicStruct = await getAllSubTopicsQuery(topic.id!, organizationId, transaction);
-    (topic.dataValues as any).subTopics = subtopicStruct;
+    const subtopicsWithQuestions = [];
     for (let subtopic of subtopicStruct) {
       const questionAnswers = await getAllQuestionsQuery(
         subtopic.id!,
         assessmentId,
         organizationId,
         transaction,
+        viewer,
       );
+      if (questionAnswers.length === 0) continue;
       (subtopic.dataValues as any).questions = [];
       for (let question of questionAnswers) {
         (subtopic.dataValues as any).questions.push({ ...question });
       }
+      subtopicsWithQuestions.push(subtopic);
     }
+    (topic.dataValues as any).subTopics = subtopicsWithQuestions;
   }
-  return topicStruct;
+  return topicStruct.filter((topic) => (topic.dataValues as any).subTopics.length > 0);
 };
 
+/**
+ * The control categories holding a control of a framework: the EU AI Act by
+ * default, where a category whose controls all moved to EU AI Act
+ * (organization) is left out. Null lists every category, for a caller that
+ * narrows them to one project framework itself (getVisibleEuCategoryIdsForProject).
+ */
 export const getAllControlCategoriesQuery = async (
   _organizationId: number,
   transaction: Transaction | null = null,
+  frameworkId: number | null = EU_AI_ACT_FRAMEWORK_ID,
 ) => {
   const controlCategoriesStruct = await sequelize.query(
-    `SELECT * FROM controlcategories_struct_eu;`,
+    `SELECT * FROM controlcategories_struct_eu cc
+      WHERE :frameworkId::int IS NULL OR EXISTS (
+        SELECT 1 FROM controls_struct_eu cs
+         WHERE cs.control_category_id = cc.id AND ${structItemInFrameworkSql("cs", ":frameworkId")}
+      )
+      ORDER BY cc.order_no, cc.id;`,
     {
+      replacements: { frameworkId },
       mapToModel: true,
       model: ControlCategoryStructEUModel,
       ...(transaction && { transaction }),
@@ -403,7 +521,8 @@ export const getAllControlCategoriesQuery = async (
 
 export const getControlStructByControlCategoryIdQuery = async (controlCategoryId: number) => {
   const controlsStruct = await sequelize.query(
-    `SELECT * FROM controls_struct_eu WHERE control_category_id = :control_category_id;`,
+    `SELECT * FROM controls_struct_eu cs
+      WHERE cs.control_category_id = :control_category_id AND ${structItemInEuAiActSql("cs")};`,
     {
       replacements: { control_category_id: controlCategoryId },
       mapToModel: true,
@@ -420,15 +539,23 @@ export const getControlStructByControlCategoryIdForAProjectQuery = async (
   approver: number | undefined,
   dueDateFilter: number | undefined,
   organizationId: number,
+  viewer?: ProjectViewer,
 ) => {
+  const copiedFrom = copiedFromJoinSql("c", viewer);
   const controlsStruct = (await sequelize.query(
-    `SELECT cs.*, c.id AS control_id, c.owner, c.status FROM controls_struct_eu cs JOIN controls_eu c ON cs.id = c.control_meta_id
-      WHERE c.organization_id = :organizationId AND cs.control_category_id = :control_category_id AND c.projects_frameworks_id = :projects_frameworks_id;`,
+    `SELECT cs.*, c.id AS control_id, c.owner, c.status, ${copiedFromColumnsSql("c")}
+      FROM controls_struct_eu cs JOIN controls_eu c ON cs.id = c.control_meta_id
+      JOIN projects_frameworks pf ON pf.organization_id = c.organization_id AND pf.id = c.projects_frameworks_id
+      ${copiedFrom.sql}
+      WHERE c.organization_id = :organizationId AND cs.control_category_id = :control_category_id AND c.projects_frameworks_id = :projects_frameworks_id
+        AND ${structItemInFrameworkSql("cs", "pf.framework_id")}
+      ORDER BY cs.order_no, cs.id;`,
     {
       replacements: {
         organizationId,
         control_category_id: controlCategoryId,
         projects_frameworks_id: projectFrameworkId,
+        ...copiedFrom.replacements,
       },
     },
   )) as [Partial<ControlStructEUModel & ControlEUModel & { control_id: number }>[], number];
@@ -452,7 +579,9 @@ export const getControlByIdQuery = async (
   controlId: number,
   organizationId: number,
   transaction: Transaction | null = null,
+  viewer?: ProjectViewer,
 ) => {
+  const copiedFrom = copiedFromJoinSql("c", viewer);
   const result = (await sequelize.query(
     `SELECT
       cs.title AS title,
@@ -467,11 +596,14 @@ export const getControlByIdQuery = async (
       c.reviewer AS reviewer,
       c.due_date AS due_date,
       c.implementation_details AS implementation_details,
-      c.created_at AS created_at
-    FROM controls_eu c JOIN controls_struct_eu cs ON c.control_meta_id = cs.id WHERE c.organization_id = :organizationId AND c.id = :control_id
+      c.created_at AS created_at,
+      ${copiedFromColumnsSql("c")}
+    FROM controls_eu c JOIN controls_struct_eu cs ON c.control_meta_id = cs.id
+      ${copiedFrom.sql}
+    WHERE c.organization_id = :organizationId AND c.id = :control_id
     ORDER BY created_at DESC, id ASC;`,
     {
-      replacements: { organizationId, control_id: controlId },
+      replacements: { organizationId, control_id: controlId, ...copiedFrom.replacements },
       ...(transaction && { transaction }),
     },
   )) as [Partial<ControlEUModel & ControlStructEUModel>[], number];
@@ -486,6 +618,7 @@ export const getSubControlsByIdQuery = async (
   dueDateFilter: number | undefined,
   organizationId: number,
   transaction: Transaction | null = null,
+  viewer?: ProjectViewer,
 ) => {
   const conditions: string[] = [
     "sc.organization_id = :organizationId",
@@ -512,6 +645,7 @@ export const getSubControlsByIdQuery = async (
   }
 
   const whereClause = conditions.join(" AND ");
+  const copiedFrom = copiedFromJoinSql("sc", viewer);
 
   const subControls = (await sequelize.query(
     `SELECT
@@ -530,14 +664,16 @@ export const getSubControlsByIdQuery = async (
       sc.is_demo AS is_demo,
       sc.evidence_description AS evidence_description,
       sc.feedback_description AS feedback_description,
-      sc.created_at AS created_at
+      sc.created_at AS created_at,
+      ${copiedFromColumnsSql("sc")}
     FROM subcontrols_eu sc
       JOIN subcontrols_struct_eu scs ON sc.subcontrol_meta_id = scs.id
       JOIN controls_eu c ON c.id = sc.control_id AND c.organization_id = sc.organization_id
+      ${copiedFrom.sql}
     WHERE ${whereClause}
     ORDER BY created_at DESC, id ASC;`,
     {
-      replacements,
+      replacements: { ...replacements, ...copiedFrom.replacements },
       ...(transaction && { transaction }),
     },
   )) as [Partial<SubcontrolEUModel | ControlStructEUModel>[], number];
@@ -585,8 +721,14 @@ export const getCompliancesEUByIdQuery = async (
   controlIds: number[],
   organizationId: number,
   transaction: Transaction | null = null,
+  viewer?: ProjectViewer,
 ) => {
-  const controlCategoriesStruct = await getAllControlCategoriesQuery(organizationId, transaction);
+  // The controls may be of either framework, so every category is listed.
+  const controlCategoriesStruct = await getAllControlCategoriesQuery(
+    organizationId,
+    transaction,
+    null,
+  );
   let controlCategoryIdIndexMap = new Map();
   for (let [i, controlCategory] of controlCategoriesStruct.entries()) {
     (controlCategory.dataValues as any).controls = [];
@@ -594,7 +736,7 @@ export const getCompliancesEUByIdQuery = async (
   }
 
   for (let controlId of controlIds) {
-    const controls = await getControlByIdQuery(controlId, organizationId, transaction);
+    const controls = await getControlByIdQuery(controlId, organizationId, transaction, viewer);
 
     for (let control of controls) {
       (controlCategoriesStruct as any)[
@@ -607,6 +749,7 @@ export const getCompliancesEUByIdQuery = async (
         undefined,
         organizationId,
         transaction,
+        viewer,
       );
       (control as any).subControls = [];
       for (let subControl of subControls) {
@@ -620,6 +763,7 @@ export const getCompliancesEUByIdQuery = async (
 export const getAssessmentsEUByProjectIdQuery = async (
   projectFrameworkId: number,
   organizationId: number,
+  viewer?: ProjectViewer,
 ) => {
   const assessmentId = (await sequelize.query(
     `SELECT id FROM assessments WHERE organization_id = :organizationId AND projects_frameworks_id = :projects_frameworks_id`,
@@ -627,15 +771,23 @@ export const getAssessmentsEUByProjectIdQuery = async (
       replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
     },
   )) as [{ id: number }[], number];
-  const assessments = await getAssessmentsEUByIdQuery(assessmentId[0][0].id, organizationId);
+  const assessments = await getAssessmentsEUByIdQuery(
+    assessmentId[0][0].id,
+    organizationId,
+    null,
+    viewer,
+  );
   return assessments;
 };
 
 /**
- * Resolve which EU AI Act category ids are visible to a project, given its
- * `high_risk_roles` + `ai_risk_classification`.
+ * Resolve which EU AI Act category ids are visible to a project framework:
+ * the categories holding a control of its framework. For the EU AI Act on a
+ * use case they are further narrowed by the use case's `high_risk_roles` +
+ * `ai_risk_classification`; EU AI Act (organization) holds obligations of the
+ * whole organization, so all of its categories show.
  *
- * Rules:
+ * Rules for the EU AI Act:
  *   - Categories tagged `General Risk` always show (horizontal obligations
  *     like Art 4 AI literacy that apply regardless of risk level).
  *   - Categories matching the project's tier show. Role is additionally
@@ -652,7 +804,7 @@ export const getVisibleEuCategoryIdsForProject = async (
   transaction: Transaction | null = null,
 ): Promise<number[]> => {
   const [[project]] = (await sequelize.query(
-    `SELECT p.high_risk_roles AS roles, p.ai_risk_classification AS tier
+    `SELECT p.high_risk_roles AS roles, p.ai_risk_classification AS tier, pf.framework_id
      FROM projects p
      JOIN projects_frameworks pf ON pf.project_id = p.id
        AND pf.organization_id = p.organization_id
@@ -663,7 +815,7 @@ export const getVisibleEuCategoryIdsForProject = async (
       replacements: { projectFrameworkId, organizationId },
       ...(transaction ? { transaction } : {}),
     },
-  )) as [{ roles: string[] | null; tier: string }[], number];
+  )) as [{ roles: string[] | null; tier: string; framework_id: number }[], number];
 
   // No row means the pairing does not exist. Nothing is visible, which is what
   // every caller already does with an empty list: countSubControlsEUByProjectId
@@ -684,8 +836,13 @@ export const getVisibleEuCategoryIdsForProject = async (
      FROM controlcategories_struct_eu cc
      JOIN frameworks f ON f.id = cc.framework_id
      WHERE f.name = 'EU AI Act'
+       AND EXISTS (
+         SELECT 1 FROM controls_struct_eu cs
+         WHERE cs.control_category_id = cc.id AND ${structItemInFrameworkSql("cs", ":frameworkId")}
+       )
        AND (
-         EXISTS (
+         :frameworkId <> ${EU_AI_ACT_FRAMEWORK_ID}
+         OR EXISTS (
            SELECT 1 FROM controlcategories_struct_eu__risk_tiers cct
            JOIN eu_act_risk_tiers rt ON rt.id = cct.risk_tier_id
            WHERE cct.control_category_id = cc.id
@@ -711,6 +868,7 @@ export const getVisibleEuCategoryIdsForProject = async (
        );`,
     {
       replacements: {
+        frameworkId: project.framework_id,
         tier: project.tier,
         applyRoleFilter,
         ...roles.replacements,
@@ -725,9 +883,15 @@ export const getVisibleEuCategoryIdsForProject = async (
 export const getComplianceEUByProjectIdQuery = async (
   projectFrameworkId: number,
   organizationId: number,
+  viewer?: ProjectViewer,
 ) => {
   const controlIds = (await sequelize.query(
-    `SELECT id FROM controls_eu WHERE organization_id = :organizationId AND projects_frameworks_id = :projects_frameworks_id`,
+    `SELECT c.id FROM controls_eu c
+       JOIN controls_struct_eu cs ON cs.id = c.control_meta_id
+       JOIN projects_frameworks pf ON pf.organization_id = c.organization_id AND pf.id = c.projects_frameworks_id
+      WHERE c.organization_id = :organizationId AND c.projects_frameworks_id = :projects_frameworks_id
+        AND ${structItemInFrameworkSql("cs", "pf.framework_id")}
+      ORDER BY cs.order_no, c.id`,
     {
       replacements: { organizationId, projects_frameworks_id: projectFrameworkId },
     },
@@ -736,6 +900,8 @@ export const getComplianceEUByProjectIdQuery = async (
   const compliances = await getCompliancesEUByIdQuery(
     controlIds[0].map((c) => c.id),
     organizationId,
+    null,
+    viewer,
   );
 
   const visibleIds = await getVisibleEuCategoryIdsForProject(projectFrameworkId, organizationId);
@@ -749,11 +915,12 @@ export const createNewAssessmentEUQuery = async (
   organizationId: number,
   transaction: Transaction,
   is_mock_data: boolean,
+  frameworkId: number = EU_AI_ACT_FRAMEWORK_ID,
 ): Promise<object> => {
   const projectFrameworkId = (await sequelize.query(
-    `SELECT id FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = 1`,
+    `SELECT id FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = :frameworkId`,
     {
-      replacements: { organizationId, project_id: assessment.project_id },
+      replacements: { organizationId, project_id: assessment.project_id, frameworkId },
       transaction,
     },
   )) as [{ id: number }[], number];
@@ -780,6 +947,7 @@ export const createNewAssessmentEUQuery = async (
     transaction,
     is_mock_data,
     isDemo,
+    frameworkId,
   );
   const assessments = await getAssessmentsEUByIdQuery(result[0].id!, organizationId, transaction);
   return { ...result[0].dataValues, topics: assessments };
@@ -792,14 +960,21 @@ export const createNewAnswersEUQuery = async (
   transaction: Transaction,
   is_mock_data: boolean,
   isDemo: boolean,
+  frameworkId: number = EU_AI_ACT_FRAMEWORK_ID,
 ) => {
   let demoAnswers: string[] = [];
   if (enable_ai_data_insertion) demoAnswers = getDemoAnswers();
-  const questions = await sequelize.query(`SELECT * FROM questions_struct_eu ORDER BY id;`, {
-    mapToModel: true,
-    model: QuestionStructEUModel,
-    transaction,
-  });
+  // The questions of this framework: EU AI Act (organization) answers the ones
+  // moved to it, once per organization, and a use case's EU AI Act the rest.
+  const questions = await sequelize.query(
+    `SELECT * FROM questions_struct_eu q WHERE ${structItemInFrameworkSql("q", ":frameworkId")} ORDER BY q.id;`,
+    {
+      replacements: { frameworkId },
+      mapToModel: true,
+      model: QuestionStructEUModel,
+      transaction,
+    },
+  );
   let createdAnswers: (AnswerEUModel | QuestionStructEUModel)[] = [];
   let ctr = 0;
   for (let question of questions) {
@@ -843,6 +1018,7 @@ export const createNewControlsQuery = async (
   organizationId: number,
   transaction: Transaction,
   is_mock_data: boolean,
+  frameworkId: number = EU_AI_ACT_FRAMEWORK_ID,
 ) => {
   let demoControls: any[] = [];
   if (enable_ai_data_insertion) demoControls = getDemoControls();
@@ -852,11 +1028,17 @@ export const createNewControlsQuery = async (
   // position. Without an explicit order Postgres returns heap order, which
   // diverges from id order as soon as a struct row has been rewritten by a
   // later migration — every demo text then lands on the wrong control.
-  const controlsStruct = await sequelize.query(`SELECT * FROM controls_struct_eu ORDER BY id;`, {
-    mapToModel: true,
-    model: ControlStructEUModel,
-    transaction,
-  });
+  // The controls of this framework: EU AI Act (organization) assesses the ones
+  // moved to it, once per organization, and a use case's EU AI Act the rest.
+  const controlsStruct = await sequelize.query(
+    `SELECT * FROM controls_struct_eu cs WHERE ${structItemInFrameworkSql("cs", ":frameworkId")} ORDER BY cs.id;`,
+    {
+      replacements: { frameworkId },
+      mapToModel: true,
+      model: ControlStructEUModel,
+      transaction,
+    },
+  );
   if (enable_ai_data_insertion && demoControls.length !== controlsStruct.length) {
     logStructured(
       "error",
@@ -870,9 +1052,9 @@ export const createNewControlsQuery = async (
   const projectFramework = (await sequelize.query(
     `SELECT pf.id, p.owner, p.is_demo FROM projects_frameworks pf
        JOIN projects p ON p.id = pf.project_id
-      WHERE pf.organization_id = :organizationId AND pf.project_id = :project_id AND pf.framework_id = 1`,
+      WHERE pf.organization_id = :organizationId AND pf.project_id = :project_id AND pf.framework_id = :frameworkId`,
     {
-      replacements: { organizationId, project_id: projectId },
+      replacements: { organizationId, project_id: projectId, frameworkId },
       transaction,
     },
   )) as [{ id: number; owner: number | null; is_demo: boolean }[], number];
@@ -1015,6 +1197,7 @@ export const createEUFrameworkQuery = async (
   organizationId: number,
   transaction: Transaction,
   is_mock_data: boolean = false,
+  frameworkId: number = EU_AI_ACT_FRAMEWORK_ID,
 ) => {
   const assessments: object = await createNewAssessmentEUQuery(
     { project_id: projectId },
@@ -1022,6 +1205,7 @@ export const createEUFrameworkQuery = async (
     organizationId,
     transaction,
     is_mock_data,
+    frameworkId,
   );
   const controls = await createNewControlsQuery(
     projectId,
@@ -1029,6 +1213,7 @@ export const createEUFrameworkQuery = async (
     organizationId,
     transaction,
     is_mock_data,
+    frameworkId,
   );
   return {
     assessment_tracker: assessments,
@@ -1069,7 +1254,8 @@ export const updateControlEUByIdQuery = async (
   )) as Array<Record<string, unknown>>;
   const before = beforeRows[0] ?? null;
 
-  const query = `UPDATE controls_eu SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
+  // A save is the review of work copied from a use case on upgrade.
+  const query = `UPDATE controls_eu SET ${setClause}, copied_from_project_id = NULL WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
 
   updateControl.organizationId = organizationId;
   updateControl.id = id;
@@ -1140,10 +1326,12 @@ export const updateSubcontrolEUByIdQuery = async (
   let subcontrolResult: any;
 
   if (setClause.length === 0) {
-    // No fields to update, but we still need to handle file operations
-    // Fetch the current subcontrol
+    // No fields to update, but we still need to handle file operations.
+    // Fetch the current subcontrol; the save still reviews work copied from a
+    // use case on upgrade.
     const existing = await sequelize.query(
-      `SELECT * FROM subcontrols_eu WHERE organization_id = :organizationId AND id = :id`,
+      `UPDATE subcontrols_eu SET copied_from_project_id = NULL
+        WHERE organization_id = :organizationId AND id = :id RETURNING *`,
       {
         replacements: { organizationId, id },
         mapToModel: true,
@@ -1164,7 +1352,8 @@ export const updateSubcontrolEUByIdQuery = async (
     )) as Array<Record<string, unknown>>;
     const before = beforeRows[0] ?? null;
 
-    const query = `UPDATE subcontrols_eu SET ${setClause} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
+    // A save is the review of work copied from a use case on upgrade.
+    const query = `UPDATE subcontrols_eu SET ${setClause}, copied_from_project_id = NULL WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
 
     updateSubControl.organizationId = organizationId;
     updateSubControl.id = id;
@@ -1320,10 +1509,15 @@ export const addFileToAnswerEU = async (
   organizationId: number,
   transaction: Transaction,
 ): Promise<QuestionStructEUModel & AnswerEUModel & { evidence_files: any[] }> => {
+  // The question's own framework: EU AI Act on a use case, EU AI Act
+  // (organization) on the organizational project for a moved question.
   const projectFrameworkId = (await sequelize.query(
-    `SELECT id FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = 1`,
+    `SELECT pf.id FROM projects_frameworks pf
+       JOIN questions_struct_eu q ON q.id = :question_id
+      WHERE pf.organization_id = :organizationId AND pf.project_id = :project_id
+        AND ${structItemInFrameworkSql("q", "pf.framework_id")}`,
     {
-      replacements: { organizationId, project_id: projectId },
+      replacements: { organizationId, project_id: projectId, question_id: questionId },
       transaction,
     },
   )) as [{ id: number }[], number];
@@ -1437,9 +1631,11 @@ export const updateQuestionEUByIdQuery = async (
   let answer: any;
 
   if (setClause.length === 0) {
-    // No fields to update, just fetch the existing answer
+    // No fields to update, just fetch the existing answer; the save still
+    // reviews work copied from a use case on upgrade.
     const result = await sequelize.query(
-      `SELECT * FROM answers_eu WHERE organization_id = :organizationId AND id = :id`,
+      `UPDATE answers_eu SET copied_from_project_id = NULL
+        WHERE organization_id = :organizationId AND id = :id RETURNING *`,
       {
         replacements: { organizationId, id },
         mapToModel: true,
@@ -1450,7 +1646,8 @@ export const updateQuestionEUByIdQuery = async (
     answer = Array.isArray(result[0]) && result[0].length > 0 ? result[0][0] : (result[0] as any);
     if (!answer) return null;
   } else {
-    const query = `UPDATE answers_eu SET ${setClause.join(", ")} WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
+    // A save is the review of work copied from a use case on upgrade.
+    const query = `UPDATE answers_eu SET ${setClause.join(", ")}, copied_from_project_id = NULL WHERE organization_id = :organizationId AND id = :id RETURNING *;`;
 
     updateQuestion.organizationId = organizationId;
     updateQuestion.id = id;
@@ -1698,11 +1895,12 @@ export const deleteProjectFrameworkEUQuery = async (
   projectId: number,
   organizationId: number,
   transaction: Transaction,
+  frameworkId: number = EU_AI_ACT_FRAMEWORK_ID,
 ) => {
   const projectFrameworkId = (await sequelize.query(
-    `SELECT id FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = 1`,
+    `SELECT id FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = :frameworkId`,
     {
-      replacements: { organizationId, project_id: projectId },
+      replacements: { organizationId, project_id: projectId, frameworkId },
       transaction,
     },
   )) as [{ id: number }[], number];
@@ -1717,9 +1915,9 @@ export const deleteProjectFrameworkEUQuery = async (
     transaction,
   );
   const result = await sequelize.query(
-    `DELETE FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = 1 RETURNING *`,
+    `DELETE FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = :frameworkId RETURNING *`,
     {
-      replacements: { organizationId, project_id: projectId },
+      replacements: { organizationId, project_id: projectId, frameworkId },
       mapToModel: true,
       model: ProjectFrameworksModel,
       type: QueryTypes.DELETE,
@@ -1728,6 +1926,39 @@ export const deleteProjectFrameworkEUQuery = async (
   );
   return result.length > 0 && assessmentDeleted && complianceDeleted;
 };
+
+/**
+ * EU AI Act (organization), framework 29: the EU AI Act controls and
+ * assessment questions moved to it, in the EU AI Act's own tables, built and
+ * removed by the same functions as a use case's EU AI Act.
+ */
+export const createEUAIActOrganizationFrameworkQuery = (
+  projectId: number,
+  enable_ai_data_insertion: boolean,
+  organizationId: number,
+  transaction: Transaction,
+  is_mock_data: boolean = false,
+) =>
+  createEUFrameworkQuery(
+    projectId,
+    enable_ai_data_insertion,
+    organizationId,
+    transaction,
+    is_mock_data,
+    EU_AI_ACT_ORGANIZATION_FRAMEWORK_ID,
+  );
+
+export const deleteProjectFrameworkEUAIActOrganizationQuery = (
+  projectId: number,
+  organizationId: number,
+  transaction: Transaction,
+) =>
+  deleteProjectFrameworkEUQuery(
+    projectId,
+    organizationId,
+    transaction,
+    EU_AI_ACT_ORGANIZATION_FRAMEWORK_ID,
+  );
 
 /**
  * Whether every id is a subcontrol of `controlId` in this organization. A

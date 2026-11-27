@@ -175,6 +175,9 @@ const PERMISSION_HOOK_KEYS: UiPermissionKey[] = [
   "aiApp.admin",
 ];
 
+/** Keys added after the move, gated with useCan from the start. */
+const USE_CAN_KEYS: UiPermissionKey[] = ["readiness.admin"];
+
 describe("BUILTIN_UI_PERMISSIONS", () => {
   it.each(UI_KEYS)("%s is in the server catalog with the same built-in roles", (key) => {
     const meta = (ROLE_PERMISSIONS as Record<string, { legacyRoles: readonly string[] }>)[key];
@@ -205,6 +208,7 @@ describe("BUILTIN_UI_PERMISSIONS", () => {
       ...LEGACY_ALLOWED_ROLES.map((e) => e.key),
       ...SCREEN_GATES.map((e) => e.key),
       ...PERMISSION_HOOK_KEYS,
+      ...USE_CAN_KEYS,
     ]);
     expect(UI_KEYS.filter((key) => !used.has(key))).toEqual([]);
   });

@@ -34,6 +34,7 @@ let mockUseCaseDefaults: { default_geography: number | null; default_framework_i
   default_framework_ids: [],
 };
 const mockAddFramework = jest.fn<any>();
+const mockBuildFramework = jest.fn<any>();
 jest.mock("../../utils/useCaseOrgSettings.utils", () => ({
   getUseCaseOrgSettings: async (organizationId: number) => ({
     organization_id: organizationId,
@@ -42,8 +43,8 @@ jest.mock("../../utils/useCaseOrgSettings.utils", () => ({
 }));
 jest.mock("../../utils/framework.utils", () => ({
   addFrameworkToProjectQuery: (...args: unknown[]) => mockAddFramework(...args),
+  buildProjectFrameworkQuery: (...args: unknown[]) => mockBuildFramework(...args),
 }));
-jest.mock("../../utils/eu.utils", () => ({ createEUFrameworkQuery: jest.fn() }));
 jest.mock("../../utils/modelInventory.utils", () => ({ createNewModelInventoryQuery: jest.fn() }));
 jest.mock("../../utils/useCaseChangeHistory.utils", () => ({
   recordMultipleFieldChanges: jest.fn<any>().mockResolvedValue(undefined),
@@ -99,7 +100,6 @@ const intake = require("../../utils/intakeForm.utils");
 const runs = require("../../utils/euAiActClassification.utils");
 const tierResponses = require("../../utils/intakeTierSuggestion.utils");
 const projects = require("../../utils/project.utils");
-const euFramework = require("../../utils/eu.utils");
 const history = require("../../utils/useCaseChangeHistory.utils");
 const fileLogger = require("../../utils/logger/fileLogger").default;
 /* eslint-enable @typescript-eslint/no-require-imports */
@@ -433,12 +433,7 @@ describe("approval with the EU AI Act step", () => {
     const r = await approve({ confirmedEntityData: { project_title: "P" } });
     expect(r.status).toHaveBeenCalledWith(200);
     expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([1]);
-    expect(euFramework.createEUFrameworkQuery).toHaveBeenCalledWith(
-      50,
-      false,
-      5,
-      expect.anything(),
-    );
+    expect(mockBuildFramework).toHaveBeenCalledWith(1, 50, false, 5, expect.anything(), 7);
   });
 
   it("attaches no framework when there is no run, even if the use case gets a level", async () => {
@@ -451,7 +446,7 @@ describe("approval with the EU AI Act step", () => {
       "Limited risk",
     );
     expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([]);
-    expect(euFramework.createEUFrameworkQuery).not.toHaveBeenCalled();
+    expect(mockBuildFramework).not.toHaveBeenCalled();
     expect(runs.insertClassificationRunQuery).not.toHaveBeenCalled();
   });
 
@@ -460,7 +455,7 @@ describe("approval with the EU AI Act step", () => {
     const r = await approve({ confirmedEntityData: { project_title: "P" } });
     expect(r.status).toHaveBeenCalledWith(200);
     expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([]);
-    expect(euFramework.createEUFrameworkQuery).not.toHaveBeenCalled();
+    expect(mockBuildFramework).not.toHaveBeenCalled();
     expect(mockAddFramework).not.toHaveBeenCalled();
   });
 
@@ -573,7 +568,7 @@ describe("approval with the EU AI Act step", () => {
       high_risk_roles: ["Provider"],
     });
     expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([]);
-    expect(euFramework.createEUFrameworkQuery).not.toHaveBeenCalled();
+    expect(mockBuildFramework).not.toHaveBeenCalled();
     expect(runs.insertClassificationRunQuery).not.toHaveBeenCalled();
     expect(history.recordMultipleFieldChanges).not.toHaveBeenCalled();
   });
@@ -688,7 +683,7 @@ describe("approval with the EU AI Act step", () => {
     expect(r.status).toHaveBeenCalledWith(200);
     // No scorable run: the reviewer's level stays but no framework is attached.
     expect(projects.createNewProjectQuery.mock.calls[0][2]).toEqual([]);
-    expect(euFramework.createEUFrameworkQuery).not.toHaveBeenCalled();
+    expect(mockBuildFramework).not.toHaveBeenCalled();
     expect(projects.createNewProjectQuery.mock.calls[0][0]).toMatchObject({
       ai_risk_classification: "High risk",
       high_risk_roles: ["Provider"],

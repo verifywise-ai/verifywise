@@ -1,3 +1,6 @@
+/** Who is asking, for the visibility checks below. */
+export type ProjectViewer = { userId: number; role: string };
+
 /** Roles that see every use case in the org, whatever the owner or members. */
 export const seesAllProjects = (role: string | undefined): boolean =>
   role === "Admin" || role === "SuperAdmin";
@@ -19,7 +22,7 @@ export const seesAllProjects = (role: string | undefined): boolean =>
  */
 export function projectVisibilitySql(
   alias: string,
-  viewer: { userId: number; role: string },
+  viewer: ProjectViewer,
 ): { sql: string; replacements: Record<string, unknown> } {
   if (seesAllProjects(viewer.role)) {
     return { sql: "", replacements: {} };

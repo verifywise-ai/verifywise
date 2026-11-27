@@ -78,3 +78,13 @@ export async function getReadinessHistory(
   const response = await apiServices.get<any>(`${BASE_URL}/history${query}`);
   return response.data;
 }
+
+/**
+ * Delete one readiness calculation: the framework score, its control scores
+ * and its history points. Allowed for the person who ran it, and for an
+ * admin on someone else's public calculation.
+ */
+export async function deleteReadinessCalculation(id: number) {
+  const response = await apiServices.delete<any>(`/v1/readiness/scores/${id}`);
+  return response.data;
+}

@@ -9,7 +9,7 @@ Governance-grade model risk management for regulated banking standards: **SR 26-
 management** tab inside Model inventory — one register for AI and traditional models, not a
 separate silo.
 
-For a principle-by-principle E-23 readiness checklist at program level, an organization adds bundled framework 26 (OSFI E-23 Model Risk Management, `Servers/structures/OSFI-E-23/`) on the Frameworks page. It is a self-assessed checklist and is not linked to MRM records. See [Compliance frameworks](./compliance-frameworks.md#bundled-frameworks-ids-528).
+For a principle-by-principle E-23 readiness checklist at program level, an organization adds bundled framework 26 (OSFI E-23 Model Risk Management, `Servers/structures/OSFI-E-23/`) on the Frameworks page. It is a self-assessed checklist and is not linked to MRM records. See [Compliance frameworks](./compliance-frameworks.md#bundled-frameworks-ids-528-and-30).
 
 The **OSFI E-23 completeness report** (system report template `osfi-e23-completeness` on the Reporting page) is where the two meet: it sets that checklist against the MRM records with 13 fixed contradiction rules, reports fleet status (tiers, validation coverage, findings, monitoring) from a report-only collector that leaves out retired models, and writes an internal fix-it list as a second file. `getAttestationSummary` and the attestation DOCX are unchanged. See [Reporting: OSFI E-23 completeness report](./reporting.md#osfi-e23-completeness-report).
 

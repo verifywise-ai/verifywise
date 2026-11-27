@@ -325,11 +325,11 @@ function ContactInfoPreview() {
     >
       <Typography
         sx={{
-          fontSize: "11px",
+          fontSize: "13px",
           fontWeight: 600,
           textTransform: "uppercase",
           letterSpacing: "0.5px",
-          color: theme.palette.text.accent,
+          color: theme.palette.text.secondary,
           mb: "10px",
         }}
       >
@@ -362,7 +362,7 @@ function ContactInfoPreview() {
               px: "10px",
             }}
           >
-            <Typography sx={{ fontSize: "12px", color: theme.palette.text.accent }}>
+            <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
               {label}
             </Typography>
           </Box>

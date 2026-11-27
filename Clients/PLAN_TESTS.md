@@ -8,7 +8,7 @@
 
 ## 2. Purpose
 
-This document defines the automated testing approach for the frontend application using Jest, React Testing Library, User Event (and related tooling) for unit and integration tests and Playwright to E2E tests. It describes what will be tested, how tests will be organized, quality gates, and how tests run in CI.
+This document defines the automated testing approach for the frontend application using Vitest, Testing Library, and MSW for unit and integration tests, and Playwright for end-to-end tests. It describes what will be tested, how tests will be organized, quality gates, and how tests run in CI. Command names match the `scripts` section of `Clients/package.json`.
 
 ## 3. Scope
 
@@ -56,16 +56,16 @@ This document defines the automated testing approach for the frontend applicatio
 
 ## 5. Tooling
 
-- **Test Runner:** Jest
-- **UI Testing:** React Testing Library + @testing-library/user-event
-- **API Mocking:** MSW (preferred) or jest mocks
-- **Coverage:** Jest coverage reports
-- **Optional:** jest-axe for accessibility checks
+- **Test Runner:** Vitest
+- **UI Testing:** Testing Library (`@testing-library/react`, `@testing-library/user-event`)
+- **API Mocking:** MSW
+- **End-to-end:** Playwright (`@playwright/test`)
+- **Coverage:** Vitest coverage (`vitest run --coverage`)
 
 ### 6. Network Mocking
 
 - Use **MSW** to mock API at the network level for component/integration tests.
-- Unit tests may mock modules directly using `jest.mock()` when appropriate.
+- Unit tests may mock modules directly using `vi.mock()` when appropriate.
 
 ### 7. Naming Conventions
 
@@ -80,18 +80,19 @@ This document defines the automated testing approach for the frontend applicatio
 
 ## 9. CI/CD Execution
 
-- TODO all implementations bellow after tests be runnning;
-- Tests run on:
-  - Pull requests (required)
-  - Main branch merges
-- Commands:
-  - `test` (fast feedback)
-  - `test:ci` (coverage + reporting)
+- Tests run on pull requests. Frontend unit and component tests use `npx vitest run` (see `.github/workflows/frontend-checks.yml`). End-to-end tests use Playwright (see `.github/workflows/e2e-tests.yml`).
+- Commands (from `Clients/package.json`):
+  - `npm run test` — `vitest watch`. Watch mode; the process does not exit.
+  - `npx vitest run` — one-shot run. Use this when the process must exit (local checks and CI).
+  - `npm run test:ci` and `npm run test:coverage` — `vitest run --coverage`
+  - `npm run test:e2e` — `playwright test`
+  - `npm run test:e2e:headed` — `playwright test --headed`
+  - `npm run test:e2e:debug` — `playwright test --debug`
 - Artifacts:
   - Coverage summary
 
 ## 10. Deliverables
 
-- `TEST_PLAN.md` (this document)
+- `PLAN_TESTS.md` (this document)
 - Coverage report in CI
 - Test results summary in PR checks

@@ -116,7 +116,7 @@ try {
   // Warn when the AI Gateway is in use but the shared key is missing (rule in
   // aiGatewayKeyCheck). Runs in the background; it never blocks startup.
   void warnIfGatewayKeyMissing(logger);
-  // Bring every framework's item text (the 24 bundled and the 4 built-ins) and
+  // Bring every framework's item text (the 25 bundled and the 4 built-ins) and
   // description in step with Servers/structures,
   // so a wording fix needs no migration (services/frameworkTextSync). Runs in
   // the background; it logs and never blocks or stops startup.

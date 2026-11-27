@@ -21,6 +21,7 @@ import { sequelize } from "../database/db";
 import { aiUsageEvent } from "../utils/shadowAiUsage.utils";
 import logger from "../utils/logger/fileLogger";
 import { frontendBaseUrl } from "../utils/frontendUrl.utils";
+import { ruleActionTypes } from "../utils/shadowAiRuleActions.utils";
 
 const TRIGGER_LABELS: Record<ShadowAiTriggerType, string> = {
   new_tool_detected: "New AI tool detected",
@@ -87,7 +88,7 @@ async function sendRuleAlert(
       risk_score: context.riskScore,
     },
     actions_taken: {
-      types: rule.actions?.map((a) => a.type) || [],
+      types: ruleActionTypes(rule.actions),
       fired_at: firedAt,
     },
   });

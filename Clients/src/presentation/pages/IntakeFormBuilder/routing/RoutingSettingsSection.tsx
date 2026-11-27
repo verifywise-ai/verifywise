@@ -180,7 +180,7 @@ const RoutingSettingsSection = ({
           >
             Assign reviewers by risk score
           </Typography>
-          <Typography sx={{ fontSize: "11px", color: theme.palette.text.accent }}>
+          <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary }}>
             Send submissions to expert or regular reviewers based on their risk score.
           </Typography>
         </Box>
@@ -189,7 +189,7 @@ const RoutingSettingsSection = ({
       {!canEdit && (
         <Typography
           data-testid="routing-admin-only"
-          sx={{ fontSize: "11px", color: theme.palette.text.accent }}
+          sx={{ fontSize: "13px", color: theme.palette.text.secondary }}
         >
           Only an Admin can change reviewer assignment.
         </Typography>
@@ -243,7 +243,7 @@ const RoutingSettingsSection = ({
 
           <Typography
             data-testid="routing-helper"
-            sx={{ fontSize: "11px", color: theme.palette.text.accent }}
+            sx={{ fontSize: "13px", color: theme.palette.text.secondary }}
           >
             <span>Scores of</span> {current.threshold}{" "}
             <span>or more, prohibited practices and scores less than</span>{" "}

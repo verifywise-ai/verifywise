@@ -44,17 +44,17 @@ export function EuAiActStepCard() {
             Submitters answer these questions first. The result is shown only to reviewers.
           </Typography>
           {showLoading && (
-            <Typography sx={{ fontSize: "12px", color: theme.palette.text.accent, mt: "4px" }}>
+            <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary, mt: "4px" }}>
               Loading questions...
             </Typography>
           )}
           {showError && (
-            <Typography sx={{ fontSize: "12px", color: theme.palette.text.accent, mt: "4px" }}>
+            <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary, mt: "4px" }}>
               The questions could not be loaded.
             </Typography>
           )}
           {data && (
-            <Typography sx={{ fontSize: "12px", color: theme.palette.text.accent, mt: "4px" }}>
+            <Typography sx={{ fontSize: "13px", color: theme.palette.text.secondary, mt: "4px" }}>
               <span>Questions</span>
               {` (${questions.length})`}
             </Typography>

@@ -42,7 +42,7 @@ import { requestCallerIsAdmin } from "../utils/organizationAdmin.utils";
 import { createNewProjectQuery } from "../utils/project.utils";
 import { setTierSuggestionResponseQuery } from "../utils/intakeTierSuggestion.utils";
 import type { ApplicantTierResponse } from "./intakeTierSuggestion.ctrl";
-import { addFrameworkToProjectQuery } from "../utils/framework.utils";
+import { addFrameworkToProjectQuery, buildProjectFrameworkQuery } from "../utils/framework.utils";
 import { getUseCaseOrgSettings } from "../utils/useCaseOrgSettings.utils";
 import {
   AI_APP_NAME_CONSTRAINT,
@@ -50,7 +50,6 @@ import {
   createAiAppQuery,
 } from "../utils/aiApp.utils";
 import { AiAppDiscoveredSource, AiAppStatus } from "../domain.layer/enums/ai-app-status.enum";
-import { createEUFrameworkQuery } from "../utils/eu.utils";
 import { EU_AI_ACT_FRAMEWORK_ID } from "../utils/validations/projectValidation.utils";
 import { IntakeFormStatus } from "../domain.layer/enums/intake-form-status.enum";
 import { IntakeSubmissionStatus } from "../domain.layer/enums/intake-submission-status.enum";
@@ -2717,11 +2716,14 @@ async function approve(
         const savepoint = await sequelize.transaction({ transaction });
         let added = false;
         try {
-          added = await addFrameworkToProjectQuery(
-            frameworkId,
-            entityId,
-            req.organizationId!,
-            savepoint,
+          added = Boolean(
+            await addFrameworkToProjectQuery(
+              frameworkId,
+              entityId,
+              req.organizationId!,
+              savepoint,
+              req.userId!,
+            ),
           );
           await savepoint.commit();
         } catch (error) {
@@ -2739,7 +2741,14 @@ async function approve(
         }
       }
       if (classification) {
-        await createEUFrameworkQuery(entityId, false, req.organizationId!, transaction);
+        await buildProjectFrameworkQuery(
+          EU_AI_ACT_FRAMEWORK_ID,
+          entityId,
+          false,
+          req.organizationId!,
+          transaction,
+          req.userId!,
+        );
         await insertClassificationRunQuery(
           {
             useCaseId: entityId,

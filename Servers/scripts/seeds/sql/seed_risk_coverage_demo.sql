@@ -55,11 +55,15 @@ VALUES (9800, 1, 9001, 1, true);
 
 -- ------------------------------------------------------- controls + subcontrols
 -- Real meta ids, looked up at runtime so the seed works on any install
--- regardless of struct id numbering: the first 6 struct subcontrols overall
--- (184 available), hanging under their distinct struct controls.
+-- regardless of struct id numbering: the first 6 struct subcontrols of controls
+-- still in the EU AI Act (not moved to EU AI Act (organization)), hanging under
+-- their distinct struct controls.
 WITH first_subs AS (
-  SELECT id AS meta_id, control_id AS struct_control
-  FROM subcontrols_struct_eu ORDER BY id LIMIT 6
+  SELECT ss.id AS meta_id, ss.control_id AS struct_control
+  FROM subcontrols_struct_eu ss
+  JOIN controls_struct_eu cs ON cs.id = ss.control_id
+  WHERE cs.moved_to_framework_id IS NULL
+  ORDER BY ss.id LIMIT 6
 ),
 parent_controls AS (
   SELECT DISTINCT struct_control FROM first_subs
@@ -71,7 +75,10 @@ FROM parent_controls;
 WITH first_subs AS (
   SELECT ss.id AS meta_id, ss.control_id AS struct_control,
          ROW_NUMBER() OVER (ORDER BY ss.id) AS rn
-  FROM subcontrols_struct_eu ss ORDER BY ss.id LIMIT 6
+  FROM subcontrols_struct_eu ss
+  JOIN controls_struct_eu cs ON cs.id = ss.control_id
+  WHERE cs.moved_to_framework_id IS NULL
+  ORDER BY ss.id LIMIT 6
 )
 INSERT INTO subcontrols_eu (id, organization_id, control_id, subcontrol_meta_id, is_demo)
 SELECT 9829 + f.rn, 1, ce.id, f.meta_id, true

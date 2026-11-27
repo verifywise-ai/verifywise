@@ -31,6 +31,8 @@ import {
 import { LifecycleStage } from "../../../../domain/enums/lifecycleStage.enum";
 import { useLifecycleTab } from "../../../../application/hooks/useLifecycleTab";
 import PendingIntakeSubmissions from "../../../components/LifecycleTabs/PendingIntakeSubmissions";
+import { showAlert } from "../../../../application/tools/alertUtils";
+import { EU_AI_ACT_ORGANIZATION_ADDED_MESSAGE } from "../../../../application/constants/frameworks";
 
 const STAGE_STORAGE_KEY = "use-cases-lifecycle-tab";
 
@@ -169,6 +171,16 @@ const Home = () => {
               searchTerm={searchTerm}
               description="Submitted through an intake form. The use case is created when a reviewer approves the request."
               exportNote="Intake requests are not included in the use case export."
+              // An org with no use cases shows the onboarding empty state
+              // instead of a list, so there is nothing to head.
+              listHeading={
+                projects.length === 0
+                  ? undefined
+                  : {
+                      title: "Use cases",
+                      description: "Existing use cases waiting for an approval decision.",
+                    }
+              }
             />
           ) : null
         }
@@ -212,6 +224,13 @@ const Home = () => {
           useStandardModal={true}
           onSubmitRef={submitFormRef}
           onClose={handleProjectFormModalClose}
+          onOrganizationFrameworkAdded={() =>
+            showAlert({
+              variant: "info",
+              body: EU_AI_ACT_ORGANIZATION_ADDED_MESSAGE,
+              isToast: true,
+            })
+          }
         />
       </StandardModal>
       <AiOrNotScreening

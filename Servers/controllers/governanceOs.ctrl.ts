@@ -31,6 +31,7 @@ import {
   validateRecommendationInput,
   validateMappingInput,
 } from "../domain.layer/validations/governanceOs.valid";
+import { structItemInEuAiActSql } from "../utils/euAiActStructItem.sql";
 
 const FILE_NAME = "governanceOs.ctrl.ts";
 
@@ -332,7 +333,7 @@ export async function simulateScenario(req: Request, res: Response): Promise<any
       1: `SELECT COUNT(*) as cnt FROM subcontrols_struct_eu sc
           JOIN controls_struct_eu c ON sc.control_id = c.id
           JOIN controlcategories_struct_eu cc ON c.control_category_id = cc.id
-          WHERE cc.framework_id = 1`,
+          WHERE cc.framework_id = 1 AND ${structItemInEuAiActSql("c")}`,
       2: `SELECT COUNT(*) as cnt FROM subclauses_struct_iso s
           JOIN clauses_struct_iso c ON s.clause_id = c.id
           WHERE c.framework_id = 2`,

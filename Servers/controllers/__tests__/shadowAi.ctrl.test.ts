@@ -935,6 +935,18 @@ describe("shadowAi.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(400);
     });
 
+    it.each([
+      ["an object of flags", { notify: true }],
+      ["a list of strings", ["notify"]],
+      ["an action without a type", [{}]],
+    ])("should return 400 without saving when actions is %s", async (_label, actions) => {
+      const req = createReq({ body: { name: "Rule 1", trigger_type: "threshold", actions } });
+      const res = createRes();
+      await createRule(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockCreateRule).not.toHaveBeenCalled();
+    });
+
     it("should return 201 on success", async () => {
       mockCreateRule.mockResolvedValue({ id: 1, name: "Rule 1" });
       const req = createReq({
@@ -942,7 +954,7 @@ describe("shadowAi.ctrl", () => {
           name: "Rule 1",
           description: "desc",
           trigger_type: "threshold",
-          actions: ["notify"],
+          actions: [{ type: "send_alert" }],
           trigger_config: { threshold: 100 },
           cooldown_minutes: 60,
           is_active: true,
@@ -958,7 +970,7 @@ describe("shadowAi.ctrl", () => {
     it("should return 500 on error", async () => {
       mockCreateRule.mockRejectedValue(new Error("DB error"));
       const req = createReq({
-        body: { name: "Rule 1", trigger_type: "threshold", actions: ["notify"] },
+        body: { name: "Rule 1", trigger_type: "threshold", actions: [{ type: "send_alert" }] },
       });
       const res = createRes();
       await createRule(req, res);
@@ -987,6 +999,14 @@ describe("shadowAi.ctrl", () => {
       const res = createRes();
       await updateRule(req, res);
       expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    it("should return 400 without saving when actions is not a list of typed actions", async () => {
+      const req = createReq({ params: { id: "1" }, body: { actions: { notify: true } } });
+      const res = createRes();
+      await updateRule(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockUpdateRule).not.toHaveBeenCalled();
     });
 
     it("should return 200 on success", async () => {

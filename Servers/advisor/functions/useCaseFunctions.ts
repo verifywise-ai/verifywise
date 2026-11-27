@@ -60,7 +60,8 @@ const getVisibleProjects = async (params: Record<string, unknown>, organizationI
   const viewer = await actingProjectViewer(params, organizationId);
   if (viewer === NO_PROJECT_VIEWER) return [];
   const projects = await getUserProjects(viewer, organizationId);
-  return projects || [];
+  // The organizational project holds the organization's frameworks; it is not a use case.
+  return (projects || []).filter((p: any) => !p.is_organizational);
 };
 
 const fetchUseCases = async (

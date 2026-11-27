@@ -771,6 +771,9 @@ async function deleteProject(
       organizationId: req.organizationId!,
     });
 
+    if (error instanceof ValidationException) {
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+    }
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

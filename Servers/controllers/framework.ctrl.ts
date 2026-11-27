@@ -167,6 +167,7 @@ export async function addFrameworkToProject(req: Request, res: Response): Promis
       projectId,
       req.organizationId!,
       transaction,
+      req.userId!,
     );
 
     if (result) {

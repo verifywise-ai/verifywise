@@ -8,6 +8,8 @@ import { Tab } from "@mui/material";
 import { Project } from "../../../../domain/types/Project";
 import { Framework } from "../../../../domain/types/Framework";
 import { getEntityById } from "../../../../application/repository/entity.repository";
+import { getComplianceProgress } from "../../../../application/repository/control_eu_act.repository";
+import { FRAMEWORK_IDS } from "../../../../application/constants/frameworks";
 import FrameworkProgressCard from "./FrameworkProgressCard";
 import AssignmentStatusCard from "./AssignmentStatusCard";
 import StatusBreakdownCard from "./StatusBreakdownCard";
@@ -409,6 +411,26 @@ const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: Dashb
               }
               annexProgress = { totalAnnexcategories: 0, doneAnnexcategories: 0 };
             }
+          } else if (Number(framework.id) === FRAMEWORK_IDS.EU_AI_ACT_ORGANIZATION) {
+            // EU AI Act (organization) keeps its controls in the EU AI Act
+            // tables, so its progress is the EU AI Act requirements progress.
+            try {
+              const complianceProgressRes = await getComplianceProgress({
+                projectFrameworkId: Number(projectFrameworkId),
+                signal: abortController.signal,
+              });
+              genericProgress = {
+                total: complianceProgressRes?.data?.allsubControls || 0,
+                done: complianceProgressRes?.data?.allDonesubControls || 0,
+              };
+            } catch (error) {
+              if (!abortController.signal.aborted) {
+                console.error(
+                  `Error fetching EU AI Act (organization) progress (${framework.id}):`,
+                  error instanceof Error ? error.message : error,
+                );
+              }
+            }
           } else {
             // Generic frameworks (SOC 2, GDPR, HIPAA, Data Governance, ...)
             // — single endpoint returns progress + assignments + status
@@ -547,8 +569,12 @@ const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: Dashb
   // dashboard that isn't one of the four built-in ids (1=EU AI Act,
   // 2=ISO 42001, 3=ISO 27001, 4=NIST AI RMF) is a generic. EU AI Act is
   // non-organizational so shouldn't appear here anyway.
+  // EU AI Act (organization) is the EU AI Act's own controls, not a generic one.
   const genericOrgFrameworks = frameworksData.filter(
-    (f) => f.frameworkId >= 5 && f.projectFrameworkId,
+    (f) =>
+      f.frameworkId >= 5 &&
+      f.frameworkId !== FRAMEWORK_IDS.EU_AI_ACT_ORGANIZATION &&
+      f.projectFrameworkId,
   );
 
   // Create tabs array: ISO 42001 → NIST AI RMF → ISO 27001 → generics
