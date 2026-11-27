@@ -262,7 +262,11 @@ describe("collectFacts — ranks every section on the vocabulary its collector e
           annexId: "A.2",
           title: "Policies",
           status: "Unknown",
-          controls: [{ controlId: "A.2.1", title: "AI policy", status: "Audited" }],
+          controls: [
+            { controlId: "A.2.1", title: "AI policy", status: "Audited" },
+            // Out of scope: neither counted nor ranked as open work.
+            { controlId: "A.2.2", title: "Excluded", status: "Not started", isApplicable: false },
+          ],
         },
       ],
     });
@@ -737,8 +741,8 @@ describe("renderFacts", () => {
     expect(out).toContain('top_showing="showing 3 of 60"');
   });
 
-  it("FACTS_SCHEMA_VERSION is 3", () => {
-    expect(FACTS_SCHEMA_VERSION).toBe(3);
+  it("FACTS_SCHEMA_VERSION is 4", () => {
+    expect(FACTS_SCHEMA_VERSION).toBe(4);
   });
 
   it("collectFacts emits frameworkRequirements aggregates", () => {
@@ -822,7 +826,7 @@ describe("facts for the OSFI E-23 sections (spec 8.10)", () => {
   const e23 = () => e23FixItReportData();
 
   it("bumps the vocabulary version for the new aggregates", () => {
-    expect(FACTS_SCHEMA_VERSION).toBe(3);
+    expect(FACTS_SCHEMA_VERSION).toBeGreaterThanOrEqual(3);
   });
 
   it("aggregates the MRM status: fleet, tiers, validation, findings, monitoring and activity", () => {

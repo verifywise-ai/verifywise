@@ -168,6 +168,23 @@ describe("createScopedDataCollector — organization scope", () => {
     ]);
   });
 
+  it("falls back to row ids when an ISO 42001 annex has no number", async () => {
+    mockAnnexes.mockResolvedValue([
+      {
+        id: 3,
+        title: "Unnumbered",
+        annexCategories: [{ id: 9, order_no: 1, title: "x", status: "Draft" }],
+      },
+    ]);
+
+    const collector = createScopedDataCollector(10, 5, "organization", [ISO]);
+    const data = await collector.collectAllData(["clausesAndAnnexes"]);
+    const [annex] = data.sections.clausesAndAnnexes!.annexes;
+
+    expect(annex.annexId).toBe("Annex 3");
+    expect(annex.controls[0].controlId).toBe("AC-9");
+  });
+
   it("collects an organization-wide section once, not once per pairing", async () => {
     const { sequelize } = require("../../../database/db");
     const collector = createScopedDataCollector(10, 5, "organization", [EU, EU_SECOND, ISO]);

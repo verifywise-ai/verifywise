@@ -1397,11 +1397,12 @@ export class ReportDataCollector {
           const annexPrefix = isIso27001
             ? `${annex.arrangement || "A"}.${annex.order_no}`
             : `A.${annexNumber}`;
+          const hasPrefix = isIso27001 ? annex.order_no != null : annexNumber != null;
           const controls = (annex.annexCategories || []).map((ac: any) => ({
             id: ac.id,
             controlId:
               ac.control_id ||
-              (ac.order_no != null ? `${annexPrefix}.${ac.order_no}` : `AC-${ac.id}`),
+              (hasPrefix && ac.order_no != null ? `${annexPrefix}.${ac.order_no}` : `AC-${ac.id}`),
             title: ac.title || "Untitled Control",
             status: ac.status || "Unknown",
             // Only ISO 42001 annex categories can be excluded.
@@ -1409,7 +1410,7 @@ export class ReportDataCollector {
           }));
           return {
             id: annex.id,
-            annexId: annex.annex_id || (annexNumber != null ? annexPrefix : `Annex ${annex.id}`),
+            annexId: annex.annex_id || (hasPrefix ? annexPrefix : `Annex ${annex.id}`),
             title: annex.title || "Untitled Annex",
             // Annex rows have no status column: summarise their controls.
             status: summarizeIsoStatus(controls),

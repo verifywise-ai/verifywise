@@ -36,8 +36,10 @@ import {
  * A prior stamped with any other version is refused by `isFactsSnapshot`, so the
  * run carries no change block at all — which is exactly what a first run
  * renders. One comparison is the honest price of a rename.
+ *
+ * 4: ISO annex categories marked not applicable are no longer counted.
  */
-export const FACTS_SCHEMA_VERSION = 3;
+export const FACTS_SCHEMA_VERSION = 4;
 
 /** Structured, storable snapshot. Persisted to report_run_analyses.audit_metadata
  *  so a later run can diff against it without a second LLM call. */
@@ -303,11 +305,14 @@ const SPECS: Record<string, SectionSpec> = {
         })),
       ),
       ...(s.annexes ?? []).flatMap((a: any) =>
-        (a.controls ?? []).map((ac: any) => ({
-          _id: text(ac.controlId),
-          _title: text(ac.title),
-          status: ac.status,
-        })),
+        // Out-of-scope categories are not open work (the table says "Not applicable").
+        (a.controls ?? [])
+          .filter((ac: any) => ac.isApplicable !== false)
+          .map((ac: any) => ({
+            _id: text(ac.controlId),
+            _title: text(ac.title),
+            status: ac.status,
+          })),
       ),
     ],
     counts: ["status"],

@@ -13,6 +13,12 @@ describe("summarizeIsoStatus", () => {
     );
   });
 
+  it("counts a row with no status (Unknown) as not started", () => {
+    expect(summarizeIsoStatus([{ status: "Unknown" }, { status: "Not started" }])).toBe(
+      "Not started (0/2)",
+    );
+  });
+
   it("is In progress with the done count otherwise", () => {
     expect(
       summarizeIsoStatus([

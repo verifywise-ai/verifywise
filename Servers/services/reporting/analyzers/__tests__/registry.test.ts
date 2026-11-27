@@ -33,7 +33,7 @@ describe("analyzer registry", () => {
     // Stamped into report_run_analyses.audit_metadata: stored analyses must
     // stay traceable to the prompts that produced them, so this is pinned
     // exactly and bumped deliberately alongside a prompt or schema change.
-    expect(ANALYZER_VERSION).toBe("report-analyzer-v9");
+    expect(ANALYZER_VERSION).toBe("report-analyzer-v10");
   });
 
   it("every analyzer builds a non-empty system and user prompt when its own sections/summaries are present", () => {
@@ -456,6 +456,25 @@ describe("analyzer registry", () => {
     expect(out.topics[0]._subtopicsTruncated).toBe("showing 5 of 10");
     expect(out.topics[0].subtopics[0].questions).toHaveLength(5);
     expect(out.topics[0].subtopics[0]._questionsTruncated).toBe("showing 5 of 10");
+  });
+
+  it("leaves out-of-scope ISO annex categories out of the prompt", () => {
+    const controls = [
+      ...Array.from({ length: 25 }, (_, i) => ({
+        controlId: `A.5.${i + 1}`,
+        status: "Not started",
+        isApplicable: false,
+      })),
+      { controlId: "A.5.99", status: "Draft" },
+    ];
+    const out = JSON.parse(
+      prepareSectionData("clausesAndAnnexes", {
+        clauses: [],
+        annexes: [{ annexId: "A.5", status: "In progress (0/1)", controls }],
+      }),
+    );
+
+    expect(out.annexes[0].controls.map((c: any) => c.controlId)).toEqual(["A.5.99"]);
   });
 
   it("Fix 3/5 — bounds nested clausesAndAnnexes subClauses/controls and stamps truncation counts", () => {
