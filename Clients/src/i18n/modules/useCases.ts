@@ -705,6 +705,9 @@ export const de: Record<string, string> = {
   "EU AI Act completion status": "Fertigstellungsstatus EU-KI-Verordnung",
   "EU AI Act (organization) completion status":
     "Fertigstellungsstatus EU-KI-Verordnung (Organisation)",
+  "Applies when the EU AI Act is added. This tab stays because it holds saved work.":
+    "Gilt, wenn die EU-KI-Verordnung hinzugefügt ist. Dieser Tab bleibt, weil er gespeicherte Arbeit enthält.",
+  "Add EU AI Act": "EU-KI-Verordnung hinzufügen",
   "ISO 42001 completion status": "Fertigstellungsstatus ISO 42001",
   "Framework not found or could not be removed from the use case":
     "Rahmenwerk nicht gefunden oder konnte nicht aus dem Anwendungsfall entfernt werden",
@@ -1505,6 +1508,9 @@ export const fr: Record<string, string> = {
   "EU AI Act completion status": "Statut d'achèvement du Règlement IA de l'UE",
   "EU AI Act (organization) completion status":
     "Statut d'achèvement du Règlement IA de l'UE (organisation)",
+  "Applies when the EU AI Act is added. This tab stays because it holds saved work.":
+    "S'applique lorsque le Règlement IA de l'UE est ajouté. Cet onglet reste affiché car il contient du travail enregistré.",
+  "Add EU AI Act": "Ajouter le Règlement IA de l'UE",
   "ISO 42001 completion status": "Statut d'achèvement ISO 42001",
   "Framework not found or could not be removed from the use case":
     "Référentiel introuvable ou impossible à retirer du cas d'usage",
@@ -2300,6 +2306,9 @@ export const es: Record<string, string> = {
   "EU AI Act completion status": "Estado de finalización del EU AI Act",
   "EU AI Act (organization) completion status":
     "Estado de finalización del EU AI Act (organización)",
+  "Applies when the EU AI Act is added. This tab stays because it holds saved work.":
+    "Se aplica cuando se añade el EU AI Act. Esta pestaña se mantiene porque contiene trabajo guardado.",
+  "Add EU AI Act": "Añadir EU AI Act",
   "ISO 42001 completion status": "Estado de finalización de ISO 42001",
   "Framework not found or could not be removed from the use case":
     "Marco no encontrado o no se pudo quitar del caso de uso",

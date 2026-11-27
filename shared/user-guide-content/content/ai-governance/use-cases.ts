@@ -168,7 +168,7 @@ export const useCasesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'For AI systems that require a CE mark under the EU AI Act. This tab is available on every use case and walks through the conformity assessment steps.',
+      text: 'For AI systems that require a CE mark under the EU AI Act. This tab appears on use cases that have the EU AI Act and walks through the conformity assessment steps. On a use case without the EU AI Act it is hidden, unless it already holds saved work: then it stays, with a note that it applies when the EU AI Act is added. The FRIA tab follows the same rule.',
     },
     {
       type: 'heading',

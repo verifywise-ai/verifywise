@@ -15,6 +15,7 @@ import {
   deleteProjectByIdV1,
   getRisksLinkedOnlyToProject,
   getUseCaseApprovalWorkflow,
+  getUseCaseEuAiActWork,
   resubmitUseCaseApproval,
   updateProjectById,
 } from "../../controllers/project.ctrl";
@@ -75,6 +76,18 @@ router.get(
   validateProjectIdParam,
   requireProjectAccess("id", "params"),
   getUseCaseApprovalWorkflow,
+);
+
+// Whether the use case's FRIA and CE marking hold work, so the use case page
+// keeps those tabs on a use case without the EU AI Act when they do. Read
+// only: the legacy FRIA and CE marking reads create a blank record. Anyone who
+// may read the use case may read it.
+router.get(
+  "/:id/eu-ai-act-work",
+  authenticateJWT,
+  validateProjectIdParam,
+  requireProjectAccess("id", "params"),
+  getUseCaseEuAiActWork,
 );
 
 // Send a rejected use case for approval again under its attached workflow.

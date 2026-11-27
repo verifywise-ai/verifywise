@@ -91,6 +91,15 @@ const ProjectFrameworks = ({
     );
   }, [allVisible, tracker, dispatch]);
 
+  // ?addFramework=1 (the "Add EU AI Act" button on the FRIA and CE marking
+  // note) opens the add framework dialog once, for roles that may use it.
+  useEffect(() => {
+    if (searchParams.get("addFramework") !== "1") return;
+    if (!isManagingFrameworksDisabled) setIsModalOpen(true);
+    searchParams.delete("addFramework");
+    setSearchParams(searchParams, { replace: true });
+  }, [searchParams, setSearchParams, isManagingFrameworksDisabled]);
+
   const associatedFrameworkIds = project.framework?.map((f) => f.framework_id) || [];
 
   // Organization-imported frameworks attached to this use case (#5254).

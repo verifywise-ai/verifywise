@@ -583,6 +583,31 @@ Automations can use these template variables:
 5. **Activity** - Change history audit trail
 6. **Post-Market Monitoring** - Ongoing monitoring config
 
+#### FRIA and CE marking tabs
+
+Both belong to the EU AI Act, so `V1.0ProjectView/index.tsx` shows them only on a use case that has
+the EU AI Act (framework id 1). EU AI Act (organization) (id 29) does not count, so the
+organizational use case does not get them: CE marking is for products, and a FRIA is done per
+deployed system.
+
+Without the EU AI Act, a tab stays only while it holds saved work, so nothing already entered is
+hidden. Opening either tab creates a blank record (`GET /api/fria/:projectId` creates the FRIA and its
+10 rights rows; `GET /api/ce-marking/:projectId` creates the record, its conformity steps and a
+`create` audit row), so the page cannot ask those routes. It reads
+`GET /api/v1/projects/:id/eu-ai-act-work` instead (read access, `requireProjectAccess`), which
+returns `{ fria, ce_marking }` from `getEuAiActWorkQuery` (`utils/project.utils.ts`) and never
+creates either record. Work means:
+
+- **FRIA:** edited (`updated_by` set or `updated_at` after `created_at`), not a draft, a version
+  above 1, or any risk item, linked model, snapshot or evidence link.
+- **CE marking:** an audit entry other than `create`, or any linked policy, evidence or incident.
+
+A kept tab opens with `EuAiActOnlyNote` ("Applies when the EU AI Act is added"). Its **Add EU AI
+Act** button, shown with `framework.edit`, goes to `?tab=frameworks&addFramework=1`, and
+`ProjectFrameworks` opens the add framework dialog once for that flag. While the check runs, a link
+to either tab keeps it on a skeleton. Once the check is done, a link to a hidden tab lands on
+Overview, as a RACI link does on the organizational use case. If the check fails, both tabs show.
+
 #### Frameworks/regulations sub-tabs
 
 `ProjectFrameworks` renders one framework at a time (selected with the framework toggle) and splits it into sub-tabs:

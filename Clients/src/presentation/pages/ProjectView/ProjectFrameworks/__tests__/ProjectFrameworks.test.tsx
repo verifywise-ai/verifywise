@@ -11,6 +11,8 @@ const FRAMEWORKS = [
 const readinessProps = vi.fn();
 const genericFrameworkProps = vi.fn();
 const buttonToggleProps = vi.fn();
+const addFrameworkProps = vi.fn();
+const authRole = vi.hoisted(() => ({ name: "Admin" }));
 
 vi.mock("../../../../../application/hooks/useFrameworks", () => ({
   default: () => ({
@@ -27,7 +29,7 @@ vi.mock("../../../../../application/hooks/useUsers", () => ({
 }));
 
 vi.mock("../../../../../application/hooks/useAuth", () => ({
-  useAuth: () => ({ userRoleName: "Admin" }),
+  useAuth: () => ({ userRoleName: authRole.name }),
 }));
 
 vi.mock("../../../../../application/hooks/useMultipleOnScreen", () => ({
@@ -61,7 +63,10 @@ vi.mock("../OrganizationObligationsStatus", () => ({
 }));
 
 vi.mock("../../AddNewFramework", () => ({
-  default: () => null,
+  default: (props: any) => {
+    addFrameworkProps(props);
+    return null;
+  },
 }));
 
 vi.mock("../../../../components/FrameworkFilter/TabFilterBar", () => ({
@@ -190,5 +195,36 @@ describe("ProjectFrameworks imported frameworks", () => {
     expect(genericFrameworkProps).toHaveBeenLastCalledWith(
       expect.objectContaining({ source: "imported", linkId: 40 }),
     );
+  });
+});
+
+describe("ProjectFrameworks ?addFramework=1", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authRole.name = "Admin";
+  });
+
+  const lastOpen = () => addFrameworkProps.mock.lastCall?.[0].open;
+
+  it("opens the add framework dialog for a role that manages frameworks", () => {
+    renderWithProviders(<ProjectFrameworks project={project} />, {
+      route: "/project-view?projectId=7&tab=frameworks&addFramework=1",
+    });
+    expect(lastOpen()).toBe(true);
+  });
+
+  it("leaves it closed without the flag", () => {
+    renderWithProviders(<ProjectFrameworks project={project} />, {
+      route: "/project-view?projectId=7&tab=frameworks",
+    });
+    expect(lastOpen()).toBe(false);
+  });
+
+  it("leaves it closed for a role that cannot manage frameworks", () => {
+    authRole.name = "Auditor";
+    renderWithProviders(<ProjectFrameworks project={project} />, {
+      route: "/project-view?projectId=7&tab=frameworks&addFramework=1",
+    });
+    expect(lastOpen()).toBe(false);
   });
 });

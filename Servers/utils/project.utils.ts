@@ -1108,6 +1108,62 @@ export const getUseCaseApprovalWorkflowQuery = async (
 };
 
 /**
+ * Whether the use case's FRIA and CE marking hold any work. Opening either
+ * tab creates a blank record (FRIA with its 10 rights rows, CE marking with
+ * its conformity steps and a 'create' audit row), so a record existing is not
+ * enough: work means an edit or something linked to it. Read only, so the use
+ * case page can decide which of the two tabs to show without creating them.
+ * Null when the use case is not in the organization.
+ */
+export const getEuAiActWorkQuery = async (
+  projectId: number,
+  organizationId: number,
+): Promise<{ fria: boolean; ce_marking: boolean } | null> => {
+  const rows = (await sequelize.query(
+    `SELECT
+       EXISTS (
+         SELECT 1 FROM fria_assessments fa
+          WHERE fa.project_id = p.id AND fa.organization_id = :organizationId
+            AND (
+              fa.updated_by IS NOT NULL
+              OR fa.updated_at > fa.created_at
+              OR fa.version > 1
+              OR COALESCE(fa.status, 'draft') <> 'draft'
+              OR EXISTS (SELECT 1 FROM fria_risk_items ri
+                          WHERE ri.fria_id = fa.id AND ri.organization_id = :organizationId)
+              OR EXISTS (SELECT 1 FROM fria_model_links ml
+                          WHERE ml.fria_id = fa.id AND ml.organization_id = :organizationId)
+              OR EXISTS (SELECT 1 FROM fria_snapshots fs
+                          WHERE fs.fria_id = fa.id AND fs.organization_id = :organizationId)
+              OR EXISTS (SELECT 1 FROM file_entity_links fel
+                          WHERE fel.framework_type = 'fria' AND fel.entity_id = fa.id
+                            AND fel.organization_id = :organizationId)
+            )
+       ) AS fria,
+       EXISTS (
+         SELECT 1 FROM ce_markings cm
+          WHERE cm.project_id = p.id AND cm.organization_id = :organizationId
+            AND (
+              EXISTS (SELECT 1 FROM ce_marking_audit_trail cat
+                       WHERE cat.ce_marking_id = cm.id AND cat.organization_id = :organizationId
+                         AND COALESCE(cat.change_type, '') <> 'create')
+              OR EXISTS (SELECT 1 FROM ce_marking_policies cp
+                          WHERE cp.ce_marking_id = cm.id AND cp.organization_id = :organizationId)
+              OR EXISTS (SELECT 1 FROM ce_marking_evidences ce
+                          WHERE ce.ce_marking_id = cm.id AND ce.organization_id = :organizationId)
+              OR EXISTS (SELECT 1 FROM ce_marking_incidents ci
+                          WHERE ci.ce_marking_id = cm.id AND ci.organization_id = :organizationId)
+            )
+       ) AS ce_marking
+     FROM projects p
+    WHERE p.id = :id AND p.organization_id = :organizationId`,
+    { replacements: { id: projectId, organizationId }, type: QueryTypes.SELECT },
+  )) as Array<{ fria: boolean; ce_marking: boolean }>;
+  if (rows.length === 0) return null;
+  return { fria: rows[0].fria === true, ce_marking: rows[0].ce_marking === true };
+};
+
+/**
  * Delete a project and everything that hangs off it. The project row is
  * locked (FOR UPDATE) before any child row is touched. The project_deleted
  * automations are queued only once the transaction commits, so they never

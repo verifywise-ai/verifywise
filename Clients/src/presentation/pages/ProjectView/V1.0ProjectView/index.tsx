@@ -10,7 +10,8 @@ import VWProjectRisks from "./ProjectRisks";
 import LinkedModels from "./LinkedModels";
 import ProjectSettings from "../ProjectSettings";
 import useProjectData from "../../../../application/hooks/useProjectData";
-import ProjectFrameworks, { FRAMEWORK_IDS } from "../ProjectFrameworks";
+import ProjectFrameworks from "../ProjectFrameworks";
+import { FRAMEWORK_IDS } from "../../../../application/constants/frameworks";
 import CustomizableToast from "../../../components/Toast";
 import CEMarking from "../CEMarking";
 import Activity from "../Activity";
@@ -27,6 +28,11 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import TabBar from "../../../components/TabBar";
 import { getAllProjectRisksByProjectId } from "../../../../application/repository/projectRisk.repository";
 import { getAllEntities } from "../../../../application/repository/entity.repository";
+import {
+  getUseCaseEuAiActWork,
+  UseCaseEuAiActWork,
+} from "../../../../application/repository/project.repository";
+import EuAiActOnlyNote from "../EuAiActOnlyNote";
 import { useExtensions } from "../../../../application/contexts/Extensions.context";
 import { JiraUseCaseOverview } from "../../Extensions/jira-assets/JiraUseCaseOverview";
 import { JiraUseCaseMonitoring } from "../../Extensions/jira-assets/JiraUseCaseMonitoring";
@@ -144,8 +150,49 @@ const VWProjectView = () => {
     fetchLinkedModelsCount();
   }, [numericProjectId, refreshKey]);
 
-  // Organizational use cases have no RACI tab, so a link to it lands on overview.
-  const activeTab = value === "raci" && project?.is_organizational ? "overview" : value;
+  // FRIA and CE marking belong to the EU AI Act. The organizational EU AI Act
+  // (id 29) does not count: CE marking is for products and a FRIA is done per
+  // deployed system.
+  const hasEuAiAct = Boolean(
+    project?.framework?.some((f) => Number(f.framework_id) === FRAMEWORK_IDS.EU_AI_ACT),
+  );
+  // Without the EU AI Act each tab stays only while it holds saved work.
+  // undefined while that is being read.
+  const [euAiActWork, setEuAiActWork] = useState<UseCaseEuAiActWork | undefined>(undefined);
+  const needsWorkCheck = Boolean(project) && !hasEuAiAct;
+
+  useEffect(() => {
+    if (!needsWorkCheck || !numericProjectId) return;
+    const controller = new AbortController();
+    setEuAiActWork(undefined);
+    getUseCaseEuAiActWork({ id: numericProjectId, signal: controller.signal })
+      .then((work) => {
+        if (!controller.signal.aborted) setEuAiActWork(work);
+      })
+      .catch(() => {
+        // Never hide saved work because the check failed: show both tabs.
+        if (!controller.signal.aborted) setEuAiActWork({ fria: true, ce_marking: true });
+      });
+    return () => controller.abort();
+  }, [needsWorkCheck, numericProjectId, refreshKey]);
+
+  const isWorkPending = needsWorkCheck && euAiActWork === undefined;
+  const showFria = hasEuAiAct || euAiActWork?.fria === true;
+  const showCeMarking = hasEuAiAct || euAiActWork?.ce_marking === true;
+  // While the check runs, a link to either tab keeps it, so it does not jump
+  // to overview and back.
+  const keepFriaTab = showFria || (isWorkPending && value === "fria");
+  const keepCeMarkingTab = showCeMarking || (isWorkPending && value === "ce-marking");
+
+  // A link to a tab this use case does not have lands on overview:
+  // organizational use cases have no RACI tab, and FRIA and CE marking are
+  // hidden without the EU AI Act unless they hold work.
+  const activeTab =
+    (value === "raci" && project?.is_organizational) ||
+    (value === "fria" && !keepFriaTab) ||
+    (value === "ce-marking" && !keepCeMarkingTab)
+      ? "overview"
+      : value;
 
   const handleChange = (_: SyntheticEvent, newValue: string) => {
     searchParams.set("tab", newValue);
@@ -267,20 +314,28 @@ const VWProjectView = () => {
                 disabled: isApprovalBlocked,
                 tooltip: "Compliance frameworks applied to this use case",
               },
-              {
-                label: "CE marking",
-                value: "ce-marking",
-                icon: "Award",
-                disabled: isApprovalBlocked,
-                tooltip: "EU conformity assessment and CE marking status",
-              },
-              {
-                label: "FRIA",
-                value: "fria",
-                icon: "Scale",
-                disabled: isApprovalBlocked,
-                tooltip: "Fundamental Rights Impact Assessment (EU AI Act Art. 27)",
-              },
+              ...(keepCeMarkingTab
+                ? [
+                    {
+                      label: "CE marking",
+                      value: "ce-marking",
+                      icon: "Award" as const,
+                      disabled: isApprovalBlocked,
+                      tooltip: "EU conformity assessment and CE marking status",
+                    },
+                  ]
+                : []),
+              ...(keepFriaTab
+                ? [
+                    {
+                      label: "FRIA",
+                      value: "fria",
+                      icon: "Scale" as const,
+                      disabled: isApprovalBlocked,
+                      tooltip: "Fundamental Rights Impact Assessment (EU AI Act Art. 27)",
+                    },
+                  ]
+                : []),
               {
                 label: "Activity",
                 value: "activity",
@@ -368,21 +423,31 @@ const VWProjectView = () => {
             )}
           </TabPanel>
 
-          <TabPanel value="ce-marking" sx={tabPanelStyle}>
-            {project ? (
-              <CEMarking projectId={projectId} />
-            ) : (
-              <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
-            )}
-          </TabPanel>
+          {keepCeMarkingTab && (
+            <TabPanel value="ce-marking" sx={tabPanelStyle}>
+              {project && !isWorkPending ? (
+                <>
+                  {!hasEuAiAct && <EuAiActOnlyNote projectId={projectId} />}
+                  <CEMarking projectId={projectId} />
+                </>
+              ) : (
+                <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+              )}
+            </TabPanel>
+          )}
 
-          <TabPanel value="fria" sx={tabPanelStyle}>
-            {project ? (
-              <FriaAssessment projectId={projectId} />
-            ) : (
-              <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
-            )}
-          </TabPanel>
+          {keepFriaTab && (
+            <TabPanel value="fria" sx={tabPanelStyle}>
+              {project && !isWorkPending ? (
+                <>
+                  {!hasEuAiAct && <EuAiActOnlyNote projectId={projectId} />}
+                  <FriaAssessment projectId={projectId} />
+                </>
+              ) : (
+                <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+              )}
+            </TabPanel>
+          )}
 
           <TabPanel value="settings" sx={tabPanelStyle}>
             {project ? (

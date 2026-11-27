@@ -13690,6 +13690,24 @@ export const v1V1projectsEndpoints: Endpoint[] = [
     ],
     tag: "v1: V1/Projects",
   },
+  {
+    method: 'GET',
+    path: '/v1/projects/{id}/eu-ai-act-work',
+    summary: "Whether a use case's FRIA and CE marking hold work",
+    description: "Two flags: fria is true when the use case's FRIA has been edited, submitted or versioned, or has risk items, linked models, evidence or snapshots; ce_marking is true when its CE marking has an audit entry other than its creation, or linked policies, evidence or incidents. The legacy GET /api/fria/{projectId} and GET /api/ce-marking/{projectId} create a blank record when none exists, so a record existing is not work. Read only: it never creates either record. The use case page uses it to keep the FRIA and CE marking tabs on a use case without the EU AI Act only when they hold work. Anyone who may read the use case may read this.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The use case id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "The id is not a positive integer" },
+      { status: 403, description: "No read access to the use case" },
+      { status: 404, description: "Use case not found in the organization" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Projects",
+  },
 ];
 
 // v1: V1/Readiness endpoints

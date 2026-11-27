@@ -43,12 +43,16 @@ export const projectOverviewContent: ArticleContent = {
         { bold: 'Use case risks', text: 'A risk register scoped to this use case. Shows a badge with the current risk count.' },
         { bold: 'Linked models', text: 'Which AI models from your inventory are associated with this use case.' },
         { bold: 'Frameworks/regulations', text: 'The controls and assessments for each attached compliance framework.' },
-        { bold: 'CE Marking', text: 'EU conformity assessment steps for high-risk AI systems.' },
-        { bold: 'FRIA', text: 'Fundamental Rights Impact Assessment (required under EU AI Act Article 27).' },
+        { bold: 'CE Marking', text: 'EU conformity assessment steps for high-risk AI systems. Only on use cases with the EU AI Act.' },
+        { bold: 'FRIA', text: 'Fundamental Rights Impact Assessment (required under EU AI Act Article 27). Only on use cases with the EU AI Act.' },
         { bold: 'Activity', text: 'Chronological log of every change: who, what, when, old value, new value.' },
         { bold: 'Monitoring', text: 'Post-market monitoring questionnaires and recurring check cycles.' },
         { bold: 'Settings', text: 'Edit metadata, transfer ownership, manage members, add/remove frameworks or delete the use case.' },
       ],
+    },
+    {
+      type: 'paragraph',
+      text: 'CE Marking and FRIA belong to the EU AI Act. A use case without it, the organizational use case included, does not show them. If either tab already holds saved work, it stays, with a note that it applies when the EU AI Act is added. Users who can manage frameworks get an **Add EU AI Act** button in that note.',
     },
     {
       type: 'callout',
