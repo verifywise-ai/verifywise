@@ -36,8 +36,10 @@ import {
  * A prior stamped with any other version is refused by `isFactsSnapshot`, so the
  * run carries no change block at all — which is exactly what a first run
  * renders. One comparison is the honest price of a rename.
+ *
+ * 4: ISO annex categories marked not applicable are no longer counted.
  */
-export const FACTS_SCHEMA_VERSION = 3;
+export const FACTS_SCHEMA_VERSION = 4;
 
 /** Structured, storable snapshot. Persisted to report_run_analyses.audit_metadata
  *  so a later run can diff against it without a second LLM call. */
@@ -290,27 +292,27 @@ const SPECS: Record<string, SectionSpec> = {
   },
   clausesAndAnnexes: {
     // Leaves only, and symmetrically so: the top-level clause and annex rows
-    // are both skipped because neither carries a status to bucket or rank on.
-    // `clauses_struct_iso` / `annex_struct_iso` have no status column
-    // (reporting.utils.ts:276), so dataCollector's `clause.status || "Unknown"`
-    // is always literally "Unknown" — counting those rows would put a large
-    // fabricated status_Unknown bucket in front of the model and let stateless
-    // rows outrank real open work in the top-3. The clause id is not lost: it
-    // is carried onto each sub-clause row below.
+    // are both skipped. Their struct tables have no status column, so their
+    // status is a summary of these same leaves (summarizeIsoStatus), and
+    // counting them too would count every leaf twice. Each leaf carries its
+    // own id ("4.1", "A.5.1"), or its clause's when the struct has none.
     rows: (s) => [
       ...(s.clauses ?? []).flatMap((c: any) =>
         (c.subClauses ?? []).map((sc: any) => ({
-          _id: text(c.clauseId),
+          _id: text(sc.subClauseId || c.clauseId),
           _title: text(sc.title),
           status: sc.status,
         })),
       ),
       ...(s.annexes ?? []).flatMap((a: any) =>
-        (a.controls ?? []).map((ac: any) => ({
-          _id: text(ac.controlId),
-          _title: text(ac.title),
-          status: ac.status,
-        })),
+        // Out-of-scope categories are not open work (the table says "Not applicable").
+        (a.controls ?? [])
+          .filter((ac: any) => ac.isApplicable !== false)
+          .map((ac: any) => ({
+            _id: text(ac.controlId),
+            _title: text(ac.title),
+            status: ac.status,
+          })),
       ),
     ],
     counts: ["status"],

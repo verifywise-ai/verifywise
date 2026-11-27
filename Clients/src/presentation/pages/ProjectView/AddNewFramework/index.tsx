@@ -176,7 +176,11 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
       isOpen={open}
       onClose={onClose}
       title="AI Frameworks"
-      description="Add or remove AI frameworks or regulations to your platform. Those selected will be integrated into your use case."
+      description={
+        project.is_organizational
+          ? "Add or remove the AI frameworks and regulations your organization follows."
+          : "Add or remove AI frameworks or regulations to your platform. Those selected will be integrated into your use case."
+      }
       maxWidth="800px"
       customFooter={
         <>

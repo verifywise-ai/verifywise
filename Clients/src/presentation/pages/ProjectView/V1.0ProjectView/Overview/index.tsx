@@ -33,6 +33,15 @@ import { singleTheme } from "../../../../themes";
 import UseCaseLifecyclePanel from "./UseCaseLifecyclePanel";
 import LinkedAiAppsCard from "./LinkedAiAppsCard";
 import { chartTheme } from "../../../../themes/chartTheme";
+import {
+  FRAMEWORK_IDS,
+  isBundledFrameworkId,
+} from "../../../../../application/constants/frameworks";
+
+// EU AI Act on a use case, or EU AI Act (organization) on the organizational
+// project: both keep requirements and assessments in the EU AI Act tables.
+const isEuAiActFramework = (frameworkId: number) =>
+  frameworkId === FRAMEWORK_IDS.EU_AI_ACT || frameworkId === FRAMEWORK_IDS.EU_AI_ACT_ORGANIZATION;
 
 /**
  * A use case whose approval request is pending or rejected has every tab in the
@@ -85,8 +94,8 @@ const VWProjectOverview = ({
   // Update framework IDs when project changes
   useEffect(() => {
     if (project?.framework) {
-      // Only set framework ID 1 if the project has EU AI Act framework
-      const framework1 = project.framework.find((p) => p.framework_id === 1);
+      // Only set the EU AI Act id if the project has EU AI Act (or its organization part)
+      const framework1 = project.framework.find((p) => isEuAiActFramework(p.framework_id));
       if (framework1?.project_framework_id && !isNaN(Number(framework1.project_framework_id))) {
         setProjectFrameworkId(Number(framework1.project_framework_id));
       } else {
@@ -136,11 +145,9 @@ const VWProjectOverview = ({
     doneSubclauses: number;
   }>();
 
-  // Progress cards for the 9 project-attachable generic frameworks (HIPAA,
-  // Texas AI Act, OECD AI Principles, Colorado AI Act, AI Ethics, PCI-DSS,
-  // FTC AI Guidelines, NYC Local Law 144, ALTAI). Framework IDs 1-4 are
-  // handled above (EU AI Act, ISO 42001) or are organizational-only and
-  // never appear on a use case (ISO 27001, NIST AI RMF).
+  // Progress cards for bundled frameworks (HIPAA, SOC 2, GDPR, ...). EU AI Act
+  // and EU AI Act (organization) share the EU AI Act card, ISO 42001 has its
+  // own; ISO 27001 and NIST AI RMF get no card here.
   type GenericFrameworkProgress = {
     framework_id: number;
     name: string;
@@ -159,28 +166,28 @@ const VWProjectOverview = ({
   // the first render.
   useEffect(() => {
     if (!project) return;
-    const hasEuAiActFramework = project.framework.some((f) => f.framework_id === 1);
+    const hasEuAiActFramework = project.framework.some((f) => isEuAiActFramework(f.framework_id));
     if (!hasEuAiActFramework || !projectFrameworkId || isNaN(projectFrameworkId)) {
       setComplianceProgress(undefined);
       setAssessmentProgress(undefined);
       return;
     }
-    (async () => {
+    // Each bar loads on its own, and a response for an earlier project is dropped.
+    let cancelled = false;
+    const load = async <T,>(routeUrl: string, set: (value: T | undefined) => void) => {
       try {
-        const complianceData = await getEntityById({
-          routeUrl: `/eu-ai-act/compliances/progress/${projectFrameworkId}`,
-        });
-        if (complianceData?.data) setComplianceProgress(complianceData.data);
-        const assessmentData = await getEntityById({
-          routeUrl: `/eu-ai-act/assessments/progress/${projectFrameworkId}`,
-        });
-        if (assessmentData?.data) setAssessmentProgress(assessmentData.data);
+        const response = await getEntityById({ routeUrl });
+        if (!cancelled) set(response?.data ?? undefined);
       } catch (error) {
         console.error("Error fetching EU AI Act data:", error);
-        setComplianceProgress(undefined);
-        setAssessmentProgress(undefined);
+        if (!cancelled) set(undefined);
       }
-    })();
+    };
+    load(`/eu-ai-act/compliances/progress/${projectFrameworkId}`, setComplianceProgress);
+    load(`/eu-ai-act/assessments/progress/${projectFrameworkId}`, setAssessmentProgress);
+    return () => {
+      cancelled = true;
+    };
   }, [project, projectFrameworkId]);
 
   // ISO 42001 progress — same rationale, isolated on projectFrameworkId2.
@@ -210,11 +217,11 @@ const VWProjectOverview = ({
     })();
   }, [project, projectFrameworkId2]);
 
-  // Generic-framework dashboards (framework_id >= 5). Depends only on
+  // Bundled-framework dashboards (SOC 2, GDPR, ...). Depends only on
   // `project` — pfId comes from the framework list itself, not state.
   useEffect(() => {
     if (!project) return;
-    const genericFrameworks = project.framework.filter((f) => f.framework_id >= 5);
+    const genericFrameworks = project.framework.filter((f) => isBundledFrameworkId(f.framework_id));
     if (genericFrameworks.length === 0) {
       setGenericFrameworkProgress([]);
       return;
@@ -397,7 +404,12 @@ const VWProjectOverview = ({
             <>
               {projectFrameworkId && (
                 <Stack sx={columnStyle}>
-                  <Typography sx={projectRiskSection}>EU AI Act completion status</Typography>
+                  <Typography sx={projectRiskSection}>
+                    {project.framework.find((f) => isEuAiActFramework(f.framework_id))
+                      ?.framework_id === FRAMEWORK_IDS.EU_AI_ACT_ORGANIZATION
+                      ? "EU AI Act (organization) completion status"
+                      : "EU AI Act completion status"}
+                  </Typography>
                   <GroupStatsCard
                     completed={completedEuActNumbers}
                     total={totalEuActNumbers}
