@@ -215,7 +215,7 @@ export const euAiActContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'If your use cases already had answers for these items before the change, the most advanced one for each item was copied into EU AI Act (organization) and marked **Review**. Open the item, check what was copied, and save it to clear the mark. The **Copied, needs review** status filter lists the ones left. Only Admins and members of the organization-level project can see and edit EU AI Act (organization).',
+      text: 'If your use cases already had answers for these items before the change, the most complete one for each item was copied into EU AI Act (organization) and marked **Review**. Open the item, check what was copied, and save it to clear the mark. The note on the item names the use case it came from if you can see that use case; if you can\'t, it says only that it came from a use case. The **Copied, needs review** status filter lists the ones left. Only Admins and members of the organization-level project can see and edit EU AI Act (organization).',
     },
     {
       type: 'heading',

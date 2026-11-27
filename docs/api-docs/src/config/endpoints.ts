@@ -3125,6 +3125,7 @@ export const euAiActEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/eu-ai-act/controls/byControlCategoryId/{id}',
     summary: "Get Controls By Control Category Id",
+    description: "On EU AI Act (organization) (framework 29), a row whose work was copied from a use case on upgrade carries copied_from_project_id (that use case) and copied_from_use_case (\"<title> (<UC id>)\"). The label is null unless the caller can see that use case: Admins see every one, other roles one they own, are a member of or reach through a group. Saving the row clears both.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -3152,6 +3153,7 @@ export const euAiActEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/eu-ai-act/assessments/byProjectId/{id}',
     summary: "Get Assessments By Project Id",
+    description: "On EU AI Act (organization) (framework 29), a row whose work was copied from a use case on upgrade carries copied_from_project_id (that use case) and copied_from_use_case (\"<title> (<UC id>)\"). The label is null unless the caller can see that use case: Admins see every one, other roles one they own, are a member of or reach through a group. Saving the row clears both.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -3182,6 +3184,7 @@ export const euAiActEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/eu-ai-act/compliances/byProjectId/{id}',
     summary: "Get Compliances By Project Id",
+    description: "On EU AI Act (organization) (framework 29), a row whose work was copied from a use case on upgrade carries copied_from_project_id (that use case) and copied_from_use_case (\"<title> (<UC id>)\"). The label is null unless the caller can see that use case: Admins see every one, other roles one they own, are a member of or reach through a group. Saving the row clears both.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -3266,6 +3269,7 @@ export const euAiActEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/eu-ai-act/topicById',
     summary: "Get Topic By Id",
+    description: "On EU AI Act (organization) (framework 29), a row whose work was copied from a use case on upgrade carries copied_from_project_id (that use case) and copied_from_use_case (\"<title> (<UC id>)\"). The label is null unless the caller can see that use case: Admins see every one, other roles one they own, are a member of or reach through a group. Saving the row clears both.",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -3278,6 +3282,7 @@ export const euAiActEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/eu-ai-act/controlById',
     summary: "Get Control By Id",
+    description: "On EU AI Act (organization) (framework 29), a row whose work was copied from a use case on upgrade carries copied_from_project_id (that use case) and copied_from_use_case (\"<title> (<UC id>)\"). The label is null unless the caller can see that use case: Admins see every one, other roles one they own, are a member of or reach through a group. Saving the row clears both.",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
