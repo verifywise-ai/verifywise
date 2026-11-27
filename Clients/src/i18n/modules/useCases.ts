@@ -703,6 +703,8 @@ export const de: Record<string, string> = {
   "This deletes the use case, its framework progress and its files. Its risks stay in the risk register but are no longer linked to it. This cannot be undone.":
     "Dadurch werden der Anwendungsfall, sein Framework-Fortschritt und seine Dateien gelöscht. Seine Risiken bleiben im Risikoregister, sind aber nicht mehr mit ihm verknüpft. Dies kann nicht rückgängig gemacht werden.",
   "EU AI Act completion status": "Fertigstellungsstatus EU-KI-Verordnung",
+  "EU AI Act (organization) completion status":
+    "Fertigstellungsstatus EU-KI-Verordnung (Organisation)",
   "ISO 42001 completion status": "Fertigstellungsstatus ISO 42001",
   "Framework not found or could not be removed from the use case":
     "Rahmenwerk nicht gefunden oder konnte nicht aus dem Anwendungsfall entfernt werden",
@@ -1501,6 +1503,8 @@ export const fr: Record<string, string> = {
   "This deletes the use case, its framework progress and its files. Its risks stay in the risk register but are no longer linked to it. This cannot be undone.":
     "Cela supprime le cas d'usage, sa progression dans les référentiels et ses fichiers. Ses risques restent dans le registre des risques, mais ne lui sont plus liés. Cette action est irréversible.",
   "EU AI Act completion status": "Statut d'achèvement du Règlement IA de l'UE",
+  "EU AI Act (organization) completion status":
+    "Statut d'achèvement du Règlement IA de l'UE (organisation)",
   "ISO 42001 completion status": "Statut d'achèvement ISO 42001",
   "Framework not found or could not be removed from the use case":
     "Référentiel introuvable ou impossible à retirer du cas d'usage",
@@ -2294,6 +2298,8 @@ export const es: Record<string, string> = {
   "This deletes the use case, its framework progress and its files. Its risks stay in the risk register but are no longer linked to it. This cannot be undone.":
     "Esto elimina el caso de uso, su progreso en los marcos y sus archivos. Sus riesgos permanecen en el registro de riesgos, pero ya no están vinculados a él. Esta acción no se puede deshacer.",
   "EU AI Act completion status": "Estado de finalización del EU AI Act",
+  "EU AI Act (organization) completion status":
+    "Estado de finalización del EU AI Act (organización)",
   "ISO 42001 completion status": "Estado de finalización de ISO 42001",
   "Framework not found or could not be removed from the use case":
     "Marco no encontrado o no se pudo quitar del caso de uso",

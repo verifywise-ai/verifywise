@@ -1034,7 +1034,7 @@ export const ProjectForm = ({
                   getOptionDisabled={(option) => option.name.includes("coming soon")}
                   filterSelectedOptions
                   popupIcon={<GreyDownArrowIcon size={16} />}
-                  placeholder="Select regulations and standards"
+                  placeholder="Search or select regulations"
                   error={errors.monitored_regulations_and_standards}
                   sx={{
                     ...teamMembersSxStyle,
