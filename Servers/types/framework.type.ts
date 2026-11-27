@@ -63,6 +63,8 @@ import {
   deleteProjectFrameworkEN18286Query,
   createEN18286AISystemsFrameworkQuery,
   deleteProjectFrameworkEN18286AISystemsQuery,
+  createSaudiNAIIFrameworkQuery,
+  deleteProjectFrameworkSaudiNAIIQuery,
 } from "../utils/frameworkRegistry.utils";
 
 export const frameworkAdditionMap: Record<
@@ -103,6 +105,7 @@ export const frameworkAdditionMap: Record<
   27: createEN18286FrameworkQuery,
   28: createEN18286AISystemsFrameworkQuery,
   29: createEUAIActOrganizationFrameworkQuery,
+  30: createSaudiNAIIFrameworkQuery,
 };
 
 export const frameworkDeletionMap: Record<
@@ -138,6 +141,7 @@ export const frameworkDeletionMap: Record<
   27: deleteProjectFrameworkEN18286Query,
   28: deleteProjectFrameworkEN18286AISystemsQuery,
   29: deleteProjectFrameworkEUAIActOrganizationQuery,
+  30: deleteProjectFrameworkSaudiNAIIQuery,
 };
 
 export const frameworkFilesDeletionSourceMap: Record<number, string[]> = {
@@ -145,7 +149,7 @@ export const frameworkFilesDeletionSourceMap: Record<number, string[]> = {
   2: ["Management system clauses group", "Reference controls group"],
   3: ["Main clauses group", "Annex controls group"],
   4: ["Subcategories group"], // Only subcategories are tenant-based and have files
-  // Frameworks 5-28 store file links in file_entity_links (not files.source),
+  // Frameworks 5-28 and 30 store file links in file_entity_links (not files.source),
   // so the source-based sweep in framework.utils.ts is a no-op. Their delete
   // functions handle file_entity_links cleanup themselves.
   5: [],
@@ -175,4 +179,5 @@ export const frameworkFilesDeletionSourceMap: Record<number, string[]> = {
   // EU AI Act (organization) keeps its controls and questions in the EU AI Act
   // tables on the organizational project, so its evidence carries their sources.
   29: ["Assessment tracker group", "Compliance tracker group"],
+  30: [],
 };

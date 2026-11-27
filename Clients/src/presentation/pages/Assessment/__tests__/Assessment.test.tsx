@@ -8,7 +8,7 @@ vi.mock("../../../../application/hooks/useAssessmentProgress", () => ({
   }),
 }));
 
-vi.mock("../../../../application/hooks/useAssessmentTopcis", () => ({
+vi.mock("../../../../application/hooks/useAssessmentTopics", () => ({
   default: () => ({
     assessmentTopics: [
       { id: 1, title: "Topic 1" },

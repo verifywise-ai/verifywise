@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { apiServices } from "../../../infrastructure/api/networkServices";
-import CustomException from "../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../infrastructure/exceptions/customException";
 import { APIError } from "../../tools/error";
 import {
   acceptVendorRiskFinding,

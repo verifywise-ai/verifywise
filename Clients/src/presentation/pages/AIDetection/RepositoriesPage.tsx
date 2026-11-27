@@ -40,7 +40,7 @@ import {
   updateRepository,
   deleteRepository,
   triggerRepositoryScan,
-} from "../../../application/repository/aiDetectionRepository.repository";
+} from "../../../application/repository/aiDetectionRegistry.repository";
 import {
   AIDetectionRepository,
   CreateRepositoryInput,

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background circle - Saudi green -->
+  <circle cx="32" cy="32" r="30" fill="#006C35"/>
+
+  <!-- Three pillars rising as an index: directions, enablers, outputs -->
+  <g fill="#FFFFFF">
+    <rect x="17" y="34" width="8" height="14" rx="1"/>
+    <rect x="28" y="26" width="8" height="22" rx="1"/>
+    <rect x="39" y="18" width="8" height="30" rx="1"/>
+  </g>
+
+  <!-- Trend line linking the pillars -->
+  <path d="M21 29 L32 21 L43 13" stroke="#A8E6C1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="21" cy="29" r="2" fill="#A8E6C1"/>
+  <circle cx="32" cy="21" r="2" fill="#A8E6C1"/>
+  <circle cx="43" cy="13" r="2" fill="#A8E6C1"/>
+
+  <!-- Base line -->
+  <rect x="15" y="49" width="34" height="1.5" rx="0.75" fill="#FFFFFF"/>
+
+  <!-- SAUDI NAII text -->
+  <text x="32" y="57" font-family="Arial, sans-serif" font-size="4.5" font-weight="bold" fill="#FFFFFF" text-anchor="middle">SAUDI NAII</text>
+</svg>

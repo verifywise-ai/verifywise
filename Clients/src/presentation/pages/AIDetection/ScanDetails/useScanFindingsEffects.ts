@@ -10,7 +10,7 @@ import {
   getScanSecurityFindings,
   getScanSecuritySummary,
   getComplianceMapping,
-} from "../../../../application/repository/aiDetection.repository";
+} from "../../../../application/repository/aiDetectionScan.repository";
 import {
   ConfidenceLevel,
   SecuritySeverity,

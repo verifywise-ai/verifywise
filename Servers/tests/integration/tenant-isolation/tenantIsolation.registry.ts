@@ -443,6 +443,15 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     testFile: "en-18286.isolation.test.ts",
   },
   {
+    // Saudi National AI Index (framework id 30). Impl rows and risk links are
+    // only reachable through a project's framework on the generic registry
+    // framework routes, so a hand-written file covers both tables.
+    name: "saudi_naii_domains",
+    tables: ["saudi_naii_domains", "saudi_naii_domains__risks"],
+    baseRoute: "/api/frameworks",
+    testFile: "saudi-naii.isolation.test.ts",
+  },
+  {
     // Slack extension connections. Every connection belongs to an
     // organization; management routes and delivery filter by it, so a
     // hand-written file covers the routes and the delivery query.

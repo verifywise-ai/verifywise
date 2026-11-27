@@ -13,7 +13,7 @@ import StandardModal from "../../../components/Modals/StandardModal";
 import Field from "../../../components/Inputs/Field";
 import Radio from "../../../components/Inputs/Radio";
 import DatePicker from "../../../components/Inputs/Datepicker";
-import { createSuppression } from "../../../../application/repository/aiDetection.repository";
+import { createSuppression } from "../../../../application/repository/aiDetectionScan.repository";
 import { CreateSuppressionRequest, Finding } from "../../../../domain/ai-detection/types";
 import { palette } from "../../../themes/palette";
 

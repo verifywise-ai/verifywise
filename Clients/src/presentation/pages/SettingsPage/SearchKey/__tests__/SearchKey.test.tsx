@@ -3,7 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useLocation } from "react-router";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
-import CustomException from "../../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../../infrastructure/exceptions/customException";
 import { APIError } from "../../../../../application/tools/error";
 
 let mockUserRoleName = "Admin";

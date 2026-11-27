@@ -35,14 +35,14 @@ Everything is in this repository. There is no separate plugin repository. The fo
 | What | Where | Reference |
 |------|-------|-----------|
 | Core frameworks (EU AI Act, ISO 42001, ISO 27001, NIST AI RMF; ids 1–4), and EU AI Act (organization) (id 29): EU AI Act controls and questions held on the organizational project | Hand-built tables, routes and pages (EU AI Act (organization) uses the EU AI Act ones) | `docs/technical/domains/compliance-frameworks.md` |
-| 24 bundled frameworks (SOC 2, GDPR, HIPAA, EN 18286, ...; ids 5–28) | `Servers/structures/<Name>/*.structure.ts`, registry `Servers/structures/index.ts` | `docs/technical/guides/adding-new-framework.md` |
+| 25 bundled frameworks (SOC 2, GDPR, HIPAA, EN 18286, ...; ids 5–28 and 30) | `Servers/structures/<Name>/*.structure.ts`, registry `Servers/structures/index.ts` | `docs/technical/guides/adding-new-framework.md` |
 | 9 extensions (Slack, MLflow, Azure AI Foundry, Model lifecycle, Risk import, Jira Assets, Jira incidents, Dataset bulk upload, Framework import) | `Servers/extensions/<key>/` + `Clients/src/presentation/pages/Extensions/` (Framework import: `Framework/Components/FrameworkImportModal.tsx`) | `docs/technical/infrastructure/extensions.md` |
 
 ---
 
 ## Project Overview
 
-VerifyWise is an AI governance platform supporting EU AI Act, ISO 42001, ISO 27001, NIST AI RMF, and 24 more built-in frameworks (SOC 2, GDPR, HIPAA, etc.), plus built-in extensions (integrations an Admin enables per organization).
+VerifyWise is an AI governance platform supporting EU AI Act, ISO 42001, ISO 27001, NIST AI RMF, and 25 more built-in frameworks (SOC 2, GDPR, HIPAA, etc.), plus built-in extensions (integrations an Admin enables per organization).
 
 ### Tech Stack
 

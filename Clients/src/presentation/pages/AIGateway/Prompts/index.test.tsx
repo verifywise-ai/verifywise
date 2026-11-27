@@ -29,7 +29,7 @@ vi.mock("../../../components/Layout/PageHeaderExtended", () => ({
 
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import PromptsPage from "./index";
-import CustomException from "../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../infrastructure/exceptions/customException";
 
 const mockGet = apiServices.get as unknown as ReturnType<typeof vi.fn>;
 const mockPost = apiServices.post as unknown as ReturnType<typeof vi.fn>;

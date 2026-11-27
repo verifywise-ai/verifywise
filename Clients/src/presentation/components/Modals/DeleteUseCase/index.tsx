@@ -1,5 +1,5 @@
 import { useState } from "react";
-import CustomException from "../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../infrastructure/exceptions/customException";
 import { Box, Collapse, Stack, Typography } from "@mui/material";
 import { ChevronDown } from "lucide-react";
 import ConfirmationModal from "../../Dialogs/ConfirmationModal";

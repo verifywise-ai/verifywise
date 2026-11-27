@@ -26,7 +26,7 @@ import {
   startScan,
   updateFindingGovernanceStatus,
   updateRiskScoringConfig,
-} from "../aiDetection.repository";
+} from "../aiDetectionScan.repository";
 
 vi.mock("../../../infrastructure/api/networkServices", () => {
   return {

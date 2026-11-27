@@ -5,7 +5,7 @@ import { useNavigate } from "react-router";
 import { useProjects } from "../../../../application/hooks/useProjects";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import { getComplianceProgress } from "../../../../application/repository/control_eu_act.repository";
-import { getAssessmentProgress } from "../../../../application/repository/assesment.repository";
+import { getAssessmentProgress } from "../../../../application/repository/assessment.repository";
 import {
   EU_AI_ACT_ORGANIZATION_SLUG,
   FRAMEWORK_IDS,

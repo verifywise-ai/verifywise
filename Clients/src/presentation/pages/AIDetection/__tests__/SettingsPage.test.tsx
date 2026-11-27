@@ -23,7 +23,7 @@ const mockUpdateRiskScoringConfig = vi.fn();
 const mockListSuppressions = vi.fn();
 const mockDeleteSuppression = vi.fn();
 
-vi.mock("../../../../application/repository/aiDetection.repository", () => ({
+vi.mock("../../../../application/repository/aiDetectionScan.repository", () => ({
   getRiskScoringConfig: (...args: unknown[]) => mockGetRiskScoringConfig(...args),
   updateRiskScoringConfig: (...args: unknown[]) => mockUpdateRiskScoringConfig(...args),
   listSuppressions: (...args: unknown[]) => mockListSuppressions(...args),

@@ -6,7 +6,7 @@ import type {
   DataRetentionOverview,
   RetentionRow,
 } from "../../../../../application/repository/dataRetention.repository";
-import CustomException from "../../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../../infrastructure/exceptions/customException";
 
 const mockGetDataRetention = vi.fn();
 const mockPreview = vi.fn();

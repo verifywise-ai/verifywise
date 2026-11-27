@@ -1,4 +1,4 @@
-import CustomException from "../../infrastructure/exceptions/customeException";
+import CustomException from "../../infrastructure/exceptions/customException";
 
 /**
  * The specific reason carried in an API error response, if there is one.

@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "../../../../../../test/renderWithProviders";
 import LinkedAiAppsCard from "../LinkedAiAppsCard";
-import CustomException from "../../../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../../../infrastructure/exceptions/customException";
 import { Project } from "../../../../../../domain/types/Project";
 
 const mockCreate = vi.fn();

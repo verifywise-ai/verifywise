@@ -17,7 +17,7 @@ vi.mock("@xyflow/react", () => ({
 
 vi.mock("@xyflow/react/dist/style.css", () => ({}));
 
-vi.mock("../../../../application/repository/aiDetection.repository", () => ({
+vi.mock("../../../../application/repository/aiDetectionScan.repository", () => ({
   getDependencyGraph: vi.fn().mockResolvedValue({ nodes: [], edges: [] }),
 }));
 

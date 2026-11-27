@@ -5,7 +5,7 @@ import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { invalidateLLMKeyQueries } from "../../../../application/hooks/useLLMKeys";
 import CustomAxios from "../../../../infrastructure/api/customAxios";
 import { IntakeFormBuilder } from "../index";
-import CustomException from "../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../infrastructure/exceptions/customException";
 import {
   getIntakeForm,
   getIntakeFormReviewTime,

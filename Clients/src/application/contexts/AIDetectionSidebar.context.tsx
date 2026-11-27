@@ -23,8 +23,8 @@ import {
   ReactNode,
   FC,
 } from "react";
-import { getActiveScan, getScans, getScanStatus } from "../repository/aiDetection.repository";
-import { getRepositoryCount } from "../repository/aiDetectionRepository.repository";
+import { getActiveScan, getScans, getScanStatus } from "../repository/aiDetectionScan.repository";
+import { getRepositoryCount } from "../repository/aiDetectionRegistry.repository";
 import { ScanStatus, ScansResponse } from "../../domain/ai-detection/types";
 
 interface RecentScan {

@@ -3,7 +3,7 @@
  *
  * API client for AI Detection endpoints.
  *
- * @module repository/aiDetection
+ * @module repository/aiDetectionScan
  */
 
 import { apiServices } from "../../infrastructure/api/networkServices";

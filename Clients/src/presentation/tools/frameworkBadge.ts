@@ -31,6 +31,7 @@ const FRAMEWORK_BADGE_SLUGS: Record<string, string> = {
   "Qatar Personal Data Privacy Law": "qatar_pdpl",
   "Quebec Law 25 Compliance Framework": "quebec_law25",
   "Saudi Arabia Personal Data Protection Law": "saudi_pdpl",
+  "Saudi National AI Index (NAII)": "saudi_naii",
   "Texas Responsible AI Governance Act Framework": "texas_ai_act",
   "UAE Personal Data Protection Law": "uae_pdpl",
 };

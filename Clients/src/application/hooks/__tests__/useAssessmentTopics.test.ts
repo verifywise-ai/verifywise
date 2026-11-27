@@ -1,16 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 
-vi.mock("../../repository/assesment.repository", () => ({
+vi.mock("../../repository/assessment.repository", () => ({
   getAllAssessmentTopics: vi.fn(),
   getAssessmentsByProjectFrameworkId: vi.fn(),
 }));
 
-import useAssessmentTopics from "../useAssessmentTopcis";
+import useAssessmentTopics from "../useAssessmentTopics";
 import {
   getAllAssessmentTopics,
   getAssessmentsByProjectFrameworkId,
-} from "../../repository/assesment.repository";
+} from "../../repository/assessment.repository";
 
 const mockGetAll = vi.mocked(getAllAssessmentTopics);
 const mockGetTree = vi.mocked(getAssessmentsByProjectFrameworkId);

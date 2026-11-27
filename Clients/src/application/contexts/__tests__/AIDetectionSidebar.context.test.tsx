@@ -19,13 +19,13 @@ const mockGetActiveScan = vi.fn().mockResolvedValue(null);
 const mockGetScanStatus = vi.fn().mockResolvedValue({ status: "completed" });
 const mockGetRepositoryCount = vi.fn().mockResolvedValue(5);
 
-vi.mock("../../repository/aiDetection.repository", () => ({
+vi.mock("../../repository/aiDetectionScan.repository", () => ({
   getScans: (...args: unknown[]) => mockGetScans(...args),
   getActiveScan: (...args: unknown[]) => mockGetActiveScan(...args),
   getScanStatus: (...args: unknown[]) => mockGetScanStatus(...args),
 }));
 
-vi.mock("../../repository/aiDetectionRepository.repository", () => ({
+vi.mock("../../repository/aiDetectionRegistry.repository", () => ({
   getRepositoryCount: (...args: unknown[]) => mockGetRepositoryCount(...args),
 }));
 

@@ -85,6 +85,31 @@ describe("AddFrameworkModal imported frameworks", () => {
     expect(mockGetLinks).toHaveBeenCalledWith(7);
   });
 
+  it("filters imported frameworks with the dialog search", async () => {
+    renderWithProviders(
+      <AddFrameworkModal open={true} onClose={vi.fn()} frameworks={frameworks} project={project} />,
+    );
+    await screen.findByTestId("imported-frameworks-section");
+    const search = screen.getByRole("textbox", { name: "Search frameworks" });
+
+    // Only an imported framework matches: it shows, and no "no match" message.
+    fireEvent.change(search, { target: { value: "vendor" } });
+    const section = screen.getByTestId("imported-frameworks-section");
+    expect(within(section).getByText("Vendor checklist")).toBeInTheDocument();
+    expect(within(section).queryByText("Internal AI policy")).not.toBeInTheDocument();
+    expect(screen.queryByText("ISO 42001")).not.toBeInTheDocument();
+    expect(screen.queryByText("No frameworks match your search.")).not.toBeInTheDocument();
+
+    // Only a built-in framework matches: the imported section is hidden.
+    fireEvent.change(search, { target: { value: "iso" } });
+    expect(screen.getByText("ISO 42001")).toBeInTheDocument();
+    expect(screen.queryByTestId("imported-frameworks-section")).not.toBeInTheDocument();
+
+    // Nothing matches: the message shows once.
+    fireEvent.change(search, { target: { value: "hipaa" } });
+    expect(screen.getAllByText("No frameworks match your search.")).toHaveLength(1);
+  });
+
   it("attaches an imported framework and reports the change", async () => {
     mockAttach.mockResolvedValue({ id: 41 });
     const onFrameworksChanged = vi.fn();

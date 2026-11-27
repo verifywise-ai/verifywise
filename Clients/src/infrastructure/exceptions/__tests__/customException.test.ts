@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import CustomException from "../customeException";
+import CustomException from "../customException";
 
 describe("CustomException", () => {
   it("sets message, status, and response", () => {

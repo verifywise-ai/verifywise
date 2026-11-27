@@ -1,7 +1,7 @@
 import { screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import SubmissionPreviewModal from "../SubmissionPreviewModal";
-import CustomException from "../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../infrastructure/exceptions/customException";
 import {
   getSubmissionPreview,
   approveSubmission,

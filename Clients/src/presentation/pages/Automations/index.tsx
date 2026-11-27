@@ -27,7 +27,7 @@ import { getAllUsers } from "../../../application/repository/user.repository";
 import Alert from "../../components/Alert";
 import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
 import { useProjects } from "../../../application/hooks/useProjects";
-import CustomException from "../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../infrastructure/exceptions/customException";
 import { palette } from "../../themes/palette";
 
 type AutomationSaveField = "name" | "triggerId" | "actions" | "params";

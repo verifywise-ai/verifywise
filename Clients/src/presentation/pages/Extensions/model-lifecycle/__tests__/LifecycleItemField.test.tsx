@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import LifecycleItemField from "../LifecycleItemField";
-import CustomException from "../../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../../infrastructure/exceptions/customException";
 import type { LifecycleItem } from "../useModelLifecycle";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 

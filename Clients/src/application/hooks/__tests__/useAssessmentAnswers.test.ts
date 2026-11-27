@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 
-vi.mock("../../repository/assesment.repository", () => ({
+vi.mock("../../repository/assessment.repository", () => ({
   getAssessmentAnswers: vi.fn(),
 }));
 
 import useAssessmentAnswers from "../useAssessmentAnswers";
-import { getAssessmentAnswers } from "../../repository/assesment.repository";
+import { getAssessmentAnswers } from "../../repository/assessment.repository";
 
 const mockGetAnswers = vi.mocked(getAssessmentAnswers);
 

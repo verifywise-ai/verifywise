@@ -47,7 +47,7 @@ Reports are organized into three groups:
 - Assessment Tracker (EU AI Act)
 - Clauses & Annexes (ISO 42001, ISO 27001)
 - NIST Subcategories (NIST AI RMF)
-- Framework Requirements (the bundled frameworks, ids 5–28: SOC 2, GDPR, HIPAA, OSFI E-23 and the rest)
+- Framework Requirements (the bundled frameworks, ids 5–28 and 30: SOC 2, GDPR, HIPAA, OSFI E-23 and the rest)
 
 **Organization:**
 - AI Models
@@ -225,7 +225,7 @@ renderers read it to drop the project line. The report's own scope is
 ### Framework requirements section
 
 `frameworkRequirements` ("Framework requirements", group "Compliance and
-governance") covers the bundled frameworks, `frameworks.id` 5–28. The collector is
+governance") covers the bundled frameworks, `frameworks.id` 5–28 and 30. The collector is
 `services/reporting/collectors/frameworkRequirements.ts`, with its SQL in
 `frameworkRequirements.queries.ts` and the arithmetic in `frameworkRollup.ts`. It
 reads each framework's tables through its `Servers/structures` definition, so one
@@ -277,7 +277,7 @@ so every parser branch rejects it rather than passing it through.
 > **Since August 2026 (PR #4443):** the 21 former plugin frameworks are native
 > `frameworks` rows (ids 5–25), and `native:5`…`native:28` parse with their
 > `projects_frameworks` pairings. Since November 2026 the bundled frameworks
-> (ids 5–28, from `Servers/structures`) are covered by one generic section,
+> (ids 5–28 and 30, from `Servers/structures`) are covered by one generic section,
 > `frameworkRequirements` (see [Framework requirements section](#framework-requirements-section)).
 > Imported (Excel) frameworks are still **not covered**. The `plugin:` and
 > `custom:` namespaces remain in the parser and point at the legacy

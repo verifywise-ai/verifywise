@@ -6,7 +6,7 @@ import type { SuppressionRule } from "../../../../../domain/ai-detection/types";
 const mockListSuppressions = vi.fn();
 const mockDeleteSuppression = vi.fn();
 
-vi.mock("../../../../../application/repository/aiDetection.repository", () => ({
+vi.mock("../../../../../application/repository/aiDetectionScan.repository", () => ({
   listSuppressions: (...args: unknown[]) => mockListSuppressions(...args),
   deleteSuppression: (...args: unknown[]) => mockDeleteSuppression(...args),
 }));

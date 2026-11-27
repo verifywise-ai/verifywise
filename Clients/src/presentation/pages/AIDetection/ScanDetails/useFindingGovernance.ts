@@ -11,7 +11,7 @@
 
 import { useState } from "react";
 import type React from "react";
-import { updateFindingGovernanceStatus } from "../../../../application/repository/aiDetection.repository";
+import { updateFindingGovernanceStatus } from "../../../../application/repository/aiDetectionScan.repository";
 import { Finding, GovernanceStatus } from "../../../../domain/ai-detection/types";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import { fill } from "../../../../i18n/fill";

@@ -7,7 +7,7 @@ import {
   getGatewayErrorText,
   isClientError,
 } from "../apiErrorReason";
-import CustomException from "../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../infrastructure/exceptions/customException";
 
 describe("getApiErrorReason", () => {
   it("reads the 5xx reason from `error`", () => {

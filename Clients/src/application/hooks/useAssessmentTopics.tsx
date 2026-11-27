@@ -3,7 +3,7 @@ import { Topic } from "../../domain/types/Topic";
 import {
   getAllAssessmentTopics,
   getAssessmentsByProjectFrameworkId,
-} from "../repository/assesment.repository";
+} from "../repository/assessment.repository";
 
 /**
  * Custom hook to fetch and manage assessment topics.

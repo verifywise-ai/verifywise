@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { AssessmentProgress } from "../../domain/interfaces/i.assessment";
-import { getAssessmentProgress } from "../repository/assesment.repository";
+import { getAssessmentProgress } from "../repository/assessment.repository";
 
 /**
  * Custom hook to fetch and manage assessment progress data for a selected project.

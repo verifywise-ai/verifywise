@@ -3,7 +3,7 @@ import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { Route, Routes } from "react-router";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { PublicIntakeForm } from "..";
-import CustomException from "../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../infrastructure/exceptions/customException";
 
 const repo = vi.hoisted(() => ({
   getPublicFormById: vi.fn(),

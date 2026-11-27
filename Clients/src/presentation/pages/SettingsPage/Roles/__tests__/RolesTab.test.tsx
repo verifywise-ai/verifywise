@@ -1,6 +1,6 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
-import CustomException from "../../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../../infrastructure/exceptions/customException";
 
 vi.mock("../../../../../application/hooks/useMyPermissions", () => ({
   MY_PERMISSIONS_QUERY_KEY: ["my-permissions"],

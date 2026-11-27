@@ -2,7 +2,7 @@ import { screen } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
 // Mock the AI detection repository (all async calls)
-vi.mock("../../../../application/repository/aiDetection.repository", () => ({
+vi.mock("../../../../application/repository/aiDetectionScan.repository", () => ({
   startScan: vi.fn(),
   pollScanStatus: vi.fn(),
   getScan: vi.fn(),
