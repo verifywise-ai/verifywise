@@ -120,7 +120,7 @@ Supported frameworks:
 2. ISO 42001 (framework_id: 2)
 3. ISO 27001 (framework_id: 3)
 4. NIST AI RMF (framework_id: 4)
-5. The 24 bundled frameworks (framework_id: 5–28), see [Compliance frameworks](./compliance-frameworks.md#bundled-frameworks-ids-528)
+5. The 25 bundled frameworks (framework_id: 5–28 and 30), see [Compliance frameworks](./compliance-frameworks.md#bundled-frameworks-ids-528-and-30)
 
 ## Status Workflow
 
@@ -364,7 +364,7 @@ The rejection notice (in-app and email) links the requester to the use case (`/p
 7. Send email to project owner
 8. Send Slack notification
 
-Every picked framework, core (1–4) or bundled (5–28), is built through `frameworkAdditionMap` by `buildProjectFrameworkQuery` (`utils/framework.utils.ts`): at creation in `createUseCaseService` step 3 (`services/useCase.service.ts`, shared by `POST /api/projects`, `POST /api/v1/projects`, the MCP `create_use_case` tool and the advisor's `agent_create_use_case`), and after approval in `createPendingFrameworksForApprovedUseCase` (`utils/approvalRequest.utils.ts`, also run when an edit clears the workflow). An id with no builder is refused with 400 (`framework`, "Framework not found") before anything is written; a pending id with no builder is logged and left off at approval, and one attached since the request was made (through "add framework" after a rejection) is neither linked nor built again. Intake approval builds the EU AI Act and adds the organization's default frameworks through `addFrameworkToProjectQuery`, which uses the same builder. Before November 2026 only ids 1–4 were built, leaving bundled frameworks attached with no rows; migration `20261117140851-build-empty-bundled-frameworks.js` builds those links.
+Every picked framework, core (1–4) or bundled (5–28, 30), is built through `frameworkAdditionMap` by `buildProjectFrameworkQuery` (`utils/framework.utils.ts`): at creation in `createUseCaseService` step 3 (`services/useCase.service.ts`, shared by `POST /api/projects`, `POST /api/v1/projects`, the MCP `create_use_case` tool and the advisor's `agent_create_use_case`), and after approval in `createPendingFrameworksForApprovedUseCase` (`utils/approvalRequest.utils.ts`, also run when an edit clears the workflow). An id with no builder is refused with 400 (`framework`, "Framework not found") before anything is written; a pending id with no builder is logged and left off at approval, and one attached since the request was made (through "add framework" after a rejection) is neither linked nor built again. Intake approval builds the EU AI Act and adds the organization's default frameworks through `addFrameworkToProjectQuery`, which uses the same builder. Before November 2026 only ids 1–4 were built, leaving bundled frameworks attached with no rows; migration `20261117140851-build-empty-bundled-frameworks.js` builds those links.
 
 ### Response
 

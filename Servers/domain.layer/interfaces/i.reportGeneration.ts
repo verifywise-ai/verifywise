@@ -532,7 +532,7 @@ export interface PolicyManagerSectionData {
   }>;
 }
 
-// Bundled framework requirements (Compliance & Governance group, framework ids 5-28)
+// Bundled framework requirements (Compliance & Governance group, framework ids 5-28 and 30)
 export interface FrameworkRequirementRow {
   implId: number;
   level: 2 | 3;

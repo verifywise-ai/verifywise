@@ -24,6 +24,7 @@ import nistCsfStructure from "./NIST-CSF/nist-csf.structure";
 import osfiE23Structure from "./OSFI-E-23/osfi-e23.structure";
 import en18286Structure from "./EN-18286/en-18286.structure";
 import en18286AiSystemsStructure from "./EN-18286/en-18286-ai-systems.structure";
+import saudiNaiiStructure from "./Saudi-NAII/saudi-naii.structure";
 
 export * from "./types";
 export {
@@ -63,6 +64,7 @@ export const FRAMEWORK_STRUCTURES: FrameworkStructure[] = [
   osfiE23Structure,
   en18286Structure,
   en18286AiSystemsStructure,
+  saudiNaiiStructure,
 ];
 
 const BY_KEY = new Map<string, FrameworkStructure>();
