@@ -10,6 +10,7 @@ import {
 import { startSession } from "../utils/clearSession";
 import { extractUserToken } from "../tools/extractToken";
 import { logEngine } from "../tools/log.engine";
+import { takeMcpAuthorizationReturn } from "../utils/mcpAuthorizeReturn";
 import type { LoginSession } from "../repository/user.repository";
 
 const REMEMBER_ME_MS = 30 * 24 * 60 * 60 * 1000;
@@ -31,6 +32,8 @@ export const useStartLoginSession = () => {
       dispatch(setExpiration(rememberMe ? Date.now() + REMEMBER_ME_MS : null));
       dispatch(setIsSuperAdmin(isSuperAdminFlag));
       localStorage.setItem("root_version", __APP_VERSION__);
+      // Logging in to answer an MCP client's sign-in goes back to that page.
+      const mcpAuthorization = takeMcpAuthorizationReturn();
 
       // Bootstrap SuperAdmin: JWT has no organizationId — take them
       // straight to /super-admin. Elected SuperAdmins have their own
@@ -38,14 +41,14 @@ export const useStartLoginSession = () => {
       // can jump to /super-admin from the AppSwitcher.
       if (isSuperAdminFlag && !extractUserToken(session.token)?.organizationId) {
         logEngine({ type: "info", message: "Super-admin login successful." });
-        navigate("/super-admin");
+        navigate(mcpAuthorization ?? "/super-admin");
         return;
       }
 
       dispatch(setOnboardingStatus(session.onboarding_status || "completed"));
       dispatch(setIsOrgCreator(session.is_org_creator || false));
       logEngine({ type: "info", message: "Login successful." });
-      navigate("/");
+      navigate(mcpAuthorization ?? "/");
     },
     [dispatch, navigate],
   );

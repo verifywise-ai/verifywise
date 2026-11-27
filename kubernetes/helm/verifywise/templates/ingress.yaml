@@ -33,6 +33,22 @@ spec:
                 name: backend
                 port:
                   number: 3000
+          # MCP sign-in discovery documents, fixed at the site root by RFC 9728
+          # and RFC 8414 (Servers/routes/mcpOAuthMetadata.route.ts).
+          - path: /.well-known/oauth-protected-resource
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 3000
+          - path: /.well-known/oauth-authorization-server
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 3000
           - path: /
             pathType: Prefix
             backend:

@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from "react-router";
 import { useDispatch } from "react-redux";
 import { setExpiration } from "../../../../application/redux/auth/authSlice";
 import { startSession } from "../../../../application/utils/clearSession";
+import { takeMcpAuthorizationReturn } from "../../../../application/utils/mcpAuthorizeReturn";
 import { loginUserWithMicrosoft } from "../../../../application/repository/user.repository";
 
 const MicrosoftCallback: React.FC = () => {
@@ -58,7 +59,7 @@ const MicrosoftCallback: React.FC = () => {
           startSession(dispatch, token);
           dispatch(setExpiration(expirationDate));
           localStorage.setItem("root_version", __APP_VERSION__);
-          navigate("/");
+          navigate(takeMcpAuthorizationReturn() ?? "/");
         }
       } catch {
         fail("SSO authentication failed");

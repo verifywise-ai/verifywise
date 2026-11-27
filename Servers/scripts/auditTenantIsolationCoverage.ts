@@ -849,6 +849,16 @@ const deferredScopedTables: SharedTableEntry[] = [
       "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
   },
   {
+    name: "oauth_authorization_codes",
+    justification:
+      "MCP sign-in store (mcp/oauth.ts): single-use codes read by hash at the token endpoint, never listed per organization; isolation coverage deferred with refresh_tokens. See runbook section 2.4.",
+  },
+  {
+    name: "oauth_grants",
+    justification:
+      "MCP sign-in store (mcp/oauth.ts): read by id together with the user and organization the access token names, and listed per user; isolation coverage deferred with refresh_tokens. See runbook section 2.4.",
+  },
+  {
     name: "policy_change_history",
     justification:
       "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",

@@ -627,6 +627,7 @@ export function deriveTag(basePath: string): string {
     "/api/custom-fields": "Custom Fields",
     "/api/evidence-ai": "Evidence AI",
     "/api/governance-os": "Governance OS",
+    "/.well-known": "MCP sign-in",
   };
 
   if (basePath.includes("change-history")) {

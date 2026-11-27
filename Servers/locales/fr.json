@@ -1701,5 +1701,8 @@
   "Minor": "Mineur",
   "Serious": "Grave",
   "Very serious": "Très grave",
-  "key must be a non-empty string": "key doit être une chaîne non vide"
+  "key must be a non-empty string": "key doit être une chaîne non vide",
+  "This sign-in request is invalid or has expired. Start again from your MCP client.": "Cette demande de connexion est invalide ou a expiré. Recommencez depuis votre client MCP.",
+  "Invalid connection id": "Identifiant de connexion invalide",
+  "Connection not found": "Connexion introuvable"
 }

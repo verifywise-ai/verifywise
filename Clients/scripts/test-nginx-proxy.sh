@@ -98,6 +98,12 @@ check "GET /api keeps its prefix and query string" \
   "200 backend GET /api/users?page=2" "$(request "$WEB" 'http://localhost/api/users?page=2')"
 check "an /api path ending in .png is proxied, not served as a static file" \
   "200 backend GET /api/files/logo.png" "$(request "$WEB" http://localhost/api/files/logo.png)"
+check "the MCP sign-in protected resource metadata reaches the backend" \
+  "200 backend GET /.well-known/oauth-protected-resource/api/mcp" \
+  "$(request "$WEB" http://localhost/.well-known/oauth-protected-resource/api/mcp)"
+check "the MCP sign-in authorization server metadata reaches the backend" \
+  "200 backend GET /.well-known/oauth-authorization-server/api/v1/oauth" \
+  "$(request "$WEB" http://localhost/.well-known/oauth-authorization-server/api/v1/oauth)"
 
 # The backend trusts one hop and reads the last X-Forwarded-For entry as the
 # client. Behind a host proxy that must still be the client, not the proxy.
@@ -198,6 +204,11 @@ check "host: Connection upgrade only when the client asks for it" \
   "$(request "$HOST" -H 'Upgrade: websocket' http://localhost/api/ws)"
 check "host: /v1 reaches the backend" \
   "200 backend /v1/models conn= xff=127.0.0.1" "$(request "$HOST" http://localhost/v1/models)"
+check "host: MCP sign-in discovery reaches the backend" \
+  "200 backend /.well-known/oauth-authorization-server/api/v1/oauth conn= xff=127.0.0.1" \
+  "$(request "$HOST" http://localhost/.well-known/oauth-authorization-server/api/v1/oauth)"
+check "host: other well-known paths stay with the frontend" \
+  "200 frontend /.well-known/security.txt" "$(request "$HOST" http://localhost/.well-known/security.txt)"
 check "host: a path that only starts with api goes to the frontend" \
   "200 frontend /apidocs" "$(request "$HOST" http://localhost/apidocs)"
 docker stop "$PREFIX-host-stubs" >/dev/null

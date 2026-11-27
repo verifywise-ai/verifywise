@@ -4,6 +4,7 @@ import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router";
 import { setExpiration } from "../../../application/redux/auth/authSlice";
 import { startSession } from "../../../application/utils/clearSession";
+import { takeMcpAuthorizationReturn } from "../../../application/utils/mcpAuthorizeReturn";
 import { ReactComponent as MicrosoftIcon } from "../../assets/icons/microsoft-icon.svg";
 import { palette, radiusPx } from "../../themes/palette";
 
@@ -38,7 +39,7 @@ export const MicrosoftSignIn: React.FC<MicrosoftSignInProps> = ({
         dispatch(setExpiration(event.data.expirationDate));
         localStorage.setItem("root_version", __APP_VERSION__);
         setIsSubmitting(false);
-        navigate("/");
+        navigate(takeMcpAuthorizationReturn() ?? "/");
       } else if (event.data?.type === "MICROSOFT_AUTH_ERROR") {
         setIsSubmitting(false);
         onError?.(event.data.error || "SSO authentication failed");

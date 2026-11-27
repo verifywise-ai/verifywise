@@ -570,6 +570,35 @@ from every organization; the access token stops working
 on the next request, because `authenticateJWT` loads the user as a member of
 the token's organization.
 
+## MCP Sign-in (OAuth)
+
+MCP clients such as Claude Code connect to `/api/mcp` by signing in through the
+browser, following the MCP authorization spec
+(https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization).
+The deployment is both the authorization server and the resource server. An API
+token in an `Authorization` header still works, for clients without browser
+sign-in. Code: `Servers/mcp/oauth.ts` (provider), `Servers/routes/v1/mcpOAuth.route.ts`,
+`Servers/controllers/mcpOAuth.ctrl.ts`, `Servers/routes/mcpOAuthMetadata.route.ts`,
+consent page `Clients/src/presentation/pages/McpAuthorize`.
+
+| Step | What happens |
+|------|--------------|
+| Discovery | `/api/mcp` answers a missing or rejected token with 401 and `WWW-Authenticate: Bearer resource_metadata="<FRONTEND_URL>/.well-known/oauth-protected-resource/api/mcp"`. That document names the issuer `<FRONTEND_URL>/api/v1/oauth`, whose metadata is at `/.well-known/oauth-authorization-server/api/v1/oauth`. |
+| Registration | Dynamic client registration at `/api/v1/oauth/register` (`oauth_clients`; a confidential client's secret is stored encrypted). |
+| Authorization | `/api/v1/oauth/authorize` (SDK handler: client, redirect URI, PKCE S256) redirects to `/mcp/authorize?request=<token>`, the request signed into a 10-minute JWT with `type: "mcp_authorization_request"`. |
+| Consent | The signed-in user allows or declines (`/api/v1/oauth/authorization-requests`). Only users who could call `/api/mcp` can allow (`canUseMcp`, `middleware/mcpAccess.middleware.ts`). The code is issued for the session's organization (none for a pure super admin): single use, 5 minutes, stored as a SHA-256 hash, bound to the PKCE challenge, redirect URI and resource. |
+| Tokens | `/api/v1/oauth/token` creates a grant (`oauth_grants`, the connection) and issues a one-hour access token (JWT, `type: "mcp_access"`, `aud` = `<FRONTEND_URL>/api/mcp`, `grantId`) and a 30-day refresh token (random, hashed in `oauth_refresh_tokens`). Refresh rotates it; presenting a rotated refresh token revokes the grant. |
+| Use | `authenticateJWTForMcp`, used only on `/api/mcp`, accepts `mcp_access` tokens while their grant is active, then applies the same membership, role and super-admin checks as `authenticateJWT`. `authenticateJWT` rejects them everywhere else. An expired MCP access token gets 401 (not 406), which makes the client refresh. |
+| Revocation | `/api/v1/oauth/revoke` (RFC 7009), or **Disconnect** in the MCP tab (`/api/v1/oauth/connections`), revokes the grant: its access and refresh tokens stop working at once. |
+
+`FRONTEND_URL` must be the deployment's public address: it builds every URL
+above, and a token is only valid for the resource it names. Without it, sign-in
+is off (no challenge, discovery 404) and API tokens keep working. The two
+`/.well-known/oauth-*` prefixes sit at the site root, outside `/api`, so every
+proxy layer sends them to the backend: `Clients/nginx.conf`, the Ansible host
+template, the Helm and Kubernetes ingresses, and the Vite dev proxy
+(`Clients/scripts/test-nginx-proxy.sh` checks the two nginx configs).
+
 ## Password Reset Flow
 
 ### Request Reset (Sends Email)

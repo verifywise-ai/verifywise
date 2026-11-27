@@ -1694,5 +1694,8 @@
   "Minor": "Minor",
   "Serious": "Serious",
   "Very serious": "Very serious",
-  "key must be a non-empty string": "key must be a non-empty string"
+  "key must be a non-empty string": "key must be a non-empty string",
+  "This sign-in request is invalid or has expired. Start again from your MCP client.": "This sign-in request is invalid or has expired. Start again from your MCP client.",
+  "Invalid connection id": "Invalid connection id",
+  "Connection not found": "Connection not found"
 }

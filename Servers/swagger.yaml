@@ -7968,6 +7968,8 @@ tags:
   -
     name: 'LLM Keys'
   -
+    name: 'MCP sign-in'
+  -
     name: Mail
   -
     name: Mcp
@@ -8089,6 +8091,8 @@ tags:
     name: 'v1: V1/Model Inventories'
   -
     name: 'v1: V1/Model Risks'
+  -
+    name: 'v1: V1/Oauth'
   -
     name: 'v1: V1/Policy Templates'
   -
@@ -30446,3 +30450,81 @@ paths:
       security:
         -
           bearerAuth: []
+  /v1/oauth/authorization-requests:
+    get:
+      summary: 'Get Authorization Request Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Oauth'
+      operationId: getAuthorizationRequestHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/oauth/authorization-requests/decision:
+    post:
+      summary: 'Decide Authorization Request Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Oauth'
+      operationId: decideAuthorizationRequestHandler
+      security:
+        -
+          bearerAuth: []
+  /v1/oauth/connections:
+    get:
+      summary: 'List Connections Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Oauth'
+      operationId: listConnectionsHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/oauth/connections/{id}':
+    delete:
+      summary: 'Revoke Connection Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Oauth'
+      operationId: revokeConnectionHandler
+      security:
+        -
+          bearerAuth: []
+  /.well-known/oauth-protected-resource/api/mcp:
+    get:
+      summary: 'Get Protected Resource Metadata'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'MCP sign-in'
+      operationId: getProtectedResourceMetadata
+  /.well-known/oauth-authorization-server/api/v1/oauth:
+    get:
+      summary: 'Get Authorization Server Metadata'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'MCP sign-in'
+      operationId: getAuthorizationServerMetadata

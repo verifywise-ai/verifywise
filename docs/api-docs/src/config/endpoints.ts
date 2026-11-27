@@ -7580,6 +7580,32 @@ export const mcpEndpoints: Endpoint[] = [
   },
 ];
 
+// MCP sign-in endpoints
+export const mcpSigninEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/.well-known/oauth-protected-resource/api/mcp',
+    summary: "Get Protected Resource Metadata",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "MCP sign-in",
+  },
+  {
+    method: 'GET',
+    path: '/.well-known/oauth-authorization-server/api/v1/oauth',
+    summary: "Get Authorization Server Metadata",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "MCP sign-in",
+  },
+];
+
 // Model Inventory endpoints
 export const modelInventoryEndpoints: Endpoint[] = [
   {
@@ -13457,6 +13483,54 @@ export const v1V1modelRisksEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Oauth endpoints
+export const v1V1oauthEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/oauth/authorization-requests',
+    summary: "Get Authorization Request Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Oauth",
+  },
+  {
+    method: 'POST',
+    path: '/v1/oauth/authorization-requests/decision',
+    summary: "Decide Authorization Request Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Oauth",
+  },
+  {
+    method: 'GET',
+    path: '/v1/oauth/connections',
+    summary: "List Connections Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Oauth",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/oauth/connections/{id}',
+    summary: "Revoke Connection Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Oauth",
+  },
+];
+
 // v1: V1/Policy Templates endpoints
 export const v1V1policyTemplatesEndpoints: Endpoint[] = [
   {
@@ -14619,6 +14693,7 @@ export const allEndpoints = {
   llmEvals: llmEvalsEndpoints,
   llmKey: llmKeyEndpoints,
   mcp: mcpEndpoints,
+  mcpSignin: mcpSigninEndpoints,
   modelInventory: modelInventoryEndpoints,
   modelRisk: modelRiskEndpoints,
   mrm: mrmEndpoints,
@@ -14674,6 +14749,7 @@ export const allEndpoints = {
   v1V1llmKeys: v1V1llmKeysEndpoints,
   v1V1modelInventories: v1V1modelInventoriesEndpoints,
   v1V1modelRisks: v1V1modelRisksEndpoints,
+  v1V1oauth: v1V1oauthEndpoints,
   v1V1policyTemplates: v1V1policyTemplatesEndpoints,
   v1V1projects: v1V1projectsEndpoints,
   v1V1reportRuns: v1V1reportRunsEndpoints,

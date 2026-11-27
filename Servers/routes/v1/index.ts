@@ -53,6 +53,7 @@ import reportRunsRoutes from "./reportRuns.route";
 import vendorRisksRoutes from "./vendorRisks.route";
 import llmKeysRoutes from "./llmKeys.route";
 import tasksRoutes from "./tasks.route";
+import mcpOAuthRoutes from "./mcpOAuth.route";
 
 const router = express.Router();
 
@@ -156,5 +157,8 @@ router.use("/llm-keys", llmKeysRoutes);
 // Tasks linked to an entity (incident drawer's linked tasks); the legacy
 // /api/tasks router is frozen.
 router.use("/tasks", tasksRoutes);
+// Sign-in for MCP clients (the issuer of mcp/oauth.ts): OAuth endpoints, the
+// consent page's request and decision, and the user's connections.
+router.use("/oauth", mcpOAuthRoutes);
 
 export default router;
