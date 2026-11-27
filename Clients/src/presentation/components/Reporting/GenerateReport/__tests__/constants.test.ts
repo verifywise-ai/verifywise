@@ -12,9 +12,14 @@ describe("getAvailableSections frameworkRequirements", () => {
     expect(complianceSectionIds(26, true)).toEqual(["frameworkRequirements"]);
   });
 
-  it("offers nothing in Compliance & Governance for an organizational core framework", () => {
+  it("offers each organizational core framework the section the server builds for it", () => {
+    expect(complianceSectionIds(2, true)).toEqual(["clausesAndAnnexes"]);
+    expect(complianceSectionIds(3, true)).toEqual(["clausesAndAnnexes"]);
+    expect(complianceSectionIds(4, true)).toEqual(["nistSubcategories"]);
+  });
+
+  it("offers nothing in Compliance & Governance for EU AI Act on an organizational report", () => {
     expect(complianceSectionIds(1, true)).toEqual([]);
-    expect(complianceSectionIds(4, true)).toEqual([]);
   });
 
   it("offers frameworkRequirements for a use case report on a bundled framework", () => {

@@ -78,41 +78,31 @@ export function getAvailableSections(
           (s) => s.id !== "vendorRisks" && s.id !== "modelRisks",
         );
       }
-      // Organizational reports keep only the Compliance & Governance sections
-      // the server builds for organization-level frameworks: framework
-      // requirements for a bundled framework, and requirements plus assessment
-      // tracker for EU AI Act (organization), which shares EU AI Act's sections.
-      if (group.id === "complianceGovernance") {
-        filteredSections = filteredSections.filter((s) => {
-          if (s.id === "frameworkRequirements") return isBundledFrameworkId(frameworkId);
-          if (s.id === "controls" || s.id === "assessmentTracker") {
-            return frameworkId === FRAMEWORK_IDS.EU_AI_ACT_ORGANIZATION;
-          }
-          return false;
-        });
-      }
     }
 
-    // Filter Compliance & Governance sections based on framework
-    if (group.id === "complianceGovernance" && !isOrganizational) {
+    // Compliance & Governance: only the sections the server builds for the
+    // chosen framework. ISO 42001/27001 and NIST AI RMF exist only on the
+    // organizational project; EU AI Act's sections come from EU AI Act on a
+    // use case, or from EU AI Act (organization) on the organizational project.
+    if (group.id === "complianceGovernance") {
+      const euAiActId = isOrganizational
+        ? FRAMEWORK_IDS.EU_AI_ACT_ORGANIZATION
+        : FRAMEWORK_IDS.EU_AI_ACT;
       filteredSections = filteredSections.filter((section) => {
         switch (section.id) {
           case "controls":
           case "assessmentTracker":
-            // Only for EU AI Act (framework 1)
-            return frameworkId === FRAMEWORK_IDS.EU_AI_ACT;
+            return frameworkId === euAiActId;
           case "clausesAndAnnexes":
-            // Only for ISO frameworks (2 and 3)
             return (
               frameworkId === FRAMEWORK_IDS.ISO_42001 || frameworkId === FRAMEWORK_IDS.ISO_27001
             );
           case "nistSubcategories":
-            // Only for NIST AI RMF (framework 4)
             return frameworkId === FRAMEWORK_IDS.NIST_AI_RMF;
           case "frameworkRequirements":
             return isBundledFrameworkId(frameworkId);
           default:
-            return true;
+            return !isOrganizational;
         }
       });
     }

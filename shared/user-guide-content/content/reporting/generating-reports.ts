@@ -70,7 +70,7 @@ export const generatingReportsContent: ArticleContent = {
         {
           icon: 'Building2',
           title: 'Organization reports',
-          description: 'Reports covering your entire organization\'s governance program for one framework you pick. The EU AI Act is not offered for organization reports.',
+          description: 'Reports covering your entire organization\'s governance program for one framework you pick. The EU AI Act itself belongs to use cases; EU AI Act (organization) is offered once a use case has the EU AI Act.',
         },
       ],
     },
@@ -92,7 +92,7 @@ export const generatingReportsContent: ArticleContent = {
       ],
       rows: [
         { group: 'Risk Analysis', sections: 'Use Case Risks. A use case report also offers Vendor Risks and Model Risks.' },
-        { group: 'Compliance & Governance', sections: 'Use case reports only, by framework: Requirements and Assessment Tracker for the EU AI Act, Clauses & Annexes for ISO 42001 and ISO 27001, NIST Subcategories for the NIST AI RMF. The other built-in frameworks get Framework requirements, which organization reports offer too.' },
+        { group: 'Compliance & Governance', sections: 'By framework: Requirements and Assessment Tracker for the EU AI Act (use case reports) and EU AI Act (organization) (organization reports), Clauses & Annexes for ISO 42001 and ISO 27001, NIST Subcategories for the NIST AI RMF. The other built-in frameworks get Framework requirements.' },
         { group: 'Organization', sections: 'AI Models, Vendors, Training Registry, Policy Manager and Incident Management.' },
       ],
     },

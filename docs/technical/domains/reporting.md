@@ -58,13 +58,17 @@ Reports are organized into three groups:
 
 ### Framework Section Mapping
 
-| Framework | Available Sections |
-|-----------|-------------------|
-| EU AI Act | Compliance, Assessment, Project Risks, Organization |
-| ISO 42001 | Clauses & Annexes, Project Risks, Organization |
-| ISO 27001 | Clauses & Annexes, Project Risks, Organization |
-| NIST AI RMF | NIST Subcategories, Project Risks, Organization |
-| Bundled frameworks (ids 5–28 and 30) | Framework Requirements, Project Risks, Organization |
+Compliance & Governance sections offered by the report builder (`getAvailableSections` in `Clients/src/presentation/components/Reporting/GenerateReport/constants.ts`). Every report also gets Project Risks and the Organization group.
+
+| Framework | Report type | Compliance & Governance sections |
+|-----------|-------------|----------------------------------|
+| EU AI Act (1) | Use case | Compliance (Requirements), Assessment |
+| EU AI Act (organization) (29) | Organization | Compliance (Requirements), Assessment |
+| ISO 42001 (2), ISO 27001 (3) | Organization | Clauses & Annexes |
+| NIST AI RMF (4) | Organization | NIST Subcategories |
+| Bundled frameworks (every structure in `Servers/structures`) | Either | Framework Requirements |
+
+ISO 42001, ISO 27001 and NIST AI RMF only exist on the organizational project. "Bundled" is `isBundledFrameworkId` in `Clients/src/application/constants/frameworks.ts`, which must match the server's structure registry (`getStructureById`).
 
 ## API Endpoints
 
