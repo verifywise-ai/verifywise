@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Box, Typography, Stack, Button } from "@mui/material";
 import { Check as CheckGreenIcon, Shield as ShieldIcon } from "lucide-react";
 import { getFrameworkBadgePath } from "../../../tools/frameworkBadge";
 import StandardModal from "../../../components/Modals/StandardModal";
+import SearchBox from "../../../components/Search/SearchBox";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import {
   accent,
@@ -62,7 +64,24 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
   const [alert, setAlert] = useState<AlertProps | null>(null);
   const [frameworkToRemove, setFrameworkToRemove] = useState<Framework | null>(null);
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { isEnabled } = useExtensions();
+  const { t } = useTranslation();
+
+  // Start each opening with the full list.
+  useEffect(() => {
+    if (!open) setSearchQuery("");
+  }, [open]);
+
+  const visibleFrameworks = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return frameworks;
+    return frameworks.filter(
+      (fw) =>
+        (fw.name ?? "").toLowerCase().includes(query) ||
+        (fw.description ?? "").toLowerCase().includes(query),
+    );
+  }, [frameworks, searchQuery]);
   // Imported frameworks attach to use cases only, and only while the extension is on.
   const showImported = open && isEnabled("framework-import") && !project.is_organizational;
 
@@ -161,7 +180,10 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
         </>
       }
     >
-      <Stack spacing={6}>
+      {/* Hold the height of the full (scrolling) list so the centred modal
+          doesn't shrink and move the search box while the user types. Matches
+          StandardModal's body maxHeight minus its 20px padding. */}
+      <Stack spacing={6} sx={{ minHeight: "calc(100vh - 280px)" }}>
         {alert && (
           <Alert
             variant={alert.variant}
@@ -172,6 +194,17 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
           />
         )}
         {isLoading && <CustomizableToast title="Processing..." />}
+        <SearchBox
+          placeholder={t("Search frameworks")}
+          value={searchQuery}
+          onChange={setSearchQuery}
+          inputProps={{ "aria-label": t("Search frameworks") }}
+        />
+        {visibleFrameworks.length === 0 && (
+          <Typography sx={frameworkCardDescriptionStyle}>
+            {t("No frameworks match your search.")}
+          </Typography>
+        )}
         <Box
           sx={{
             display: "grid",
@@ -180,7 +213,7 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
             alignItems: "stretch",
           }}
         >
-          {frameworks.map((fw) => {
+          {visibleFrameworks.map((fw) => {
             const isAdded = isFrameworkAdded(fw);
             const lockedReason = isAdded ? lockedFrameworks?.[Number(fw.id)] : undefined;
             const badgePath = getFrameworkBadgePath(fw.name);
