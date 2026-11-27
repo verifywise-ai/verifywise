@@ -629,6 +629,8 @@ export const de: Record<string, string> = {
   "API key (optional)": "API-Schlüssel (optional)",
   "Add comment (optional)": "Kommentar hinzufügen (optional)",
   "Added": "Hinzugefügt",
+  "Required while a use case has EU AI Act":
+    "Erforderlich, solange ein Anwendungsfall die EU-KI-Verordnung nutzt",
   "AI Frameworks": "KI-Rahmenwerke",
   "Add or remove AI frameworks or regulations to your platform. Those selected will be integrated into your use case.":
     "KI-Rahmenwerke oder Regulierungen zu Ihrer Plattform hinzufügen oder entfernen. Ausgewählte werden in Ihren Anwendungsfall integriert.",
@@ -5338,6 +5340,8 @@ export const fr: Record<string, string> = {
   "API key (optional)": "Clé API (optionnelle)",
   "Add comment (optional)": "Ajouter un commentaire (optionnel)",
   "Added": "Ajouté",
+  "Required while a use case has EU AI Act":
+    "Requis tant qu'un cas d'usage utilise le Règlement IA de l'UE",
   "AI Frameworks": "Référentiels IA",
   "Add or remove AI frameworks or regulations to your platform. Those selected will be integrated into your use case.":
     "Ajoutez ou retirez des référentiels ou réglementations IA sur votre plateforme. Ceux sélectionnés seront intégrés à votre cas d'usage.",
@@ -10051,6 +10055,7 @@ export const es: Record<string, string> = {
   "API key (optional)": "Clave de API (opcional)",
   "Add comment (optional)": "Añadir comentario (opcional)",
   "Added": "Añadido",
+  "Required while a use case has EU AI Act": "Necesario mientras un caso de uso tenga el EU AI Act",
   "AI Frameworks": "Marcos de IA",
   "Add or remove AI frameworks or regulations to your platform. Those selected will be integrated into your use case.":
     "Añada o elimine marcos o normativas de IA de su plataforma. Los seleccionados se integrarán en su caso de uso.",
