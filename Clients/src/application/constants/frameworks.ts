@@ -15,6 +15,19 @@ export const FRAMEWORK_IDS = {
   EU_AI_ACT_ORGANIZATION: 29,
 } as const;
 
+/** Framework ids from this one up are bundled frameworks (SOC 2, GDPR, ...), except EU AI Act (organization). */
+export const FIRST_BUNDLED_FRAMEWORK_ID = 5;
+
+/**
+ * Whether the framework is a bundled one, built from Servers/structures (a
+ * generic framework: one requirements section, generic dashboard tab).
+ * EU AI Act (organization) sits in that id range but has its own tables. The
+ * server decides this from its structure registry (getStructureById), so a
+ * new id >= 5 without a structure must be excluded here too.
+ */
+export const isBundledFrameworkId = (frameworkId: number): boolean =>
+  frameworkId >= FIRST_BUNDLED_FRAMEWORK_ID && frameworkId !== FRAMEWORK_IDS.EU_AI_ACT_ORGANIZATION;
+
 /** The Frameworks page's ?framework= value for EU AI Act (organization); notification links use it. */
 export const EU_AI_ACT_ORGANIZATION_SLUG = "eu-ai-act-organization";
 

@@ -3,7 +3,7 @@
  * Defines the hierarchical structure of report sections
  */
 
-import { FRAMEWORK_IDS as APP_FRAMEWORK_IDS } from "../../../../application/constants/frameworks";
+import { FRAMEWORK_IDS, isBundledFrameworkId } from "../../../../application/constants/frameworks";
 
 export interface ReportSection {
   id: string;
@@ -60,29 +60,6 @@ export const REPORT_SECTION_GROUPS: ReportSectionGroup[] = [
 ];
 
 /**
- * Framework IDs
- */
-export const FRAMEWORK_IDS = {
-  EU_AI_ACT: 1,
-  ISO_42001: 2,
-  ISO_27001: 3,
-  NIST_AI_RMF: 4,
-} as const;
-
-/** Framework ids from this one up are the bundled frameworks (SOC 2, GDPR, ...). */
-export const FIRST_BUNDLED_FRAMEWORK_ID = 5;
-
-/**
- * Whether the framework is a bundled one, so the server can build its
- * framework requirements section. EU AI Act (organization) sits in the
- * bundled id range but has its own tables, and the server skips it
- * (`isBundledFrameworkId` in Servers/services/reporting/collectors/frameworkRequirements.ts).
- */
-export const isBundledFrameworkId = (frameworkId: number): boolean =>
-  frameworkId >= FIRST_BUNDLED_FRAMEWORK_ID &&
-  frameworkId !== APP_FRAMEWORK_IDS.EU_AI_ACT_ORGANIZATION;
-
-/**
  * Get sections available for a specific framework and report type
  */
 export function getAvailableSections(
@@ -101,13 +78,18 @@ export function getAvailableSections(
           (s) => s.id !== "vendorRisks" && s.id !== "modelRisks",
         );
       }
-      // Organizational reports have no Compliance & Governance sections, except
-      // the framework requirements section of a bundled framework (many of which
-      // are organizational).
+      // Organizational reports keep only the Compliance & Governance sections
+      // the server builds for organization-level frameworks: framework
+      // requirements for a bundled framework, and requirements plus assessment
+      // tracker for EU AI Act (organization), which shares EU AI Act's sections.
       if (group.id === "complianceGovernance") {
-        filteredSections = filteredSections.filter(
-          (s) => s.id === "frameworkRequirements" && isBundledFrameworkId(frameworkId),
-        );
+        filteredSections = filteredSections.filter((s) => {
+          if (s.id === "frameworkRequirements") return isBundledFrameworkId(frameworkId);
+          if (s.id === "controls" || s.id === "assessmentTracker") {
+            return frameworkId === FRAMEWORK_IDS.EU_AI_ACT_ORGANIZATION;
+          }
+          return false;
+        });
       }
     }
 
