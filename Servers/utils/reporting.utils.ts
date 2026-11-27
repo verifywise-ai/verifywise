@@ -321,7 +321,7 @@ export const annexCategoriesQuery = async (
        FROM annexcategories_struct_iso acs
        JOIN annexcategories_iso ac ON acs.id = ac.annexcategory_meta_id AND ac.organization_id = :organizationId
        WHERE acs.annex_id = :id AND ac.projects_frameworks_id = :projects_frameworks_id
-       ORDER BY acs.id;`,
+       ORDER BY acs.order_no, acs.id;`,
     {
       replacements: {
         id: annexId,
@@ -449,11 +449,11 @@ export const subClausesQuery = async (
   transaction: Transaction | null = null,
 ) => {
   return await sequelize.query(
-    `SELECT scs.id, scs.title, scs.order_no, scs.summary, sc.status, sc.implementation_description
+    `SELECT scs.id, scs.subclause_id, scs.title, scs.order_no, scs.summary, sc.status, sc.implementation_description
      FROM subclauses_struct_iso scs
      JOIN subclauses_iso sc ON scs.id = sc.subclause_meta_id AND sc.organization_id = :organizationId
      WHERE scs.clause_id = :clause_id AND sc.projects_frameworks_id = :projects_frameworks_id
-     ORDER BY scs.id;`,
+     ORDER BY scs.order_no, scs.id;`,
     {
       replacements: {
         clause_id: clauseId,

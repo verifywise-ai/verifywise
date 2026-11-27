@@ -452,12 +452,15 @@ export interface ClausesAndAnnexesSectionData {
     id: number;
     clauseId: string;
     title: string;
+    /** Summary of the subclauses' statuses, e.g. "In progress (3/7)" (summarizeIsoStatus). */
     status: string;
     /** See the note on ComplianceSectionData.controls[].useCase. */
     useCase?: string;
 
     subClauses: Array<{
       id: number;
+      /** e.g. "4.1"; empty when the struct row has none. */
+      subClauseId: string;
       title: string;
       status: string;
     }>;
@@ -468,12 +471,16 @@ export interface ClausesAndAnnexesSectionData {
     id: number;
     annexId: string;
     title: string;
+    /** Summary of the applicable controls' statuses (summarizeIsoStatus). */
     status: string;
     controls: Array<{
       id: number;
+      /** e.g. "A.5.1" (ISO 42001) or "A.5.26" (ISO 27001). */
       controlId: string;
       title: string;
       status: string;
+      /** False for an ISO 42001 annex category excluded from scope. */
+      isApplicable?: boolean;
     }>;
   }>;
 }

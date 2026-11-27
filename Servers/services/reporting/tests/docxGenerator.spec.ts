@@ -658,6 +658,51 @@ describe("DOCX Generator", () => {
       expect(text).toContain("A.1");
     });
 
+    it("lists subclauses and annex controls under their clause and annex", async () => {
+      const result = await generateDOCX({
+        ...mockReportData,
+        sections: {
+          clausesAndAnnexes: {
+            clauses: [
+              {
+                id: 1,
+                clauseId: "4",
+                title: "Context",
+                status: "In progress (1/2)",
+                subClauses: [
+                  { id: 7, subClauseId: "4.1", title: "Organization", status: "Implemented" },
+                ],
+              },
+            ],
+            annexes: [
+              {
+                id: 1,
+                annexId: "A.5",
+                title: "Policies",
+                status: "-",
+                controls: [
+                  {
+                    id: 4,
+                    controlId: "A.5.2",
+                    title: "Review",
+                    status: "Not started",
+                    isApplicable: false,
+                  },
+                ],
+              },
+            ],
+          },
+        },
+      } as unknown as ReportData);
+      const text = await docxText(result.content);
+
+      expect(text).toContain("In progress (1/2)");
+      expect(text).toContain("4.1");
+      expect(text).toContain("Organization");
+      expect(text).toContain("A.5.2");
+      expect(text).toContain("Not applicable");
+    });
+
     it("adds no column for a single-use-case report", async () => {
       const result = await generateDOCX(merged());
       const text = await docxText(result.content);

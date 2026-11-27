@@ -253,7 +253,7 @@ describe("collectFacts — ranks every section on the vocabulary its collector e
           status: "Unknown",
           subClauses: [
             { title: "Scope", status: "Implemented" },
-            { title: "Interested parties", status: "Not started" },
+            { subClauseId: "4.2", title: "Interested parties", status: "Not started" },
           ],
         },
       ],
@@ -269,6 +269,7 @@ describe("collectFacts — ranks every section on the vocabulary its collector e
 
     expect(facts.items).toBe(3);
     expect(facts.status_Unknown).toBeUndefined();
+    expect(String(facts.top1)).toContain("4.2 Interested parties");
     expect(facts.status_Implemented).toBe(1);
     expect(facts.status_Audited).toBe(1);
     expect(facts["status_Not started"]).toBe(1);

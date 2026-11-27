@@ -1,6 +1,6 @@
 # Reporting Domain
 
-> **Last Updated:** 2026-11-23
+> **Last Updated:** 2026-11-27
 
 ## Overview
 
@@ -519,7 +519,7 @@ literal `NULL` and counted as "unowned".
 | modelRisks         | model_risks, model_inventories         | risk_name, risk_level, **status** (there is no `mitigation_status` column), mitigation_plan, target_date                      |
 | compliance         | controls_eu, controlcategories_struct_eu | status, title, owner, due_date, **title** for the control family (the category rows have no `name` column; reading `name` labelled every control "Unknown") |
 | assessment         | assessments, topics, questions         | answer, progress                                                                                                              |
-| clausesAndAnnexes  | subclauses_iso, annexcategories_iso    | status (the `*_struct` parent tables carry none)                                                                              |
+| clausesAndAnnexes  | subclauses_iso, annexcategories_iso (ISO 42001); subclauses_iso27001, annexcontrols_iso27001 (ISO 27001) | status, is_applicable (ISO 42001 annex categories). The `*_struct` clause and annex tables carry no status, so each clause and annex row shows a summary of the rows under it (`isoStatusSummary.ts`: "Implemented (n/n)", "Not started (0/n)", "In progress (d/n)", not-applicable rows left out), and the report lists those rows under it with their ids ("4.1", "A.5.1" from `order_no` as the Annex screen shows it, ISO 27001 `control_id`) |
 | nistSubcategories  | nist_ai_rmf_subcategories + `*_struct` | function, category, status                                                                                                    |
 | frameworkRequirements | the framework's own tables from its structure (`l1`/`l2`/`l3` struct and impl tables, `Servers/structures`), `file_entity_links` + `files` (evidence), the l2/l3 risk link tables + `risks` (live linked risks) | status, owner, due_date, evidence file names |
 | vendors            | vendors, vendors_projects              | vendor_name, review_status, assignee                                                                                          |

@@ -596,6 +596,52 @@ describe("report-pdf.ejs template", () => {
       expect(html).toContain("Beta");
     });
 
+    it("lists subclauses and annex controls under their clause and annex", () => {
+      const html = render(undefined, {
+        clausesAndAnnexes: {
+          clauses: [
+            {
+              id: 1,
+              clauseId: "4",
+              title: "Context",
+              status: "In progress (1/2)",
+              subClauses: [
+                { id: 7, subClauseId: "4.1", title: "Organization", status: "Implemented" },
+                { id: 8, subClauseId: "4.2", title: "Parties", status: "Draft" },
+              ],
+            },
+          ],
+          annexes: [
+            {
+              id: 1,
+              annexId: "A.5",
+              title: "Policies",
+              status: "Implemented (1/1)",
+              controls: [
+                { id: 3, controlId: "A.5.1", title: "Policy", status: "Audited" },
+                {
+                  id: 4,
+                  controlId: "A.5.2",
+                  title: "Review",
+                  status: "Not started",
+                  isApplicable: false,
+                },
+              ],
+            },
+          ],
+        },
+      } as never);
+
+      expect(html).toContain("In progress (1/2)");
+      expect(html).toContain("4.1");
+      expect(html).toContain("Parties");
+      expect(html).toContain("A.5.2");
+      expect(html).toMatch(/chip-default">Not applicable</);
+      expect(html).toMatch(/chip-success">Implemented<\/span>/);
+      expect(html).toMatch(/chip-warning">Draft</);
+      expect(html).not.toContain(">Unknown<");
+    });
+
     it("labels merged assessment topics", () => {
       const html = render(undefined, {
         assessment: {
