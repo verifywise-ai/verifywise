@@ -1,6 +1,6 @@
 # Servers — Backend Development Guide
 
-> **Last Updated:** 2026-11-23
+> **Last Updated:** 2026-11-26
 
 ---
 
@@ -161,7 +161,7 @@ Bug fixes to existing unversioned endpoints stay on their legacy router in `rout
 
 ### Frameworks and Extensions
 
-- **Frameworks 5–28** (SOC 2, GDPR, HIPAA, ...) are declared in `structures/<Name>/*.structure.ts` (registry `structures/index.ts`) and served by the generic `routes/frameworkImpl.route.ts`. Migrations `require("../../dist/structures")`, so run `npm run build` before `npm run migrate-db`. Guide: `docs/technical/guides/adding-new-framework.md`.
+- **Frameworks 5–28 and 30** (SOC 2, GDPR, HIPAA, ...) are declared in `structures/<Name>/*.structure.ts` (registry `structures/index.ts`) and served by the generic `routes/frameworkImpl.route.ts`. Migrations `require("../../dist/structures")`, so run `npm run build` before `npm run migrate-db`. Guide: `docs/technical/guides/adding-new-framework.md`.
 - **Framework wording needs no migration** (all 28 frameworks, plus each framework's description; names are never synced). On startup, `services/frameworkTextSync` rewrites struct text that differs from `structures/`. To change wording: edit the TS, bump that framework's text revision (`textRevision` in its `.structure.ts`, or its entry in `services/frameworkTextSync/builtins.ts` for EU AI Act, ISO 42001, ISO 27001 and NIST AI RMF), then run `npm run framework-text:record`; `structures/__tests__/frameworkTextRevisions.test.ts` fails otherwise. Adding, removing or reordering items still needs a migration. Details: "Changing an existing framework's text" in the guide.
 - **Extensions** live in `extensions/<key>/`. They are mounted at `/api/extensions/<key>` **after** the `/api/extensions` catalog router, and gated with `requireExtensionEnabled("<key>")`. Read config with `ExtensionService.getRuntimeConfiguration(key, orgId)`. Reference: `docs/technical/infrastructure/extensions.md`.
 

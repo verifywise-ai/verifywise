@@ -489,7 +489,7 @@ export class ReportDataCollector {
       sectionNotices.push({ sectionKey: "nistSubcategories", reason: noticeReason });
     }
 
-    // Bundled frameworks (ids 5-28) share one generic section.
+    // Bundled frameworks (ids 5-28 and 30) share one generic section.
     //
     // An E-23 kind run also needs the E-23 (framework 26) requirements for its
     // rules, fix-it list and glance, whether or not the section itself was

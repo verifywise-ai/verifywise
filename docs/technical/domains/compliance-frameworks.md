@@ -2,10 +2,10 @@
 
 ## Overview
 
-VerifyWise ships 28 compliance frameworks, all available to every organization. None of them needs to be installed or enabled.
+VerifyWise ships 29 compliance frameworks, all available to every organization. None of them needs to be installed or enabled.
 
 - **4 core frameworks** (ids 1–4): EU AI Act, ISO 42001, ISO 27001 and NIST AI RMF. Each has hand-built tables, endpoints and pages. Most of this document describes these.
-- **24 bundled frameworks** (ids 5–28): SOC 2, GDPR, HIPAA and others. They are declared in the structure registry (`Servers/structures/`) and served by generic endpoints and a generic UI. See [Bundled frameworks (ids 5–28)](#bundled-frameworks-ids-528).
+- **25 bundled frameworks** (ids 5–28 and 30): SOC 2, GDPR, HIPAA and others. They are declared in the structure registry (`Servers/structures/`) and served by generic endpoints and a generic UI. See [Bundled frameworks (ids 5–28 and 30)](#bundled-frameworks-ids-528-and-30).
 
 - **Imported frameworks**: an organization's own frameworks, imported from Excel through the `framework-import` extension. They are stored per organization outside the bundled catalog, and use cases assess them like the bundled ones. See [Imported frameworks](#imported-frameworks).
 
@@ -19,7 +19,7 @@ All frameworks share the same patterns for progress tracking, status management 
 | ISO 42001 | 2 | AI management system |
 | ISO 27001 | 3 | Information security management |
 | NIST AI RMF | 4 | AI risk management |
-| 24 bundled frameworks | 5–28 | See [Bundled frameworks](#bundled-frameworks-ids-528) |
+| 25 bundled frameworks | 5–28, 30 | See [Bundled frameworks](#bundled-frameworks-ids-528-and-30) |
 
 ## Framework Structures
 
@@ -526,7 +526,7 @@ DELETE /frameworks/fromProject?frameworkId=2&projectId=5
 
 Calls `frameworkDeletionMap[frameworkId]` and deletes all of that project's implementation data for the framework (status, assignments, risk links, evidence links). The UI asks for confirmation ("Confirm framework removal") first.
 
-## Bundled frameworks (ids 5–28)
+## Bundled frameworks (ids 5–28 and 30)
 
 These frameworks shipped as plugins until PR #4443 (August 2026). They are now core and are declared in TypeScript:
 
@@ -538,7 +538,7 @@ These frameworks shipped as plugins until PR #4443 (August 2026). They are now c
 
 Names and flags come from each structure's `seed.name` and `seed.is_organizational`.
 
-**Organization-level (14)**: added under **Frameworks → Manage frameworks → Add/remove frameworks**
+**Organization-level (15)**: added under **Frameworks → Manage frameworks → Add/remove frameworks**
 
 | ID | Key | Name | Levels |
 |----|-----|------|--------|
@@ -556,6 +556,7 @@ Names and flags come from each structure's `seed.name` and `seed.is_organization
 | 25 | `nist-csf` | NIST Cybersecurity Framework | 3 |
 | 26 | `osfi-e23` | OSFI E-23 Model Risk Management | 2 |
 | 27 | `en-18286` | EN 18286 | 2 |
+| 30 | `saudi-naii` | Saudi National AI Index (NAII) | 2 |
 
 **Use-case-level (10)**: added from a use case's **Frameworks/regulations** tab
 
@@ -572,9 +573,11 @@ Names and flags come from each structure's `seed.name` and `seed.is_organization
 | 24 | `hipaa` | HIPAA Security Rule Framework | 3 |
 | 28 | `en-18286-ai-systems` | EN 18286 AI systems | 2 |
 
-Total: 4 core + 24 bundled = **28 frameworks**.
+Total: 4 core + 25 bundled = **29 frameworks**. Id 29 is EU AI Act (organization), which is not a registry framework (see [Organization-wide obligations](#organization-wide-obligations-eu-ai-act-organization)).
 
 EN 18286 is split into two frameworks: `en-18286` (id 27, organization level: clauses 4–7, 9.6, 9.7 and 10) and `en-18286-ai-systems` (id 28, use-case level: clause 8 and 9.1–9.5, tracked per AI system). The standard defines one QMS; the split follows the organization / AI system division Modulos uses. Both were added after the August 2026 migrations, by `20261110121006-add-en-18286-framework.js`, which skips each framework whose `frameworks` row the `20260805*` migrations already created.
+
+The Saudi National AI Index (`saudi-naii`, id 30, organization level) follows SDAIA-P123 version 1 (May 2025) one to one: level 1 is the sub-pillar, titled "<pillar>: <sub-pillar>" (7), and level 2 is the domain (23). Titles and descriptions follow SDAIA's document. SDAIA shares its questionnaire only with assessed entities, so each domain's `questions` and `evidence_examples` are VerifyWise guidance, and the user guide says so. SDAIA's six adoption levels (0 absence of capabilities to 5 pioneer) come from weighted domain scores whose weights are not published, so VerifyWise does not calculate a level; the levels are explained in the framework description and the user guide. `structures/__tests__/saudiNaii.structure.test.ts` pins the 7 × 23 hierarchy. It was added by `20261126211629-add-saudi-naii-framework.js`, which skips when the `20260805*` migrations already created it.
 
 ### Tables
 
@@ -613,7 +616,7 @@ The **Notes** tab uses `notesAttachedTo = "<FRAMEWORK_TYPE>_<ENTITY_TYPE>"` (e.g
 
 ### Reporting
 
-Generated reports cover bundled frameworks (ids 5–28) through the `frameworkRequirements` section: per framework, requirement progress by group with owners, due dates and evidence. See [Reporting](./reporting.md#framework-requirements-section). Imported (Excel) frameworks are not covered.
+Generated reports cover bundled frameworks (ids 5–28 and 30) through the `frameworkRequirements` section: per framework, requirement progress by group with owners, due dates and evidence. See [Reporting](./reporting.md#framework-requirements-section). Imported (Excel) frameworks are not covered.
 
 ### Known gaps
 
@@ -688,7 +691,7 @@ An imported framework cannot be deleted while a use case uses it: the delete ans
 | `routes/iso-42001.route.ts` | ISO 42001 routes |
 | `routes/nist-ai-rmf.route.ts` | NIST routes |
 | `routes/eu-ai-act.route.ts` | EU AI Act routes |
-| `structures/index.ts`, `structures/<Name>/*.structure.ts` | Bundled framework registry (ids 5–28) |
+| `structures/index.ts`, `structures/<Name>/*.structure.ts` | Bundled framework registry (ids 5–28 and 30) |
 | `utils/frameworkRegistry.utils.ts` | Add/remove bundled frameworks on a project |
 | `routes/frameworkImpl.route.ts`, `controllers/frameworkImpl.ctrl.ts`, `utils/frameworkImpl.utils.ts` | Generic implementation endpoints |
 | `types/framework.type.ts` | `frameworkAdditionMap` / `frameworkDeletionMap` by framework id |

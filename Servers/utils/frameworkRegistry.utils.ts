@@ -398,3 +398,8 @@ export const deleteProjectFrameworkEN18286Query = makeDelete("en-18286");
 // EN 18286 AI systems (id=28)
 export const createEN18286AISystemsFrameworkQuery = makeCreate("en-18286-ai-systems");
 export const deleteProjectFrameworkEN18286AISystemsQuery = makeDelete("en-18286-ai-systems");
+
+// Saudi National AI Index (id=30). Id 29 is EU AI Act (organization), which is
+// not a registry framework.
+export const createSaudiNAIIFrameworkQuery = makeCreate("saudi-naii");
+export const deleteProjectFrameworkSaudiNAIIQuery = makeDelete("saudi-naii");

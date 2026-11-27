@@ -59,6 +59,7 @@ export type FileSource =
   | "Qatar PDPL articles"
   | "Quebec Law 25 articles"
   | "Saudi PDPL articles"
+  | "Saudi NAII domains"
   | "SOC 2 controls"
   | "Texas AI Act sections"
   | "UAE PDPL articles"
@@ -273,6 +274,7 @@ export class FileModel extends Model<File> {
       "Qatar PDPL articles",
       "Quebec Law 25 articles",
       "Saudi PDPL articles",
+      "Saudi NAII domains",
       "SOC 2 controls",
       "Texas AI Act sections",
       "UAE PDPL articles",
