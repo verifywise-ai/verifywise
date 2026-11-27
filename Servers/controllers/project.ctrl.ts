@@ -12,6 +12,7 @@ import {
   getProjectByIdQuery,
   getUseCaseApprovalSnapshotQuery,
   getUseCaseApprovalWorkflowQuery,
+  getEuAiActWorkQuery,
   lockUseCaseWorkflowQuery,
   updateProjectByIdQuery,
 } from "../utils/project.utils";
@@ -876,6 +877,47 @@ export async function getUseCaseApprovalWorkflow(req: Request, res: Response): P
       error: error as Error,
       userId: req.userId!,
       organizationId: req.organizationId!,
+    });
+
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * Whether the use case's FRIA and CE marking hold work, so the use case page
+ * keeps those tabs on a use case without the EU AI Act when they do.
+ */
+export async function getUseCaseEuAiActWork(req: Request, res: Response): Promise<any> {
+  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const log = {
+    functionName: "getUseCaseEuAiActWork",
+    fileName: "project.ctrl.ts",
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  };
+
+  logProcessing({
+    description: `starting getUseCaseEuAiActWork for project ID ${projectId}`,
+    ...log,
+  });
+
+  try {
+    const work = await getEuAiActWorkQuery(projectId, req.organizationId!);
+    if (!work) {
+      return res.status(404).json(STATUS_CODE[404]({}));
+    }
+    await logSuccess({
+      eventType: "Read",
+      description: `Read the FRIA and CE marking work of project ID ${projectId}`,
+      ...log,
+    });
+    return res.status(200).json(STATUS_CODE[200](work));
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: `Failed to read the FRIA and CE marking work of project ID ${projectId}`,
+      ...log,
+      error: error as Error,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));

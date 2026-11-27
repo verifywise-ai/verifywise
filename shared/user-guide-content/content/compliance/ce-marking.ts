@@ -25,7 +25,7 @@ export const ceMarkingContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Open a use case from your dashboard.' },
+        { text: 'Open a use case that has the EU AI Act. Without it, the CE Marking tab is hidden unless it already holds saved work.' },
         { text: 'Click the **CE Marking** tab.' },
         { text: 'The first time you open this tab, a default record is created with all 7 conformity steps set to "Not started."' },
       ],

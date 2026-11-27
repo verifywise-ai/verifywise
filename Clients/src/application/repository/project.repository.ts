@@ -95,6 +95,30 @@ export async function getUseCaseApprovalWorkflow({
   return response.data.data;
 }
 
+/** GET /api/v1/projects/:id/eu-ai-act-work: whether each tab holds saved work. */
+export interface UseCaseEuAiActWork {
+  fria: boolean;
+  ce_marking: boolean;
+}
+
+/**
+ * Whether the use case's FRIA and CE marking hold work. Read only: opening
+ * either tab's own endpoint creates a blank record.
+ */
+export async function getUseCaseEuAiActWork({
+  id,
+  signal,
+}: {
+  id: number;
+  signal?: AbortSignal;
+}): Promise<UseCaseEuAiActWork> {
+  const response = await apiServices.get<{ data: UseCaseEuAiActWork }>(
+    `/v1/projects/${id}/eu-ai-act-work`,
+    { signal },
+  );
+  return response.data.data;
+}
+
 /**
  * POST /api/v1/projects/:id/resubmit-approval's answer. A resubmission is
  * never auto-approved, so `status` is "pending" and `auto_approved` false.

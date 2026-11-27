@@ -25,7 +25,7 @@ export const friaContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Open any use case from your dashboard.' },
+        { text: 'Open a use case that has the EU AI Act. Without it, the FRIA tab is hidden unless the FRIA already holds saved work.' },
         { text: 'Click the **FRIA** tab.' },
         { text: 'The assessment is created automatically the first time you open it.' },
       ],

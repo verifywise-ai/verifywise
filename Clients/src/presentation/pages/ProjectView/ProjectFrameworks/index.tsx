@@ -13,7 +13,7 @@ import { ButtonToggle } from "../../../components/button-toggle";
 
 import { containerStyle, headerContainerStyle } from "./styles";
 import { CustomizableButton } from "../../../components/button/customizable-button";
-import { useCanCheck } from "../../../../application/hooks/useCan";
+import { useCanCheck, usePermissionsSettled } from "../../../../application/hooks/useCan";
 import { useSearchParams } from "react-router";
 import { text, palette as vwPalette } from "../../../themes/palette";
 import OrganizationObligationsStatus from "./OrganizationObligationsStatus";
@@ -90,6 +90,18 @@ const ProjectFrameworks = ({
       }),
     );
   }, [allVisible, tracker, dispatch]);
+
+  // ?addFramework=1 (the "Add EU AI Act" button on the FRIA and CE marking
+  // note) opens the add framework dialog once, for roles that may use it.
+  // A custom role's permissions load after mount: wait for them, or the flag
+  // would be used up while can() still says no.
+  const permissionsSettled = usePermissionsSettled();
+  useEffect(() => {
+    if (searchParams.get("addFramework") !== "1" || !permissionsSettled) return;
+    if (!isManagingFrameworksDisabled) setIsModalOpen(true);
+    searchParams.delete("addFramework");
+    setSearchParams(searchParams, { replace: true });
+  }, [searchParams, setSearchParams, isManagingFrameworksDisabled, permissionsSettled]);
 
   const associatedFrameworkIds = project.framework?.map((f) => f.framework_id) || [];
 

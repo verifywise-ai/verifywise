@@ -62,6 +62,7 @@ import {
 import { showAlert as showGlobalAlert } from "../../../../application/tools/alertUtils";
 import useUsers from "../../../../application/hooks/useUsers";
 import useProjectData from "../../../../application/hooks/useProjectData";
+import { FRAMEWORK_IDS } from "../../../../application/constants/frameworks";
 
 interface CEMarkingProps {
   projectId: string;
@@ -369,6 +370,12 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
       isToast: true,
     });
   };
+
+  // The checklist is the EU AI Act's: without it the tab is only kept for
+  // saved work, and the link would open another framework.
+  const hasEuAiAct = Boolean(
+    project?.framework?.some((f) => Number(f.framework_id) === FRAMEWORK_IDS.EU_AI_ACT),
+  );
 
   const handleViewChecklist = () => {
     // Navigate to the Frameworks/regulations tab with EU AI Act framework
@@ -973,9 +980,11 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                 />
               </Box>
 
-              <Box sx={{ display: "flex", justifyContent: "flex-end", paddingTop: "8px" }}>
-                <VWLink onClick={handleViewChecklist}>View detailed EU AI Act checklist</VWLink>
-              </Box>
+              {hasEuAiAct && (
+                <Box sx={{ display: "flex", justifyContent: "flex-end", paddingTop: "8px" }}>
+                  <VWLink onClick={handleViewChecklist}>View detailed EU AI Act checklist</VWLink>
+                </Box>
+              )}
             </Stack>
           </CardContent>
         </Card>
