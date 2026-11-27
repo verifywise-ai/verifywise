@@ -79,16 +79,28 @@ export function getAvailableSections(
         );
       }
       // Organizational reports keep only the Compliance & Governance sections
-      // the server builds for organization-level frameworks: framework
-      // requirements for a bundled framework, and requirements plus assessment
-      // tracker for EU AI Act (organization), which shares EU AI Act's sections.
+      // the server builds for organization-level frameworks: clauses and
+      // annexes for ISO 42001/27001, subcategories for NIST AI RMF (all three
+      // exist only on the organizational project), framework requirements for
+      // a bundled framework, and requirements plus assessment tracker for EU
+      // AI Act (organization), which shares EU AI Act's sections.
       if (group.id === "complianceGovernance") {
         filteredSections = filteredSections.filter((s) => {
-          if (s.id === "frameworkRequirements") return isBundledFrameworkId(frameworkId);
-          if (s.id === "controls" || s.id === "assessmentTracker") {
-            return frameworkId === FRAMEWORK_IDS.EU_AI_ACT_ORGANIZATION;
+          switch (s.id) {
+            case "controls":
+            case "assessmentTracker":
+              return frameworkId === FRAMEWORK_IDS.EU_AI_ACT_ORGANIZATION;
+            case "clausesAndAnnexes":
+              return (
+                frameworkId === FRAMEWORK_IDS.ISO_42001 || frameworkId === FRAMEWORK_IDS.ISO_27001
+              );
+            case "nistSubcategories":
+              return frameworkId === FRAMEWORK_IDS.NIST_AI_RMF;
+            case "frameworkRequirements":
+              return isBundledFrameworkId(frameworkId);
+            default:
+              return false;
           }
-          return false;
         });
       }
     }
