@@ -273,6 +273,24 @@ describe("AddFrameworkModal", () => {
     expect(screen.getByText("EU AI Act")).toBeInTheDocument();
   });
 
+  it("describes the dialog for the organization on the organizational project", () => {
+    renderWithProviders(
+      <AddFrameworkModal
+        open={true}
+        onClose={vi.fn()}
+        frameworks={frameworks}
+        project={{ ...project, is_organizational: true } as Project}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "Add or remove the AI frameworks and regulations your organization follows.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/integrated into your use case/)).not.toBeInTheDocument();
+  });
+
   it("calls onClose when Done is clicked", () => {
     const onClose = vi.fn();
     renderWithProviders(

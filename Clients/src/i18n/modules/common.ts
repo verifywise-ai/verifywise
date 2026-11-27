@@ -2975,6 +2975,8 @@ export const de: Record<string, string> = {
   "Framework (Organizational)": "Rahmenwerk (Organisatorisch)",
   "Framework added successfully": "Rahmenwerk erfolgreich hinzugefügt",
   "Framework removed successfully": "Rahmenwerk erfolgreich entfernt",
+  "Add or remove the AI frameworks and regulations your organization follows.":
+    "Fügen Sie die KI-Rahmenwerke und Vorschriften hinzu, die Ihre Organisation befolgt, oder entfernen Sie sie.",
   "Frameworks/regulations": "Rahmenwerke/Vorschriften",
   "Fraud risk": "Betrugsrisiko",
   "Friday": "Freitag",
@@ -7687,6 +7689,8 @@ export const fr: Record<string, string> = {
   "Framework (Organizational)": "Référentiel (organisationnel)",
   "Framework added successfully": "Référentiel ajouté avec succès",
   "Framework removed successfully": "Référentiel supprimé avec succès",
+  "Add or remove the AI frameworks and regulations your organization follows.":
+    "Ajoutez ou supprimez les référentiels IA et réglementations que suit votre organisation.",
   "Frameworks/regulations": "Référentiels/réglementations",
   "Fraud risk": "Risque de fraude",
   "Friday": "Vendredi",
@@ -12390,6 +12394,8 @@ export const es: Record<string, string> = {
   "Framework (Organizational)": "Marco (organizativo)",
   "Framework added successfully": "Marco añadido correctamente",
   "Framework removed successfully": "Marco eliminado correctamente",
+  "Add or remove the AI frameworks and regulations your organization follows.":
+    "Añada o elimine los marcos de IA y las regulaciones que sigue su organización.",
   "Frameworks/regulations": "Marcos/normativas",
   "Fraud risk": "Riesgo de fraude",
   "Friday": "Viernes",

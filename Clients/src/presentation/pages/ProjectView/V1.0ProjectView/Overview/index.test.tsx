@@ -1,7 +1,8 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import { Project } from "../../../../../domain/types/Project";
 import VWProjectOverview from "./index";
+import { getEntityById } from "../../../../../application/repository/entity.repository";
 
 vi.mock("../../../../../application/hooks/useUsers", () => ({
   default: () => ({ users: [{ id: 1, name: "Ada", surname: "Lovelace" }] }),
@@ -66,5 +67,44 @@ describe("VWProjectOverview approval banner", () => {
     renderWithProviders(<VWProjectOverview project={buildProject({ approval_status: null })} />);
 
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+});
+
+describe("VWProjectOverview EU AI Act (organization) card", () => {
+  beforeEach(() => {
+    vi.mocked(getEntityById).mockClear();
+  });
+
+  const orgProject = () =>
+    buildProject({
+      is_organizational: true,
+      framework: [
+        { project_framework_id: 40, framework_id: 29, name: "EU AI Act (organization)" },
+      ] as Project["framework"],
+    });
+
+  it("shows the EU AI Act card from the EU AI Act progress of the organization part", async () => {
+    renderWithProviders(<VWProjectOverview project={orgProject()} />);
+
+    expect(
+      await screen.findByText("EU AI Act (organization) completion status"),
+    ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(getEntityById).toHaveBeenCalledWith({
+        routeUrl: "/eu-ai-act/compliances/progress/40",
+      }),
+    );
+    expect(getEntityById).toHaveBeenCalledWith({
+      routeUrl: "/eu-ai-act/assessments/progress/40",
+    });
+  });
+
+  it("doesn't ask the bundled-framework dashboard for it", async () => {
+    renderWithProviders(<VWProjectOverview project={orgProject()} />);
+
+    await screen.findByText("EU AI Act (organization) completion status");
+    expect(getEntityById).not.toHaveBeenCalledWith({
+      routeUrl: "/frameworks/29/dashboard/40",
+    });
   });
 });
