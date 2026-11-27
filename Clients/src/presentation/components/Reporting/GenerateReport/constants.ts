@@ -3,6 +3,8 @@
  * Defines the hierarchical structure of report sections
  */
 
+import { FRAMEWORK_IDS as APP_FRAMEWORK_IDS } from "../../../../application/constants/frameworks";
+
 export interface ReportSection {
   id: string;
   label: string;
@@ -71,6 +73,16 @@ export const FRAMEWORK_IDS = {
 export const FIRST_BUNDLED_FRAMEWORK_ID = 5;
 
 /**
+ * Whether the framework is a bundled one, so the server can build its
+ * framework requirements section. EU AI Act (organization) sits in the
+ * bundled id range but has its own tables, and the server skips it
+ * (`isBundledFrameworkId` in Servers/services/reporting/collectors/frameworkRequirements.ts).
+ */
+export const isBundledFrameworkId = (frameworkId: number): boolean =>
+  frameworkId >= FIRST_BUNDLED_FRAMEWORK_ID &&
+  frameworkId !== APP_FRAMEWORK_IDS.EU_AI_ACT_ORGANIZATION;
+
+/**
  * Get sections available for a specific framework and report type
  */
 export function getAvailableSections(
@@ -94,7 +106,7 @@ export function getAvailableSections(
       // are organizational).
       if (group.id === "complianceGovernance") {
         filteredSections = filteredSections.filter(
-          (s) => s.id === "frameworkRequirements" && frameworkId >= FIRST_BUNDLED_FRAMEWORK_ID,
+          (s) => s.id === "frameworkRequirements" && isBundledFrameworkId(frameworkId),
         );
       }
     }
@@ -116,7 +128,7 @@ export function getAvailableSections(
             // Only for NIST AI RMF (framework 4)
             return frameworkId === FRAMEWORK_IDS.NIST_AI_RMF;
           case "frameworkRequirements":
-            return frameworkId >= FIRST_BUNDLED_FRAMEWORK_ID;
+            return isBundledFrameworkId(frameworkId);
           default:
             return true;
         }
