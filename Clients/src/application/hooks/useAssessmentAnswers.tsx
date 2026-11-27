@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { getAssessmentAnswers } from "../repository/assesment.repository";
+import { getAssessmentAnswers } from "../repository/assessment.repository";
 
 interface AssessmentProps {
   assessmentId: string | null | undefined;

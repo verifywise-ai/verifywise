@@ -3,12 +3,12 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 
-vi.mock("../../repository/assesment.repository", () => ({
+vi.mock("../../repository/assessment.repository", () => ({
   getAssessmentProgress: vi.fn(),
 }));
 
 import useAssessmentProgress from "../useAssessmentProgress";
-import { getAssessmentProgress } from "../../repository/assesment.repository";
+import { getAssessmentProgress } from "../../repository/assessment.repository";
 
 const mockGetProgress = vi.mocked(getAssessmentProgress);
 

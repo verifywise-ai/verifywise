@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import AIAppLinkedUseCases from "../AIAppLinkedUseCases";
-import CustomException from "../../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../../infrastructure/exceptions/customException";
 
 const mockLink = vi.fn();
 const mockUnlink = vi.fn();

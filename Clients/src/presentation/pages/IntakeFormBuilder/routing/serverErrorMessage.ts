@@ -1,4 +1,4 @@
-import CustomException from "../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../infrastructure/exceptions/customException";
 
 /** The message the server sent with a failed request, if any. */
 export function serverErrorMessage(err: unknown): string | null {

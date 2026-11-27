@@ -13,7 +13,7 @@ vi.mock("../../../../../application/hooks/useProjects", () => ({
 vi.mock("../../../../../application/repository/control_eu_act.repository", () => ({
   getComplianceProgress: (...args: unknown[]) => mockComplianceProgress(...args),
 }));
-vi.mock("../../../../../application/repository/assesment.repository", () => ({
+vi.mock("../../../../../application/repository/assessment.repository", () => ({
   getAssessmentProgress: (...args: unknown[]) => mockAssessmentProgress(...args),
 }));
 vi.mock("react-router", async (importOriginal) => ({

@@ -44,7 +44,7 @@ import {
 import {
   getRiskScoringConfig,
   updateRiskScoringConfig,
-} from "../../../application/repository/aiDetection.repository";
+} from "../../../application/repository/aiDetectionScan.repository";
 import { useLLMKeys } from "../../../application/hooks/useLLMKeys";
 import {
   DimensionKey,

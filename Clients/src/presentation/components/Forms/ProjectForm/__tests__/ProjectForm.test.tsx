@@ -65,7 +65,7 @@ vi.mock("../../../../../application/hooks/useMyPermissions", () => ({
 }));
 
 import { act, fireEvent, screen, within } from "@testing-library/react";
-import CustomException from "../../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../../infrastructure/exceptions/customException";
 import { updateProject } from "../../../../../application/repository/project.repository";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import { ProjectForm } from "../index";

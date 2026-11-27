@@ -5,7 +5,7 @@
  */
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
-import { getWebhookConfig } from "../repository/aiDetectionRepository.repository";
+import { getWebhookConfig } from "../repository/aiDetectionRegistry.repository";
 import type { WebhookConfig } from "../../domain/ai-detection/repositoryTypes";
 
 export const WEBHOOK_CONFIG_QUERY_KEY = ["ai-detection", "webhook-config"] as const;

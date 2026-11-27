@@ -27,7 +27,7 @@ import { palette, radiusPx } from "../../../themes/palette";
 import {
   listSuppressions,
   deleteSuppression,
-} from "../../../../application/repository/aiDetection.repository";
+} from "../../../../application/repository/aiDetectionScan.repository";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { SuppressionRule } from "../../../../domain/ai-detection/types";
 

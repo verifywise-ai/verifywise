@@ -8,7 +8,7 @@ import {
   getAssessmentProgress,
   getAssessmentTopicById,
   updateAssessment,
-} from "../assesment.repository";
+} from "../assessment.repository";
 
 vi.mock("../../../infrastructure/api/networkServices", () => {
   return {

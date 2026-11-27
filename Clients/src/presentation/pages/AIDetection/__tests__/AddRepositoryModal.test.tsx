@@ -7,7 +7,7 @@ import type { AIDetectionRepository } from "../../../../domain/ai-detection/repo
 const mockGenerateWebhookSecret = vi.fn();
 const mockGetWebhookConfig = vi.fn();
 
-vi.mock("../../../../application/repository/aiDetectionRepository.repository", () => ({
+vi.mock("../../../../application/repository/aiDetectionRegistry.repository", () => ({
   generateWebhookSecret: (...args: unknown[]) => mockGenerateWebhookSecret(...args),
   getWebhookConfig: (...args: unknown[]) => mockGetWebhookConfig(...args),
 }));

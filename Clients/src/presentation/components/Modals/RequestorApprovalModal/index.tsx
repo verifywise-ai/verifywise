@@ -86,7 +86,7 @@ import { extractEntityDetails } from "./entityTypeConfig";
 import { dispatchFileApprovalChanged } from "../../../../application/events/fileEvents";
 import { dispatchPolicyApprovalChanged } from "../../../../application/events/policyEvents";
 import { dispatchAiActionCompleted } from "../../../../application/events/aiActionEvents";
-import CustomException from "../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../infrastructure/exceptions/customException";
 import Alert from "../../Alert";
 
 type ValidationFieldError = { field: string; message: string };

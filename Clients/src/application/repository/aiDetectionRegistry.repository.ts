@@ -3,7 +3,7 @@
  *
  * API functions for managing registered repositories and their scan schedules.
  *
- * @module repository/aiDetectionRepository
+ * @module repository/aiDetectionRegistry
  */
 
 import { apiServices } from "../../infrastructure/api/networkServices";

@@ -36,7 +36,7 @@ vi.mock("../../../../../application/hooks/useAuth", () => ({
 }));
 
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
-import CustomException from "../../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../../infrastructure/exceptions/customException";
 import InviteUserModal from "../index";
 
 async function submitWith(error: Error) {

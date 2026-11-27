@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import ExtensionsPage from "..";
-import CustomException from "../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../infrastructure/exceptions/customException";
 import type { Extension } from "../../../../domain/types/extensions";
 
 vi.mock("../../../../application/hooks/useCan", () => ({

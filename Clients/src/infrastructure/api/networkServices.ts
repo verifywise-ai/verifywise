@@ -7,7 +7,7 @@
  */
 
 import CustomAxios from "./customAxios";
-import CustomException from "../exceptions/customeException";
+import CustomException from "../exceptions/customException";
 import axios, { AxiosRequestConfig, AxiosResponseHeaders, ResponseType } from "axios";
 import type { ApiErrorEnvelope, ApiResponse, RequestParams } from "./api.types";
 

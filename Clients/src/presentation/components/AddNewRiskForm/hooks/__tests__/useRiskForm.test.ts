@@ -9,7 +9,7 @@ import { AddNewRiskFormProps } from "../../../../types/riskForm.types";
 import authReducer from "../../../../../application/redux/auth/authSlice";
 import uiReducer from "../../../../../application/redux/ui/uiSlice";
 import fileReducer from "../../../../../application/redux/file/fileSlice";
-import CustomException from "../../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../../infrastructure/exceptions/customException";
 
 const mockClosePopup = vi.fn();
 const mockOnSuccess = vi.fn();

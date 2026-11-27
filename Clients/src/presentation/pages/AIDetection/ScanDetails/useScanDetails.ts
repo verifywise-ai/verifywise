@@ -13,7 +13,7 @@ import {
   getScanSecuritySummary,
   exportAIBOM,
   recalculateRiskScore,
-} from "../../../../application/repository/aiDetection.repository";
+} from "../../../../application/repository/aiDetectionScan.repository";
 import {
   ScanResponse,
   ConfidenceLevel,

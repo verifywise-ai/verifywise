@@ -22,7 +22,7 @@ vi.mock("../../../../domain/constants/pluginSlots", () => ({
 }));
 
 import AddFrameworkModal from "./index";
-import CustomException from "../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../infrastructure/exceptions/customException";
 import type { Project } from "../../../../domain/types/Project";
 import type { Framework } from "../../../../domain/types/Framework";
 

@@ -8,7 +8,7 @@ import {
   getRepositoryScans,
   triggerRepositoryScan,
   updateRepository,
-} from "../aiDetectionRepository.repository";
+} from "../aiDetectionRegistry.repository";
 
 vi.mock("../../../infrastructure/api/networkServices", () => {
   return {

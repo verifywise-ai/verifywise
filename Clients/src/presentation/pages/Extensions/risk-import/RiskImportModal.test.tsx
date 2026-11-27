@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
-import CustomException from "../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../infrastructure/exceptions/customException";
 import RiskImportModal, { MAX_RISK_IMPORT_ROWS, TOO_MANY_ROWS_MESSAGE } from "./RiskImportModal";
 
 const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));

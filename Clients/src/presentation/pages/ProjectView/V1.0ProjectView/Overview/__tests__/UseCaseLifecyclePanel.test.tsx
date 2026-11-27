@@ -4,7 +4,7 @@ import UseCaseLifecyclePanel from "../UseCaseLifecyclePanel";
 import { canManageLifecycle } from "../../../../../../application/utils/useCaseLifecycle";
 import { LifecycleStage } from "../../../../../../domain/enums/lifecycleStage.enum";
 import type { Project } from "../../../../../../domain/types/Project";
-import CustomException from "../../../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../../../infrastructure/exceptions/customException";
 
 const mockMarkLive = vi.fn();
 const mockRetire = vi.fn();

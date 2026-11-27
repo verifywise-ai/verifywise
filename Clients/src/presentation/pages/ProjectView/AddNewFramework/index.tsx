@@ -25,7 +25,7 @@ import {
   assignFrameworkToProject,
   deleteEntityById,
 } from "../../../../application/repository/entity.repository";
-import CustomException from "../../../../infrastructure/exceptions/customeException";
+import CustomException from "../../../../infrastructure/exceptions/customException";
 import { logEngine } from "../../../../application/tools/log.engine";
 import { handleAlert } from "../../../../application/tools/alertUtils";
 import { EU_AI_ACT_ORGANIZATION_ADDED_MESSAGE } from "../../../../application/constants/frameworks";

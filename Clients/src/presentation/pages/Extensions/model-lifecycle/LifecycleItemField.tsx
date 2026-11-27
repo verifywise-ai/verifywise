@@ -23,7 +23,7 @@ import { LifecycleItem, LifecycleValue } from "./useModelLifecycle";
 import { useCan } from "../../../../application/hooks/useCan";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
-import type CustomException from "../../../../infrastructure/exceptions/customeException";
+import type CustomException from "../../../../infrastructure/exceptions/customException";
 import {
   background,
   border,

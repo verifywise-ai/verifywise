@@ -20,7 +20,7 @@ vi.mock("../../../../application/repository/file.repository", () => ({
 vi.mock("../../../../application/repository/question.repository", () => ({
   updateEUAIActAnswerById: vi.fn(),
 }));
-vi.mock("../../../../application/repository/assesment.repository", () => ({
+vi.mock("../../../../application/repository/assessment.repository", () => ({
   getAssessmentTopicById: vi.fn(),
 }));
 vi.mock("../../../../application/repository/control_eu_act.repository", () => ({

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Subtopic } from "../../domain/types/Subtopic";
-import { getAssessmentTopicById } from "../repository/assesment.repository";
+import { getAssessmentTopicById } from "../repository/assessment.repository";
 
 /**
  * Custom hook to fetch and manage assessment subtopics based on the active assessment topic ID.
