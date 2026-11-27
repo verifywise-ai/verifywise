@@ -197,7 +197,6 @@ export const de: Record<string, string> = {
   "Save snapshot": "Snapshot speichern",
   "Start new assessment": "Neue Bewertung starten",
   "Affected groups description": "Beschreibung der betroffenen Gruppen",
-  "AI Frameworks": "KI-Rahmenwerke",
   "Annex III category": "Anhang-III-Kategorie",
   "Assessment owner": "Verantwortlicher für die Bewertung",
   "Assessment summary": "Zusammenfassung der Bewertung",
@@ -266,8 +265,6 @@ export const de: Record<string, string> = {
     "Wessen Name und Rolle auf dem Erklärungsdokument erscheinen",
   "No AI models linked to this project yet": "Noch keine KI-Modelle mit diesem Projekt verknüpft",
   "No project selected": "Kein Projekt ausgewählt",
-  "Add or remove AI frameworks or regulations to your platform. Those selected will be integrated into your use case.":
-    "KI-Rahmenwerke oder Regulierungen zu Ihrer Plattform hinzufügen oder entfernen. Ausgewählte werden in Ihren Anwendungsfall integriert.",
   "Assess the potential impact of the AI system on each fundamental right from the EU Charter.":
     "Die potenzielle Auswirkung des KI-Systems auf jedes Grundrecht aus der EU-Charta bewerten.",
   "Configure the monitoring question details": "Details der Überwachungsfrage konfigurieren",
@@ -997,7 +994,6 @@ export const fr: Record<string, string> = {
   "Save snapshot": "Enregistrer l'instantané",
   "Start new assessment": "Démarrer une nouvelle évaluation",
   "Affected groups description": "Description des groupes affectés",
-  "AI Frameworks": "Référentiels IA",
   "Annex III category": "Catégorie de l'annexe III",
   "Assessment owner": "Responsable de l'évaluation",
   "Assessment summary": "Résumé de l'évaluation",
@@ -1066,8 +1062,6 @@ export const fr: Record<string, string> = {
     "Dont le nom et le rôle figurent sur le document de déclaration",
   "No AI models linked to this project yet": "Aucun modèle IA n'est encore relié à ce projet",
   "No project selected": "Aucun projet sélectionné",
-  "Add or remove AI frameworks or regulations to your platform. Those selected will be integrated into your use case.":
-    "Ajoutez ou retirez des référentiels ou réglementations IA sur votre plateforme. Ceux sélectionnés seront intégrés à votre cas d'usage.",
   "Assess the potential impact of the AI system on each fundamental right from the EU Charter.":
     "Évaluez l'impact potentiel du système IA sur chaque droit fondamental de la Charte de l'UE.",
   "Configure the monitoring question details":
@@ -1794,7 +1788,6 @@ export const es: Record<string, string> = {
   "Save snapshot": "Guardar instantánea",
   "Start new assessment": "Iniciar nueva evaluación",
   "Affected groups description": "Descripción de los grupos afectados",
-  "AI Frameworks": "Marcos de IA",
   "Annex III category": "Categoría del Anexo III",
   "Assessment owner": "Responsable de la evaluación",
   "Assessment summary": "Resumen de la evaluación",
@@ -1863,8 +1856,6 @@ export const es: Record<string, string> = {
     "Cuyo nombre y cargo aparecen en el documento de declaración",
   "No AI models linked to this project yet": "Aún no hay modelos de IA vinculados a este proyecto",
   "No project selected": "No se ha seleccionado ningún proyecto",
-  "Add or remove AI frameworks or regulations to your platform. Those selected will be integrated into your use case.":
-    "Añada o elimine marcos o normativas de IA de su plataforma. Los seleccionados se integrarán en su caso de uso.",
   "Assess the potential impact of the AI system on each fundamental right from the EU Charter.":
     "Evalúe el impacto potencial del sistema de IA en cada derecho fundamental de la Carta de la UE.",
   "Configure the monitoring question details":

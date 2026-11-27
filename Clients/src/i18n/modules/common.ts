@@ -629,6 +629,9 @@ export const de: Record<string, string> = {
   "API key (optional)": "API-Schlüssel (optional)",
   "Add comment (optional)": "Kommentar hinzufügen (optional)",
   "Added": "Hinzugefügt",
+  "AI Frameworks": "KI-Rahmenwerke",
+  "Add or remove AI frameworks or regulations to your platform. Those selected will be integrated into your use case.":
+    "KI-Rahmenwerke oder Regulierungen zu Ihrer Plattform hinzufügen oder entfernen. Ausgewählte werden in Ihren Anwendungsfall integriert.",
   "Analytics & Trends": "Analytik und Trends",
   "Apply": "Anwenden",
   "Approval Workflow (Optional)": "Genehmigungs-Workflow (optional)",
@@ -5335,6 +5338,9 @@ export const fr: Record<string, string> = {
   "API key (optional)": "Clé API (optionnelle)",
   "Add comment (optional)": "Ajouter un commentaire (optionnel)",
   "Added": "Ajouté",
+  "AI Frameworks": "Référentiels IA",
+  "Add or remove AI frameworks or regulations to your platform. Those selected will be integrated into your use case.":
+    "Ajoutez ou retirez des référentiels ou réglementations IA sur votre plateforme. Ceux sélectionnés seront intégrés à votre cas d'usage.",
   "Analytics & Trends": "Analyses et tendances",
   "Apply": "Appliquer",
   "Approval Workflow (Optional)": "Flux d'approbation (optionnel)",
@@ -10045,6 +10051,9 @@ export const es: Record<string, string> = {
   "API key (optional)": "Clave de API (opcional)",
   "Add comment (optional)": "Añadir comentario (opcional)",
   "Added": "Añadido",
+  "AI Frameworks": "Marcos de IA",
+  "Add or remove AI frameworks or regulations to your platform. Those selected will be integrated into your use case.":
+    "Añada o elimine marcos o normativas de IA de su plataforma. Los seleccionados se integrarán en su caso de uso.",
   "Analytics & Trends": "Analíticas y tendencias",
   "Apply": "Aplicar",
   "Approval Workflow (Optional)": "Flujo de trabajo de aprobación (opcional)",
