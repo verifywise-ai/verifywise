@@ -38,8 +38,16 @@ jest.mock("../../utils/roleMap", () => ({
 jest.mock("../../utils/superAdmin.utils", () => ({
   isUserSuperAdmin: jest.fn().mockResolvedValue(false),
 }));
+jest.mock("../../mcp/oauth", () => ({
+  activeGrantForAccessToken: jest.fn(),
+}));
+jest.mock("../../utils/mcpOAuth.utils", () => ({
+  touchGrantLastUsedQuery: jest.fn(),
+}));
 
-import authenticateJWT from "../auth.middleware";
+import authenticateJWT, { authenticateJWTForMcp } from "../auth.middleware";
+import { activeGrantForAccessToken } from "../../mcp/oauth";
+import { touchGrantLastUsedQuery } from "../../utils/mcpOAuth.utils";
 import { getTokenPayload } from "../../utils/jwt.utils";
 import { getUserByIdQuery } from "../../utils/user.utils";
 import { isUserSuperAdmin } from "../../utils/superAdmin.utils";
@@ -450,6 +458,78 @@ describe("authenticateJWT middleware", () => {
       await authenticateJWT(req as Request, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(401);
+      expect(next).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("MCP access tokens", () => {
+    const mcpPayload = { ...validPayload, type: "mcp_access", grantId: 11, aud: "x" };
+    const mockActiveGrant = activeGrantForAccessToken as jest.MockedFunction<
+      typeof activeGrantForAccessToken
+    >;
+
+    /** They come from the MCP sign-in and are meant for /api/mcp only. */
+    it("are refused everywhere else", async () => {
+      setupValidMocks();
+      mockGetTokenPayload.mockReturnValue(mcpPayload as any);
+      const res = createRes();
+
+      await authenticateJWT(createReq("Bearer mcp") as Request, res as Response, next);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(mockActiveGrant).not.toHaveBeenCalled();
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it("are accepted on /api/mcp while their grant is active", async () => {
+      setupValidMocks();
+      mockGetTokenPayload.mockReturnValue(mcpPayload as any);
+      mockActiveGrant.mockResolvedValue({ id: 11 } as any);
+      const req = createReq("Bearer mcp") as any;
+
+      await authenticateJWTForMcp(req as Request, createRes() as Response, next);
+
+      expect(mockActiveGrant).toHaveBeenCalledWith(mcpPayload);
+      expect(touchGrantLastUsedQuery).toHaveBeenCalledWith(11);
+      expect(req.userId).toBe(1);
+      expect(req.organizationId).toBe(10);
+      expect(next).toHaveBeenCalled();
+    });
+
+    it("are refused once their grant is revoked", async () => {
+      setupValidMocks();
+      mockGetTokenPayload.mockReturnValue(mcpPayload as any);
+      mockActiveGrant.mockResolvedValue(null);
+      const res = createRes();
+
+      await authenticateJWTForMcp(createReq("Bearer mcp") as Request, res as Response, next);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    /** 401, not 406: an OAuth client refreshes on 401. */
+    it("answer 401 when expired", async () => {
+      setupValidMocks();
+      mockGetTokenPayload.mockReturnValue({ ...mcpPayload, expire: Date.now() - 1000 } as any);
+      const res = createRes();
+
+      await authenticateJWTForMcp(createReq("Bearer mcp") as Request, res as Response, next);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(mockActiveGrant).not.toHaveBeenCalled();
+    });
+
+    it("still go through the role check", async () => {
+      setupValidMocks();
+      mockGetTokenPayload.mockReturnValue(mcpPayload as any);
+      mockActiveGrant.mockResolvedValue({ id: 11 } as any);
+      mockGetRoleNameById.mockResolvedValue("Editor");
+      const res = createRes();
+
+      await authenticateJWTForMcp(createReq("Bearer mcp") as Request, res as Response, next);
+
+      expect(res.status).toHaveBeenCalledWith(403);
       expect(next).not.toHaveBeenCalled();
     });
   });

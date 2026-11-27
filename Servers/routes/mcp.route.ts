@@ -1,31 +1,37 @@
 import express, { NextFunction, Request, Response } from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import authenticateJWT from "../middleware/auth.middleware";
+import { authenticateJWTForMcp } from "../middleware/auth.middleware";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { buildMcpServer } from "../mcp/server";
+import { requireMcpAccess } from "../middleware/mcpAccess.middleware";
+import { mcpOAuthUrls } from "../mcp/oauth";
 import logger from "../utils/logger/fileLogger";
 
 const router = express.Router();
 
 /**
- * Super admins, and Admins of the organization their token names.
- *
- * authenticateJWT has already resolved the bearer token to a user, re-checked
- * super_admins membership and confirmed the token's role is still the user's
- * role in that organization, so both checks hold per request: a revoked super
- * admin or a demoted Admin loses access without the token being revoked.
- * Which tools each gets is decided in mcp/server.ts.
+ * How an MCP client learns to sign in (RFC 9728 §5.1, required by the MCP
+ * authorization spec): every 401 names the protected resource metadata, which
+ * names this deployment's authorization server. A request without a token is
+ * answered here with that 401; authenticateJWT would answer 400.
  */
-function adminOrSuperAdmin(req: Request, res: Response, next: NextFunction) {
-  if (req.isSuperAdmin || (req.role === "Admin" && req.organizationId)) {
-    return next();
+function oauthChallenge(req: Request, res: Response, next: NextFunction) {
+  const urls = mcpOAuthUrls();
+  if (urls) {
+    const challenge = `Bearer resource_metadata="${urls.resourceMetadata}"`;
+    const status = res.status.bind(res);
+    res.status = (code: number) => {
+      if (code === 401) res.set("WWW-Authenticate", challenge);
+      return status(code);
+    };
   }
-  return res
-    .status(403)
-    .json(STATUS_CODE[403](req.t!("Access restricted to Admins and super admins")));
+  if (!req.headers.authorization) {
+    return res.status(401).json(STATUS_CODE[401]({ message: req.t!("Token not found") }));
+  }
+  return next();
 }
 
-router.use(authenticateJWT, adminOrSuperAdmin);
+router.use(oauthChallenge, authenticateJWTForMcp, requireMcpAccess);
 
 /**
  * One MCP request.

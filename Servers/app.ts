@@ -7,6 +7,7 @@ import { csrfProtection } from "./middleware/csrf.middleware";
 import webhookRoutes from "./routes/webhook.route";
 import virtualKeyProxyRoutes from "./routes/virtualKeyProxy.route";
 import v1Routes from "./routes/v1";
+import mcpOAuthMetadataRoutes from "./routes/mcpOAuthMetadata.route";
 import { registerCoreAuthRoutes } from "./routes/legacy/coreAuth.routes";
 import { registerVendorRoutes } from "./routes/legacy/vendors.routes";
 import { registerProjectsRisksRoutes } from "./routes/legacy/projectsRisks.routes";
@@ -231,6 +232,10 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   // routes/v1/index.ts. No legacy mount path is a prefix of /api/v1, so
   // mounting after the legacy groups preserves route-matching behavior.
   app.use("/api/v1", v1Routes);
+
+  // Discovery documents for the MCP server's sign-in (RFC 9728, RFC 8414),
+  // which must sit at the site root.
+  app.use("/.well-known", mcpOAuthMetadataRoutes);
 
   return app;
 }

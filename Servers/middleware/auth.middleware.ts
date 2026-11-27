@@ -42,6 +42,17 @@ import {
 } from "../utils/tokens.utils";
 import { rlsEnforcement } from "./rls.middleware";
 import { isUserSuperAdmin } from "../utils/superAdmin.utils";
+import { activeGrantForAccessToken } from "../mcp/oauth";
+import { touchGrantLastUsedQuery } from "../utils/mcpOAuth.utils";
+
+interface AuthenticateOptions {
+  /**
+   * Also accept MCP access tokens (`type: "mcp_access"`, issued by the OAuth
+   * flow in mcp/oauth.ts). Only the /api/mcp router sets this, so those tokens
+   * reach nothing else.
+   */
+  acceptMcpAccessTokens: boolean;
+}
 
 /**
  * Express middleware for JWT authentication and authorization
@@ -87,11 +98,12 @@ import { isUserSuperAdmin } from "../utils/superAdmin.utils";
  *   }
  * });
  */
-const authenticateJWT = async (
+async function authenticate(
+  { acceptMcpAccessTokens }: AuthenticateOptions,
   req: Request,
   res: Response,
   next: NextFunction,
-): Promise<void | Response> => {
+): Promise<void | Response> {
   // Test bypass: integration tests may inject mock auth context via
   // createTestApp({ bypassAuth: true }). Only active in test environment.
   if (process.env.NODE_ENV === "test" && req.testBypassAuth === true) {
@@ -129,9 +141,16 @@ const authenticateJWT = async (
         }),
       );
 
-    // Check token expiration
-    if (decoded.expire < Date.now())
+    const isMcpAccessToken = acceptMcpAccessTokens && decoded.type === "mcp_access";
+
+    // Check token expiration. An expired MCP access token is a 401, which is
+    // what tells an OAuth client to use its refresh token.
+    if (decoded.expire < Date.now()) {
+      if (isMcpAccessToken) {
+        return res.status(401).json(STATUS_CODE[401]({ message: req.t!("Token expired") }));
+      }
       return res.status(406).json(STATUS_CODE[406]({ message: req.t!("Token expired") }));
+    }
 
     // Validate payload structure
     if (
@@ -147,8 +166,23 @@ const authenticateJWT = async (
     // Session JWTs have no `type` claim. Any other typed token signed with
     // the same secret (the organization-selection token issued between
     // password check and org choice) is not an access token.
-    if (decoded.type !== undefined && decoded.type !== "api_token") {
+    if (decoded.type !== undefined && decoded.type !== "api_token" && !isMcpAccessToken) {
       return res.status(401).json(STATUS_CODE[401]({ message: req.t!("Unauthorized **") }));
+    }
+
+    // MCP access tokens are revocable through their grant, the connection the
+    // user allowed, and are valid only for this deployment's MCP server.
+    let mcpGrantId: number | null = null;
+    if (isMcpAccessToken) {
+      const grant = await activeGrantForAccessToken(decoded);
+      if (!grant) {
+        return res.status(401).json(
+          STATUS_CODE[401]({
+            message: req.t!("API token is invalid or has been revoked"),
+          }),
+        );
+      }
+      mcpGrantId = grant.id;
     }
 
     // API tokens carry a `type: "api_token"` claim and must additionally exist
@@ -232,6 +266,13 @@ const authenticateJWT = async (
         // swallow — usage tracking is non-critical
       }
     }
+    if (mcpGrantId !== null) {
+      try {
+        await touchGrantLastUsedQuery(mcpGrantId);
+      } catch {
+        // swallow — usage tracking is non-critical
+      }
+    }
 
     // Initialize AsyncLocalStorage context for request tracing
     asyncLocalStorage.run(
@@ -252,6 +293,13 @@ const authenticateJWT = async (
   } catch (error) {
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
-};
+}
+
+const authenticateJWT = (req: Request, res: Response, next: NextFunction) =>
+  authenticate({ acceptMcpAccessTokens: false }, req, res, next);
+
+/** authenticateJWT for /api/mcp: also accepts the access tokens of the MCP OAuth flow. */
+export const authenticateJWTForMcp = (req: Request, res: Response, next: NextFunction) =>
+  authenticate({ acceptMcpAccessTokens: true }, req, res, next);
 
 export default authenticateJWT;

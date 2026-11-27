@@ -112,6 +112,7 @@ const getRefreshTokenPayload = (token: any): any => {
 // Token expiration constants
 const ONE_HOUR_MS = 1 * 3600 * 1000;
 const ORGANIZATION_SELECTION_LIFETIME_MS = 5 * 60 * 1000;
+const MCP_AUTHORIZATION_REQUEST_LIFETIME_MS = 10 * 60 * 1000;
 const THIRTY_DAYS_MS = 1 * 3600 * 1000 * 24 * 30;
 /**
  * How long an invitation link (and its stored expires_at) stays valid. Its own
@@ -222,8 +223,52 @@ const generateOrganizationSelectionToken = (payload: { id: number; email: string
   );
 };
 
+/**
+ * Generates the one-hour access token an MCP client gets through the OAuth
+ * flow (mcp/oauth.ts).
+ *
+ * It carries a `type: "mcp_access"` claim, the grant it was issued under and
+ * the MCP server it is for (`aud`). The auth middleware accepts this type only
+ * where it is told to, on /api/mcp, so the token reaches nothing else.
+ */
+const generateMcpAccessToken = (payload: {
+  id: number;
+  email: string;
+  roleName: string;
+  organizationId: number | null;
+  grantId: number;
+  aud: string;
+}) => {
+  return signToken(
+    { ...payload, type: "mcp_access" },
+    ONE_HOUR_MS,
+    process.env.JWT_SECRET as string,
+  );
+};
+
+/**
+ * Generates the token that carries an OAuth authorization request from the
+ * authorize endpoint to the consent page and back. Its `type` claim keeps the
+ * auth middleware from ever accepting it for access.
+ */
+const generateMcpAuthorizationRequestToken = (payload: {
+  clientId: string;
+  redirectUri: string;
+  codeChallenge: string;
+  state: string | null;
+  resource: string;
+}) => {
+  return signToken(
+    { ...payload, type: "mcp_authorization_request" },
+    MCP_AUTHORIZATION_REQUEST_LIFETIME_MS,
+    process.env.JWT_SECRET as string,
+  );
+};
+
 export {
   getTokenPayload,
+  generateMcpAccessToken,
+  generateMcpAuthorizationRequestToken,
   generateOrganizationSelectionToken,
   generateToken,
   generateInviteToken,

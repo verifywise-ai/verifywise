@@ -26,6 +26,7 @@ const ResetPasswordContinue = lazyRoute(
 const MicrosoftCallback = lazyRoute(
   () => import("../../presentation/pages/Authentication/MicrosoftCallback"),
 );
+const McpAuthorize = lazyRoute(() => import("../../presentation/pages/McpAuthorize"));
 const RegisterUser = lazyRoute(
   () => import("../../presentation/pages/Authentication/RegisterUser"),
 );
@@ -1286,6 +1287,17 @@ export const createRoutes = (
     element={
       <Suspense fallback={<LazyFallback />}>
         <MicrosoftCallback />
+      </Suspense>
+    }
+  />,
+  // An MCP client's browser sign-in. Handles a missing session itself, so it
+  // is not behind ProtectedRoute (see the page).
+  <Route
+    key="mcp-authorize"
+    path="/mcp/authorize"
+    element={
+      <Suspense fallback={<LazyFallback />}>
+        <McpAuthorize />
       </Suspense>
     }
   />,

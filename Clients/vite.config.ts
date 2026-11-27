@@ -48,6 +48,12 @@ export default defineConfig({
           });
         },
       },
+      // MCP sign-in discovery documents, fixed at the site root by RFC 9728
+      // and RFC 8414 (Servers/routes/mcpOAuthMetadata.route.ts).
+      "/.well-known/oauth-": {
+        target: "http://localhost:3000",
+        changeOrigin: true,
+      },
     },
   },
   build: {

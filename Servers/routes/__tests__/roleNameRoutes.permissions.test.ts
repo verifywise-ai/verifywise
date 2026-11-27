@@ -251,10 +251,10 @@ const ROLE_NAME_ALLOWLIST: Record<string, { count: number; reason: string }> = {
     reason:
       "updateUserById: editing other users is Admin by name; Settings > Team matches (#5314).",
   },
-  "routes/mcp.route.ts": {
+  "middleware/mcpAccess.middleware.ts": {
     count: 1,
     reason:
-      "The MCP server admits org Admins and super admins; no catalog key; Settings > MCP matches.",
+      "The MCP server and its sign-in admit org Admins and super admins; no catalog key; Settings > MCP matches.",
   },
 };
 

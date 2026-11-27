@@ -79,6 +79,19 @@ server {
         error_page 504 = @api_timeout;
     }
 
+    # MCP sign-in discovery documents (RFC 9728, RFC 8414): the standards fix
+    # them at the site root, outside /api, and the frontend would answer them
+    # with index.html. Servers/routes/mcpOAuthMetadata.route.ts.
+    location ^~ /.well-known/oauth- {
+        proxy_pass http://localhost:{{ backend_port }};
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+    }
+
     location @api_unavailable {
         default_type application/json;
         return 503 '{"message":"VerifyWise is unavailable, please retry shortly"}';

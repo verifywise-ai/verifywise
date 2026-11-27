@@ -156,19 +156,18 @@ export const organizationSettingsContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Choose when the token expires, then select **Download config file**.' },
-        { text: 'In the folder holding the file, run the command shown in the MCP section to add it to Claude Code. Then delete the file.' },
-        { text: 'Restart Claude Code and run `/mcp`. You should see `verifywise` with the tools listed in the MCP section.' },
+        { text: 'Copy the command shown in the MCP section and run it in a terminal. It adds VerifyWise to Claude Code.' },
+        { text: 'In Claude Code, run `/mcp`, choose `verifywise` and authenticate. Your browser opens VerifyWise: check the organization and select **Allow**.' },
+        { text: 'Run `/mcp` again. You should see `verifywise` connected, with the tools listed in the MCP section.' },
       ],
     },
     {
-      type: 'callout',
-      variant: 'warning',
-      text: 'The file contains an API token. A person who has the file can use those tools as you. Downloading a new file revokes the token you got from this section last time, so anything set up with the old file stops working.',
+      type: 'paragraph',
+      text: 'The connection acts as you, in the organization you were logged in to when you allowed it. It stays signed in until you select **Disconnect** under **Connected clients** in the MCP section. Losing your Admin role, or leaving the organization, also ends its access.',
     },
     {
       type: 'paragraph',
-      text: 'For other MCP clients, create a token on the **API keys** section and use the connect command on the **MCP** section. If you are also a super admin, set up the connection from **Super Admin**, **Settings**, **MCP** instead.',
+      text: 'For an MCP client without browser sign-in, use **Connect with a token instead** in the MCP section. It creates an API token and shows a command that contains it. Anyone who has the command can use those tools as you, and creating a new command revokes the token you got from this section last time. If you are also a super admin, set up the connection from **Super Admin**, **Settings**, **MCP** instead.',
     },
     {
       type: 'heading',
