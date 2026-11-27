@@ -172,22 +172,22 @@ const VWProjectOverview = ({
       setAssessmentProgress(undefined);
       return;
     }
-    (async () => {
+    // Each bar loads on its own, and a response for an earlier project is dropped.
+    let cancelled = false;
+    const load = async <T,>(routeUrl: string, set: (value: T | undefined) => void) => {
       try {
-        const complianceData = await getEntityById({
-          routeUrl: `/eu-ai-act/compliances/progress/${projectFrameworkId}`,
-        });
-        if (complianceData?.data) setComplianceProgress(complianceData.data);
-        const assessmentData = await getEntityById({
-          routeUrl: `/eu-ai-act/assessments/progress/${projectFrameworkId}`,
-        });
-        if (assessmentData?.data) setAssessmentProgress(assessmentData.data);
+        const response = await getEntityById({ routeUrl });
+        if (!cancelled) set(response?.data ?? undefined);
       } catch (error) {
         console.error("Error fetching EU AI Act data:", error);
-        setComplianceProgress(undefined);
-        setAssessmentProgress(undefined);
+        if (!cancelled) set(undefined);
       }
-    })();
+    };
+    load(`/eu-ai-act/compliances/progress/${projectFrameworkId}`, setComplianceProgress);
+    load(`/eu-ai-act/assessments/progress/${projectFrameworkId}`, setAssessmentProgress);
+    return () => {
+      cancelled = true;
+    };
   }, [project, projectFrameworkId]);
 
   // ISO 42001 progress — same rationale, isolated on projectFrameworkId2.
@@ -405,9 +405,8 @@ const VWProjectOverview = ({
               {projectFrameworkId && (
                 <Stack sx={columnStyle}>
                   <Typography sx={projectRiskSection}>
-                    {project.framework.some(
-                      (f) => f.framework_id === FRAMEWORK_IDS.EU_AI_ACT_ORGANIZATION,
-                    )
+                    {project.framework.find((f) => isEuAiActFramework(f.framework_id))
+                      ?.framework_id === FRAMEWORK_IDS.EU_AI_ACT_ORGANIZATION
                       ? "EU AI Act (organization) completion status"
                       : "EU AI Act completion status"}
                   </Typography>

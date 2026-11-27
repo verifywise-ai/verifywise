@@ -99,6 +99,23 @@ describe("VWProjectOverview EU AI Act (organization) card", () => {
     });
   });
 
+  it("keeps the requirements numbers when the assessments request fails", async () => {
+    vi.mocked(getEntityById).mockImplementation(async ({ routeUrl }) => {
+      if (routeUrl.includes("/assessments/")) throw new Error("boom");
+      if (routeUrl.includes("/compliances/")) {
+        return { data: { allsubControls: 30, allDonesubControls: 12 } };
+      }
+      return { data: null };
+    });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    renderWithProviders(<VWProjectOverview project={orgProject()} />);
+
+    expect(await screen.findByText("12 Requirements out of 30 is completed")).toBeInTheDocument();
+    errorSpy.mockRestore();
+    vi.mocked(getEntityById).mockResolvedValue({ data: null });
+  });
+
   it("doesn't ask the bundled-framework dashboard for it", async () => {
     renderWithProviders(<VWProjectOverview project={orgProject()} />);
 

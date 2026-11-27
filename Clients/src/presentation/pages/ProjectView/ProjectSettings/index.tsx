@@ -1311,7 +1311,7 @@ const ProjectSettings = React.memo(
                               renderInput={(params) => (
                                 <TextField
                                   {...params}
-                                  placeholder="Select regulations and standards"
+                                  placeholder="Search or select regulations"
                                   sx={{
                                     "& .MuiOutlinedInput-root": {
                                       height: "34px",
