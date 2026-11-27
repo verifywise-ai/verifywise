@@ -146,6 +146,7 @@ export async function createUseCaseService(
         newProject.enable_ai_data_insertion,
         ctx.organizationId,
         transaction,
+        ctx.userId,
       );
     }
   }

@@ -12,6 +12,8 @@ export type AnswerEU = {
   dropdown_options?: any[]; // gets assigned from the structure
   // NOTE: evidence_files are now stored in file_entity_links table
   status?: StatusAnswers;
+  /** The use case this answer was copied from on upgrade; cleared on save. */
+  copied_from_project_id?: number | null;
 };
 
 @Table({
@@ -53,6 +55,13 @@ export class AnswerEUModel extends Model<AnswerEU> {
     type: DataType.ENUM(...STATUSES_ANSWERS),
   })
   status?: StatusAnswers;
+
+  /** The use case this row's work was copied from on upgrade; cleared on save. */
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+  })
+  copied_from_project_id?: number | null;
 
   @Column({
     type: DataType.DATE,

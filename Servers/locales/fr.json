@@ -1661,6 +1661,13 @@
   "This use case has no approval workflow. Attach one to send it for approval.": "Ce cas d'usage n'a pas de workflow d'approbation. Associez-en un pour le soumettre à approbation.",
   "{reason}. Ask an approval workflow admin to change this use case's approval workflow.": "{reason}. Demandez à un administrateur des workflows d'approbation de modifier le workflow d'approbation de ce cas d'usage.",
   "Framework {id} can't be used for this kind of use case": "Le framework {id} ne peut pas être utilisé pour ce type de cas d'usage",
+  "EU AI Act (organization) is added automatically when a use case has EU AI Act": "EU AI Act (organisation) est ajouté automatiquement lorsqu'un cas d'usage a l'EU AI Act",
+  "EU AI Act (organization) can't be removed while a use case has EU AI Act": "EU AI Act (organisation) ne peut pas être retiré tant qu'un cas d'usage a l'EU AI Act",
+  "Organizational project created": "Projet d'organisation créé",
+  "EU AI Act (organization) added": "EU AI Act (organisation) ajouté",
+  "EU AI Act was enabled on \"{useCase}\", so the organizational project \"{project}\" was created with EU AI Act (organization). Fill in its organization-level controls on the Frameworks page.": "EU AI Act a été activé sur « {useCase} », le projet d'organisation « {project} » a donc été créé avec EU AI Act (organisation). Renseignez ses contrôles au niveau de l'organisation sur la page Frameworks.",
+  "EU AI Act was enabled on \"{useCase}\", so EU AI Act (organization) was added to \"{project}\". Fill in its organization-level controls on the Frameworks page.": "EU AI Act a été activé sur « {useCase} », EU AI Act (organisation) a donc été ajouté à « {project} ». Renseignez ses contrôles au niveau de l'organisation sur la page Frameworks.",
+  "This project holds EU AI Act (organization) and can't be deleted while a use case has EU AI Act": "Ce projet contient EU AI Act (organisation) et ne peut pas être supprimé tant qu'un cas d'usage a l'EU AI Act",
   "Approve this use case before marking it as live": "Approuvez ce cas d'usage avant de le marquer comme en service",
   "Invalid parameter": "Paramètre non valide",
   "The approver must be a member of this organization.": "L'approbateur doit être membre de cette organisation.",
@@ -1704,5 +1711,9 @@
   "Serious": "Grave",
   "Very serious": "Très grave",
   "key must be a non-empty string": "key doit être une chaîne non vide",
-  "Readiness score not found": "Score de préparation introuvable"
+  "Readiness score not found": "Score de préparation introuvable",
+  "EU AI Act organization-wide obligations moved": "Obligations de l'EU AI Act à l'échelle de l'organisation déplacées",
+  "Prohibited practices, AI literacy, the quality management system and other organization-wide EU AI Act obligations now live once in EU AI Act (organization) on \"{project}\" instead of on each use case. Review them on the Frameworks page.": "Les pratiques interdites, la maîtrise de l'IA, le système de gestion de la qualité et les autres obligations de l'EU AI Act à l'échelle de l'organisation figurent désormais une seule fois dans EU AI Act (organisation) sur « {project} » au lieu de chaque cas d'usage. Vérifiez-les sur la page Frameworks.",
+  "Prohibited practices, AI literacy, the quality management system and other organization-wide EU AI Act obligations now live once in EU AI Act (organization) on \"{project}\" instead of on each use case. 1 item was copied from your use cases; review it on the Frameworks page.": "Les pratiques interdites, la maîtrise de l'IA, le système de gestion de la qualité et les autres obligations de l'EU AI Act à l'échelle de l'organisation figurent désormais une seule fois dans EU AI Act (organisation) sur « {project} » au lieu de chaque cas d'usage. 1 élément a été copié depuis vos cas d'usage ; vérifiez-le sur la page Frameworks.",
+  "Prohibited practices, AI literacy, the quality management system and other organization-wide EU AI Act obligations now live once in EU AI Act (organization) on \"{project}\" instead of on each use case. {copied} items were copied from your use cases; review them on the Frameworks page.": "Les pratiques interdites, la maîtrise de l'IA, le système de gestion de la qualité et les autres obligations de l'EU AI Act à l'échelle de l'organisation figurent désormais une seule fois dans EU AI Act (organisation) sur « {project} » au lieu de chaque cas d'usage. {copied} éléments ont été copiés depuis vos cas d'usage ; vérifiez-les sur la page Frameworks."
 }

@@ -51,6 +51,43 @@ Topics (Assessment)
 12. Reporting serious incidents
 13. General-purpose AI models
 
+#### Organization-wide obligations (EU AI Act (organization))
+
+Some EU AI Act obligations fall on the organization, not on one AI system. They are tracked once per organization, on the organizational project, as **EU AI Act (organization)** (framework id 29, organization level), not once per use case. Framework 29 is not a separate structure: it is these EU AI Act controls and assessment questions, in the EU AI Act's own tables, shown with the EU AI Act's own screens (`EuAiActTrackers`, `Clients/src/presentation/pages/ProjectView/EuAiActTrackers`, which renders both a use case's EU AI Act and the Frameworks page's EU AI Act (organization)). Their text and numbers are the EU AI Act's, so an obligation has the same number on both pages.
+
+Controls (`EU_AI_ACT_ORGANIZATION_CONTROLS`, `Servers/structures/EU-AI-Act-Organization/euAiActOrganization.ts`, by category and control `order_no`), 18 controls with 42 subcontrols:
+
+- 0 Prohibited AI practices (Art. 5): all 8 controls
+- 1 AI literacy (Art. 4): both controls
+- 6.1, 6.2 AI Act compliance policies and guidelines, and AI risk response planning (Art. 26)
+- 7.1 Fundamental rights impact assessment process development (Art. 27)
+- 10.2 The process to respond to national authority requests (Art. 71)
+- 15 Quality management system (Art. 17): all 3 controls
+- 17.1 The authorized representative in the Union (Art. 22)
+
+Assessment questions (`EU_AI_ACT_ORGANIZATION_QUESTIONS`, by topic, subtopic and question `order_no`): 5.1.2 (how the organization communicates its AI values externally), 8.1.1–8.1.3 (its documented AI values, its AI governance framework, its self-assessment and certification schedule) and 11.1.1 (who ensures AI systems follow its values).
+
+`controls_struct_eu.moved_to_framework_id` and `questions_struct_eu.moved_to_framework_id` are 29 on these items. An item belongs to the framework it moved to, else to the EU AI Act: `structItemInFrameworkSql` (`Servers/utils/euAiActStructItem.sql.ts`) is the one place that rule is written, and every query that tells them apart uses it (`structItemInEuAiActSql` is its EU AI Act case). So:
+
+- **Building.** `createEUFrameworkQuery` and `deleteProjectFrameworkEUQuery` (`utils/eu.utils.ts`) take the framework id. For framework 1 they build or remove a use case's controls, subcontrols and assessment for the items still in the EU AI Act; for framework 29 (`createEUAIActOrganizationFrameworkQuery`, `deleteProjectFrameworkEUAIActOrganizationQuery`, wired into `frameworkAdditionMap` / `frameworkDeletionMap`) the same rows for the moved items. Its evidence uses the EU AI Act's file sources and links.
+- **Reading.** The requirements, assessments, progress and report-section queries scoped to a project framework, and readiness's assessment completion, read the items of its framework. A use case's EU AI Act no longer lists or counts the moved items, and framework 29 lists only them. Framework 29 shows all its categories, whatever the project's risk classification (`getVisibleEuCategoryIdsForProject` applies the tier and role filter to framework 1 only). The EU AI Act catalogue (`GET /eu-ai-act/controlCategories` without a project framework, `GET /eu-ai-act/topics`) leaves out categories and topics whose items all moved, and the assessment tree leaves out subtopics and topics with no question of its framework. Reports give framework 29 the EU AI Act compliance and assessment sections, and the Frameworks page dashboard shows its EU AI Act requirements progress.
+- **Existing data.** Rows a use case already had for the moved items stay in `controls_eu` / `subcontrols_eu` / `answers_eu`, hidden and unchanged; migration `20261126150000` copies their work to framework 29 once (below). The File Manager does not show their file links (`HIDDEN_EU_AI_ACT_LINK_SQL`, `utils/files/attachLinkProjections.ts`), and a notification or task email link to one opens the organizational project's row of the same item (`buildEntityUrlAsync`, `services/inAppNotification.service.ts`), or nothing when there is none. Task links stay on them. Risk-link graphs and coverage scans (`utils/riskLink.utils.ts`) still read those rows. Removing a risk's link to framework 1 or 29 deletes its mappings to either framework's rows (`deleteRiskMappingsForProjectFrameworksQuery`).
+- **Copied, review it.** `controls_eu` / `subcontrols_eu` / `answers_eu.copied_from_project_id` is the use case a framework-29 row's work was copied from on upgrade. The tracker reads return it with `copied_from_use_case` ("<title> (<UC id>)"), and any save of the row (`updateControlEUByIdQuery`, `updateSubcontrolEUByIdQuery`, `updateQuestionEUByIdQuery`) clears it.
+
+Framework 29 is never added by hand. `buildProjectFrameworkQuery` (`utils/framework.utils.ts`), which every path that enables EU AI Act on a use case goes through (creation, approval of pending frameworks, "add framework", intake approval), calls `ensureEuAiActOrganizationFrameworkQuery` (`utils/euAiActOrganization.utils.ts`) in the same transaction:
+
+- Demo use cases (`is_demo`) don't trigger it, and the demo data seeder doesn't add framework 29.
+- If a non-demo organizational project already has framework 29, nothing happens (idempotent). An advisory lock per organization keeps two concurrent enables from both creating it.
+- Otherwise it goes on the organizational project the Frameworks page shows (`created_at DESC, id ASC`, first), skipping demo ones, since deleting the demo data removes them. If the organization has none, one is created, named after the organization and owned by its first Admin (earliest `organization_members.joined_at`), else the user who enabled EU AI Act, else the use case owner; the user who enabled it is its creator.
+- The response says whether this call added it: `organization_framework_added` on `POST /frameworks/toProject` and on `frameworks.eu` of `POST /projects`. The client then shows a toast, and the use case's EU AI Act Requirements tab shows a notice pointing to the Frameworks page.
+- After the outermost transaction commits (a savepoint's own hook would run before that), every Admin of the organization, the user who enabled EU AI Act and the organizational project's owner get one in-app notification (`notifyEuAiActOrganizationAdded`, type `system`, linking to `/framework`): "Organizational project created" when the project was made for it, "EU AI Act (organization) added" otherwise. A failed notification is logged and does not undo the add.
+
+Adding framework 29 by hand is refused (400): `addFrameworkToProjectQuery` and `createNewProjectQuery` reject it, and the client leaves it out of the add lists. Removing it is refused (400) while any non-demo use case has EU AI Act. Deleting the organizational project that holds it is refused (400) under the same condition (`assertProjectDeletableForEuAiActQuery`, called by `deleteProjectWithSideEffects`, the one delete path); the delete dialog shows the reason.
+
+Migration `20261119235846-add-eu-ai-act-organization-framework.js` is the whole change: it inserts frameworks row 29, sets `moved_to_framework_id` on the listed controls and questions, and attaches framework 29, with its rows, to every organization that already had EU AI Act on a non-demo use case, by the rules above, without notifications. It is idempotent.
+
+Migration `20261126150000-eu-ai-act-organization-copy-forward.js` then copies the work: each framework-29 row nobody has touched takes the best hidden row of the same item among the organization's non-demo use cases (most advanced status, then a row with any work, then the latest change history, then the highest id), with users who left the organization dropped from owner / reviewer / approver, the union of every hidden row's file and risk links, a system "Copied from use case" change-history entry, and `copied_from_project_id`. A control's status is derived from its subcontrols, as `saveControls` does. Every Admin then gets one in-app notification in their language, linking to `/framework?framework=eu-ai-act-organization`. It is idempotent.
+
 ### ISO 42001 / ISO 27001
 
 ```

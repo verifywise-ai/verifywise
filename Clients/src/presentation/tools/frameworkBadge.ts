@@ -5,6 +5,7 @@
  */
 const FRAMEWORK_BADGE_SLUGS: Record<string, string> = {
   "EU AI Act": "eu_ai_act",
+  "EU AI Act (organization)": "eu_ai_act",
   "ISO 42001": "iso_42001",
   "ISO 27001": "iso_27001",
   "NIST AI RMF": "nist_ai_rmf",

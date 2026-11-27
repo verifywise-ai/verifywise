@@ -92,6 +92,8 @@ export interface ProjectFormProps {
   projectToEdit?: any; // Add optional prop for editing
   useStandardModal?: boolean; // When true, renders without internal header/footer for use inside StandardModal
   onSubmitRef?: React.MutableRefObject<(() => void) | undefined>; // Ref to expose handleSubmit when useStandardModal is true
+  /** Called after creation when EU AI Act also added EU AI Act (organization). */
+  onOrganizationFrameworkAdded?: () => void;
 }
 
 export interface FrameworkOption {

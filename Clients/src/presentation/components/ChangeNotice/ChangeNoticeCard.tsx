@@ -276,6 +276,7 @@ export default function ChangeNoticeCard({
             </div>
             <DismissButton onClick={onDismiss} style={{ margin: "-6px -8px 0 0" }} />
           </div>
+          {items.length > 0 && <CheckList items={items} indent={false} />}
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {showMe}
             {guide}

@@ -71,6 +71,21 @@ export async function getAssessmentTopicById({
   return response.data;
 }
 
+/** The topic -> subtopic -> question tree of one project framework's assessment. */
+export async function getAssessmentsByProjectFrameworkId({
+  projectFrameworkId,
+  signal,
+}: {
+  projectFrameworkId: number;
+  signal?: AbortSignal;
+}): Promise<any> {
+  const response = await apiServices.get(
+    `/eu-ai-act/assessments/byProjectId/${projectFrameworkId}`,
+    { signal },
+  );
+  return response.data;
+}
+
 export async function getAllAssessmentTopics({
   signal,
 }: {

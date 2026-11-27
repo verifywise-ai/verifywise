@@ -23,6 +23,8 @@ import { handleAlert } from "../../../../application/tools/alertUtils";
 import Alert from "../../../components/Alert";
 import { AlertProps } from "../../../types/alert.types";
 import { background, palette as vwPalette, radiusPx } from "../../../themes/palette";
+import { matchesEuAiActStatusFilter } from "../../../../application/constants/frameworks";
+import { EuAiActReviewBadge } from "../../../components/EuAiActCopiedNote";
 
 interface AccordionViewProps {
   subtopics: Array<Subtopic & { questions?: Question[] }>;
@@ -238,11 +240,7 @@ const AccordionView = ({
   // Filter questions based on status
   const filterQuestions = useCallback(
     (questions: Question[]) => {
-      let filtered = questions;
-      if (statusFilter && statusFilter !== "") {
-        filtered = filtered.filter((q) => q.status?.toLowerCase() === statusFilter.toLowerCase());
-      }
-      return filtered;
+      return questions.filter((q) => matchesEuAiActStatusFilter(q, statusFilter));
     },
     [statusFilter],
   );
@@ -355,6 +353,7 @@ const AccordionView = ({
                         }}
                         onClick={(e) => e.stopPropagation()}
                       >
+                        <EuAiActReviewBadge item={question} />
                         <PriorityChip priority={question.priority_level} />
 
                         <EUAIActStatusDropdown

@@ -224,6 +224,18 @@ describe("getAssessmentCompletionQuery", () => {
     expect(sql).toContain("pf.organization_id = a.organization_id");
   });
 
+  it("counts a question only in the framework it belongs to", async () => {
+    mockQuery.mockResolvedValueOnce([[{ total: "10", done: "5" }]]);
+
+    await getAssessmentCompletionQuery(1, 7);
+
+    // A use case's old answers to the questions moved to EU AI Act
+    // (organization) are not counted; the organizational project's are.
+    expect(mockQuery.mock.calls[0][0]).toContain(
+      "COALESCE(q.moved_to_framework_id, 1) = pf.framework_id",
+    );
+  });
+
   it("covers the whole organization when no project is given", async () => {
     mockQuery.mockResolvedValueOnce([[{ total: "10", done: "5" }]]);
 

@@ -77,6 +77,20 @@ export const CHANGE_NOTICES: readonly ChangeNoticeEntry[] = [
     moved: { item: "AI Detection", before: "App switcher", now: "Record" },
     showMeTestId: "nav-item-ai-detection",
   },
+  {
+    id: "eu-ai-act-organization-2026-11",
+    routes: ["/project-view", "/framework"],
+    variant: "moved",
+    title: "Organization-wide EU AI Act obligations moved",
+    body: "Prohibited practices, AI literacy and the quality management system are now tracked once for the organization, in EU AI Act (organization) on the Frameworks page, instead of on every use case.",
+    items: [
+      "Work already done on your use cases was copied there and marked for review.",
+      "Only Admins and members of the organizational project can see and edit it.",
+    ],
+    moved: { item: "EU AI Act (organization)", before: "Every use case", now: "Frameworks" },
+    showMeTestId: "nav-item-frameworks",
+    guidePath: "compliance/eu-ai-act",
+  },
 ];
 
 export const GLOBAL_NOTICE: ChangeNoticeEntry | null =

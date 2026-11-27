@@ -9912,6 +9912,8 @@ paths:
                 properties:
                   message: {type: string, example: Accepted}
                   data: {type: boolean, example: true}
+        '400':
+          description: 'The project holds EU AI Act (organization) while a use case has EU AI Act'
         '404':
           description: 'Project not found'
           content:
@@ -11597,6 +11599,7 @@ paths:
         - Frameworks
       summary: 'Add Framework To Project'
       operationId: addFrameworkToProject
+      description: 'Adding EU AI Act (1) to a non-demo use case also adds EU AI Act (organization) (29) to the organizational project, creating that project when the organization has none; organization_framework_added says whether this request did. Framework 29 itself can''t be added by hand (400).'
       security:
         -
           bearerAuth: []
@@ -11606,8 +11609,17 @@ paths:
             schema:
               type: object
       responses:
-        '201':
-          description: 'Created successfully'
+        '200':
+          description: 'Framework added'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string}
+                  data: {type: object, properties: {organization_framework_added: {type: boolean}}}
+        '400':
+          description: 'EU AI Act (organization) is added automatically'
         '401':
           description: Unauthorized
         '500':
@@ -11624,6 +11636,8 @@ paths:
       responses:
         '200':
           description: 'Deleted successfully'
+        '400':
+          description: 'EU AI Act (organization) can''t be removed while a non-demo use case has EU AI Act'
         '401':
           description: Unauthorized
         '500':
@@ -11652,7 +11666,7 @@ paths:
           name: frameworkId
           in: path
           required: true
-          description: 'Framework id (the bundled frameworks use ids 5-28)'
+          description: 'Framework id (the bundled frameworks use ids 5-29)'
           schema:
             type: integer
         -
@@ -11686,7 +11700,7 @@ paths:
           name: frameworkId
           in: path
           required: true
-          description: 'Framework id (the bundled frameworks use ids 5-28)'
+          description: 'Framework id (the bundled frameworks use ids 5-29)'
           schema:
             type: integer
         -
@@ -11720,7 +11734,7 @@ paths:
           name: frameworkId
           in: path
           required: true
-          description: 'Framework id (the bundled frameworks use ids 5-28)'
+          description: 'Framework id (the bundled frameworks use ids 5-29)'
           schema:
             type: integer
         -
@@ -11763,7 +11777,7 @@ paths:
           name: frameworkId
           in: path
           required: true
-          description: 'Framework id (the bundled frameworks use ids 5-28)'
+          description: 'Framework id (the bundled frameworks use ids 5-29)'
           schema:
             type: integer
         -
@@ -11835,7 +11849,7 @@ paths:
           name: frameworkId
           in: path
           required: true
-          description: 'Framework id (the bundled frameworks use ids 5-28)'
+          description: 'Framework id (the bundled frameworks use ids 5-29)'
           schema:
             type: integer
         -
@@ -28297,7 +28311,7 @@ paths:
         '202':
           description: 'Deleted. Body data: { deleted: true, archived_risk_ids: number[] } (empty unless archiving was asked for)'
         '400':
-          description: 'Invalid id, or archive_risks_linked_only_here missing, repeated or not true/false'
+          description: 'Invalid id, or archive_risks_linked_only_here missing, repeated or not true/false, or the project holds EU AI Act (organization) while a use case has EU AI Act'
         '403':
           description: 'No useCase.edit permission, no write access to the use case, or archiving asked without risks.edit'
         '404':

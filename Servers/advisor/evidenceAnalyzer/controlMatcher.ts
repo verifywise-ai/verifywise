@@ -21,6 +21,7 @@ import {
   buildQueryTextForEmbedding,
   type EmbeddingMatcherKey,
 } from "./embeddingMatcher";
+import { structItemInEuAiActSql } from "../../utils/euAiActStructItem.sql";
 
 interface ControlCandidate {
   control_id: number;
@@ -63,8 +64,8 @@ async function fetchAllControls(): Promise<ControlCandidate[]> {
   try {
     const [euRows] = await sequelize.query(
       `SELECT id, title as control_title, description as control_description
-       FROM controls_struct_eu
-       WHERE title IS NOT NULL
+       FROM controls_struct_eu cs
+       WHERE title IS NOT NULL AND ${structItemInEuAiActSql("cs")}
        ORDER BY id ASC
        LIMIT 200`,
     );

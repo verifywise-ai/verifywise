@@ -2,6 +2,7 @@ import { sequelize } from "../database/db";
 import logger from "./logger/fileLogger";
 import { buildVisibilityFilter } from "./visibility.utils";
 import { getVisibleEuCategoryIdsForProject } from "./eu.utils";
+import { structItemInEuAiActSql, structItemInFrameworkSql } from "./euAiActStructItem.sql";
 
 /**
  * Upsert a control readiness score.
@@ -549,6 +550,7 @@ export async function getApplicableControlsWithRequirementsQuery(
            WHERE c.organization_id = :organizationId
              AND c.projects_frameworks_id = :projectFrameworkId
              AND cs.control_category_id IN (:visibleCategoryIds)
+             AND ${structItemInEuAiActSql("cs")}
            GROUP BY c.control_meta_id`,
           { replacements: { organizationId, projectFrameworkId, visibleCategoryIds } },
         );
@@ -590,10 +592,12 @@ export async function getAssessmentCompletionQuery(
        FROM assessments a
        JOIN answers_eu ans
          ON a.organization_id = ans.organization_id AND a.id = ans.assessment_id
+       JOIN questions_struct_eu q ON q.id = ans.question_id
        JOIN projects_frameworks pf
          ON pf.id = a.projects_frameworks_id AND pf.organization_id = a.organization_id
        WHERE a.organization_id = :organizationId
-         AND (:projectId::int IS NULL OR pf.project_id = :projectId)`,
+         AND (:projectId::int IS NULL OR pf.project_id = :projectId)
+         AND ${structItemInFrameworkSql("q", "pf.framework_id")}`,
       { replacements: { organizationId, projectId } },
     );
 

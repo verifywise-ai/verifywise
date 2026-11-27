@@ -140,6 +140,7 @@ export const addingFrameworksContent: ArticleContent = {
       items: [
         { bold: 'No duplicates', text: 'A framework can only be added once to the same organization or use case.' },
         { bold: 'Type must match', text: 'Organization-level frameworks go on the Frameworks page, use case-level frameworks go on use cases. You can\'t mix them.' },
+        { bold: 'EU AI Act (organization)', text: 'Added for you, not from the dialog. It is the part of EU AI Act that applies to the organization as a whole, shown with the same requirements and assessments screens and numbers as EU AI Act. The first time a use case gets EU AI Act, VerifyWise adds EU AI Act (organization) to the Frameworks page, and creates the organization-level project if there is none. While a use case has EU AI Act, it can\'t be removed and the organization-level project can\'t be deleted.' },
         { bold: 'Pending approval', text: 'While a use case has a pending approval request, you can\'t add or remove its frameworks. VerifyWise shows "This use case has a pending approval request…" until the approval process is complete.' },
         { bold: 'Starting point', text: 'Adding a framework creates all of its requirements with the status "Not started".' },
       ],

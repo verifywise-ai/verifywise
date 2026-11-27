@@ -3,12 +3,17 @@ import { renderHook, waitFor } from "@testing-library/react";
 
 vi.mock("../../repository/assesment.repository", () => ({
   getAllAssessmentTopics: vi.fn(),
+  getAssessmentsByProjectFrameworkId: vi.fn(),
 }));
 
 import useAssessmentTopics from "../useAssessmentTopcis";
-import { getAllAssessmentTopics } from "../../repository/assesment.repository";
+import {
+  getAllAssessmentTopics,
+  getAssessmentsByProjectFrameworkId,
+} from "../../repository/assesment.repository";
 
 const mockGetAll = vi.mocked(getAllAssessmentTopics);
+const mockGetTree = vi.mocked(getAssessmentsByProjectFrameworkId);
 
 describe("useAssessmentTopics", () => {
   beforeEach(() => vi.clearAllMocks());
@@ -68,5 +73,22 @@ describe("useAssessmentTopics", () => {
 
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.assessmentTopics).toEqual([]);
+  });
+
+  it("lists the topics of a project framework's own assessment", async () => {
+    mockGetTree.mockResolvedValue({
+      message: "OK",
+      data: [
+        { id: 6, title: "Transparency & user information", subTopics: [{ questions: [{}] }] },
+        { id: 9, title: "Conformity assessment", subTopics: [{ questions: [{}, {}, {}] }] },
+      ],
+    });
+
+    const { result } = renderHook(() => useAssessmentTopics({ projectFrameworkId: 42 }));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(mockGetTree).toHaveBeenCalledWith(expect.objectContaining({ projectFrameworkId: 42 }));
+    expect(mockGetAll).not.toHaveBeenCalled();
+    expect(result.current.assessmentTopics.map((topic) => topic.id)).toEqual([6, 9]);
   });
 });

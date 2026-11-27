@@ -56,6 +56,10 @@ vi.mock("../../../Framework/Generic", () => ({
   },
 }));
 
+vi.mock("../OrganizationObligationsStatus", () => ({
+  default: () => <div data-testid="eu-ai-act-organization-status" />,
+}));
+
 vi.mock("../../AddNewFramework", () => ({
   default: () => null,
 }));

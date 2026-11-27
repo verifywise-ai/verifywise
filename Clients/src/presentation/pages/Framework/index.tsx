@@ -33,6 +33,11 @@ import ISO42001Annex from "./ISO42001/Annex";
 import { getAllEntities } from "../../../application/repository/entity.repository";
 import { ProjectForm } from "../../components/Forms/ProjectForm";
 import AddFrameworkModal from "../ProjectView/AddNewFramework";
+import {
+  EU_AI_ACT_ORGANIZATION_LOCKED_REASON,
+  EU_AI_ACT_ORGANIZATION_SLUG,
+  FRAMEWORK_IDS,
+} from "../../../application/constants/frameworks";
 import { useCanCheck, useCan } from "../../../application/hooks/useCan";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import StandardModal from "../../components/Modals/StandardModal";
@@ -56,6 +61,7 @@ import NISTAIRMFMap from "./NIST-AI-RMF/Map";
 import NISTAIRMFMeasure from "./NIST-AI-RMF/Measure";
 import NISTAIRMFManage from "./NIST-AI-RMF/Manage";
 import GenericFramework from "./Generic";
+import EuAiActTrackers, { EuAiActTrackerTab } from "../ProjectView/EuAiActTrackers";
 import { brand, border as borderPalette, icon, radiusPx } from "../../themes/palette";
 import GovernanceIntelligenceContextBar from "../../components/GovernanceOS/GovernanceIntelligenceContextBar";
 import { storageService } from "../../../infrastructure/storage";
@@ -116,6 +122,10 @@ const Framework = () => {
   const categoryId = searchParams.get("categoryId");
   const subcategoryId = searchParams.get("subcategoryId");
 
+  // EU AI Act (organization) parameters; controlId, subControlId, topicId and
+  // questionId are read by its trackers.
+  const euSubtab = searchParams.get("subtab");
+
   const dispatch = useDispatch();
   const projects = useProjects().data ?? [];
   const { setProjectsCache, refreshProjects } = useProjectsCache();
@@ -138,6 +148,19 @@ const Framework = () => {
   const organizationalProject = useMemo(() => {
     return projects.find((project) => project.is_organizational === true);
   }, [projects]);
+
+  // EU AI Act (organization) can't be removed while a use case has EU AI Act;
+  // the server refuses it too, also for use cases this user can't see.
+  const isEuAiActInUse = useMemo(
+    () =>
+      projects.some(
+        (project) =>
+          !project.is_organizational &&
+          !project.is_demo &&
+          project.framework?.some((pf) => Number(pf.framework_id) === FRAMEWORK_IDS.EU_AI_ACT),
+      ),
+    [projects],
+  );
 
   // State for modals
   const [isProjectFormModalOpen, setIsProjectFormModalOpen] = useState(false);
@@ -275,6 +298,8 @@ const Framework = () => {
   const [nistAiRmfTabValue, setNistAiRmfTabValue] = useState(() =>
     storageService.get("nistAiRmfTab", "govern"),
   );
+  const [euAiActOrganizationTracker, setEuAiActOrganizationTracker] =
+    useState<EuAiActTrackerTab>("compliance");
 
   const [risksFrameworkIndex, setRisksFrameworkIndex] = useState(0);
   const [linkedModelsFrameworkIndex, setLinkedModelsFrameworkIndex] = useState(0);
@@ -395,6 +420,21 @@ const Framework = () => {
       } else if (clause27001Id || subClause27001Id) {
         setIso27001TabValue("clause");
       }
+    } else if (
+      framework === EU_AI_ACT_ORGANIZATION_SLUG ||
+      frameworkName === EU_AI_ACT_ORGANIZATION_SLUG
+    ) {
+      const euAiActOrganizationIndex = filteredFrameworks.findIndex(
+        (fw) => Number(fw.id) === FRAMEWORK_IDS.EU_AI_ACT_ORGANIZATION,
+      );
+      if (euAiActOrganizationIndex !== -1) {
+        setSelectedFramework(euAiActOrganizationIndex);
+      }
+      // Only a link that names a tracker picks it: this effect reruns when the
+      // project list refetches, and must not undo the user's own tab choice.
+      if (euSubtab === "assessment" || euSubtab === "compliance") {
+        setEuAiActOrganizationTracker(euSubtab);
+      }
     } else if (framework === "nist-ai-rmf" || frameworkName === "nist-ai-rmf") {
       // Find NIST AI RMF framework in filtered frameworks
       const nistAiRmfIndex = filteredFrameworks.findIndex(
@@ -431,6 +471,7 @@ const Framework = () => {
     functionId,
     categoryId,
     subcategoryId,
+    euSubtab,
   ]);
 
   const resetFilters = () => {
@@ -758,6 +799,19 @@ const Framework = () => {
             </TabPanel>
           </TabContext>
         </Box>
+      );
+    }
+
+    // EU AI Act (organization) is the EU AI Act's organization-wide controls and
+    // questions, so it has the EU AI Act's own screen.
+    if (Number(framework.id) === FRAMEWORK_IDS.EU_AI_ACT_ORGANIZATION) {
+      return (
+        <EuAiActTrackers
+          project={organizationalProject}
+          frameworkId={FRAMEWORK_IDS.EU_AI_ACT_ORGANIZATION}
+          tracker={euAiActOrganizationTracker}
+          onTrackerChange={setEuAiActOrganizationTracker}
+        />
       );
     }
 
@@ -1095,8 +1149,22 @@ const Framework = () => {
           <AddFrameworkModal
             open={isFrameworkModalOpen}
             onClose={() => setIsFrameworkModalOpen(false)}
+            lockedFrameworks={
+              isEuAiActInUse
+                ? { [FRAMEWORK_IDS.EU_AI_ACT_ORGANIZATION]: EU_AI_ACT_ORGANIZATION_LOCKED_REASON }
+                : undefined
+            }
             frameworks={allFrameworks
-              .filter((framework) => framework.is_organizational)
+              .filter(
+                (framework) =>
+                  framework.is_organizational &&
+                  // Added by the server, never by hand; listed once added so it
+                  // can be removed when no use case has EU AI Act.
+                  (Number(framework.id) !== FRAMEWORK_IDS.EU_AI_ACT_ORGANIZATION ||
+                    organizationalProject.framework?.some(
+                      (pf) => Number(pf.framework_id) === FRAMEWORK_IDS.EU_AI_ACT_ORGANIZATION,
+                    )),
+              )
               .sort((a, b) => {
                 // Sort order: ISO 42001 first, then NIST AI RMF, then ISO 27001
                 const aIsISO42001 = a.name.toLowerCase().includes("iso 42001");

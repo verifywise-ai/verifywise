@@ -15,6 +15,7 @@ import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
 import { calculateComplianceScore } from "../../utils/compliance.utils";
 import { countAnswersEUByProjectId, countSubControlsEUByProjectId } from "../../utils/eu.utils";
+import { EU_AI_ACT_ORGANIZATION_FRAMEWORK_ID } from "../../structures/EU-AI-Act-Organization/euAiActOrganization";
 import {
   countAnnexCategoriesISOByProjectId,
   countSubClausesISOByProjectId as countSubClauses42001ByProjectId,
@@ -78,7 +79,9 @@ async function frameworkProgress(
 ): Promise<Record<string, unknown>> {
   const tracks: Record<string, unknown> = {};
 
-  if (row.framework_id === 1) {
+  if (row.framework_id === 1 || row.framework_id === EU_AI_ACT_ORGANIZATION_FRAMEWORK_ID) {
+    // EU AI Act (organization) keeps its items in the EU AI Act tables; the
+    // counts take only the items of the row's own framework.
     const controls = await countSubControlsEUByProjectId(row.project_framework_id, organizationId);
     const answers = await countAnswersEUByProjectId(row.project_framework_id, organizationId);
     const totalControls = parseInt(controls.totalSubcontrols, 10) || 0;
@@ -95,6 +98,7 @@ async function frameworkProgress(
       answered: doneQuestions,
       percent: percentage(doneQuestions, totalQuestions),
     };
+    if (row.framework_id === EU_AI_ACT_ORGANIZATION_FRAMEWORK_ID) tracks.scope = "organization";
   } else if (row.framework_id === 2) {
     const clauses = await countSubClauses42001ByProjectId(row.project_framework_id, organizationId);
     const annexes = await countAnnexCategoriesISOByProjectId(
