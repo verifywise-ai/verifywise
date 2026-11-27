@@ -185,7 +185,7 @@ describe("CEMarking", () => {
     mockUseProjectData.mockReturnValue({
       project: {
         goal: "Automate support",
-        framework: [{ framework_id: 2, project_framework_id: 12 }],
+        framework: [{ framework_id: 12, project_framework_id: 12 }],
       },
       error: null,
       isLoading: false,

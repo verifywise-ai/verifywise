@@ -138,7 +138,9 @@ import { waitFor } from "@testing-library/react";
 import VWProjectView from "../V1.0ProjectView/index";
 
 const EU_AI_ACT = { framework_id: 1, project_framework_id: 11 };
-const ISO_42001 = { framework_id: 2, project_framework_id: 12 };
+// ISO 42001 and the like are organizational; a regular use case without the
+// EU AI Act has none, or a use case framework such as NYC Local Law 144.
+const NYC_LL_144 = { framework_id: 12, project_framework_id: 12 };
 const EU_AI_ACT_ORGANIZATION = { framework_id: 29, project_framework_id: 13 };
 
 const showUseCase = (framework: unknown[], extra: Record<string, unknown> = {}) =>
@@ -280,7 +282,7 @@ describe("ProjectView (VWProjectView)", () => {
 
     it("hides both without the EU AI Act when neither holds work", async () => {
       euAiActWorkMock.mockResolvedValue({ fria: false, ce_marking: false });
-      showUseCase([ISO_42001]);
+      showUseCase([NYC_LL_144]);
       renderWithProviders(<VWProjectView />, { route: "/project-view?projectId=1" });
 
       await waitFor(() => expect(euAiActWorkMock).toHaveBeenCalled());
@@ -292,7 +294,7 @@ describe("ProjectView (VWProjectView)", () => {
     it("keeps only the tab that holds work, with the note", async () => {
       euAiActWorkMock.mockResolvedValue({ fria: true, ce_marking: false });
       searchParamsMock.value = "projectId=1&tab=fria";
-      showUseCase([ISO_42001]);
+      showUseCase([NYC_LL_144]);
       renderWithProviders(<VWProjectView />, { route: "/project-view?projectId=1&tab=fria" });
 
       expect(await screen.findByTestId("fria")).toBeInTheDocument();
@@ -332,7 +334,7 @@ describe("ProjectView (VWProjectView)", () => {
     it("sends a link to a hidden tab to overview", async () => {
       euAiActWorkMock.mockResolvedValue({ fria: false, ce_marking: false });
       searchParamsMock.value = "projectId=1&tab=ce-marking";
-      showUseCase([ISO_42001]);
+      showUseCase([NYC_LL_144]);
       renderWithProviders(<VWProjectView />, { route: "/project-view?projectId=1&tab=ce-marking" });
 
       expect(await screen.findByTestId("project-overview")).toBeInTheDocument();
@@ -351,7 +353,7 @@ describe("ProjectView (VWProjectView)", () => {
     it("keeps kept tabs in place while a refresh re-checks", async () => {
       euAiActWorkMock.mockResolvedValueOnce({ fria: true, ce_marking: false });
       searchParamsMock.value = "projectId=1&tab=settings";
-      showUseCase([ISO_42001]);
+      showUseCase([NYC_LL_144]);
       renderWithProviders(<VWProjectView />, { route: "/project-view?projectId=1&tab=settings" });
       expect(await screen.findByText("FRIA")).toBeInTheDocument();
 
@@ -376,7 +378,7 @@ describe("ProjectView (VWProjectView)", () => {
     it("keeps a linked tab on a skeleton while the check runs", () => {
       euAiActWorkMock.mockReturnValue(new Promise(() => {}));
       searchParamsMock.value = "projectId=1&tab=fria";
-      showUseCase([ISO_42001]);
+      showUseCase([NYC_LL_144]);
       renderWithProviders(<VWProjectView />, { route: "/project-view?projectId=1&tab=fria" });
 
       expect(screen.getByText("FRIA")).toBeInTheDocument();
