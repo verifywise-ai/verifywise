@@ -229,7 +229,8 @@ class TestForward:
             if method == "initialize":
                 return httpx.Response(200, json={"jsonrpc": "2.0", "id": 0, "result": {}}, headers={"mcp-session-id": "fresh"})
             if method == "tools/call" and sid == "stale":
-                return httpx.Response(404, json={"jsonrpc": "2.0", "id": 1, "error": {"code": -32001, "message": "Session not found"}})
+                # What the MCP Python SDK sends for an unknown session id.
+                return httpx.Response(404, json={"jsonrpc": "2.0", "id": None, "error": {"code": -32600, "message": "Session not found"}})
             if method == "tools/call":
                 return httpx.Response(200, json={"jsonrpc": "2.0", "id": 1, "result": {"content": []}})
             return httpx.Response(202)
@@ -576,3 +577,117 @@ def test_fail_open_is_logged_once_per_outage_not_per_call(caplog):
         redis_util.log_fail_open(log, "Rate limit check", redis_util.RedisUnavailableError("down"))
 
     assert [r.getMessage() for r in caplog.records] == ["Rate limit check failed (fail-open): refused"]
+
+
+# ─── Second review follow-ups ───────────────────────────────────────────────
+
+class TestRequestSecrets:
+    def test_masks_path_userinfo_and_encoded_query_values(self):
+        url = "https://bob:pa55word-x@mcp.vendor.com/s/AbC123secretXYZ/mcp?key=a%2Bb%2Fc%3Dd&mode=fast"
+        secrets = svc._request_secrets(url, {"Authorization": "Bearer tok-123456"})
+        message = (
+            "Unknown tool for /s/AbC123secretXYZ/mcp as bob:pa55word-x, "
+            "key=a%2Bb%2Fc%3Dd, decoded a+b/c=d, token tok-123456"
+        )
+        masked = svc._redact(message, secrets)
+
+        for leaked in ("AbC123secretXYZ", "pa55word-x", "a%2Bb%2Fc%3Dd", "a+b/c=d", "tok-123456"):
+            assert leaked not in masked
+        assert "/mcp" in masked and "mode" not in secrets
+
+    def test_plain_path_words_are_not_masked(self):
+        secrets = svc._request_secrets("https://host/api/v1/servers/metadata/mcp", {})
+        assert secrets == ()
+
+
+@pytest.mark.asyncio
+class TestSecondReviewForward:
+    async def test_404_answering_the_call_is_not_retried(self, route_forward_through):
+        calls = []
+
+        def call(request):
+            calls.append(request.headers.get("mcp-session-id"))
+            return httpx.Response(404, json={"jsonrpc": "2.0", "id": 1, "error": {"code": -32002, "message": "Record not found"}})
+
+        route_forward_through(_rpc_upstream(call))
+        with pytest.raises(svc.UpstreamToolError) as exc:
+            await svc.forward_tool_call(SERVER_URL, "none", {}, "search", {}, session_id="cached")
+
+        assert calls == ["cached"]
+        assert exc.value.message == "Record not found"
+
+    async def test_a_429_with_a_json_rpc_error_still_counts_as_an_upstream_failure(self, route_forward_through):
+        route_forward_through(_rpc_upstream(lambda r: httpx.Response(
+            429, json={"jsonrpc": "2.0", "id": None, "error": {"code": -32000, "message": "Slow down"}})))
+
+        with pytest.raises(httpx.HTTPStatusError):
+            await svc.forward_tool_call(SERVER_URL, "none", {}, "search", {})
+
+    async def test_a_stateless_re_handshake_replaces_the_cached_id(self, route_forward_through):
+        def handler(request):
+            method = json.loads(request.content).get("method")
+            if method == "initialize":
+                return httpx.Response(200, json={"jsonrpc": "2.0", "id": 0, "result": {}})
+            if method == "tools/call" and request.headers.get("mcp-session-id") == "stale":
+                return httpx.Response(404)
+            if method == "tools/call":
+                return httpx.Response(200, json={"jsonrpc": "2.0", "id": 1, "result": {"content": []}})
+            return httpx.Response(202)
+
+        route_forward_through(handler)
+        _, new_session = await svc.forward_tool_call(SERVER_URL, "none", {}, "search", {}, session_id="stale")
+
+        assert new_session == ""
+
+    async def test_a_result_that_is_not_an_object_is_an_invalid_reply(self, route_forward_through):
+        route_forward_through(_rpc_upstream(lambda r: httpx.Response(200, json={"jsonrpc": "2.0", "id": 1, "result": ["ok"]})))
+
+        with pytest.raises(svc.UpstreamResponseError):
+            await svc.forward_tool_call(SERVER_URL, "none", {}, "search", {})
+
+
+@pytest.mark.asyncio
+class TestSecondReviewRouter:
+    async def test_tools_list_never_sends_null(self, handler_fakes, monkeypatch):
+        monkeypatch.setattr(proxy, "get_all_tools", AsyncMock(return_value=[
+            {**TOOL, "description": None, "input_schema": None}]))
+
+        tools = json.loads((await proxy.mcp_jsonrpc(_request(_rpc("tools/list", {})))).body)["result"]["tools"]
+
+        assert tools == [{"name": "search", "description": "", "inputSchema": {"type": "object"}}]
+
+    async def test_odd_content_items_do_not_break_a_call_that_ran(self, handler_fakes):
+        async def ok(**kwargs):
+            return {"content": ["plain text"]}, None
+
+        handler_fakes.forward = ok
+        response = await proxy.mcp_jsonrpc(_call())
+
+        assert json.loads(response.body)["result"] == {"content": ["plain text"]}
+        assert handler_fakes.audits[-1]["result_status"] == "success"
+
+    async def test_a_stateless_session_is_stored_so_the_stale_id_is_dropped(self, handler_fakes, monkeypatch):
+        stored = AsyncMock()
+        monkeypatch.setattr(proxy, "get_backend_session", AsyncMock(return_value="stale"))
+        monkeypatch.setattr(proxy, "set_backend_session", stored)
+
+        async def ok(**kwargs):
+            return {"content": []}, ""
+
+        handler_fakes.forward = ok
+        await proxy.mcp_jsonrpc(_request(_rpc("tools/call", {"name": "search", "arguments": {}}), {"mcp-session-id": "gw-1"}))
+
+        stored.assert_awaited_once_with("gw-1", 9, "")
+
+    async def test_http_errors_are_audited_without_the_url(self, handler_fakes):
+        async def fail(**kwargs):
+            request = httpx.Request("POST", "https://host/mcp?api_key=sk_live_abcdef")
+            response = httpx.Response(500, request=request)
+            raise httpx.HTTPStatusError(f"Server error for url '{request.url}'", request=request, response=response)
+
+        handler_fakes.forward = fail
+        await proxy.mcp_jsonrpc(_call())
+
+        summary = handler_fakes.audits[-1]["result_summary"]
+        assert "sk_live_abcdef" not in summary
+        assert summary == "The server returned HTTP 500 (HTTPStatusError)"

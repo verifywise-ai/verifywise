@@ -166,7 +166,13 @@ async def mcp_jsonrpc(request: Request):
             ]
 
         tools_list = [
-            {"name": t["tool_name"], "description": t.get("description", ""), "inputSchema": t.get("input_schema", {})}
+            # Never null: strict clients (the TypeScript SDK, Claude
+            # connectors) reject the whole list over one null field.
+            {
+                "name": t["tool_name"],
+                "description": t.get("description") or "",
+                "inputSchema": t.get("input_schema") or {"type": "object"},
+            }
             for t in filtered
         ]
         return JSONResponse(content=_jsonrpc_result(msg_id, {"tools": tools_list}))
@@ -356,12 +362,15 @@ async def mcp_jsonrpc(request: Request):
                     await note_token_outcome(org_id, server_id, None, _stored_health(tool))
 
             # Cache new backend session for next call
-            if new_backend_session and gateway_session:
+            # "" means the upstream is now stateless: store it, so a stale
+            # cached id is not sent again.
+            if new_backend_session is not None and gateway_session:
                 await set_backend_session(gateway_session, server_id, new_backend_session)
 
             content_text = None
-            if result.get("content"):
-                content_text = str(result["content"][0].get("text", ""))
+            content = result.get("content")
+            if isinstance(content, list) and content and isinstance(content[0], dict):
+                content_text = str(content[0].get("text", ""))
             # The tool ran but reported a failure (MCP's isError). The upstream
             # is healthy, so the breaker counted a success above, but Activity
             # must not show the call as successful.
@@ -413,9 +422,12 @@ async def mcp_jsonrpc(request: Request):
             # The upstream failed (HTTP error, timeout, unreachable, unreadable
             # reply). The agent gets a short, secret-free reason; the full error
             # is audited and logged.
-            await _audit("error", str(e) or type(e).__name__, True)
-            logger.warning("MCP upstream failed: tool=%s org=%s error=%r", tool_name, org_id, e)
+            # httpx errors carry the request URL, which may hold a credential
+            # (?api_key=...), so they are recorded by reason, never by str(e).
             reason = describe_discovery_error(e, TOOL_CALL_TIMEOUT_SECONDS)
+            detail = str(e) if isinstance(e, UpstreamResponseError) else f"{reason} ({type(e).__name__})"
+            await _audit("error", detail, True)
+            logger.warning("MCP upstream failed: tool=%s org=%s error=%s", tool_name, org_id, detail)
             return JSONResponse(
                 content=_jsonrpc_error(msg_id, -32603, f"Upstream MCP server error: {reason}"),
                 status_code=200,

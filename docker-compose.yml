@@ -149,7 +149,8 @@ services:
       - BACKEND_URL=http://backend:$BACKEND_PORT
       # MCP sessions, rate limits and the circuit breaker live in Redis. Without
       # this the gateway falls back to localhost, where nothing listens.
-      - REDIS_URL=redis://redis:6379/0
+      # An env file value (e.g. an external Redis) still wins over the default.
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
     restart: unless-stopped
 
 volumes:

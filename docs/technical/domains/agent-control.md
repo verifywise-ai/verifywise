@@ -473,13 +473,20 @@ SDKs) depend on. Client setup for users is in the guide (`ai-gateway/mcp-agent-k
   message answering the request id, so log or progress notifications sent before it are skipped
   (the old parser returned the first `data:` line, which made the result empty). Multi-line data
   and `data:` without a space are handled.
-- **Stale backend session:** a 404 to `tools/call` on a cached session means the upstream forgot
-  it and did not run the call; the gateway opens a new session and sends the call once more.
+- **Stale backend session:** a 404 to `tools/call` on a cached session (or a 400 that names the
+  session) means the upstream forgot it and did not run the call; the gateway opens a new session
+  and sends the call once more. A reply that is a JSON-RPC response to the call's own id is never
+  retried, whatever its status: the tool ran, and a resend would run it twice. A re-handshake with
+  no session id (the upstream became stateless) replaces the cached id with "".
 - **Errors to the agent:** an upstream JSON-RPC error (`UpstreamToolError`) keeps its code and
-  message, except the gateway's own codes (-32001, -32003, -32004) which become -32603. HTTP,
+  message, except the gateway's own codes (-32001, -32003, -32004) which become -32603. The message
+  is masked with `_request_secrets` (auth header values, URL user, password, query values and
+  secret-looking path segments, raw and percent-encoded). A 4xx carries the tool's error only when
+  it is 400/422 or answers the call's id; other 4xx replies count as upstream failures. HTTP,
   timeout, connection and unreadable-reply failures are -32603 "Upstream MCP server error: …"
   with the secret-free reason from `describe_discovery_error`; they count against the breaker.
-  The full error is in the audit row.
+  The audit row records the same reason and the error type, never `str(e)` of an httpx error
+  (it carries the request URL, which may hold a credential).
 - **Tool-reported failures:** a result with `isError: true` is audited as `error` with
   `is_error = true` (a monitor-only key keeps its would_* status and sets `is_error`). The
   upstream is healthy, so the breaker still records a success.
