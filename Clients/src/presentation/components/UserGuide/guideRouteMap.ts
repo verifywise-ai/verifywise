@@ -126,6 +126,29 @@ export const GUIDE_ROUTE_RULES: GuideRouteRule[] = [
   { prefix: "/super-admin", target: "settings/super-admin" },
 ];
 
+/** Guide page for the dashboard ("/"), which no prefix rule can match. */
+export const DASHBOARD_GUIDE_TARGET = "getting-started/dashboard";
+
+export interface GuidePath {
+  collectionId?: string;
+  articleId?: string;
+  /** Heading id to scroll to; only kept when there is an article. */
+  sectionId?: string;
+}
+
+/**
+ * Splits a guide path ("collection", "collection/article" or
+ * "collection/article#heading-id") into its parts. Missing parts come back
+ * undefined, so callers can clear state left over from an earlier page.
+ */
+export function parseGuidePath(path: string): GuidePath {
+  const [pathPart, section] = path.split("#");
+  const [collectionId, articleId] = pathPart.split("/");
+  if (!collectionId) return {};
+  if (!articleId) return { collectionId };
+  return { collectionId, articleId, sectionId: section || undefined };
+}
+
 const matches = (pathname: string, rule: GuideRouteRule): boolean => {
   if (rule.pattern) return rule.pattern.test(pathname);
   const { prefix } = rule;
@@ -143,7 +166,7 @@ const toTarget = (value: string): GuideTarget => {
  */
 export function getGuideTargetForLocation(pathname: string, hash = ""): GuideTarget | undefined {
   // The dashboard is "/" exactly; a prefix match would swallow every route.
-  if (pathname === "/") return toTarget("getting-started/dashboard");
+  if (pathname === "/") return toTarget(DASHBOARD_GUIDE_TARGET);
 
   const rule = GUIDE_ROUTE_RULES.find((r) => matches(pathname, r));
   if (!rule) return undefined;

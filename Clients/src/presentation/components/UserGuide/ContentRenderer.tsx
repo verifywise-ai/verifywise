@@ -1,33 +1,7 @@
 import React, { useState } from "react";
 import { colors, typography, spacing, border, chipStyles, imageStyles } from "./styles/theme";
 import ImageLightbox from "./ImageLightbox";
-import {
-  CheckCircle,
-  Clock,
-  Rocket,
-  Shield,
-  Brain,
-  AlertTriangle,
-  Server,
-  Database,
-  Terminal,
-  FileText,
-  FolderKanban,
-  Gauge,
-  LayoutDashboard,
-  Menu,
-  Settings,
-  Info,
-  Lightbulb,
-  ArrowRight,
-  Radar,
-  Search,
-  TrendingUp,
-  Building2,
-  ShieldAlert,
-  Circle,
-  type LucideIcon,
-} from "lucide-react";
+import { ArrowRight, CheckCircle, Clock, FolderKanban } from "lucide-react";
 import type {
   ContentBlock,
   HeadingBlock,
@@ -48,40 +22,14 @@ import type {
   ArticleContent,
 } from "@user-guide-content/contentTypes";
 import "./ContentRenderer.css";
+import { getContentIcon } from "./contentIcons";
+import { parseGuidePath } from "./guideRouteMap";
 import { palette, radiusPx } from "../../themes/palette";
-
-// Icon mapping
-const iconMap: Record<string, LucideIcon> = {
-  CheckCircle,
-  Clock,
-  Rocket,
-  Shield,
-  Brain,
-  AlertTriangle,
-  Server,
-  Database,
-  Terminal,
-  FileText,
-  FolderKanban,
-  Gauge,
-  LayoutDashboard,
-  Menu,
-  Settings,
-  Info,
-  Lightbulb,
-  Radar,
-  Search,
-  TrendingUp,
-  Building2,
-  ShieldAlert,
-  Circle,
-};
-
-const getIcon = (name: string): LucideIcon => iconMap[name] || Info;
 
 interface ContentRendererProps {
   content: ArticleContent;
-  onNavigate?: (collectionId: string, articleId: string) => void;
+  /** sectionId is set for inline links that name a heading ("collection/article#heading-id"). */
+  onNavigate?: (collectionId: string, articleId: string, sectionId?: string) => void;
 }
 
 const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }) => {
@@ -126,11 +74,11 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
         // Article link: [[text]](collection/article)
         const linkText = match[3];
         const linkPath = match[4];
-        const [collectionId, articleId] = linkPath.split("/");
+        const { collectionId = "", articleId = "", sectionId } = parseGuidePath(linkPath);
         parts.push(
           <span
             key={key++}
-            onClick={() => onNavigate?.(collectionId, articleId)}
+            onClick={() => onNavigate?.(collectionId, articleId, sectionId)}
             style={{
               color: colors.brand.primary,
               cursor: "pointer",
@@ -368,7 +316,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
       }}
     >
       {block.items.map((item, i) => {
-        const IconComponent = getIcon(item.icon);
+        const IconComponent = getContentIcon(item.icon);
         return (
           <div
             key={i}
@@ -434,7 +382,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
       }}
     >
       {block.items.map((item, i) => {
-        const IconComponent = item.icon ? getIcon(item.icon) : null;
+        const IconComponent = item.icon ? getContentIcon(item.icon) : null;
         return (
           <div
             key={i}
@@ -534,7 +482,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
   );
 
   const renderInfoBox = (block: InfoBoxBlock, index: number) => {
-    const IconComponent = block.icon ? getIcon(block.icon) : FolderKanban;
+    const IconComponent = block.icon ? getContentIcon(block.icon) : FolderKanban;
     return (
       <div
         key={index}
@@ -624,7 +572,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
       }}
     >
       {block.items.map((req, i) => {
-        const IconComponent = getIcon(req.icon);
+        const IconComponent = getContentIcon(req.icon);
         return (
           <div
             key={i}

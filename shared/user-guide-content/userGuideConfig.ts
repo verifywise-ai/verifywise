@@ -683,7 +683,16 @@ export const collections: Collection[] = [
       // Prompts is hidden in the app behind the SHOW_AI_GATEWAY_PROMPTS flag
       // (Clients/src/application/config/featureFlags.ts). This shared package
       // cannot import that flag, so the article stays unregistered here while
-      // the feature is hidden. Restore both together to bring it back.
+      // the feature is hidden. Restore both together to bring it back, and also:
+      //   - add 1 to this collection's articleCount,
+      //   - uncomment the import and the 'ai-gateway/prompts' entry in content/index.ts,
+      //   - set PROMPTS_GUIDE_PATH back to "ai-gateway/prompts" in
+      //     Clients/src/presentation/pages/AIGateway/Prompts/guidePath.ts (used by the
+      //     4 help icons in Prompts/index.tsx and the one in Prompts/PromptEditor.tsx),
+      //   - re-add the "Prompts" card to the 'Related articles' blocks of
+      //     content/ai-gateway/endpoints.ts and content/ai-gateway/playground.ts
+      //     (removed while the article is hidden),
+      //   - mirror the content changes to the website copy.
       // {
       //   id: 'prompts',
       //   title: 'Prompts',

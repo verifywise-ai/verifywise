@@ -153,7 +153,7 @@ const GovernanceOSEnableCTA: React.FC<GovernanceOSEnableCTAProps> = ({ onEnabled
             variant="text"
             size="small"
             color="primary"
-            onClick={() => openUserGuide("governance-os")}
+            onClick={() => openUserGuide("ai-governance/governance-os")}
             text="Learn more in the user guide"
           />
         </Stack>

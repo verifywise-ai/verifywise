@@ -90,12 +90,6 @@ export const playgroundContent: ArticleContent = {
           title: 'Guardrails',
           description: 'Configure rules that the Playground enforces on every message.',
         },
-        {
-          collectionId: 'ai-gateway',
-          articleId: 'prompts',
-          title: 'Prompts',
-          description: 'Build versioned prompt templates and test them in the editor chat.',
-        },
       ],
     },
   ],
