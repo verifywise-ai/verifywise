@@ -5,7 +5,8 @@ import type { FrameworkStructure } from "../types";
  *
  * The index has 3 pillars (Directions, Enablers, Outputs), 7 sub-pillars and
  * 23 domains. Level 1 is the sub-pillar, titled "<pillar>: <sub-pillar>"; level
- * 2 is the domain. Titles and descriptions follow the index document.
+ * 2 is the domain. Titles and descriptions follow the index document, except
+ * the Impact thresholds (see below).
  *
  * `questions` come from the index's appendix, "National Artificial
  * Intelligence Index Questions, Supporting Evidence, and Acceptance Criteria":
@@ -13,9 +14,11 @@ import type { FrameworkStructure } from "../types";
  * what adoption levels 3, 4 and 5 require. Development and deployment has four
  * questions (AI.AQ.AP.1.1 to 1.4), each followed by one line for its levels.
  * `evidence_examples` are the appendix's acceptance evidence for levels 3 to
- * 5 with SDAIA's evidence codes (<question>.<level>.<item>); where the
+ * 5 with SDAIA's evidence codes (<group>.<level>.<item>); where the
  * appendix's evidence and criteria columns number an item differently, the
- * criteria column wins.
+ * criteria column wins. The group matches the question id everywhere except
+ * Applications, where SDAIA numbers evidence AP.1 to AP.6: AP.1 to AP.4 for
+ * AI.AQ.AP.1.1 to 1.4, AP.5 for AI.AQ.AP.2 and AP.6 for AI.AQ.AP.3.
  *
  * The three Impact domains state the appendix's level 5 thresholds. The index
  * document's own section 3.2.1 puts them one domain apart (it gives the job
@@ -389,7 +392,7 @@ export const saudiNaiiStructure: FrameworkStructure = {
             description:
               "Service continuity with downtime not exceeding 30 minutes a year, and predictive analytics used to reduce potential outages",
             order_no: 3,
-            summary: "Keep downtime under 30 minutes a year",
+            summary: "Keep each AI application's downtime to 30 minutes a year or less",
             questions: [
               "AI.AQ.IN.3: To what extent does the entity monitor the availability and uptime of AI applications, and to what extent are internal monitoring mechanisms (such as incident logs and performance dashboards) implemented to ensure continuous service delivery?",
               "Level 3: Is the average annual downtime of each AI application between 1 and 5 hours, with monitoring dashboards and incident response that also cover hybrid environments?",
@@ -687,7 +690,7 @@ export const saudiNaiiStructure: FrameworkStructure = {
           {
             title: "Service quality and improvement",
             description:
-              "AI used to deliver interactive, personalized and proactive services through diverse channels for users, customers or citizens. AI powers more than 25% of services, with improvements in response time, satisfaction and personalization exceeding 20%",
+              "AI used to deliver interactive, personalized and proactive services through diverse channels for users, customers or citizens. The top adoption level is reached when AI supports more than 25% of services or improves response time, satisfaction and personalization by more than 20%",
             order_no: 3,
             summary: "Power more than 25% of services with AI",
             questions: [

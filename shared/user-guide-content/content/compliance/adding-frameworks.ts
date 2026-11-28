@@ -108,28 +108,29 @@ export const addingFrameworksContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: "SDAIA scores each entity on 6 adoption levels. VerifyWise tracks the status of each domain and does not calculate this level, because SDAIA does not publish the weight of each domain. SDAIA's question appendix names levels 1 to 5 Foundation, Activation, Enablement, Distinction and Pioneering.",
+      text: "SDAIA scores each entity on 6 adoption levels. VerifyWise tracks the status of each domain and does not calculate this level, because SDAIA does not publish the weight of each domain. The index document and its question appendix name the same levels differently.",
     },
     {
       type: 'table',
       columns: [
         { key: 'level', label: 'Level', width: '35%' },
-        { key: 'score', label: 'Score', width: '65%' },
+        { key: 'appendix', label: 'Name in the appendix', width: '35%' },
+        { key: 'score', label: 'Score', width: '30%' },
       ],
       rows: [
-        { level: '0: Absence of capabilities', score: '0% to 4.9%' },
-        { level: '1: Establishing', score: '5% to 24.9%' },
-        { level: '2: Activated', score: '25% to 49.9%' },
-        { level: '3: Managed', score: '50% to 79.9%' },
-        { level: '4: Excellence', score: '80% to 94.9%' },
-        { level: '5: Pioneer', score: '95% to 100%' },
+        { level: '0: Absence of capabilities', appendix: 'Absence of capabilities', score: '0% to 4.9%' },
+        { level: '1: Establishing', appendix: 'Foundation', score: '5% to 24.9%' },
+        { level: '2: Activated', appendix: 'Activation', score: '25% to 49.9%' },
+        { level: '3: Managed', appendix: 'Enablement', score: '50% to 79.9%' },
+        { level: '4: Excellence', appendix: 'Distinction', score: '80% to 94.9%' },
+        { level: '5: Pioneer', appendix: 'Pioneering', score: '95% to 100%' },
       ],
     },
     {
       type: 'callout',
       variant: 'info',
       title: "SDAIA's questions and evidence",
-      text: "Each domain's drawer shows SDAIA's assessment question with its ID (for example AI.AQ.ST.1), what levels 3, 4 and 5 require, and the evidence SDAIA accepts for those levels with its evidence codes (for example ST.1.3.1). Development and deployment has four questions. Attach the evidence to each domain so it is ready for the assessment.",
+      text: "Each domain's drawer shows SDAIA's assessment question with its ID (for example AI.AQ.ST.1), what levels 3, 4 and 5 require, and the evidence SDAIA accepts for those levels with its evidence codes (for example ST.1.3.1). Development and deployment has four questions; its evidence codes AP.1 to AP.4 follow questions AP.1.1 to AP.1.4, and Privacy and security and Operation and management use AP.5 and AP.6. Attach the evidence to each domain so it is ready for the assessment.",
     },
     {
       type: 'heading',
