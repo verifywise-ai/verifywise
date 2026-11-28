@@ -272,7 +272,7 @@ export default function SpendDashboardPage() {
         title="Dashboard"
         description="Monitor LLM usage and costs across your organization."
         tipBoxEntity="ai-gateway-dashboard"
-        helpArticlePath="ai-gateway/dashboard"
+        helpArticlePath="ai-gateway/analytics"
       >
         <Box
           sx={{
@@ -304,7 +304,7 @@ export default function SpendDashboardPage() {
       title="Dashboard"
       description="Monitor LLM usage and costs across your organization."
       tipBoxEntity="ai-gateway-dashboard"
-      helpArticlePath="ai-gateway/dashboard"
+      helpArticlePath="ai-gateway/analytics"
       actionButton={
         <Select
           id="analytics-period"

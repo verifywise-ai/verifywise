@@ -141,12 +141,6 @@ export const endpointsContent: ArticleContent = {
           title: 'Guardrails',
           description: 'Set up PII detection and content filtering applied to all endpoints.',
         },
-        {
-          collectionId: 'ai-gateway',
-          articleId: 'prompts',
-          title: 'Prompts',
-          description: 'Create versioned prompt templates that can be bound to endpoints.',
-        },
       ],
     },
   ],

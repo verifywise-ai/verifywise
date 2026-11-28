@@ -254,7 +254,7 @@ export default function PromptsPage() {
         title="Prompts"
         description="Create versioned prompt templates with variables and bind them to endpoints."
         tipBoxEntity="ai-gateway-prompts"
-        helpArticlePath="ai-gateway/prompts"
+        helpArticlePath="ai-gateway/endpoints"
         actionButton={actionButton}
       >
         <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
@@ -268,7 +268,7 @@ export default function PromptsPage() {
         title="Prompts"
         description="Create versioned prompt templates with variables and bind them to endpoints."
         tipBoxEntity="ai-gateway-prompts"
-        helpArticlePath="ai-gateway/prompts"
+        helpArticlePath="ai-gateway/endpoints"
         actionButton={actionButton}
       >
         <EmptyState icon={AlertTriangle} message={loadError}>
@@ -290,7 +290,7 @@ export default function PromptsPage() {
         title="Prompts"
         description="Create versioned prompt templates with variables and bind them to endpoints."
         tipBoxEntity="ai-gateway-prompts"
-        helpArticlePath="ai-gateway/prompts"
+        helpArticlePath="ai-gateway/endpoints"
         actionButton={actionButton}
       >
         <EmptyState
@@ -320,7 +320,7 @@ export default function PromptsPage() {
       title="Prompts"
       description="Create versioned prompt templates with variables and bind them to endpoints."
       tipBoxEntity="ai-gateway-prompts"
-      helpArticlePath="ai-gateway/prompts"
+      helpArticlePath="ai-gateway/endpoints"
       actionButton={actionButton}
     >
       <TableContainer sx={frame}>

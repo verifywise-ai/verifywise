@@ -86,7 +86,7 @@ describe("GovernanceOSEnableCTA", () => {
     fireEvent.click(screen.getByRole("button", { name: "Learn more in the user guide" }));
 
     await waitFor(() => {
-      expect(mockOpenUserGuide).toHaveBeenCalledWith("governance-os");
+      expect(mockOpenUserGuide).toHaveBeenCalledWith("ai-governance/governance-os");
     });
   });
 });

@@ -616,7 +616,7 @@ export default function PromptEditorPage() {
         prompt.description || "Edit prompt messages, test with variables, and publish versions."
       }
       tipBoxEntity="ai-gateway-prompts"
-      helpArticlePath="ai-gateway/prompts"
+      helpArticlePath="ai-gateway/endpoints"
       actionButton={
         <Stack direction="row" alignItems="center" gap="8px">
           <CustomizableButton

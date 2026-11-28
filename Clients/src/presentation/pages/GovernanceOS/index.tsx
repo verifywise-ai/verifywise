@@ -70,7 +70,7 @@ const GovernanceOS = () => {
     <PageHeaderExtended
       title="Core Governance OS"
       description="Cross-framework intelligence layer with control mappings, governance scenarios, and unified coverage analysis."
-      helpArticlePath="governance-os"
+      helpArticlePath="ai-governance/governance-os"
       tipBoxEntity="governance-os"
       summaryCards={isEnabled ? summaryCards : undefined}
     >
