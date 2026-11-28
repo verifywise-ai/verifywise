@@ -44,6 +44,8 @@ import { isCompletedStatus } from "../../../../domain/types/Status";
 import { importedAssessmentPaths } from "../../../../application/repository/importedFrameworkAssessment.repository";
 import { styles } from "./style";
 import { getPositionPrefix } from "../../../../application/constants/frameworks";
+import { adoptionLevelRowLabel } from "../../../../application/constants/adoptionLevels";
+import StatusBadge from "../../../components/StatusBadge";
 
 interface FrameworkMeta {
   id: number;
@@ -52,6 +54,8 @@ interface FrameworkMeta {
   display_name: string;
   entity_types: { l2_impl: string; l3_impl?: string | null };
   hierarchy_type: "two_level" | "three_level";
+  /** Level 2 rows carry a self-assessed adoption level 0-5 (Saudi NAII). */
+  adoption_levels?: boolean;
 }
 
 interface TreeNode {
@@ -63,6 +67,8 @@ interface TreeNode {
   questions?: string[] | null;
   evidence_examples?: string[] | null;
   status?: string | null;
+  /** 0-5 or null; only set when the framework has adoption levels. */
+  adoption_level?: number | null;
   order_no?: number | null;
   /** Imported frameworks only: removed from the source file but kept for its data. */
   retired?: boolean;
@@ -254,6 +260,7 @@ const GenericFramework = ({
       summary: selected.node.summary,
       questions: selected.node.questions,
       evidenceExamples: selected.node.evidence_examples,
+      adoptionLevels: !isImported && !!data.framework.adoption_levels && selected.level === "l2",
       notesAttachedTo,
     };
   }, [selected, data, projectIdNum, isImported, implBaseUrl]);
@@ -443,12 +450,20 @@ const GenericFramework = ({
                 {row.node.title}
                 {row.node.retired && <RetiredMarker />}
               </Typography>
-              <StatusDropdown
-                currentStatus={row.node.status ?? "Not started"}
-                onStatusChange={(newStatus) => handleStatusChange("l2", row.node, newStatus)}
-                size="small"
-                canEdit={can("framework.edit")}
-              />
+              <Stack direction="row" alignItems="center" gap="8px">
+                {adoptionLevelRowLabel(row.node.adoption_level) && (
+                  <StatusBadge
+                    label={adoptionLevelRowLabel(row.node.adoption_level)!}
+                    variant="info"
+                  />
+                )}
+                <StatusDropdown
+                  currentStatus={row.node.status ?? "Not started"}
+                  onStatusChange={(newStatus) => handleStatusChange("l2", row.node, newStatus)}
+                  size="small"
+                  canEdit={can("framework.edit")}
+                />
+              </Stack>
             </Stack>
           );
         })}

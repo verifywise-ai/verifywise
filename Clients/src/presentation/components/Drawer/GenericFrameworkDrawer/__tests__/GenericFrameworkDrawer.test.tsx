@@ -209,4 +209,60 @@ describe("GenericFrameworkDrawer - framework-specific behavior", () => {
     expect(implSpy).toHaveBeenCalledTimes(2);
     expect(patchSpy).toHaveBeenCalledTimes(1);
   });
+
+  it("loads and sends the adoption level when the framework has levels", async () => {
+    let sent: FormDataEntryValue | null | undefined;
+    server.use(
+      http.get("/api/frameworks/2/impl/l2/10", () =>
+        HttpResponse.json({ data: { status: "In progress", adoption_level: 3, risks: [] } }),
+      ),
+      http.get("/api/frameworks/2/impl/l2/10/risks", () => HttpResponse.json({ data: [] })),
+      http.patch("/api/frameworks/2/impl/l2/10", async ({ request }) => {
+        sent = (await request.formData()).get("adoption_level");
+        return HttpResponse.json({ data: {} });
+      }),
+    );
+    const onSaveSuccess = vi.fn();
+    renderWithProviders(
+      <GenericFrameworkDrawer
+        {...baseProps}
+        open={true}
+        adoptionLevels={true}
+        onSaveSuccess={onSaveSuccess}
+      />,
+    );
+
+    expect(screen.getByTestId("select-adoption-level")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("3: Managed")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Save")).not.toBeDisabled());
+    fireEvent.click(screen.getByText("Save"));
+
+    await waitFor(() => expect(onSaveSuccess).toHaveBeenCalledWith(true, "Saved", 10));
+    expect(sent).toBe("3");
+  });
+
+  it("neither shows nor sends an adoption level for other frameworks", async () => {
+    let hasLevel: boolean | undefined;
+    server.use(
+      http.get("/api/frameworks/2/impl/l2/10", () =>
+        HttpResponse.json({ data: { status: "In progress", risks: [] } }),
+      ),
+      http.get("/api/frameworks/2/impl/l2/10/risks", () => HttpResponse.json({ data: [] })),
+      http.patch("/api/frameworks/2/impl/l2/10", async ({ request }) => {
+        hasLevel = (await request.formData()).has("adoption_level");
+        return HttpResponse.json({ data: {} });
+      }),
+    );
+    const onSaveSuccess = vi.fn();
+    renderWithProviders(
+      <GenericFrameworkDrawer {...baseProps} open={true} onSaveSuccess={onSaveSuccess} />,
+    );
+
+    expect(screen.queryByTestId("select-adoption-level")).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Save")).not.toBeDisabled());
+    fireEvent.click(screen.getByText("Save"));
+
+    await waitFor(() => expect(onSaveSuccess).toHaveBeenCalledWith(true, "Saved", 10));
+    expect(hasLevel).toBe(false);
+  });
 });

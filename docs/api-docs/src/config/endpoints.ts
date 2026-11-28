@@ -5268,7 +5268,7 @@ export const frameworkEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/frameworks/{frameworkId}/tree/{projectId}',
     summary: "Get framework tree",
-    description: "Returns the framework metadata (id, key, framework_type, display_name, entity_types, hierarchy_type) and the full structure tree with the project's implementation rows. Generic endpoint for the bundled frameworks declared in Servers/structures.",
+    description: "Returns the framework metadata (id, key, framework_type, display_name, entity_types, hierarchy_type, adoption_levels) and the full structure tree with the project's implementation rows. Level 2 rows carry adoption_level (0-5 or null; always null unless adoption_levels is true). Generic endpoint for the bundled frameworks declared in Servers/structures.",
     requiresAuth: true,
     parameters: [
       { name: 'frameworkId', in: 'path', type: 'integer', required: true, description: "Framework id (the bundled frameworks use ids 5-28 and 30)" },
@@ -5323,7 +5323,7 @@ export const frameworkEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/frameworks/{frameworkId}/impl/{level}/{id}',
     summary: "Update implementation row",
-    description: "Multipart form. Fields: status, implementation_description, owner, reviewer, approver, due_date, auditor_feedback, risksMitigated (JSON array), risksDelete (JSON array), delete (JSON array of file ids to detach), user_id; attach evidence as file parts.",
+    description: "Multipart form. Fields: status, implementation_description, owner, reviewer, approver, due_date, auditor_feedback, adoption_level, risksMitigated (JSON array), risksDelete (JSON array), delete (JSON array of file ids to detach), user_id; attach evidence as file parts. adoption_level (0-5, empty to clear) is accepted only on level l2 of a framework with adoption levels (Saudi NAII, id 30); anywhere else, or outside 0-5, it is a 400.",
     requiresAuth: true,
     parameters: [
       { name: 'frameworkId', in: 'path', type: 'integer', required: true, description: "Framework id (the bundled frameworks use ids 5-28 and 30)" },
@@ -5338,6 +5338,7 @@ export const frameworkEndpoints: Endpoint[] = [
       "approver": "string (optional)",
       "due_date": "string (optional)",
       "auditor_feedback": "string (optional)",
+      "adoption_level": "string (optional)",
       "risksMitigated": "string (optional)",
       "risksDelete": "string (optional)",
       "delete": "string (optional)",
@@ -5345,7 +5346,7 @@ export const frameworkEndpoints: Endpoint[] = [
     },
     responses: [
       { status: 200, description: "Updated implementation row" },
-      { status: 400, description: "Invalid parameters" },
+      { status: 400, description: "Invalid parameters or adoption level" },
       { status: 404, description: "Framework or record not found" },
       { status: 500, description: "Internal server error" },
     ],

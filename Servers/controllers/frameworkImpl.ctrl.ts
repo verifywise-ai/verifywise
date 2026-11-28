@@ -13,8 +13,10 @@ import {
   getImplContextQuery,
   getImplLinkedRisksQuery,
   ImplLevel,
+  InvalidAdoptionLevelError,
   resolveLevel,
   updateImplQuery,
+  validateAdoptionLevel,
 } from "../utils/frameworkImpl.utils";
 import { getConfigById } from "../utils/frameworkRegistry.utils";
 
@@ -182,6 +184,17 @@ export async function updateImpl(req: RequestWithFile, res: Response): Promise<a
       await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404](req.t!("Framework not found")));
     }
+    // Checked before any upload: a level outside 0-5, or one sent to a
+    // framework without adoption levels, is the caller's error.
+    try {
+      validateAdoptionLevel(resolved.cfg, level, req.body?.adoption_level);
+    } catch (error) {
+      if (!(error instanceof InvalidAdoptionLevelError)) throw error;
+      await transaction.rollback();
+      return res
+        .status(400)
+        .json(STATUS_CODE[400](req.t!("Invalid adoption level: use 0 to 5, or leave it empty")));
+    }
     const uploadLabel = resolved.cfg.source_labels[resolved.tables.entityType];
     if (!uploadLabel) {
       await transaction.rollback();
@@ -238,6 +251,7 @@ export async function updateImpl(req: RequestWithFile, res: Response): Promise<a
       id,
       req.organizationId!,
       {
+        adoption_level: body.adoption_level,
         status: body.status,
         implementation_description: body.implementation_description,
         owner: body.owner,
@@ -371,6 +385,7 @@ export async function getFrameworkTree(req: Request, res: Response): Promise<any
           display_name: cfg.displayName,
           entity_types: cfg.entity_types,
           hierarchy_type: cfg.tables.l3_struct ? "three_level" : "two_level",
+          adoption_levels: !!cfg.adoption_levels,
         },
         tree,
       }),

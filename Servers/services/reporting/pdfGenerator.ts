@@ -5,6 +5,7 @@
  */
 
 import { archivedIncidentsNote, NOTICE_TEXT } from "./noticeText";
+import { adoptionLevelLabel } from "./adoptionLevel";
 import { chromium, Browser, Page } from "playwright";
 import * as ejs from "ejs";
 import * as path from "path";
@@ -120,6 +121,7 @@ export function renderReportHtml(reportData: ReportData): string {
     noticeText: NOTICE_TEXT,
     archivedIncidentsNote,
     frameworkRequirementCharts: buildFrameworkRequirementCharts(reportData),
+    adoptionLevelLabel,
     // Include helper for CSS inclusion
     include: (filePath: string) => {
       if (filePath.includes("pdf.css")) {

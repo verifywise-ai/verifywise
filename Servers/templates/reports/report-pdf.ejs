@@ -958,7 +958,8 @@ const isE23 = typeof e23 !== 'undefined' && !!e23;
       <table class="data-table" style="font-size: 10px;">
         <thead>
           <tr>
-            <th>Requirement</th>
+            <th>Requirement</th><% if (fw.adoptionLevels) { %>
+            <th>Adoption level</th><% } %>
             <th>Status</th>
             <th>Owner</th>
             <th>Due date</th>
@@ -969,7 +970,8 @@ const isE23 = typeof e23 !== 'undefined' && !!e23;
           <% group.requirements.forEach(function(req) {
             [req].concat(req.children || []).forEach(function(r) { %>
           <tr>
-            <td<% if (r.level === 3) { %> style="padding-left: 24px;"<% } %>><%= r.title %><% if (frEvidenceLine(r)) { %><br><span style="font-size: 9px; color: var(--color-text-secondary);"><%= frEvidenceLine(r) %></span><% } %></td>
+            <td<% if (r.level === 3) { %> style="padding-left: 24px;"<% } %>><%= r.title %><% if (frEvidenceLine(r)) { %><br><span style="font-size: 9px; color: var(--color-text-secondary);"><%= frEvidenceLine(r) %></span><% } %></td><% if (fw.adoptionLevels) { %>
+            <td style="white-space: nowrap;"><%= r.level === 2 ? adoptionLevelLabel(r.adoptionLevel) : '—' %></td><% } %>
             <td><span class="chip <%= frChipClass(r) %>"><%= r.status %></span></td>
             <td><%= r.owner || '—' %></td>
             <td style="white-space: nowrap;"><%= r.dueDate || '—' %></td>

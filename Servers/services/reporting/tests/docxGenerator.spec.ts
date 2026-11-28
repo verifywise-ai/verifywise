@@ -865,6 +865,19 @@ describe("DOCX Generator", () => {
       expect(text).toContain("Evidence: a.pdf, b.docx, and 1 more");
     });
 
+    it("adds an adoption level column only for a framework with levels", async () => {
+      expect(await docxText((await generateDOCX(frameworkData())).content)).not.toContain(
+        "Adoption level",
+      );
+      const data = frameworkData();
+      const fw = data.sections.frameworkRequirements!.frameworks[0];
+      fw.adoptionLevels = true;
+      fw.groups[0].requirements[0].adoptionLevel = 4;
+      const text = await docxText((await generateDOCX(data)).content);
+      expect(text).toContain("Adoption level");
+      expect(text).toContain("4: Excellence");
+    });
+
     it("includes frameworkRequirements in the compliance group guard", async () => {
       const result = await generateDOCX(frameworkData());
       const text = await docxText(result.content);

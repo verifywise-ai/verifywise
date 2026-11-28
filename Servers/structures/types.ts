@@ -102,4 +102,12 @@ export interface FrameworkStructure {
    * changed without a bump.
    */
   textRevision?: number;
+  /**
+   * The level 2 impl rows carry `adoption_level` (0-5, null = not assessed),
+   * a self-assessed maturity level per item (Saudi NAII's SDAIA adoption
+   * levels). The impl table needs the column (a migration); the generic
+   * tree, impl, update and report paths read and write it only when this is
+   * true.
+   */
+  adoption_levels?: boolean;
 }

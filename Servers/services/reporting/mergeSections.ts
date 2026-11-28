@@ -145,6 +145,7 @@ export function mergeFrameworkRequirements(
       return {
         frameworkId,
         frameworkName: parts[0].data.frameworks[0].frameworkName,
+        ...(parts[0].data.frameworks[0].adoptionLevels ? { adoptionLevels: true } : {}),
         groups,
         rollup: rollupFromGroups(groups),
       };

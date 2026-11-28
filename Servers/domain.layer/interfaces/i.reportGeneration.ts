@@ -555,6 +555,9 @@ export interface FrameworkRequirementRow {
   evidenceCount: number;
   evidenceFiles: string[]; // file names, max 10, sorted
   riskCount: number;
+  /** Self-assessed adoption level 0-5; null = not assessed. Set only for a
+   *  framework with adoption levels (Saudi NAII), level 2 rows. */
+  adoptionLevel?: number | null;
   children?: FrameworkRequirementRow[]; // L3 under L2
 }
 
@@ -580,6 +583,8 @@ export interface FrameworkRequirementsSectionData {
   frameworks: Array<{
     frameworkId: number;
     frameworkName: string;
+    /** True when the rows carry an adoption level (Saudi NAII). */
+    adoptionLevels?: boolean;
     groups: FrameworkRequirementGroup[];
     rollup: FrameworkRequirementRollup;
   }>;

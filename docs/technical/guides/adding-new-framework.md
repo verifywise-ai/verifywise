@@ -343,6 +343,24 @@ instances starting together take turns. Tests:
 `tests/integration/framework-text-sync.test.ts`, which also checks that a
 freshly migrated database needs no change in any framework.
 
+## Adoption levels (optional)
+
+A framework whose items are scored on a maturity scale can set
+`adoption_levels: true` on its structure (Saudi NAII does: SDAIA's levels
+0-5). Its level 2 impl rows then carry `adoption_level` (SMALLINT, NULL = not
+assessed, 0-5): the tree and impl endpoints return it, `PATCH
+.../impl/l2/:id` accepts it ("" clears; a value outside 0-5 is a 400), the
+drawer shows an Adoption level select, the page shows a "Level N" badge, and
+the framework requirements report adds an Adoption level column. Level 3 rows
+and frameworks without the flag never take a level.
+
+The flag does not create the column. Turning it on needs a migration that
+adds `adoption_level` and its CHECK to that framework's level 2 impl table
+(see `20261127120000-add-adoption-level-to-saudi-naii.js`); without it, every
+read of the framework fails with "column i.adoption_level does not exist".
+The level names come from `Clients/src/application/constants/adoptionLevels.ts`
+and `Servers/services/reporting/adoptionLevel.ts`, which today hold SDAIA's.
+
 ## Checklist
 
 - [ ] `<key>.structure.ts` with a unique id, key, `framework_type` and table names

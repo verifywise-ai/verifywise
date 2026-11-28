@@ -162,4 +162,74 @@ describe("GenericFramework source", () => {
       }),
     );
   });
+
+  it("shows the adoption level on a domain row and enables it in the drawer", async () => {
+    const naiiTree = {
+      projects_frameworks_id: 30,
+      framework: {
+        id: 30,
+        key: "saudi-naii",
+        framework_type: "saudi_naii",
+        display_name: "Saudi National AI Index (NAII)",
+        entity_types: { l2_impl: "domain" },
+        hierarchy_type: "two_level",
+        adoption_levels: true,
+      },
+      tree: [
+        {
+          id: 1,
+          title: "Directions: Strategy",
+          order_no: 1,
+          children: [
+            {
+              struct_id: 3,
+              impl_id: 303,
+              title: "Budget",
+              status: "In progress",
+              adoption_level: 3,
+              order_no: 1,
+              children: [],
+            },
+            {
+              struct_id: 4,
+              impl_id: 304,
+              title: "Initiatives",
+              status: "Not started",
+              adoption_level: null,
+              order_no: 2,
+              children: [],
+            },
+          ],
+        },
+      ],
+    };
+    server.use(http.get("/api/frameworks/30/tree/7", () => HttpResponse.json({ data: naiiTree })));
+    renderWithProviders(<GenericFramework projectId={7} frameworkId={30} />);
+
+    (await screen.findByText(/Directions: Strategy/)).click();
+    expect(await screen.findByText("Level 3")).toBeInTheDocument();
+    // Initiatives has no level, so only one badge shows.
+    expect(screen.getAllByText(/^Level \d$/)).toHaveLength(1);
+
+    (await screen.findByText(/Budget/)).click();
+    await waitFor(() => expect(drawerProps).toHaveBeenCalled());
+    expect(drawerProps).toHaveBeenLastCalledWith(
+      expect.objectContaining({ frameworkId: 30, adoptionLevels: true }),
+    );
+  });
+
+  it("does not enable adoption levels for frameworks without them", async () => {
+    server.use(
+      http.get("/api/frameworks/9/tree/7", () => HttpResponse.json({ data: bundledTree })),
+    );
+    renderWithProviders(<GenericFramework projectId={7} frameworkId={9} />);
+    (await screen.findByText("1 Internal AI policy")).click();
+    (await screen.findByText("1.1 Data handling")).click();
+
+    await waitFor(() => expect(drawerProps).toHaveBeenCalled());
+    expect(drawerProps).toHaveBeenLastCalledWith(
+      expect.objectContaining({ adoptionLevels: false }),
+    );
+    expect(screen.queryByText(/^Level \d$/)).not.toBeInTheDocument();
+  });
 });

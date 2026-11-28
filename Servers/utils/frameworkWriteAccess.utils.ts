@@ -195,6 +195,23 @@ export function dateChanged(
   return Math.abs(next - stored) > 1;
 }
 
+/**
+ * Adoption level (0-5): "" or null clears, so a clear is a change when a
+ * level is stored. Junk is a change too: the update rejects it with a 400.
+ */
+export function levelChanged(sent: unknown, current: unknown): boolean {
+  if (sent === undefined) return false;
+  const asLevel = (value: unknown): number | null | typeof NaN => {
+    if (isBlank(value)) return null;
+    const text = String(value).trim();
+    // Same digits-only rule as parseAdoptionLevel; anything else is junk.
+    return /^\d+$/.test(text) ? Number(text) : NaN;
+  };
+  const next = asLevel(sent);
+  if (Number.isNaN(next)) return true;
+  return next !== asLevel(current);
+}
+
 export function boolChanged(sent: unknown, current: unknown): boolean {
   if (isBlank(sent)) return false;
   return String(sent).trim().toLowerCase() !== String(current ?? false).toLowerCase();
@@ -256,7 +273,7 @@ export function riskLinksChanged(
 
 // ── Flat implementation rows (ISO, NIST, bundled, imported) ─────────────────
 
-type FieldKind = "text" | "status" | "user" | "date" | "bool";
+type FieldKind = "text" | "status" | "user" | "date" | "bool" | "level";
 
 interface FlatField {
   field: string;
@@ -297,10 +314,20 @@ export const ISO42001_ANNEX_RULES: FlatRowRules = {
   parseUser: parseUserStrict,
 };
 
+/** Imported frameworks: their update query has no adoption level. */
 export const IMPL_RULES: FlatRowRules = {
   fields: WORKFLOW_FIELDS,
   emptyClears: true,
   parseUser: parseUserLoose,
+};
+
+/**
+ * Bundled frameworks. adoption_level is written only for a framework with
+ * adoption levels (Saudi NAII); anywhere else the update rejects it.
+ */
+export const BUNDLED_IMPL_RULES: FlatRowRules = {
+  ...IMPL_RULES,
+  fields: [...WORKFLOW_FIELDS, { field: "adoption_level", kind: "level", cls: "edit" }],
 };
 
 const fieldChanged = (spec: FlatField, sent: unknown, current: unknown, rules: FlatRowRules) => {
@@ -318,6 +345,8 @@ const fieldChanged = (spec: FlatField, sent: unknown, current: unknown, rules: F
       return dateChanged(sent, current, rules.emptyClears);
     case "bool":
       return boolChanged(sent, current);
+    case "level":
+      return levelChanged(sent, current);
     default:
       return true;
   }
@@ -500,8 +529,9 @@ export const frameworkImplChanges: FrameworkChangeDetector = async (req) => {
   );
   if (!current) return noChanges();
   const body = requestBody(req);
-  return withRestore(detectFlatChanges(body, uploadedFiles(req), current, IMPL_RULES), (cls) =>
-    restoreFlatFields(body, IMPL_RULES, cls),
+  return withRestore(
+    detectFlatChanges(body, uploadedFiles(req), current, BUNDLED_IMPL_RULES),
+    (cls) => restoreFlatFields(body, BUNDLED_IMPL_RULES, cls),
   );
 };
 

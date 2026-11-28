@@ -10,11 +10,16 @@
 import type { FrameworkStructure } from "../../../structures/types";
 
 /** L2 requirements with their L1 group, ordered group then requirement. */
-export const l2RequirementsSql = ({ tables, cols }: FrameworkStructure): string => `
+export const l2RequirementsSql = ({
+  tables,
+  cols,
+  adoption_levels,
+}: FrameworkStructure): string => `
   SELECT i.id AS impl_id, s2.id AS struct_id, s1.id AS group_id,
          s1.title AS group_title, s1.order_no AS group_order,
          s2.title, s2.order_no,
-         i.status, i.owner, i.reviewer, i.approver, i.due_date
+         i.status, i.owner, i.reviewer, i.approver, i.due_date,
+         ${adoption_levels ? "i.adoption_level" : "NULL::smallint AS adoption_level"}
     FROM ${tables.l1_struct} s1
     JOIN ${tables.l2_struct} s2 ON s2.${cols.l2_struct_parent} = s1.id
     JOIN ${tables.l2_impl} i ON i.${cols.l2_impl_meta} = s2.id
