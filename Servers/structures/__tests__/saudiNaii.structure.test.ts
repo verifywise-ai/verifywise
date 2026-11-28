@@ -119,6 +119,53 @@ describe("Saudi NAII structure", () => {
       }
     }
   });
+
+  it("asks SDAIA's 26 appendix questions, by id, in each domain's order", () => {
+    const ids = naii.seed.structure.flatMap((l1) =>
+      (l1.items ?? []).map((l2) =>
+        (l2.questions ?? [])
+          .map((q) => /^(AI\.AQ\.[A-Z]{2}\.[\d.]+):/.exec(q)?.[1])
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+    expect(ids).toEqual([
+      ["AI.AQ.ST.1"],
+      ["AI.AQ.ST.2"],
+      ["AI.AQ.ST.3"],
+      ["AI.AQ.GO.1"],
+      ["AI.AQ.GO.2"],
+      ["AI.AQ.GO.3"],
+      ["AI.AQ.GO.4"],
+      ["AI.AQ.DA.1"],
+      ["AI.AQ.DA.2"],
+      ["AI.AQ.DA.3"],
+      ["AI.AQ.IN.1"],
+      ["AI.AQ.IN.2"],
+      ["AI.AQ.IN.3"],
+      ["AI.AQ.HC.1"],
+      ["AI.AQ.HC.2"],
+      ["AI.AQ.HC.3"],
+      ["AI.AQ.HC.4"],
+      ["AI.AQ.AP.1.1", "AI.AQ.AP.1.2", "AI.AQ.AP.1.3", "AI.AQ.AP.1.4"],
+      ["AI.AQ.AP.2"],
+      ["AI.AQ.AP.3"],
+      ["AI.AQ.IM.1"],
+      ["AI.AQ.IM.2"],
+      ["AI.AQ.IM.3"],
+    ]);
+  });
+
+  it("codes every evidence example with SDAIA's evidence codes for levels 3 to 5", () => {
+    for (const l1 of naii.seed.structure) {
+      for (const l2 of l1.items ?? []) {
+        for (const evidence of l2.evidence_examples ?? []) {
+          expect(evidence).toMatch(
+            /\([A-Z]{2}\.\d+\.[3-5]\.\d+(?:, [A-Z]{2}\.\d+\.[3-5]\.\d+)*\)$/,
+          );
+        }
+      }
+    }
+  });
 });
 
 describe("Saudi NAII add and remove dispatch", () => {

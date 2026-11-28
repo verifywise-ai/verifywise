@@ -108,7 +108,7 @@ export const addingFrameworksContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'SDAIA scores each entity on 6 adoption levels. VerifyWise tracks the status of each domain and does not calculate this level, because SDAIA does not publish the weight of each domain.',
+      text: "SDAIA scores each entity on 6 adoption levels. VerifyWise tracks the status of each domain and does not calculate this level, because SDAIA does not publish the weight of each domain. SDAIA's question appendix names levels 1 to 5 Foundation, Activation, Enablement, Distinction and Pioneering.",
     },
     {
       type: 'table',
@@ -128,8 +128,8 @@ export const addingFrameworksContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'info',
-      title: 'Questions are guidance',
-      text: "SDAIA shares its questionnaire only with the entities it assesses. The questions and evidence examples in each domain's drawer are VerifyWise guidance, written from SDAIA's domain descriptions. Attach the evidence SDAIA asks for to each domain so it is ready for the assessment.",
+      title: "SDAIA's questions and evidence",
+      text: "Each domain's drawer shows SDAIA's assessment question with its ID (for example AI.AQ.ST.1), what levels 3, 4 and 5 require, and the evidence SDAIA accepts for those levels with its evidence codes (for example ST.1.3.1). Development and deployment has four questions. Attach the evidence to each domain so it is ready for the assessment.",
     },
     {
       type: 'heading',
