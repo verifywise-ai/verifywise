@@ -15,7 +15,7 @@ import {
 } from "@user-guide-content/userGuideConfig";
 import type { ArticleContent, ContentBlock } from "@user-guide-content/contentTypes";
 import { isContentIconName } from "../contentIcons";
-import { GUIDE_ROUTE_RULES } from "../guideRouteMap";
+import { DASHBOARD_GUIDE_TARGET, GUIDE_ROUTE_RULES } from "../guideRouteMap";
 
 const INLINE_LINK = /\[\[([^\]]+)\]\]\(([^)]+)\)/g;
 
@@ -138,10 +138,15 @@ describe("user guide content integrity", () => {
     const targets = GUIDE_ROUTE_RULES.flatMap((r) => [
       r.target,
       ...Object.values(r.byHash ?? {}),
+      DASHBOARD_GUIDE_TARGET,
     ]).map((target) => ({ where: "guideRouteMap", target }));
     expect(broken(targets)).toEqual([]);
   });
 });
+
+// Lower than today's count so removing a few help icons is fine, but an
+// empty or broken scan fails.
+const MIN_GUIDE_PATHS = 60;
 
 describe("guide paths in app source", () => {
   const SRC = path.resolve(__dirname, "../../../..");
@@ -153,31 +158,66 @@ describe("guide paths in app source", () => {
       return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [full] : [];
     });
 
-  const collectionIds = collections.map((c) => c.id).join("|");
-  const PATTERNS = [
-    // Props and fields that take a guide path: helpArticlePath="x", articlePath="x", guidePath: "x"
-    /\b(?:helpArticlePath|articlePath|guidePath)\s*[=:]\s*\{?\s*(["'`])([^"'`$]+)\1/g,
-    // Calls that open the guide sidebar on a path
-    /\b(?:openGuide|openUserGuide|userGuideSidebar\.open)\(\s*(["'`])([^"'`$]+)\1/g,
-    // Any "collection/article" literal (catches ternaries and config objects)
-    new RegExp(`(["'\`])((?:${collectionIds})/[a-z0-9-]+(?:#[a-z0-9-]+)?)\\1`, "g"),
-  ];
-  // <HelperIcon articlePath="x" sectionId="y" /> opens "x#y"
-  const WITH_SECTION = /articlePath="([^"]+)"\s+sectionId="([^"]+)"/g;
+  const QUOTED = /(["'`])([^"'`$]+)\1/g;
 
-  it("every guide path literal resolves to a collection, article and heading", () => {
+  /** Text between the brace at `open` and its matching closing brace. */
+  const braceBody = (text: string, open: number): string => {
+    let depth = 0;
+    for (let i = open; i < text.length; i++) {
+      if (text[i] === "{") depth++;
+      else if (text[i] === "}" && --depth === 0) return text.slice(open + 1, i);
+    }
+    return "";
+  };
+
+  /**
+   * Guide paths in the places that take one, and nowhere else, so an
+   * unrelated "x/y" string can't fail the test:
+   * - helpArticlePath / articlePath / guidePath given a literal, or an
+   *   expression whose literals are all paths (a ternary per tab),
+   * - openGuide / openUserGuide / userGuideSidebar.open called with a literal,
+   * - SOMETHING_GUIDE_PATH / SOMETHING_GUIDE_TARGET constants,
+   * - <HelperIcon articlePath="x" sectionId="y" />, read as "x#y" whatever the
+   *   attribute order or line breaks.
+   */
+  const guidePathsIn = (text: string): string[] => {
+    const paths: string[] = [];
+    const PROP = /\b(?:helpArticlePath|articlePath|guidePath)\s*[=:]\s*(?:(["'`])([^"'`$]+)\1|\{)/g;
+    for (const m of text.matchAll(PROP)) {
+      if (m[2]) paths.push(m[2]);
+      else
+        for (const lit of braceBody(text, m.index + m[0].length - 1).matchAll(QUOTED))
+          paths.push(lit[2]);
+    }
+    const CALL = /\b(?:openGuide|openUserGuide|userGuideSidebar\.open)\(\s*(["'`])([^"'`$]+)\1/g;
+    for (const m of text.matchAll(CALL)) paths.push(m[2]);
+    const CONST =
+      /\b[A-Z][A-Z0-9_]*_GUIDE_(?:PATH|TARGET)\s*(?::\s*string\s*)?=\s*(["'`])([^"'`$]+)\1/g;
+    for (const m of text.matchAll(CONST)) paths.push(m[2]);
+    for (const tag of text.matchAll(/<HelperIcon\b([^>]*?)\/?>/g)) {
+      const article = /\barticlePath="([^"]+)"/.exec(tag[1]);
+      const section = /\bsectionId="([^"]+)"/.exec(tag[1]);
+      if (article && section) paths.push(`${article[1]}#${section[1]}`);
+    }
+    return paths;
+  };
+
+  it("finds guide paths whatever the HelperIcon attribute order", () => {
+    const tag = `<HelperIcon\n  sectionId="b"\n  size="small"\n  articlePath="getting-started/dashboard"\n/>`;
+    expect(guidePathsIn(tag)).toContain("getting-started/dashboard#b");
+    expect(guidePathsIn(`helpArticlePath={x ? "a/b" : "c/d"}`)).toEqual(["a/b", "c/d"]);
+    expect(guidePathsIn(`const label = "training/stats";`)).toEqual([]);
+  });
+
+  it("every guide path in source resolves to a collection, article and heading", () => {
     const found: { where: string; target: string }[] = [];
     for (const file of sourceFiles(SRC)) {
-      const text = fs.readFileSync(file, "utf8");
       const where = path.relative(SRC, file);
-      for (const pattern of PATTERNS) {
-        for (const m of text.matchAll(pattern)) found.push({ where, target: m[2] });
-      }
-      for (const m of text.matchAll(WITH_SECTION)) found.push({ where, target: `${m[1]}#${m[2]}` });
+      for (const target of guidePathsIn(fs.readFileSync(file, "utf8")))
+        found.push({ where, target });
     }
-    // The scan finding nothing would pass vacuously; there are 60+ call sites.
-    expect(found.length).toBeGreaterThan(50);
-    // One literal can match more than one pattern; report each once.
+    // An empty scan would pass vacuously; it finds 75 today.
+    expect(found.length).toBeGreaterThanOrEqual(MIN_GUIDE_PATHS);
     expect([...new Set(broken(found))]).toEqual([]);
   });
 });

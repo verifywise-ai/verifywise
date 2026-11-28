@@ -20,7 +20,7 @@ import {
   getDomainByPath,
 } from "../AdvisorChat/advisorConfig";
 import AdvisorHeader from "./AdvisorHeader";
-import { getGuideTargetForLocation } from "./guideRouteMap";
+import { getGuideTargetForLocation, parseGuidePath } from "./guideRouteMap";
 import { useLocation } from "react-router";
 import { useOverlayAccessibility } from "../../../application/hooks/useOverlayAccessibility";
 import "./SidebarWrapper.css";
@@ -129,15 +129,17 @@ const SidebarWrapper: React.FC<SidebarWrapperProps> = ({
   // Path syntax: "collection/article" or "collection/article#sectionId".
   useEffect(() => {
     if (initialPath) {
-      const [pathPart, section] = initialPath.split("#");
-      const parts = pathPart.split("/");
-      if (parts.length >= 1 && parts[0]) {
-        setCollectionId(parts[0]);
-        if (parts.length >= 2 && parts[1]) {
-          setArticleId(parts[1]);
-        }
+      const {
+        collectionId: pathCollection,
+        articleId: pathArticle,
+        sectionId,
+      } = parseGuidePath(initialPath);
+      if (pathCollection) {
+        setCollectionId(pathCollection);
+        // Clear the article for a collection-only path, or the last one stays open
+        setArticleId(pathArticle);
       }
-      setTargetSectionId(section || undefined);
+      setTargetSectionId(sectionId);
       setActiveTab("user-guide");
     }
   }, [initialPath]);
@@ -352,7 +354,13 @@ const SidebarWrapper: React.FC<SidebarWrapperProps> = ({
           mode="in-app"
         >
           {articleContent && (
-            <ContentRenderer content={articleContent} onNavigate={handleNavigate} />
+            <ContentRenderer
+              content={articleContent}
+              onNavigate={(colId, artId, sectionId) => {
+                handleNavigate(colId, artId);
+                setTargetSectionId(sectionId);
+              }}
+            />
           )}
         </ArticlePage>
       );

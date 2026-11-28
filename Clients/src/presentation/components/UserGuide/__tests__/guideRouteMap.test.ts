@@ -1,18 +1,33 @@
 import { describe, it, expect } from "vitest";
-import { getCollection, getArticle } from "@user-guide-content/userGuideConfig";
-import { GUIDE_ROUTE_RULES, getGuideTargetForLocation } from "../guideRouteMap";
+import { getGuideTargetForLocation, parseGuidePath } from "../guideRouteMap";
 
-describe("getGuideTargetForLocation", () => {
-  it("every mapped target exists in the user guide", () => {
-    const targets = GUIDE_ROUTE_RULES.flatMap((r) => [r.target, ...Object.values(r.byHash ?? {})]);
-    targets.push("getting-started/dashboard");
-    for (const target of targets) {
-      const [collectionId, articleId] = target.split("/");
-      expect(getCollection(collectionId), target).toBeDefined();
-      if (articleId) expect(getArticle(collectionId, articleId), target).toBeDefined();
-    }
+// That every target resolves is checked in contentIntegrity.test.ts.
+describe("parseGuidePath", () => {
+  it("splits collection, article and section", () => {
+    expect(parseGuidePath("getting-started/dashboard#governance-score")).toEqual({
+      collectionId: "getting-started",
+      articleId: "dashboard",
+      sectionId: "governance-score",
+    });
+    expect(parseGuidePath("ai-gateway/endpoints")).toEqual({
+      collectionId: "ai-gateway",
+      articleId: "endpoints",
+      sectionId: undefined,
+    });
   });
 
+  it("leaves the article undefined for a collection-only path", () => {
+    expect(parseGuidePath("ai-gateway")).toEqual({ collectionId: "ai-gateway" });
+    // A section without an article has nothing to scroll in
+    expect(parseGuidePath("ai-gateway#x")).toEqual({ collectionId: "ai-gateway" });
+  });
+
+  it("returns nothing for an empty path", () => {
+    expect(parseGuidePath("")).toEqual({});
+  });
+});
+
+describe("getGuideTargetForLocation", () => {
   it("opens the topic for the LLM Evals section in the hash", () => {
     expect(getGuideTargetForLocation("/evals/12", "#experiments")).toEqual({
       collectionId: "llm-evals",

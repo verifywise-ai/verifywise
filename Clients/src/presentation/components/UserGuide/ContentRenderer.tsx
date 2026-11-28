@@ -23,11 +23,13 @@ import type {
 } from "@user-guide-content/contentTypes";
 import "./ContentRenderer.css";
 import { getContentIcon } from "./contentIcons";
+import { parseGuidePath } from "./guideRouteMap";
 import { palette, radiusPx } from "../../themes/palette";
 
 interface ContentRendererProps {
   content: ArticleContent;
-  onNavigate?: (collectionId: string, articleId: string) => void;
+  /** sectionId is set for inline links that name a heading ("collection/article#heading-id"). */
+  onNavigate?: (collectionId: string, articleId: string, sectionId?: string) => void;
 }
 
 const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }) => {
@@ -72,12 +74,11 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({ content, onNavigate }
         // Article link: [[text]](collection/article)
         const linkText = match[3];
         const linkPath = match[4];
-        // A "#section" suffix is allowed in content; the sidebar opens the article.
-        const [collectionId, articleId] = linkPath.split("#")[0].split("/");
+        const { collectionId = "", articleId = "", sectionId } = parseGuidePath(linkPath);
         parts.push(
           <span
             key={key++}
-            onClick={() => onNavigate?.(collectionId, articleId)}
+            onClick={() => onNavigate?.(collectionId, articleId, sectionId)}
             style={{
               color: colors.brand.primary,
               cursor: "pointer",

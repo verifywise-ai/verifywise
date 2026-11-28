@@ -61,8 +61,14 @@ import {
   Users,
   Wrench,
   XCircle,
+  EyeOff,
+  FlaskConical,
+  Plug,
+  Router,
+  ScanSearch,
   type LucideIcon,
 } from "lucide-react";
+import type { IconName } from "@user-guide-content/userGuideConfig";
 
 /**
  * Icons that user guide content can name in `icon` fields (icon cards, grid
@@ -143,3 +149,21 @@ export const isContentIconName = (name: string): name is ContentIconName =>
 /** Content stores icon names as plain strings; unknown names render as `Info`. */
 export const getContentIcon = (name: string): LucideIcon =>
   isContentIconName(name) ? contentIconMap[name] : Info;
+
+/** Collection icons (landing, collection and article pages), keyed by the config's IconName. */
+export const collectionIconMap: Record<IconName, LucideIcon> = {
+  Rocket,
+  Shield,
+  AlertTriangle,
+  Brain,
+  Settings,
+  Plug,
+  FileText,
+  GraduationCap,
+  BarChart3,
+  FlaskConical,
+  ScanSearch,
+  EyeOff,
+  Router,
+  Gauge,
+};

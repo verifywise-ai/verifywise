@@ -70,6 +70,7 @@ import {
 import VersionDiffModal from "./VersionDiffModal";
 import ComparePanel from "./ComparePanel";
 import TestDatasetPanel from "./TestDatasetPanel";
+import { PROMPTS_GUIDE_PATH } from "./guidePath";
 
 interface Message {
   role: string;
@@ -616,7 +617,7 @@ export default function PromptEditorPage() {
         prompt.description || "Edit prompt messages, test with variables, and publish versions."
       }
       tipBoxEntity="ai-gateway-prompts"
-      helpArticlePath="ai-gateway/endpoints"
+      helpArticlePath={PROMPTS_GUIDE_PATH}
       actionButton={
         <Stack direction="row" alignItems="center" gap="8px">
           <CustomizableButton

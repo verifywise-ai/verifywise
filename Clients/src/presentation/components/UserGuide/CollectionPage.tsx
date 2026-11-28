@@ -1,43 +1,9 @@
 import React from "react";
-import {
-  ChevronLeft,
-  ArrowRight,
-  FileText,
-  Rocket,
-  Shield,
-  AlertTriangle,
-  Brain,
-  Settings,
-  Plug,
-  GraduationCap,
-  BarChart3,
-  FlaskConical,
-  ScanSearch,
-  EyeOff,
-  Router,
-  Gauge,
-  LucideIcon,
-} from "lucide-react";
-import { Collection, IconName } from "@user-guide-content/userGuideConfig";
+import { ChevronLeft, ArrowRight, FileText } from "lucide-react";
+import { Collection } from "@user-guide-content/userGuideConfig";
 
-// Map icon names to actual Lucide components
-const iconMap: Record<IconName, LucideIcon> = {
-  Rocket,
-  Shield,
-  AlertTriangle,
-  Brain,
-  Settings,
-  Plug,
-  FileText,
-  GraduationCap,
-  BarChart3,
-  FlaskConical,
-  ScanSearch,
-  EyeOff,
-  Router,
-  Gauge,
-};
 import { colors, typography, spacing, border } from "./styles/theme";
+import { collectionIconMap } from "./contentIcons";
 import "./CollectionPage.css";
 
 interface CollectionPageProps {
@@ -47,7 +13,7 @@ interface CollectionPageProps {
 }
 
 const CollectionPage: React.FC<CollectionPageProps> = ({ collection, onBack, onArticleClick }) => {
-  const IconComponent = iconMap[collection.icon];
+  const IconComponent = collectionIconMap[collection.icon];
 
   return (
     <div style={{ minHeight: "100%", backgroundColor: colors.background.alt }}>

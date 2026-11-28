@@ -39,6 +39,7 @@ import {
 } from "../../../../application/utils/paginationStorage";
 import { slugify, ProviderIcon, getLabelVariant } from "../shared";
 import singleTheme from "../../../themes/v1SingleTheme";
+import { PROMPTS_GUIDE_PATH } from "./guidePath";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import { palette } from "../../../themes/palette";
 
@@ -254,7 +255,7 @@ export default function PromptsPage() {
         title="Prompts"
         description="Create versioned prompt templates with variables and bind them to endpoints."
         tipBoxEntity="ai-gateway-prompts"
-        helpArticlePath="ai-gateway/endpoints"
+        helpArticlePath={PROMPTS_GUIDE_PATH}
         actionButton={actionButton}
       >
         <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
@@ -268,7 +269,7 @@ export default function PromptsPage() {
         title="Prompts"
         description="Create versioned prompt templates with variables and bind them to endpoints."
         tipBoxEntity="ai-gateway-prompts"
-        helpArticlePath="ai-gateway/endpoints"
+        helpArticlePath={PROMPTS_GUIDE_PATH}
         actionButton={actionButton}
       >
         <EmptyState icon={AlertTriangle} message={loadError}>
@@ -290,7 +291,7 @@ export default function PromptsPage() {
         title="Prompts"
         description="Create versioned prompt templates with variables and bind them to endpoints."
         tipBoxEntity="ai-gateway-prompts"
-        helpArticlePath="ai-gateway/endpoints"
+        helpArticlePath={PROMPTS_GUIDE_PATH}
         actionButton={actionButton}
       >
         <EmptyState
@@ -320,7 +321,7 @@ export default function PromptsPage() {
       title="Prompts"
       description="Create versioned prompt templates with variables and bind them to endpoints."
       tipBoxEntity="ai-gateway-prompts"
-      helpArticlePath="ai-gateway/endpoints"
+      helpArticlePath={PROMPTS_GUIDE_PATH}
       actionButton={actionButton}
     >
       <TableContainer sx={frame}>
