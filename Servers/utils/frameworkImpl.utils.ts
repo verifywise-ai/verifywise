@@ -330,6 +330,23 @@ export function parseAdoptionLevel(raw: unknown): number | null | undefined {
   return value;
 }
 
+/**
+ * The adoption level a save writes for this framework and level: undefined
+ * when the request has none. Throws InvalidAdoptionLevelError for a value
+ * outside 0-5, or for any value on a framework or level without levels.
+ */
+export function validateAdoptionLevel(
+  cfg: FrameworkConfig,
+  level: ImplLevel,
+  raw: unknown,
+): number | null | undefined {
+  const value = parseAdoptionLevel(raw);
+  if (value !== undefined && (!cfg.adoption_levels || level !== "l2")) {
+    throw new InvalidAdoptionLevelError(raw);
+  }
+  return value;
+}
+
 export class InvalidAdoptionLevelError extends Error {
   constructor(raw: unknown) {
     super(
@@ -418,11 +435,8 @@ export async function updateImplQuery(
     setPieces.push("status = :status");
     replacements.status = input.status;
   }
-  const adoptionLevel = parseAdoptionLevel(input.adoption_level);
+  const adoptionLevel = validateAdoptionLevel(cfg, level, input.adoption_level);
   if (adoptionLevel !== undefined) {
-    if (!cfg.adoption_levels || level !== "l2") {
-      throw new InvalidAdoptionLevelError(input.adoption_level);
-    }
     setPieces.push("adoption_level = :adoption_level");
     replacements.adoption_level = adoptionLevel;
   }

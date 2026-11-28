@@ -1,18 +1,18 @@
 "use strict";
 
 /**
- * Adds `adoption_level` (SDAIA adoption level 0-5, NULL = not assessed) to the
- * level 2 impl table of every registry framework with `adoption_levels: true`
- * (today only Saudi NAII: saudi_naii_domains).
+ * Adds `adoption_level` (SDAIA adoption level 0-5, NULL = not assessed) to
+ * saudi_naii_domains, the level 2 impl table of Saudi NAII, the only registry
+ * framework with `adoption_levels: true`. The table is named here rather than
+ * read from the registry: a framework that sets the flag later needs its own
+ * migration for its table.
  *
  * IF NOT EXISTS: a fresh database gets the impl table from the 20260805*
  * registry migrations, an existing one from 20261126211629; both end with
  * the column after this runs.
  */
 
-const { FRAMEWORK_STRUCTURES } = require("../../dist/structures");
-
-const withLevels = () => FRAMEWORK_STRUCTURES.filter((fw) => fw.adoption_levels);
+const TABLES = ["saudi_naii_domains"];
 const constraintName = (table) => `${table}_adoption_level_check`;
 
 module.exports = {
@@ -20,8 +20,7 @@ module.exports = {
     const sequelize = queryInterface.sequelize;
     const transaction = await sequelize.transaction();
     try {
-      for (const fw of withLevels()) {
-        const table = fw.tables.l2_impl;
+      for (const table of TABLES) {
         await sequelize.query(
           `ALTER TABLE verifywise.${table}
              ADD COLUMN IF NOT EXISTS adoption_level SMALLINT NULL;`,
@@ -50,9 +49,9 @@ module.exports = {
     const sequelize = queryInterface.sequelize;
     const transaction = await sequelize.transaction();
     try {
-      for (const fw of withLevels()) {
+      for (const table of TABLES) {
         await sequelize.query(
-          `ALTER TABLE verifywise.${fw.tables.l2_impl} DROP COLUMN IF EXISTS adoption_level;`,
+          `ALTER TABLE verifywise.${table} DROP COLUMN IF EXISTS adoption_level;`,
           { transaction },
         );
       }

@@ -14,9 +14,9 @@ import {
   getImplLinkedRisksQuery,
   ImplLevel,
   InvalidAdoptionLevelError,
-  parseAdoptionLevel,
   resolveLevel,
   updateImplQuery,
+  validateAdoptionLevel,
 } from "../utils/frameworkImpl.utils";
 import { getConfigById } from "../utils/frameworkRegistry.utils";
 
@@ -187,10 +187,7 @@ export async function updateImpl(req: RequestWithFile, res: Response): Promise<a
     // Checked before any upload: a level outside 0-5, or one sent to a
     // framework without adoption levels, is the caller's error.
     try {
-      const adoptionLevel = parseAdoptionLevel(req.body?.adoption_level);
-      if (adoptionLevel !== undefined && (!resolved.cfg.adoption_levels || level !== "l2")) {
-        throw new InvalidAdoptionLevelError(req.body.adoption_level);
-      }
+      validateAdoptionLevel(resolved.cfg, level, req.body?.adoption_level);
     } catch (error) {
       if (!(error instanceof InvalidAdoptionLevelError)) throw error;
       await transaction.rollback();

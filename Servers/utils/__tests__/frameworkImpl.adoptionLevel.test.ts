@@ -9,6 +9,7 @@ import {
   InvalidAdoptionLevelError,
   parseAdoptionLevel,
   updateImplQuery,
+  validateAdoptionLevel,
 } from "../frameworkImpl.utils";
 import { adoptionLevelLabel } from "../../services/reporting/adoptionLevel";
 
@@ -41,6 +42,16 @@ describe("adoptionLevelColumn", () => {
     expect(adoptionLevelColumn(naii, "l2")).toBe("i.adoption_level");
     expect(adoptionLevelColumn(naii, "l3")).toBe("NULL::smallint AS adoption_level");
     expect(adoptionLevelColumn(other, "l2")).toBe("NULL::smallint AS adoption_level");
+  });
+});
+
+describe("validateAdoptionLevel", () => {
+  it("allows a level only on level 2 of a framework with levels", () => {
+    expect(validateAdoptionLevel(naii, "l2", "2")).toBe(2);
+    expect(validateAdoptionLevel(naii, "l2", undefined)).toBeUndefined();
+    expect(validateAdoptionLevel(other, "l2", undefined)).toBeUndefined();
+    expect(() => validateAdoptionLevel(naii, "l3", "2")).toThrow(InvalidAdoptionLevelError);
+    expect(() => validateAdoptionLevel(other, "l2", "")).toThrow(InvalidAdoptionLevelError);
   });
 });
 

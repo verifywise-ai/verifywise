@@ -181,6 +181,8 @@ const GenericFrameworkDrawer: React.FC<GenericFrameworkDrawerProps> = ({
   const fetchImpl = async () => {
     if (!entityId) return;
     console.debug("[fw] GenericFrameworkDrawer fetchImpl", { url: baseUrl, entityId });
+    // The drawer stays mounted across rows: never carry a level to another row.
+    setAdoptionLevel("");
     setIsLoading(true);
     try {
       const response = await getEntityById({ routeUrl: baseUrl });

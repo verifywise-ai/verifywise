@@ -14,6 +14,7 @@ import {
   euAnswerChanges,
   euControlChanges,
   frameworkImplChanges,
+  BUNDLED_IMPL_RULES,
   IMPL_RULES,
   iso42001SubclauseChanges,
   levelChanged,
@@ -357,6 +358,13 @@ describe("adoption level changes", () => {
     expect(levelChanged(undefined, 3)).toBe(false);
     expect(levelChanged("3", 3)).toBe(false);
     expect(levelChanged("", null)).toBe(false);
+    expect(levelChanged("03", 3)).toBe(false);
+    expect(levelChanged(" 0 ", 0)).toBe(false);
+  });
+
+  it("treats junk as a change so the update can reject it", () => {
+    expect(levelChanged("high", 3)).toBe(true);
+    expect(levelChanged("2.5", null)).toBe(true);
   });
 
   it("counts a level-only drawer save as an edit, not an audit", () => {
@@ -365,12 +373,23 @@ describe("adoption level changes", () => {
         { adoption_level: "2" },
         [],
         { ...stored, adoption_level: null },
-        IMPL_RULES,
+        BUNDLED_IMPL_RULES,
       ),
     ).toMatchObject({ edit: true, audit: false });
     expect(
-      detectFlatChanges({ adoption_level: "2" }, [], { ...stored, adoption_level: 2 }, IMPL_RULES)
-        .edit,
+      detectFlatChanges(
+        { adoption_level: "2" },
+        [],
+        { ...stored, adoption_level: 2 },
+        BUNDLED_IMPL_RULES,
+      ).edit,
     ).toBe(false);
+  });
+
+  it("leaves the level out of the imported framework rules", () => {
+    expect(IMPL_RULES.fields.map((f) => f.field)).not.toContain("adoption_level");
+    expect(detectFlatChanges({ adoption_level: "2" }, [], { ...stored }, IMPL_RULES).edit).toBe(
+      false,
+    );
   });
 });
