@@ -5,18 +5,19 @@ rate limiting, and tool call forwarding for the MCP Gateway.
 
 import asyncio
 import hashlib
+import itertools
 import json
 import logging
-import time
+import re
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Awaitable, Callable, Optional
+from urllib.parse import parse_qsl, quote, quote_plus, unquote, urlsplit
 
 import httpx
 from fastapi import Request, HTTPException
 from sqlalchemy import text
 
 import crud.mcp_servers as mcp_servers_crud
-from config import settings
 from database.db import get_db
 from services.mcp_token_service import TokenError, auth_headers_for, invalidate, record_upstream_rejection
 from utils.mcp_credentials import TOKEN_AUTH_TYPES
@@ -152,21 +153,186 @@ async def resolve_tool(org_id: int, tool_name: str) -> dict:
 
 # ─── SSE Response Parser ──────────────────────────────────────────────────
 
-def _parse_sse_response(text_body: str) -> dict:
-    """Parse a Server-Sent Events response and extract the JSON-RPC message."""
-    for line in text_body.strip().split("\n"):
-        line = line.strip()
-        if line.startswith("data: "):
-            return json.loads(line[6:])
-    raise ValueError(f"No data line found in SSE response: {text_body[:200]}")
+class UpstreamResponseError(Exception):
+    """The upstream MCP server answered with something that is not a usable
+    JSON-RPC response. Not a ValueError: it is the server's fault, not the
+    agent's arguments, so it counts against the circuit breaker."""
 
 
-def _parse_response(resp: httpx.Response) -> dict:
+class UpstreamToolError(ValueError):
+    """A JSON-RPC error returned by a healthy upstream for a tool call (unknown
+    tool, bad arguments, ...). A ValueError so it is not counted against the
+    circuit breaker; the router passes its code and message on to the agent,
+    as a direct connection to that server would show them."""
+
+    def __init__(self, code: int, message: str):
+        super().__init__(f"Tool call failed: {message}")
+        self.code = code
+        self.message = message
+
+    @classmethod
+    def from_rpc(cls, error, secrets: tuple[str, ...] = ()) -> "UpstreamToolError":
+        """Build from a JSON-RPC error object. Only the code and message are
+        kept, and every secret the gateway added to the request is masked."""
+        if not isinstance(error, dict):
+            return cls(-32603, _redact(str(error), secrets)[:500])
+        code = error.get("code")
+        return cls(
+            code if isinstance(code, int) and not isinstance(code, bool) else -32603,
+            _redact(str(error.get("message") or "Unknown error"), secrets)[:500],
+        )
+
+
+# Headers the gateway sets that carry no secret.
+_PLAIN_HEADERS = frozenset({"content-type", "accept", "mcp-session-id"})
+_MIN_SECRET_CHARS = 6
+
+
+def _looks_like_path_secret(segment: str) -> bool:
+    """A URL path segment that may be a credential (some servers put the key
+    in the path): long, or mid-length with a digit. Plain words such as
+    "mcp" or "servers" are left alone so messages stay readable."""
+    return len(segment) >= 16 or (len(segment) >= 8 and any(c.isdigit() for c in segment))
+
+
+_MIN_CREDENTIAL_CHARS = 3
+
+
+def _request_secrets(server_url: str, headers: dict) -> tuple[str, ...]:
+    """Values the gateway adds to a forwarded call that the agent never holds:
+    auth header values (and the token after a scheme such as Bearer), the
+    server URL's user, password, query values and secret-looking path
+    segments, each also in its percent-encoded forms. Longest first, so a
+    value is masked whole."""
+    # Credentials for certain (auth headers, URL user and password) are masked
+    # whatever their length; guessed ones (query values, path segments) only
+    # from _MIN_SECRET_CHARS, so short ordinary words survive.
+    credentials = set()
+    for name, value in headers.items():
+        if name.lower() in _PLAIN_HEADERS or not isinstance(value, str):
+            continue
+        credentials.add(value)
+        _scheme, _, token = value.partition(" ")
+        if token:
+            credentials.add(token)
+    parts = urlsplit(server_url)
+    credentials.update(v for v in (parts.username, parts.password) if v)
+    credentials = {v for v in credentials if len(v) >= _MIN_CREDENTIAL_CHARS}
+
+    found = set()
+    found.update(v for _, v in parse_qsl(parts.query))
+    found.update(pair.partition("=")[2] for pair in parts.query.split("&"))  # as written in the URL
+    found.update(unquote(seg) for seg in parts.path.split("/") if _looks_like_path_secret(unquote(seg)))
+    found = {v for v in found if len(v) >= _MIN_SECRET_CHARS} | credentials
+    found |= {quote(v, safe="") for v in found} | {quote_plus(v) for v in found}
+    return tuple(sorted(found, key=len, reverse=True))
+
+
+def _redact(text_value: str, secrets: tuple[str, ...]) -> str:
+    for secret in secrets:
+        text_value = text_value.replace(secret, "[redacted]")
+    return text_value
+
+
+def _answers_call(resp: httpx.Response, request_id) -> bool:
+    """The reply is a JSON-RPC response to this call, so the call ran."""
+    try:
+        return _parse_response(resp).get("id") == request_id
+    except UpstreamResponseError:
+        return False
+
+
+def _is_stale_session(resp: httpx.Response, request_id) -> bool:
+    """On a cached session: the upstream rejected the session before running
+    the call. 404 per the MCP spec; some servers answer 400 ("Server not
+    initialized", "No valid session ID") with an error that has a null id.
+
+    A reply that is a JSON-RPC response to this call came from the tool after
+    it ran (say, a lookup that failed with 404, or "user session expired" from
+    an API it called), so it is never treated as stale: retrying it would run
+    the tool twice."""
+    return resp.status_code in (400, 404) and not _answers_call(resp, request_id)
+
+
+def _raise_rpc_error_from_4xx(resp: httpx.Response, request_id, secrets: tuple[str, ...]) -> None:
+    """A 400 or 422 carrying a JSON-RPC error, or any 4xx whose JSON-RPC error
+    answers this call, is the server's answer to the call: it goes to the agent
+    and does not charge the breaker. Other 4xx replies (a moved endpoint, 429)
+    fall through to raise_for_status and count as upstream failures; 401 and
+    403 always do, so the token retry and the credentials message apply."""
+    if not 400 <= resp.status_code < 500 or resp.status_code in (401, 403):
+        return
+    try:
+        data = _parse_response(resp)
+    except UpstreamResponseError:
+        return
+    if "error" not in data:
+        return
+    if resp.status_code in (400, 422) or data.get("id") == request_id:
+        raise UpstreamToolError.from_rpc(data["error"], secrets)
+
+
+_SSE_LINE_BREAK = re.compile(r"\r\n|\r|\n")
+
+
+def _sse_messages(text_body: str):
+    """Yield the JSON payload of each event in a Server-Sent Events body.
+
+    An event's data may span several `data:` lines (joined with newlines), and
+    the space after the colon is optional. Events whose data is not JSON are
+    skipped."""
+    data_lines: list[str] = []
+    # Only CR, LF and CRLF end an SSE line. str.splitlines() would also split
+    # at U+2028, U+2029 and U+0085, which may appear unescaped inside JSON.
+    for raw in _SSE_LINE_BREAK.split(text_body) + [""]:
+        if raw == "":
+            if data_lines:
+                try:
+                    yield json.loads("\n".join(data_lines))
+                except ValueError:
+                    pass
+                data_lines = []
+            continue
+        if raw.startswith("data:"):
+            value = raw[5:]
+            data_lines.append(value[1:] if value.startswith(" ") else value)
+
+
+def _is_response(message, request_id) -> bool:
+    """A JSON-RPC response (not a notification or request), to request_id if given."""
+    if not isinstance(message, dict) or "method" in message:
+        return False
+    if "result" not in message and "error" not in message:
+        return False
+    return request_id is None or message.get("id") == request_id
+
+
+def _parse_sse_response(text_body: str, request_id=None) -> dict:
+    """Extract the JSON-RPC response from a Server-Sent Events body.
+
+    A server may send notifications (progress, log messages) or its own
+    requests on the stream before the response, so the response is the first
+    message that answers request_id."""
+    for message in _sse_messages(text_body):
+        if _is_response(message, request_id):
+            return message
+    raise UpstreamResponseError(f"No JSON-RPC response in SSE body: {text_body[:200]}")
+
+
+def _parse_response(resp: httpx.Response, request_id=None) -> dict:
     """Parse an MCP response — handles both JSON and SSE content types."""
     content_type = resp.headers.get("content-type", "")
     if "text/event-stream" in content_type:
-        return _parse_sse_response(resp.text)
-    return resp.json()
+        return _parse_sse_response(resp.text, request_id)
+    try:
+        data = resp.json()
+    except ValueError:
+        raise UpstreamResponseError(
+            f"Upstream sent a non-JSON response ({content_type or 'no content type'}): {resp.text[:200]}"
+        ) from None
+    if not isinstance(data, dict):
+        raise UpstreamResponseError("Upstream sent a JSON response that is not a JSON-RPC object")
+    return data
 
 
 # ─── Server Tool Discovery ─────────────────────────────────────────────────
@@ -175,6 +341,10 @@ ON_SAVE_DISCOVERY_SECONDS = 10
 # Kept under the Express proxy timeout (30 s) so this error, not a generic
 # gateway timeout, is what the user sees.
 MANUAL_DISCOVERY_SECONDS = 25
+# How long a forwarded tools/call may take upstream.
+TOOL_CALL_TIMEOUT_SECONDS = 60
+# JSON-RPC ids for forwarded tool calls, unique within this process.
+_call_ids = itertools.count(1)
 MAX_TOOL_PAGES = 20
 MAX_DISCOVERY_ERROR_CHARS = 500
 _PROTOCOL_VERSION = "2025-03-26"
@@ -443,7 +613,7 @@ def describe_discovery_error(exc: BaseException, budget_seconds) -> str:
         message = str(exc)
     elif isinstance(exc, UnsafeOutboundUrlError):
         message = f"The server address is not allowed: {exc}"
-    elif isinstance(exc, (ValueError, KeyError, TypeError)):
+    elif isinstance(exc, (UpstreamResponseError, ValueError, KeyError, TypeError)):
         message = "The server's reply was not a valid MCP response"
     else:
         message = "Discovery failed unexpectedly"
@@ -505,72 +675,116 @@ async def forward_tool_call(
     tool_name: str,
     arguments: dict,
     session_id: Optional[str] = None,
+    on_new_session: Optional[Callable[[str], Awaitable[None]]] = None,
 ) -> tuple[dict, Optional[str]]:
     """
     Forward a tools/call request to the backend MCP server.
     Initializes a session if no session_id is provided.
-    Returns (result_dict, backend_session_id).
+
+    on_new_session is awaited with the id of every session opened here ("" for
+    a stateless server) as soon as it exists, so the caller can cache it even
+    if the call then fails. Without it nobody will reuse the session, so it is
+    closed (DELETE) once the call is done.
+    Returns (result_dict, backend_session_id): the id is None when no new
+    session was opened, "" when the upstream is stateless (so a cached id must
+    be dropped), otherwise the new session's id.
     """
+    async def _handshake(client: httpx.AsyncClient, url: str, headers: dict) -> Optional[str]:
+        """Open a backend session; returns its id (None for a stateless server)."""
+        headers.pop("Mcp-Session-Id", None)
+        init_resp = await client.post(
+            url,
+            json={
+                "jsonrpc": "2.0",
+                "id": 0,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": _PROTOCOL_VERSION,
+                    "capabilities": {},
+                    "clientInfo": {"name": "VerifyWise MCP Gateway", "version": "1.0.0"},
+                },
+            },
+            headers=headers,
+        )
+        init_resp.raise_for_status()
+        # "" (not None) for a stateless server, so a stale cached id is replaced.
+        sid = init_resp.headers.get("mcp-session-id") or ""
+        if sid:
+            headers["Mcp-Session-Id"] = sid
+        # notifications/initialized only after fresh handshake
+        await client.post(
+            url,
+            json={"jsonrpc": "2.0", "method": "notifications/initialized"},
+            headers=headers,
+        )
+        return sid
+
     async def _attempt() -> tuple[dict, Optional[str]]:
-        sid = session_id
         url = assert_safe_outbound_url(server_url)
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json, text/event-stream",
             **(await auth_headers_for(auth_type, auth_config)),
         }
+        # A unique id per call: parallel calls of one client share the cached
+        # backend session, and the response is picked out by this id.
+        call_id = next(_call_ids)
+        call = {
+            "jsonrpc": "2.0",
+            "id": call_id,
+            "method": "tools/call",
+            "params": {"name": tool_name, "arguments": arguments},
+        }
+        secrets = _request_secrets(url, headers)
         new_session = None
 
-        async with httpx.AsyncClient(timeout=60) as client:
-            if not sid:
-                init_resp = await client.post(
-                    url,
-                    json={
-                        "jsonrpc": "2.0",
-                        "id": 0,
-                        "method": "initialize",
-                        "params": {
-                            "protocolVersion": "2025-03-26",
-                            "capabilities": {},
-                            "clientInfo": {"name": "VerifyWise MCP Gateway", "version": "1.0.0"},
-                        },
-                    },
-                    headers=headers,
-                )
-                init_resp.raise_for_status()
-                sid = init_resp.headers.get("mcp-session-id")
-                new_session = sid
+        async def open_session() -> str:
+            sid = await _handshake(client, url, headers)
+            if on_new_session is not None:
+                await on_new_session(sid)
+            return sid
 
-                if sid:
-                    headers["Mcp-Session-Id"] = sid
+        async with httpx.AsyncClient(timeout=TOOL_CALL_TIMEOUT_SECONDS) as client:
+            try:
+                if session_id:
+                    headers["Mcp-Session-Id"] = session_id
+                else:
+                    new_session = await open_session()
 
-                # notifications/initialized only after fresh handshake
-                await client.post(
-                    url,
-                    json={"jsonrpc": "2.0", "method": "notifications/initialized"},
-                    headers=headers,
-                )
-            else:
-                headers["Mcp-Session-Id"] = sid
-
-            resp = await client.post(
-                url,
-                json={
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "method": "tools/call",
-                    "params": {"name": tool_name, "arguments": arguments},
-                },
-                headers=headers,
-            )
-            resp.raise_for_status()
-            data = _parse_response(resp)
+                resp = await client.post(url, json=call, headers=headers)
+                if session_id and _is_stale_session(resp, call_id):
+                    # The upstream no longer knows the cached session (it
+                    # restarted or expired it), so it did not run the call. Open
+                    # a new session and send the call once more, as the MCP spec
+                    # asks of clients.
+                    new_session = await open_session()
+                    resp = await client.post(url, json=call, headers=headers)
+                _raise_rpc_error_from_4xx(resp, call_id, secrets)
+                resp.raise_for_status()
+                try:
+                    data = _parse_response(resp, request_id=call_id)
+                except UpstreamResponseError as exc:
+                    # Its text quotes the reply, which may echo a credential.
+                    raise UpstreamResponseError(_redact(str(exc), secrets)) from None
+            finally:
+                if new_session and on_new_session is None:
+                    await _close_session(client, url, headers)
 
         if "error" in data:
-            error = data["error"]
-            message = error.get("message", str(error)) if isinstance(error, dict) else str(error)
-            raise ValueError(f"Tool call failed: {message}")
+            raise UpstreamToolError.from_rpc(data["error"], secrets)
 
-        return data.get("result", {}), new_session
+        result = data.get("result") or {}
+        if not isinstance(result, dict):
+            raise UpstreamResponseError("Upstream tools/call result is not a JSON object")
+        return result, new_session
 
     return await _with_token_retry(auth_type, auth_config, _attempt)
+
+
+async def _close_session(client: httpx.AsyncClient, url: str, headers: dict) -> None:
+    """End a backend session nobody will reuse (best effort; a server may
+    answer 405 if it does not support explicit termination)."""
+    try:
+        await client.delete(url, headers=headers)
+    except httpx.HTTPError as exc:
+        logger.debug("MCP session close failed: %r", exc)

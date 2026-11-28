@@ -14,7 +14,7 @@ from sqlalchemy import text
 from database.db import get_db
 from services.guardrail_service import scan_text_async, ScanResult, REDOS_SCAN_CAP
 from utils.mcp_tool_content import extract_scannable_content
-from utils.redis import get_redis
+from utils.redis import get_redis, log_fail_open
 
 logger = logging.getLogger("uvicorn")
 
@@ -345,7 +345,7 @@ async def check_anomaly(agent_key_id: int, tool_name: str) -> bool:
         return False
 
     except Exception as e:
-        logger.warning(f"Anomaly detection failed (fail-open): {e}")
+        log_fail_open(logger, "Anomaly detection", e)
         return False
 
 

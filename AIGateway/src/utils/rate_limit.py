@@ -6,7 +6,7 @@ Used by both LLM proxy and MCP Gateway.
 import logging
 import time
 
-from utils.redis import get_redis
+from utils.redis import get_redis, log_fail_open
 
 logger = logging.getLogger("uvicorn")
 
@@ -33,5 +33,5 @@ async def check_rate_limit(key: str, rpm: int) -> bool:
         count = results[1]
         return count < rpm
     except Exception as e:
-        logger.warning(f"Rate limit check failed (fail-open): {e}")
+        log_fail_open(logger, "Rate limit check", e)
         return True

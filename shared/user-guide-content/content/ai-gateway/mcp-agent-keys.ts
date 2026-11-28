@@ -188,6 +188,77 @@ curl -X POST https://your-verifywise-host/v1/mcp \\
     },
     {
       type: 'heading',
+      id: 'connect-mcp-client',
+      level: 2,
+      text: 'Connect an MCP client',
+    },
+    {
+      type: 'paragraph',
+      text: 'Any MCP client that speaks Streamable HTTP can use the gateway as its MCP server: point it at `https://your-verifywise-host/v1/mcp` and send the agent key as a Bearer token. The client sees the tools the key may use, and every call goes through the key\'s tool lists, approvals, guardrails and Activity log. The agent itself does not change.',
+    },
+    {
+      type: 'heading',
+      id: 'connect-claude-connector',
+      level: 3,
+      text: 'Claude (custom connector)',
+    },
+    {
+      type: 'paragraph',
+      text: 'In Claude, add a custom connector with the gateway URL. Under **Request headers**, choose `authorization` and enter `Bearer sk-mcp-your-key-here`, with the space. Claude sends the value exactly as entered. Request headers are a beta feature in Claude and, in organizations, an Owner adds the connector.',
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      title: 'Claude connects from the cloud',
+      text: 'A custom connector reaches your gateway from Anthropic\'s servers, not from your computer, so the gateway URL must be reachable from the internet. If your VerifyWise is on a private network, use the Claude Desktop setup below instead.',
+    },
+    {
+      type: 'heading',
+      id: 'connect-claude-desktop',
+      level: 3,
+      text: 'Claude Desktop (local bridge)',
+    },
+    {
+      type: 'paragraph',
+      text: 'If request headers are not available to you, or the gateway is only reachable from your network, run the `mcp-remote` bridge from Claude Desktop. Claude Desktop starts it as a local MCP server and it forwards every call to the gateway with your key. Add this to `claude_desktop_config.json` (Settings > Developer > Edit config), then restart Claude Desktop. It needs Node.js.',
+    },
+    {
+      type: 'code',
+      language: 'json',
+      code: `{
+  "mcpServers": {
+    "verifywise": {
+      "command": "npx",
+      "args": [
+        "-y", "mcp-remote",
+        "https://your-verifywise-host/v1/mcp",
+        "--header", "Authorization:\${VW_AGENT_KEY}"
+      ],
+      "env": { "VW_AGENT_KEY": "Bearer sk-mcp-your-key-here" }
+    }
+  }
+}`,
+    },
+    {
+      type: 'paragraph',
+      text: 'The key goes in `env` rather than in `args` so the space after Bearer is kept on every platform.',
+    },
+    {
+      type: 'heading',
+      id: 'connect-other-clients',
+      level: 3,
+      text: 'Other clients',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Session', text: 'The client sends `initialize` first. The gateway answers with an `Mcp-Session-Id` header; send it on later requests so the calls of one session are grouped in Activity.' },
+        { bold: 'Methods', text: '`initialize`, `ping`, `tools/list` and `tools/call`. Notifications get 202 with no body.' },
+        { bold: 'Server stream', text: '`GET /v1/mcp` opens a keep-alive event stream and needs the agent key, like every other request.' },
+      ],
+    },
+    {
+      type: 'heading',
       id: 'key-statuses',
       level: 2,
       text: 'Key statuses',

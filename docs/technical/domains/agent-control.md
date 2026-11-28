@@ -452,6 +452,50 @@ Registration is what feeds the proxy's tool catalog.
 - **Disabled servers:** proxy `tools/list` passes `active_servers_only=True`, so agents do not see
   tools of disabled servers, and calls to them are rejected. The admin MCP tools page still lists them (they are active tools of an inactive server). Tools deactivated by discovery are neither listed nor counted in `tool_count`.
 
+## MCP proxy protocol (`POST /v1/mcp`, `routers/mcp_proxy.py`)
+
+What off-the-shelf clients (Claude custom connectors, `mcp-remote` in Claude Desktop, the MCP
+SDKs) depend on. Client setup for users is in the guide (`ai-gateway/mcp-agent-keys.ts`,
+"Connect an MCP client").
+
+- **Methods:** `initialize`, `ping`, `tools/list`, `tools/call`. A message without an `id`
+  (notifications) or a client response gets 202 with no body. A batch (JSON array) is -32600.
+  `GET /v1/mcp` (keep-alive SSE) needs the agent key like POST.
+- **Sessions and Redis:** `initialize` returns `Mcp-Session-Id`; the session maps to cached
+  backend session ids in Redis (`services/mcp_session.py`). Everything Redis-backed on this path
+  fails open (sessions, rate limit, breaker, anomaly), so a lost Redis degrades caching and limits
+  but never fails a client. `utils/redis.py` keeps an outage cheap: 2 s connect and 5 s socket
+  timeouts, and after a failed connect Redis is marked down for 10 s, during which `get_redis()`
+  raises `RedisUnavailableError` at once (callers log it via `log_fail_open`, which stays quiet
+  while marked down; the down and up transitions are logged once each). The gateway needs `REDIS_URL`; Docker Compose sets it since the
+  `initialize` 500 on Compose installs, where it had fallen back to `localhost`.
+- **Upstream replies:** `_parse_response` reads JSON or SSE. In SSE the response is the first
+  message answering the request id, so log or progress notifications sent before it are skipped
+  (the old parser returned the first `data:` line, which made the result empty). Multi-line data
+  and `data:` without a space are handled.
+- **Backend sessions:** each forwarded call gets a process-unique JSON-RPC id (parallel calls of
+  one client share the cached backend session, and the reply is matched by id). A session opened
+  for a call is cached at once through `on_new_session`, even if the call then fails; "" marks a
+  stateless upstream. Without a client session id nobody reuses it, so it is closed with DELETE.
+- **Stale backend session:** a 404 or 400 to `tools/call` on a cached session that is not a
+  JSON-RPC response to the call (no body, or an error with a null or other id, e.g. "Session not
+  found", "Server not initialized") means the upstream forgot the session and did not run the
+  call; the gateway opens a new session and sends the call once more. A reply that answers the
+  call's own id is never retried, whatever its status: the tool ran, and a resend would run it twice.
+- **Errors to the agent:** an upstream JSON-RPC error (`UpstreamToolError`) keeps its code and
+  message, except the gateway's own codes (-32001, -32003, -32004) which become -32603. The message
+  is masked with `_request_secrets` (auth header values, URL user, password, query values and
+  secret-looking path segments, raw and percent-encoded; auth tokens and the URL password at any
+  length). An unreadable reply's text is masked the same way before it is audited. A 4xx carries the tool's error only when
+  it is 400/422 or answers the call's id; other 4xx replies count as upstream failures. HTTP,
+  timeout, connection and unreadable-reply failures are -32603 "Upstream MCP server error: …"
+  with the secret-free reason from `describe_discovery_error`; they count against the breaker.
+  The audit row records the same reason and the error type, never `str(e)` of an httpx error
+  (it carries the request URL, which may hold a credential).
+- **Tool-reported failures:** a result with `isError: true` is audited as `error` with
+  `is_error = true` (a monitor-only key keeps its would_* status and sets `is_error`). The
+  upstream is healthy, so the breaker still records a success.
+
 ## Not yet built (Phase 4+)
 
 - **Path-based gating** — block/approve writes by *destination* (`~/.ssh`, `.env`, outside the

@@ -15,10 +15,12 @@ and the circuit breaker still apply.
 import asyncio
 import logging
 import time
+
+import httpx
 from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 
 from config import settings
 from crud.mcp_approvals import create_approval_request, get_approval_status, get_approved_request, get_pending_request
@@ -44,7 +46,10 @@ from services.mcp_guardrail_service import (
     CircuitBreaker,
 )
 from services.mcp_proxy_service import (
-    authenticate_agent_key,
+    TOOL_CALL_TIMEOUT_SECONDS,
+    UpstreamResponseError,
+    UpstreamToolError,
+    describe_discovery_error,
     extract_agent_key,
     resolve_tool,
     enforce_tool_acls,
@@ -67,10 +72,26 @@ router = APIRouter()
 # JSON-RPC result _meta key carrying what a monitor-only key would have hit.
 MONITORED_META_KEY = "verifywise.ai/monitored"
 
+# JSON-RPC error codes the gateway uses for its own decisions: approval
+# required, blocked by a guardrail, circuit breaker open.
+GATEWAY_ERROR_CODES = frozenset({-32001, -32003, -32004})
+
+# GET /v1/mcp keep-alive interval, and how many beats between agent key checks.
+SSE_KEEPALIVE_SECONDS = 30
+SSE_KEY_RECHECK_BEATS = 10
+
 
 def _stored_health(tool: dict) -> tuple:
     """The server's health as stored when the tool was resolved."""
     return (tool.get("health_status"), tool.get("last_discovery_error"))
+
+
+def _input_schema(stored) -> dict:
+    """A tool's inputSchema as MCP requires it: an object schema with
+    type "object" (strict clients reject the whole list otherwise)."""
+    if not isinstance(stored, dict):
+        return {"type": "object"}
+    return {**stored, "type": "object"}
 
 
 def _jsonrpc_error(id, code: int, message: str, data: dict | None = None) -> dict:
@@ -95,12 +116,34 @@ async def mcp_jsonrpc(request: Request):
     except Exception:
         return JSONResponse(content=_jsonrpc_error(None, -32700, "Parse error"), status_code=200)
 
+    if not isinstance(body, dict):
+        # A JSON-RPC batch (or any non-object) is not supported.
+        return JSONResponse(content=_jsonrpc_error(None, -32600, "Invalid Request"), status_code=200)
+
     msg_id = body.get("id")
     method = body.get("method")
-    params = body.get("params", {})
+    params = body.get("params")
+    if not isinstance(params, dict):
+        params = {}
+
+    # ── notifications and responses ─────────────────────────────────────
+    # A message without an id (notifications/initialized, notifications/cancelled,
+    # ...) or a client's response gets 202 and no body, as Streamable HTTP asks.
+    # Nothing is ever answered to a notification, not even a version error.
+    is_response = "method" not in body and ("result" in body or "error" in body)
+    is_notification = isinstance(method, str) and method.startswith("notifications/")
+    if "id" not in body or is_response or is_notification:
+        return Response(status_code=202)
 
     if body.get("jsonrpc") != "2.0":
         return JSONResponse(content=_jsonrpc_error(msg_id, -32600, "Invalid JSON-RPC version"), status_code=200)
+
+    if not isinstance(method, str):
+        return JSONResponse(content=_jsonrpc_error(msg_id, -32600, "Invalid Request"), status_code=200)
+
+    # ── ping ────────────────────────────────────────────────────────────
+    if method == "ping":
+        return JSONResponse(content=_jsonrpc_result(msg_id, {}))
 
     # ── initialize ──────────────────────────────────────────────────────
     if method == "initialize":
@@ -113,10 +156,6 @@ async def mcp_jsonrpc(request: Request):
         response = JSONResponse(content=_jsonrpc_result(msg_id, result))
         response.headers["Mcp-Session-Id"] = session_id
         return response
-
-    # ── notifications/initialized ───────────────────────────────────────
-    if method == "notifications/initialized":
-        return JSONResponse(content=None, status_code=202)
 
     # ── tools/list ──────────────────────────────────────────────────────
     if method == "tools/list":
@@ -136,7 +175,13 @@ async def mcp_jsonrpc(request: Request):
             ]
 
         tools_list = [
-            {"name": t["tool_name"], "description": t.get("description", ""), "inputSchema": t.get("input_schema", {})}
+            # Never null: strict clients (the TypeScript SDK, Claude
+            # connectors) reject the whole list over one null field.
+            {
+                "name": t["tool_name"],
+                "description": t.get("description") or "",
+                "inputSchema": _input_schema(t.get("input_schema")),
+            }
             for t in filtered
         ]
         return JSONResponse(content=_jsonrpc_result(msg_id, {"tools": tools_list}))
@@ -290,14 +335,22 @@ async def mcp_jsonrpc(request: Request):
             if gateway_session:
                 backend_session = await get_backend_session(gateway_session, server_id)
 
+            async def cache_new_session(sid: str) -> None:
+                # Cached as soon as it opens, even if the call then fails;
+                # "" (now stateless) replaces a stale id.
+                await set_backend_session(gateway_session, server_id, sid)
+
             try:
-                result, new_backend_session = await forward_tool_call(
+                result, _ = await forward_tool_call(
                     server_url=tool["url"],
                     auth_type=tool.get("auth_type", "none"),
                     auth_config=tool.get("auth_config") or {},
                     tool_name=tool_name,
                     arguments=arguments,
                     session_id=backend_session,
+                    # Without a client session nobody reuses a backend
+                    # session, so forward_tool_call closes it instead.
+                    on_new_session=cache_new_session if gateway_session else None,
                 )
             except TokenError:
                 # No token, so nothing reached the upstream: not a transport
@@ -325,13 +378,14 @@ async def mcp_jsonrpc(request: Request):
                 if not stored_error or is_token_error_message(stored_error):
                     await note_token_outcome(org_id, server_id, None, _stored_health(tool))
 
-            # Cache new backend session for next call
-            if new_backend_session and gateway_session:
-                await set_backend_session(gateway_session, server_id, new_backend_session)
-
             content_text = None
-            if result.get("content"):
-                content_text = str(result["content"][0].get("text", ""))
+            content = result.get("content")
+            if isinstance(content, list) and content and isinstance(content[0], dict):
+                content_text = str(content[0].get("text", ""))
+            # The tool ran but reported a failure (MCP's isError). The upstream
+            # is healthy, so the breaker counted a success above, but Activity
+            # must not show the call as successful.
+            tool_failed = result.get("isError") is True
             if outcomes:
                 # The summary stays the upstream result; what the call would
                 # have hit is recorded in the status, matched rule and events.
@@ -339,7 +393,7 @@ async def mcp_jsonrpc(request: Request):
                 await _audit(
                     chosen["status"],
                     content_text,
-                    False,
+                    tool_failed,
                     matched_rule_id=chosen["rule_id"],
                     matched_rule_name=chosen["rule_name"],
                 )
@@ -348,7 +402,7 @@ async def mcp_jsonrpc(request: Request):
                     "_meta": {**(result.get("_meta") or {}), MONITORED_META_KEY: monitored_payload(outcomes)},
                 }
             else:
-                await _audit("success", content_text, False)
+                await _audit("error" if tool_failed else "success", content_text, tool_failed)
 
             return JSONResponse(content=_jsonrpc_result(msg_id, result))
 
@@ -367,6 +421,28 @@ async def mcp_jsonrpc(request: Request):
             await _audit("error", str(e), True)
             await note_token_outcome(org_id, tool["server_id"], str(e), _stored_health(tool))
             return JSONResponse(content=_jsonrpc_error(msg_id, -32603, "Internal error"), status_code=200)
+        except UpstreamToolError as e:
+            # The upstream server's own answer to the call: passed on as a
+            # direct connection would show it, except that a code the gateway
+            # uses for its own decisions (approval, guardrail, breaker) is not
+            # repeated, so an agent cannot mistake it for one.
+            await _audit("error", str(e), True)
+            code = -32603 if e.code in GATEWAY_ERROR_CODES else e.code
+            return JSONResponse(content=_jsonrpc_error(msg_id, code, e.message), status_code=200)
+        except (httpx.HTTPError, UpstreamResponseError) as e:
+            # The upstream failed (HTTP error, timeout, unreachable, unreadable
+            # reply). The agent gets a short, secret-free reason; the full error
+            # is audited and logged.
+            # httpx errors carry the request URL, which may hold a credential
+            # (?api_key=...), so they are recorded by reason, never by str(e).
+            reason = describe_discovery_error(e, TOOL_CALL_TIMEOUT_SECONDS)
+            detail = str(e) if isinstance(e, UpstreamResponseError) else f"{reason} ({type(e).__name__})"
+            await _audit("error", detail, True)
+            logger.warning("MCP upstream failed: tool=%s org=%s error=%s", tool_name, org_id, detail)
+            return JSONResponse(
+                content=_jsonrpc_error(msg_id, -32603, f"Upstream MCP server error: {reason}"),
+                status_code=200,
+            )
         except ValueError as e:
             await _audit("error", str(e), True)
             # Return a generic JSON-RPC error message to avoid leaking internal
@@ -411,12 +487,27 @@ async def mcp_approval_status(request: Request, request_id: int):
 
 @router.get("/v1/mcp")
 async def mcp_sse(request: Request):
-    """SSE endpoint for server-initiated messages. Keep-alive for v1."""
+    """SSE endpoint for server-initiated messages. Keep-alive for v1.
+
+    Needs a valid agent key like POST, so the endpoint cannot be used to hold
+    connections open without one. The key is checked again every few minutes,
+    so a stream ends soon after its key is revoked or expires."""
+    await extract_agent_key(request)
+
     async def event_stream():
+        beats = 0
         while True:
             if await request.is_disconnected():
                 break
+            if beats and beats % SSE_KEY_RECHECK_BEATS == 0:
+                try:
+                    await extract_agent_key(request)
+                except Exception:
+                    # Revoked, expired or not checkable: end the stream; a
+                    # client with a valid key reconnects.
+                    break
             yield ": keep-alive\n\n"
-            await asyncio.sleep(30)
+            beats += 1
+            await asyncio.sleep(SSE_KEEPALIVE_SECONDS)
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
