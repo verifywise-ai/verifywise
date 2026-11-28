@@ -7,7 +7,6 @@ import asyncio
 import hashlib
 import json
 import logging
-import time
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -16,7 +15,6 @@ from fastapi import Request, HTTPException
 from sqlalchemy import text
 
 import crud.mcp_servers as mcp_servers_crud
-from config import settings
 from database.db import get_db
 from services.mcp_token_service import TokenError, auth_headers_for, invalidate, record_upstream_rejection
 from utils.mcp_credentials import TOKEN_AUTH_TYPES
@@ -152,21 +150,90 @@ async def resolve_tool(org_id: int, tool_name: str) -> dict:
 
 # ─── SSE Response Parser ──────────────────────────────────────────────────
 
-def _parse_sse_response(text_body: str) -> dict:
-    """Parse a Server-Sent Events response and extract the JSON-RPC message."""
-    for line in text_body.strip().split("\n"):
-        line = line.strip()
-        if line.startswith("data: "):
-            return json.loads(line[6:])
-    raise ValueError(f"No data line found in SSE response: {text_body[:200]}")
+class UpstreamResponseError(Exception):
+    """The upstream MCP server answered with something that is not a usable
+    JSON-RPC response. Not a ValueError: it is the server's fault, not the
+    agent's arguments, so it counts against the circuit breaker."""
 
 
-def _parse_response(resp: httpx.Response) -> dict:
+class UpstreamToolError(ValueError):
+    """A JSON-RPC error returned by a healthy upstream for a tool call (unknown
+    tool, bad arguments, ...). A ValueError so it is not counted against the
+    circuit breaker; the router passes its code and message on to the agent,
+    as a direct connection to that server would show them."""
+
+    def __init__(self, code: int, message: str):
+        super().__init__(f"Tool call failed: {message}")
+        self.code = code
+        self.message = message
+
+    @classmethod
+    def from_rpc(cls, error) -> "UpstreamToolError":
+        if not isinstance(error, dict):
+            return cls(-32603, str(error)[:500])
+        code = error.get("code")
+        return cls(
+            code if isinstance(code, int) and not isinstance(code, bool) else -32603,
+            str(error.get("message") or "Unknown error")[:500],
+        )
+
+
+def _sse_messages(text_body: str):
+    """Yield the JSON payload of each event in a Server-Sent Events body.
+
+    An event's data may span several `data:` lines (joined with newlines), and
+    the space after the colon is optional. Events whose data is not JSON are
+    skipped."""
+    data_lines: list[str] = []
+    for raw in text_body.splitlines() + [""]:
+        if raw == "":
+            if data_lines:
+                try:
+                    yield json.loads("\n".join(data_lines))
+                except ValueError:
+                    pass
+                data_lines = []
+            continue
+        if raw.startswith("data:"):
+            value = raw[5:]
+            data_lines.append(value[1:] if value.startswith(" ") else value)
+
+
+def _is_response(message, request_id) -> bool:
+    """A JSON-RPC response (not a notification or request), to request_id if given."""
+    if not isinstance(message, dict) or "method" in message:
+        return False
+    if "result" not in message and "error" not in message:
+        return False
+    return request_id is None or message.get("id") == request_id
+
+
+def _parse_sse_response(text_body: str, request_id=None) -> dict:
+    """Extract the JSON-RPC response from a Server-Sent Events body.
+
+    A server may send notifications (progress, log messages) or its own
+    requests on the stream before the response, so the response is the first
+    message that answers request_id."""
+    for message in _sse_messages(text_body):
+        if _is_response(message, request_id):
+            return message
+    raise UpstreamResponseError(f"No JSON-RPC response in SSE body: {text_body[:200]}")
+
+
+def _parse_response(resp: httpx.Response, request_id=None) -> dict:
     """Parse an MCP response — handles both JSON and SSE content types."""
     content_type = resp.headers.get("content-type", "")
     if "text/event-stream" in content_type:
-        return _parse_sse_response(resp.text)
-    return resp.json()
+        return _parse_sse_response(resp.text, request_id)
+    try:
+        data = resp.json()
+    except ValueError:
+        raise UpstreamResponseError(
+            f"Upstream sent a non-JSON response ({content_type or 'no content type'}): {resp.text[:200]}"
+        ) from None
+    if not isinstance(data, dict):
+        raise UpstreamResponseError("Upstream sent a JSON response that is not a JSON-RPC object")
+    return data
 
 
 # ─── Server Tool Discovery ─────────────────────────────────────────────────
@@ -175,6 +242,8 @@ ON_SAVE_DISCOVERY_SECONDS = 10
 # Kept under the Express proxy timeout (30 s) so this error, not a generic
 # gateway timeout, is what the user sees.
 MANUAL_DISCOVERY_SECONDS = 25
+# How long a forwarded tools/call may take upstream.
+TOOL_CALL_TIMEOUT_SECONDS = 60
 MAX_TOOL_PAGES = 20
 MAX_DISCOVERY_ERROR_CHARS = 500
 _PROTOCOL_VERSION = "2025-03-26"
@@ -443,7 +512,7 @@ def describe_discovery_error(exc: BaseException, budget_seconds) -> str:
         message = str(exc)
     elif isinstance(exc, UnsafeOutboundUrlError):
         message = f"The server address is not allowed: {exc}"
-    elif isinstance(exc, (ValueError, KeyError, TypeError)):
+    elif isinstance(exc, (UpstreamResponseError, ValueError, KeyError, TypeError)):
         message = "The server's reply was not a valid MCP response"
     else:
         message = "Discovery failed unexpectedly"
@@ -511,66 +580,69 @@ async def forward_tool_call(
     Initializes a session if no session_id is provided.
     Returns (result_dict, backend_session_id).
     """
+    async def _handshake(client: httpx.AsyncClient, url: str, headers: dict) -> Optional[str]:
+        """Open a backend session; returns its id (None for a stateless server)."""
+        headers.pop("Mcp-Session-Id", None)
+        init_resp = await client.post(
+            url,
+            json={
+                "jsonrpc": "2.0",
+                "id": 0,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": _PROTOCOL_VERSION,
+                    "capabilities": {},
+                    "clientInfo": {"name": "VerifyWise MCP Gateway", "version": "1.0.0"},
+                },
+            },
+            headers=headers,
+        )
+        init_resp.raise_for_status()
+        sid = init_resp.headers.get("mcp-session-id")
+        if sid:
+            headers["Mcp-Session-Id"] = sid
+        # notifications/initialized only after fresh handshake
+        await client.post(
+            url,
+            json={"jsonrpc": "2.0", "method": "notifications/initialized"},
+            headers=headers,
+        )
+        return sid
+
     async def _attempt() -> tuple[dict, Optional[str]]:
-        sid = session_id
         url = assert_safe_outbound_url(server_url)
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json, text/event-stream",
             **(await auth_headers_for(auth_type, auth_config)),
         }
+        call = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "tools/call",
+            "params": {"name": tool_name, "arguments": arguments},
+        }
         new_session = None
 
-        async with httpx.AsyncClient(timeout=60) as client:
-            if not sid:
-                init_resp = await client.post(
-                    url,
-                    json={
-                        "jsonrpc": "2.0",
-                        "id": 0,
-                        "method": "initialize",
-                        "params": {
-                            "protocolVersion": "2025-03-26",
-                            "capabilities": {},
-                            "clientInfo": {"name": "VerifyWise MCP Gateway", "version": "1.0.0"},
-                        },
-                    },
-                    headers=headers,
-                )
-                init_resp.raise_for_status()
-                sid = init_resp.headers.get("mcp-session-id")
-                new_session = sid
-
-                if sid:
-                    headers["Mcp-Session-Id"] = sid
-
-                # notifications/initialized only after fresh handshake
-                await client.post(
-                    url,
-                    json={"jsonrpc": "2.0", "method": "notifications/initialized"},
-                    headers=headers,
-                )
+        async with httpx.AsyncClient(timeout=TOOL_CALL_TIMEOUT_SECONDS) as client:
+            if session_id:
+                headers["Mcp-Session-Id"] = session_id
             else:
-                headers["Mcp-Session-Id"] = sid
+                new_session = await _handshake(client, url, headers)
 
-            resp = await client.post(
-                url,
-                json={
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "method": "tools/call",
-                    "params": {"name": tool_name, "arguments": arguments},
-                },
-                headers=headers,
-            )
+            resp = await client.post(url, json=call, headers=headers)
+            if resp.status_code == 404 and session_id:
+                # The upstream no longer knows the cached session (it restarted
+                # or expired it), so it did not run the call. Open a new session
+                # and send the call once more, as the MCP spec asks of clients.
+                new_session = await _handshake(client, url, headers)
+                resp = await client.post(url, json=call, headers=headers)
             resp.raise_for_status()
-            data = _parse_response(resp)
+            data = _parse_response(resp, request_id=1)
 
         if "error" in data:
-            error = data["error"]
-            message = error.get("message", str(error)) if isinstance(error, dict) else str(error)
-            raise ValueError(f"Tool call failed: {message}")
+            raise UpstreamToolError.from_rpc(data["error"])
 
-        return data.get("result", {}), new_session
+        return data.get("result") or {}, new_session
 
     return await _with_token_retry(auth_type, auth_config, _attempt)

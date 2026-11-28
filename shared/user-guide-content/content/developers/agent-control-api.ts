@@ -59,13 +59,17 @@ export const agentControlApiContent: ArticleContent = {
     { type: 'paragraph', text: 'Check whether a pending approval has been decided. Returns a status of pending, approved, denied or expired.' },
     { type: 'code', language: 'bash', code: 'curl "$VW_GATEWAY_URL/v1/mcp/approvals/42/status" \\\n  -H "Authorization: Bearer $VW_AGENT_KEY"' },
     { type: 'heading', id: 'errors', level: 2, text: 'JSON-RPC error codes' },
-    { type: 'paragraph', text: 'On the MCP proxy path (POST /v1/mcp), an approval requirement comes back as a JSON-RPC error.' },
+    { type: 'paragraph', text: 'On the MCP proxy path (POST /v1/mcp), the gateway\'s own decisions and failures come back as JSON-RPC errors with HTTP status 200.' },
     { type: 'table', columns: [
       { key: 'code', label: 'Code', width: '20%' },
       { key: 'meaning', label: 'Meaning', width: '80%' },
     ], rows: [
       { code: '-32001', meaning: 'Tool requires approval. error.data has approval_id, poll_endpoint and expires_at.' },
+      { code: '-32003', meaning: 'Blocked by a guardrail. The message gives the reason.' },
+      { code: '-32004', meaning: 'The MCP server is temporarily unavailable: its circuit breaker is open after repeated failures.' },
+      { code: '-32603', meaning: 'The call could not be completed. When the MCP server failed, the message starts with "Upstream MCP server error:" and says why: an HTTP status, a timeout, no connection, or a reply that is not a valid MCP response.' },
     ]},
+    { type: 'paragraph', text: 'When the MCP server itself answers a tool call with a JSON-RPC error (an unknown tool or bad arguments, for example), the gateway passes its code and message on unchanged. The one exception is a code from the table above, which becomes -32603 so it cannot be mistaken for a gateway decision.' },
     { type: 'paragraph', text: 'With a monitor only agent key the proxy forwards the call instead of returning an error. When something matched, the JSON-RPC result carries the same monitored object as the hook in result._meta["verifywise.ai/monitored"].' },
     { type: 'heading', id: 'agent-key-mode', level: 2, text: 'Agent key mode' },
     { type: 'paragraph', text: 'Each agent key has an enforcement_mode: "enforce" (the default) blocks and pauses calls by policy, and "monitor" only records what would have happened. It is set on the Agent keys page. Agent key responses include these fields:' },

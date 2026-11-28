@@ -15,10 +15,12 @@ and the circuit breaker still apply.
 import asyncio
 import logging
 import time
+
+import httpx
 from datetime import datetime, timezone, timedelta
 
 from fastapi import APIRouter, Request, HTTPException
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 
 from config import settings
 from crud.mcp_approvals import create_approval_request, get_approval_status, get_approved_request, get_pending_request
@@ -44,7 +46,10 @@ from services.mcp_guardrail_service import (
     CircuitBreaker,
 )
 from services.mcp_proxy_service import (
-    authenticate_agent_key,
+    TOOL_CALL_TIMEOUT_SECONDS,
+    UpstreamResponseError,
+    UpstreamToolError,
+    describe_discovery_error,
     extract_agent_key,
     resolve_tool,
     enforce_tool_acls,
@@ -66,6 +71,10 @@ router = APIRouter()
 
 # JSON-RPC result _meta key carrying what a monitor-only key would have hit.
 MONITORED_META_KEY = "verifywise.ai/monitored"
+
+# JSON-RPC error codes the gateway uses for its own decisions: approval
+# required, blocked by a guardrail, circuit breaker open.
+GATEWAY_ERROR_CODES = frozenset({-32001, -32003, -32004})
 
 
 def _stored_health(tool: dict) -> tuple:
@@ -95,12 +104,28 @@ async def mcp_jsonrpc(request: Request):
     except Exception:
         return JSONResponse(content=_jsonrpc_error(None, -32700, "Parse error"), status_code=200)
 
+    if not isinstance(body, dict):
+        # A JSON-RPC batch (or any non-object) is not supported.
+        return JSONResponse(content=_jsonrpc_error(None, -32600, "Invalid Request"), status_code=200)
+
     msg_id = body.get("id")
     method = body.get("method")
-    params = body.get("params", {})
+    params = body.get("params")
+    if not isinstance(params, dict):
+        params = {}
 
     if body.get("jsonrpc") != "2.0":
         return JSONResponse(content=_jsonrpc_error(msg_id, -32600, "Invalid JSON-RPC version"), status_code=200)
+
+    # ── notifications and responses ─────────────────────────────────────
+    # A message without an id (notifications/initialized, notifications/cancelled,
+    # ...) or a client's response gets 202 and no body, as Streamable HTTP asks.
+    if "id" not in body or not isinstance(method, str):
+        return Response(status_code=202)
+
+    # ── ping ────────────────────────────────────────────────────────────
+    if method == "ping":
+        return JSONResponse(content=_jsonrpc_result(msg_id, {}))
 
     # ── initialize ──────────────────────────────────────────────────────
     if method == "initialize":
@@ -113,10 +138,6 @@ async def mcp_jsonrpc(request: Request):
         response = JSONResponse(content=_jsonrpc_result(msg_id, result))
         response.headers["Mcp-Session-Id"] = session_id
         return response
-
-    # ── notifications/initialized ───────────────────────────────────────
-    if method == "notifications/initialized":
-        return JSONResponse(content=None, status_code=202)
 
     # ── tools/list ──────────────────────────────────────────────────────
     if method == "tools/list":
@@ -367,6 +388,25 @@ async def mcp_jsonrpc(request: Request):
             await _audit("error", str(e), True)
             await note_token_outcome(org_id, tool["server_id"], str(e), _stored_health(tool))
             return JSONResponse(content=_jsonrpc_error(msg_id, -32603, "Internal error"), status_code=200)
+        except UpstreamToolError as e:
+            # The upstream server's own answer to the call: passed on as a
+            # direct connection would show it, except that a code the gateway
+            # uses for its own decisions (approval, guardrail, breaker) is not
+            # repeated, so an agent cannot mistake it for one.
+            await _audit("error", str(e), True)
+            code = -32603 if e.code in GATEWAY_ERROR_CODES else e.code
+            return JSONResponse(content=_jsonrpc_error(msg_id, code, e.message), status_code=200)
+        except (httpx.HTTPError, UpstreamResponseError) as e:
+            # The upstream failed (HTTP error, timeout, unreachable, unreadable
+            # reply). The agent gets a short, secret-free reason; the full error
+            # is audited and logged.
+            await _audit("error", str(e) or type(e).__name__, True)
+            logger.warning("MCP upstream failed: tool=%s org=%s error=%r", tool_name, org_id, e)
+            reason = describe_discovery_error(e, TOOL_CALL_TIMEOUT_SECONDS)
+            return JSONResponse(
+                content=_jsonrpc_error(msg_id, -32603, f"Upstream MCP server error: {reason}"),
+                status_code=200,
+            )
         except ValueError as e:
             await _audit("error", str(e), True)
             # Return a generic JSON-RPC error message to avoid leaking internal
@@ -411,7 +451,12 @@ async def mcp_approval_status(request: Request, request_id: int):
 
 @router.get("/v1/mcp")
 async def mcp_sse(request: Request):
-    """SSE endpoint for server-initiated messages. Keep-alive for v1."""
+    """SSE endpoint for server-initiated messages. Keep-alive for v1.
+
+    Needs a valid agent key like POST, so the endpoint cannot be used to hold
+    connections open without one."""
+    await extract_agent_key(request)
+
     async def event_stream():
         while True:
             if await request.is_disconnected():
