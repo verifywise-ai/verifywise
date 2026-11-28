@@ -108,7 +108,7 @@ export const addingFrameworksContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: "SDAIA scores each entity on 6 adoption levels. VerifyWise tracks the status of each domain and does not calculate this level, because SDAIA does not publish the weight of each domain. The index document and its question appendix name the same levels differently.",
+      text: "SDAIA scores each entity on 6 adoption levels. Record your own assessment of each domain in its drawer under Adoption level, next to the status. The level shows on the domain's row and in the framework requirements table of reports. It is your self-assessment, not SDAIA's result, and VerifyWise does not combine the domain levels into an overall NAII level, because SDAIA does not publish the weight of each domain. The index document and its question appendix name the same levels differently; VerifyWise uses the index document's names.",
     },
     {
       type: 'table',
@@ -130,7 +130,7 @@ export const addingFrameworksContent: ArticleContent = {
       type: 'callout',
       variant: 'info',
       title: "SDAIA's questions and evidence",
-      text: "Each domain's drawer shows SDAIA's assessment question with its ID (for example AI.AQ.ST.1), what levels 3, 4 and 5 require, and the evidence SDAIA accepts for those levels with its evidence codes (for example ST.1.3.1). Development and deployment has four questions; its evidence codes AP.1 to AP.4 follow questions AP.1.1 to AP.1.4, and Privacy and security and Operation and management use AP.5 and AP.6. Attach the evidence to each domain so it is ready for the assessment.",
+      text: "Each domain's drawer shows SDAIA's assessment question with its ID (for example AI.AQ.ST.1), what levels 3, 4 and 5 require, and the evidence SDAIA accepts for those levels with its evidence codes (for example ST.1.3.1). Development and deployment has four questions and one adoption level, so pick the level that fits the domain as a whole; its evidence codes AP.1 to AP.4 follow questions AP.1.1 to AP.1.4, and Privacy and security and Operation and management use AP.5 and AP.6. Attach the evidence to each domain so it is ready for the assessment.",
     },
     {
       type: 'heading',

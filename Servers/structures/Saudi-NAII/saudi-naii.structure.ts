@@ -47,6 +47,7 @@ export const saudiNaiiStructure: FrameworkStructure = {
   source_labels: {
     domain: "Saudi NAII domains",
   },
+  adoption_levels: true,
   seed: {
     name: "Saudi National AI Index (NAII)",
     description:

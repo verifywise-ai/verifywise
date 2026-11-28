@@ -114,10 +114,11 @@ export async function getImplByIdQuery(
 ) {
   const resolved = resolveLevel(frameworkId, level);
   if (!resolved) return null;
-  const { tables } = resolved;
+  const { cfg, tables } = resolved;
 
   const rows = (await sequelize.query(
     `SELECT
+       ${adoptionLevelColumn(cfg, level)},
        s.id            AS struct_id,
        s.title         AS title,
        s.description   AS description,
@@ -232,7 +233,8 @@ export async function getFrameworkTreeQuery(
        s.title, s.description, s.summary, s.questions,
        s.evidence_examples, s.order_no,
        i.id                    AS impl_id,
-       i.status, i.owner, i.reviewer, i.approver, i.due_date
+       i.status, i.owner, i.reviewer, i.approver, i.due_date,
+       ${adoptionLevelColumn(cfg, "l2")}
      FROM ${tables.l2_struct} s
      LEFT JOIN ${tables.l2_impl} i
        ON i.${cols.l2_impl_meta} = s.id
@@ -298,7 +300,47 @@ export async function getFrameworkTreeQuery(
   }));
 }
 
+/**
+ * `adoption_level` select expression: the column for a framework with
+ * adoption levels (level 2 only), a NULL literal otherwise, so every
+ * response has the same shape and no other impl table needs the column.
+ */
+export function adoptionLevelColumn(cfg: FrameworkConfig, level: ImplLevel): string {
+  return cfg.adoption_levels && level === "l2"
+    ? "i.adoption_level"
+    : "NULL::smallint AS adoption_level";
+}
+
+export const MIN_ADOPTION_LEVEL = 0;
+export const MAX_ADOPTION_LEVEL = 5;
+
+/**
+ * Parse a request's `adoption_level`: undefined = leave as is, null = clear
+ * ("" or null), else an integer 0-5. Throws on anything else.
+ */
+export function parseAdoptionLevel(raw: unknown): number | null | undefined {
+  if (raw === undefined) return undefined;
+  if (raw === null || raw === "") return null;
+  const text = String(raw).trim();
+  if (!/^\d+$/.test(text)) throw new InvalidAdoptionLevelError(raw);
+  const value = Number(text);
+  if (value < MIN_ADOPTION_LEVEL || value > MAX_ADOPTION_LEVEL) {
+    throw new InvalidAdoptionLevelError(raw);
+  }
+  return value;
+}
+
+export class InvalidAdoptionLevelError extends Error {
+  constructor(raw: unknown) {
+    super(
+      `Invalid adoption_level '${String(raw)}': use ${MIN_ADOPTION_LEVEL} to ${MAX_ADOPTION_LEVEL}, or empty to clear`,
+    );
+    this.name = "InvalidAdoptionLevelError";
+  }
+}
+
 interface UpdateImplInput {
+  adoption_level?: string | number | null;
   status?: string;
   implementation_description?: string;
   owner?: string | number | null;
@@ -375,6 +417,14 @@ export async function updateImplQuery(
     }
     setPieces.push("status = :status");
     replacements.status = input.status;
+  }
+  const adoptionLevel = parseAdoptionLevel(input.adoption_level);
+  if (adoptionLevel !== undefined) {
+    if (!cfg.adoption_levels || level !== "l2") {
+      throw new InvalidAdoptionLevelError(input.adoption_level);
+    }
+    setPieces.push("adoption_level = :adoption_level");
+    replacements.adoption_level = adoptionLevel;
   }
   addStringField("implementation_description");
   addStringField("auditor_feedback");

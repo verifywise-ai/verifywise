@@ -65,7 +65,7 @@ describe.each([
       const riskId = await createTestRisk(owner.orgId, { risk_owner: owner.userId });
       const patch = await owner.request
         .patch(`${ROUTE}/${frameworkId}/impl/l2/${implId}`)
-        .send({ status: "Draft", risksMitigated: JSON.stringify([riskId]) });
+        .send({ status: "Draft", adoption_level: "3", risksMitigated: JSON.stringify([riskId]) });
       expect(patch.status).toBe(200);
 
       return { owner, attacker, projectId, projectFrameworkId, implId, riskId };
@@ -90,9 +90,12 @@ describe.each([
       expect(risks.status).toBe(200);
       expect(risks.body.data).toEqual([]);
 
-      const patch = await attacker.request
-        .patch(`${ROUTE}/${frameworkId}/impl/l2/${implId}`)
-        .send({ status: "Audited", implementation_description: "pwned", risksDelete: "[]" });
+      const patch = await attacker.request.patch(`${ROUTE}/${frameworkId}/impl/l2/${implId}`).send({
+        status: "Audited",
+        implementation_description: "pwned",
+        adoption_level: "5",
+        risksDelete: "[]",
+      });
       expect(patch.status).toBe(404);
 
       const removed = await attacker.request.delete(
@@ -103,14 +106,48 @@ describe.each([
       expect(removed.status).toBe(404);
 
       const [row] = (await sequelize.query(
-        `SELECT status, implementation_description FROM ${impl} WHERE id = :id`,
+        `SELECT status, implementation_description, adoption_level FROM ${impl} WHERE id = :id`,
         { replacements: { id: implId }, type: QueryTypes.SELECT },
-      )) as Array<{ status: string; implementation_description: string | null }>;
-      expect(row).toEqual({ status: "Draft", implementation_description: null });
+      )) as Array<{
+        status: string;
+        implementation_description: string | null;
+        adoption_level: number | null;
+      }>;
+      expect(row).toEqual({
+        status: "Draft",
+        implementation_description: null,
+        adoption_level: 3,
+      });
       expect(await countFor(impl, owner.orgId)).toBe(requirements);
       expect(await countFor(risksTable, owner.orgId)).toBe(1);
       expect(await countFor(impl, attacker.orgId)).toBe(0);
       expect(await countFor(risksTable, attacker.orgId)).toBe(0);
+    });
+
+    it("records, validates and clears the owner's adoption level", async () => {
+      const { owner, projectId, implId } = await ownerWithAssessedFramework();
+      const url = `${ROUTE}/${frameworkId}/impl/l2/${implId}`;
+
+      const tree = await owner.request.get(`${ROUTE}/${frameworkId}/tree/${projectId}`);
+      expect(tree.body.data.framework.adoption_levels).toBe(true);
+      const domain = (
+        tree.body.data.tree as Array<{
+          children: Array<{ impl_id: number; adoption_level: number | null }>;
+        }>
+      )
+        .flatMap((subPillar) => subPillar.children)
+        .find((d) => d.impl_id === implId);
+      expect(domain?.adoption_level).toBe(3);
+
+      for (const bad of ["6", "-1", "2.5", "high"]) {
+        const res = await owner.request.patch(url).send({ adoption_level: bad });
+        expect(res.status).toBe(400);
+      }
+      expect((await owner.request.get(url)).body.data.adoption_level).toBe(3);
+
+      const cleared = await owner.request.patch(url).send({ adoption_level: "" });
+      expect(cleared.status).toBe(200);
+      expect((await owner.request.get(url)).body.data.adoption_level).toBeNull();
     });
 
     it("never adds the framework to another organization's project", async () => {

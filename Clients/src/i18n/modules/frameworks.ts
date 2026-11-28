@@ -463,6 +463,19 @@ export const de: Record<string, string> = {
     "Möchten Sie das Projekt „{title}“ wirklich löschen? Dadurch werden sein Framework-Fortschritt und seine Dateien gelöscht. Seine Risiken bleiben im Risikoregister, sind aber nicht mehr mit ihm verknüpft. Dies kann nicht rückgängig gemacht werden.",
   'Are you sure you want to delete the framework "{title}"? This deletes its framework progress and its files. Its risks stay in the risk register but are no longer linked to it. This cannot be undone.':
     "Möchten Sie das Rahmenwerk „{title}“ wirklich löschen? Dadurch werden sein Framework-Fortschritt und seine Dateien gelöscht. Seine Risiken bleiben im Risikoregister, sind aber nicht mehr mit ihm verknüpft. Dies kann nicht rückgängig gemacht werden.",
+  "Adoption level:": "Einführungsstufe:",
+  "0: Absence of capabilities": "0: Fehlen von Fähigkeiten",
+  "1: Establishing": "1: Aufbau",
+  "2: Activated": "2: Aktiviert",
+  "3: Managed": "3: Gesteuert",
+  "4: Excellence": "4: Exzellenz",
+  "5: Pioneer": "5: Vorreiter",
+  "Level 0": "Stufe 0",
+  "Level 1": "Stufe 1",
+  "Level 2": "Stufe 2",
+  "Level 3": "Stufe 3",
+  "Level 4": "Stufe 4",
+  "Level 5": "Stufe 5",
 };
 
 export const fr: Record<string, string> = {
@@ -931,6 +944,19 @@ export const fr: Record<string, string> = {
     "Voulez-vous vraiment supprimer le projet « {title} » ? Cela supprime sa progression dans les référentiels et ses fichiers. Ses risques restent dans le registre des risques mais ne lui sont plus liés. Cette action est irréversible.",
   'Are you sure you want to delete the framework "{title}"? This deletes its framework progress and its files. Its risks stay in the risk register but are no longer linked to it. This cannot be undone.':
     "Voulez-vous vraiment supprimer le référentiel « {title} » ? Cela supprime sa progression dans les référentiels et ses fichiers. Ses risques restent dans le registre des risques mais ne lui sont plus liés. Cette action est irréversible.",
+  "Adoption level:": "Niveau d'adoption :",
+  "0: Absence of capabilities": "0 : Absence de capacités",
+  "1: Establishing": "1 : Mise en place",
+  "2: Activated": "2 : Activé",
+  "3: Managed": "3 : Maîtrisé",
+  "4: Excellence": "4 : Excellence",
+  "5: Pioneer": "5 : Pionnier",
+  "Level 0": "Niveau 0",
+  "Level 1": "Niveau 1",
+  "Level 2": "Niveau 2",
+  "Level 3": "Niveau 3",
+  "Level 4": "Niveau 4",
+  "Level 5": "Niveau 5",
 };
 
 export const es: Record<string, string> = {
@@ -1390,4 +1416,17 @@ export const es: Record<string, string> = {
     "¿Seguro que quiere eliminar el proyecto «{title}»? Esto elimina su progreso en los marcos y sus archivos. Sus riesgos permanecen en el registro de riesgos, pero ya no están vinculados a él. Esta acción no se puede deshacer.",
   'Are you sure you want to delete the framework "{title}"? This deletes its framework progress and its files. Its risks stay in the risk register but are no longer linked to it. This cannot be undone.':
     "¿Seguro que quiere eliminar el marco «{title}»? Esto elimina su progreso en los marcos y sus archivos. Sus riesgos permanecen en el registro de riesgos, pero ya no están vinculados a él. Esta acción no se puede deshacer.",
+  "Adoption level:": "Nivel de adopción:",
+  "0: Absence of capabilities": "0: Ausencia de capacidades",
+  "1: Establishing": "1: En establecimiento",
+  "2: Activated": "2: Activado",
+  "3: Managed": "3: Gestionado",
+  "4: Excellence": "4: Excelencia",
+  "5: Pioneer": "5: Pionero",
+  "Level 0": "Nivel 0",
+  "Level 1": "Nivel 1",
+  "Level 2": "Nivel 2",
+  "Level 3": "Nivel 3",
+  "Level 4": "Nivel 4",
+  "Level 5": "Nivel 5",
 };

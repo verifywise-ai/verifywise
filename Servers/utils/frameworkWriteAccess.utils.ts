@@ -195,6 +195,17 @@ export function dateChanged(
   return Math.abs(next - stored) > 1;
 }
 
+/**
+ * Adoption level (0-5): "" or null clears, so a clear is a change when a
+ * level is stored. Junk is a change too: the update rejects it with a 400.
+ */
+export function levelChanged(sent: unknown, current: unknown): boolean {
+  if (sent === undefined) return false;
+  const next = sent === "" || sent === null ? null : String(sent).trim();
+  const stored = isBlank(current) ? null : String(current).trim();
+  return next !== stored;
+}
+
 export function boolChanged(sent: unknown, current: unknown): boolean {
   if (isBlank(sent)) return false;
   return String(sent).trim().toLowerCase() !== String(current ?? false).toLowerCase();
@@ -256,7 +267,7 @@ export function riskLinksChanged(
 
 // ── Flat implementation rows (ISO, NIST, bundled, imported) ─────────────────
 
-type FieldKind = "text" | "status" | "user" | "date" | "bool";
+type FieldKind = "text" | "status" | "user" | "date" | "bool" | "level";
 
 interface FlatField {
   field: string;
@@ -298,7 +309,9 @@ export const ISO42001_ANNEX_RULES: FlatRowRules = {
 };
 
 export const IMPL_RULES: FlatRowRules = {
-  fields: WORKFLOW_FIELDS,
+  // adoption_level is only written for frameworks with adoption levels
+  // (Saudi NAII); elsewhere it is never sent and stays undefined.
+  fields: [...WORKFLOW_FIELDS, { field: "adoption_level", kind: "level", cls: "edit" }],
   emptyClears: true,
   parseUser: parseUserLoose,
 };
@@ -318,6 +331,8 @@ const fieldChanged = (spec: FlatField, sent: unknown, current: unknown, rules: F
       return dateChanged(sent, current, rules.emptyClears);
     case "bool":
       return boolChanged(sent, current);
+    case "level":
+      return levelChanged(sent, current);
     default:
       return true;
   }

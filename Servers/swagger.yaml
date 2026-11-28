@@ -11660,7 +11660,7 @@ paths:
       security:
         -
           bearerAuth: []
-      description: 'Returns the framework metadata (id, key, framework_type, display_name, entity_types, hierarchy_type) and the full structure tree with the project''s implementation rows. Generic endpoint for the bundled frameworks declared in Servers/structures.'
+      description: 'Returns the framework metadata (id, key, framework_type, display_name, entity_types, hierarchy_type, adoption_levels) and the full structure tree with the project''s implementation rows. Level 2 rows carry adoption_level (0-5 or null; always null unless adoption_levels is true). Generic endpoint for the bundled frameworks declared in Servers/structures.'
       parameters:
         -
           name: frameworkId
@@ -11760,7 +11760,7 @@ paths:
         '200':
           description: 'Updated implementation row'
         '400':
-          description: 'Invalid parameters'
+          description: 'Invalid parameters or adoption level'
         '404':
           description: 'Framework or record not found'
         '500':
@@ -11771,7 +11771,7 @@ paths:
       security:
         -
           bearerAuth: []
-      description: 'Multipart form. Fields: status, implementation_description, owner, reviewer, approver, due_date, auditor_feedback, risksMitigated (JSON array), risksDelete (JSON array), delete (JSON array of file ids to detach), user_id; attach evidence as file parts.'
+      description: 'Multipart form. Fields: status, implementation_description, owner, reviewer, approver, due_date, auditor_feedback, adoption_level, risksMitigated (JSON array), risksDelete (JSON array), delete (JSON array of file ids to detach), user_id; attach evidence as file parts. adoption_level (0-5, empty to clear) is accepted only on level l2 of a framework with adoption levels (Saudi NAII, id 30); anywhere else, or outside 0-5, it is a 400.'
       parameters:
         -
           name: frameworkId
@@ -11817,6 +11817,9 @@ paths:
                   type: string
                 auditor_feedback:
                   type: string
+                adoption_level:
+                  type: string
+                  description: 'Self-assessed adoption level 0-5; empty clears it. Saudi NAII (id 30) level l2 only.'
                 risksMitigated:
                   type: string
                 risksDelete:

@@ -18,7 +18,8 @@ import {
 
 const query = sequelize.query as jest.Mock;
 
-const flat = FRAMEWORK_STRUCTURES.find((s) => !s.tables.l3_impl)!;
+const flat = FRAMEWORK_STRUCTURES.find((s) => !s.tables.l3_impl && !s.adoption_levels)!;
+const withLevels = FRAMEWORK_STRUCTURES.find((s) => s.adoption_levels)!;
 const nested = FRAMEWORK_STRUCTURES.find((s) => s.tables.l3_impl)!;
 
 const targetFor = (id: number, name: string): FrameworkTarget => ({
@@ -276,5 +277,37 @@ describe("collectFrameworkRequirements", () => {
       names,
     );
     expect(out.frameworks[0].groups[0].requirements[0].children).toHaveLength(1);
+  });
+
+  it("carries the adoption level for a framework with levels", async () => {
+    mockQueries({
+      l2: [
+        l2Row({ impl_id: 1, order_no: 1, adoption_level: 3 }),
+        l2Row({ impl_id: 2, order_no: 2, adoption_level: null }),
+      ],
+    });
+    const out = await collectFrameworkRequirements(
+      targetFor(withLevels.id, "NAII"),
+      1,
+      generatedAt,
+      names,
+    );
+    const fw = out.frameworks[0];
+    expect(fw.adoptionLevels).toBe(true);
+    expect(fw.groups[0].requirements.map((r) => r.adoptionLevel)).toEqual([3, null]);
+    expect(String(query.mock.calls[0][0])).toContain("i.adoption_level");
+  });
+
+  it("leaves the adoption level out for other frameworks", async () => {
+    mockQueries({ l2: [l2Row({ impl_id: 1, adoption_level: null })] });
+    const out = await collectFrameworkRequirements(
+      targetFor(flat.id, flat.displayName ?? "F"),
+      1,
+      generatedAt,
+      names,
+    );
+    expect(out.frameworks[0]).not.toHaveProperty("adoptionLevels");
+    expect(out.frameworks[0].groups[0].requirements[0]).not.toHaveProperty("adoptionLevel");
+    expect(String(query.mock.calls[0][0])).toContain("NULL::smallint AS adoption_level");
   });
 });

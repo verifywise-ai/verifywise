@@ -224,6 +224,23 @@ describe("mergeFrameworkRequirements", () => {
     expect(fw.rollup.statusBreakdown).toEqual({ Implemented: 2, "Not started": 2 });
   });
 
+  it("keeps the adoption level flag when it merges a framework", () => {
+    const withLevels = () => ({
+      frameworks: [{ ...fwData([reqRow(1, true)]).frameworks[0], adoptionLevels: true }],
+    });
+    const merged = mergeFrameworkRequirements([
+      { useCase: "Alpha", framework: "NAII", data: withLevels() },
+      { useCase: "Beta", framework: "NAII", data: withLevels() },
+    ]);
+
+    expect(merged.frameworks[0].adoptionLevels).toBe(true);
+    const plain = mergeFrameworkRequirements([
+      { useCase: "Alpha", framework: "OSFI E-23", data: fwData([reqRow(1, true)]) },
+      { useCase: "Beta", framework: "OSFI E-23", data: fwData([reqRow(2, true)]) },
+    ]);
+    expect(plain.frameworks[0]).not.toHaveProperty("adoptionLevels");
+  });
+
   it("keeps single-pairing output unlabelled", () => {
     const one = fwData([reqRow(1, true)]);
     const merged = mergeFrameworkRequirements([

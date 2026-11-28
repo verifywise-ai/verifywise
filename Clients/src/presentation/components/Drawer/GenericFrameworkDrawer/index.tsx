@@ -44,6 +44,9 @@ import {
 } from "../../../../application/repository/entity.repository";
 import { attachFilesToEntity } from "../../../../application/repository/file.repository";
 import { useCanCheck } from "../../../../application/hooks/useCan";
+import { ADOPTION_LEVEL_OPTIONS } from "../../../../application/constants/adoptionLevels";
+import Select from "../../Inputs/Select";
+import { workflowInputStyles } from "../shared/WorkflowFields";
 
 // Default 8-value status enum shared by every generic impl table.
 const DEFAULT_STATUS_OPTIONS: StatusOption[] = [
@@ -86,6 +89,8 @@ export interface GenericFrameworkDrawerProps {
   evidenceExamples?: string[] | null;
 
   isOrganizational?: boolean;
+  /** The framework records a self-assessed adoption level 0-5 (Saudi NAII). */
+  adoptionLevels?: boolean;
 
   // Optional overrides.
   /** Impl endpoint prefix, up to and including `/impl`. Defaults to `/frameworks/:frameworkId/impl`. */
@@ -112,6 +117,7 @@ const GenericFrameworkDrawer: React.FC<GenericFrameworkDrawerProps> = ({
   questions,
   evidenceExamples,
   isOrganizational = false,
+  adoptionLevels = false,
   implBaseUrl,
   statusOptions = DEFAULT_STATUS_OPTIONS,
   notesAttachedTo,
@@ -126,6 +132,8 @@ const GenericFrameworkDrawer: React.FC<GenericFrameworkDrawerProps> = ({
   const [alert, setAlert] = useState<AlertProps | null>(null);
   const [activeTab, setActiveTab] = useState("details");
   const [date, setDate] = useState<Dayjs | null>(null);
+  // "" = not assessed; "0".."5" otherwise.
+  const [adoptionLevel, setAdoptionLevel] = useState("");
 
   const [formData, setFormData] = useState<WorkflowFormData>({
     status: "Not started",
@@ -194,6 +202,9 @@ const GenericFrameworkDrawer: React.FC<GenericFrameworkDrawerProps> = ({
           auditor_feedback: response.data.auditor_feedback || "",
         });
         setDate(response.data.due_date ? dayjs(response.data.due_date) : null);
+        setAdoptionLevel(
+          response.data.adoption_level == null ? "" : String(response.data.adoption_level),
+        );
         await evidence.loadFiles(entityId);
       } else {
         console.warn("[fw] GenericFrameworkDrawer: empty impl response");
@@ -270,6 +281,7 @@ const GenericFrameworkDrawer: React.FC<GenericFrameworkDrawerProps> = ({
       formDataToSend.append("reviewer", formData.reviewer || "");
       formDataToSend.append("approver", formData.approver || "");
       formDataToSend.append("auditor_feedback", formData.auditor_feedback);
+      if (adoptionLevels) formDataToSend.append("adoption_level", adoptionLevel);
       if (date) formDataToSend.append("due_date", date.toISOString());
       formDataToSend.append("user_id", userId?.toString() || "1");
       formDataToSend.append("project_id", project_id.toString());
@@ -364,6 +376,18 @@ const GenericFrameworkDrawer: React.FC<GenericFrameworkDrawerProps> = ({
             />
           </Stack>
           <Stack gap="24px" sx={{ mt: "15px" }}>
+            {adoptionLevels && (
+              <Select
+                id="adoption-level"
+                label="Adoption level:"
+                value={adoptionLevel}
+                onChange={(event) => setAdoptionLevel(String(event.target.value))}
+                items={ADOPTION_LEVEL_OPTIONS}
+                sx={workflowInputStyles}
+                placeholder="Not assessed"
+                disabled={isEditingDisabled}
+              />
+            )}
             <WorkflowFields
               formData={formData}
               onFieldChange={handleFieldChange}

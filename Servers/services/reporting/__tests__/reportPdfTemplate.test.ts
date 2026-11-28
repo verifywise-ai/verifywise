@@ -5,6 +5,7 @@
  * malformed EJS tag, or a block moved back inside the wrong guard, fails
  * this suite instead of breaking every PDF the product generates.
  */
+import { adoptionLevelLabel } from "../adoptionLevel";
 import * as ejs from "ejs";
 import * as fs from "fs";
 import * as path from "path";
@@ -74,6 +75,7 @@ function render(
     // The renderer supplies these; the template must not declare its own copy.
     analysisLabels: ANALYSIS_LABELS,
     noticeText: NOTICE_TEXT,
+    adoptionLevelLabel,
     include: () => "",
     ...extra,
   } satisfies Omit<ReportData, "aiSummaries"> & {
@@ -787,6 +789,27 @@ describe("section notices", () => {
         },
       ],
     };
+
+    it("adds an adoption level column only for a framework with levels", () => {
+      const plain = render(undefined, { frameworkRequirements });
+      expect(plain).not.toContain("Adoption level");
+
+      const fw = frameworkRequirements.frameworks[0];
+      const html = render(undefined, {
+        frameworkRequirements: {
+          frameworks: [
+            {
+              ...fw,
+              frameworkName: "Saudi National AI Index (NAII)",
+              adoptionLevels: true,
+              groups: [{ ...fw.groups[0], requirements: [{ ...base, adoptionLevel: 3 }] }],
+            },
+          ],
+        },
+      });
+      expect(html).toContain("<th>Adoption level</th>");
+      expect(html).toContain("3: Managed");
+    });
 
     it("renders framework requirements block and TOC entry", () => {
       const html = render(undefined, { frameworkRequirements });

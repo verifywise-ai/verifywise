@@ -47,6 +47,7 @@ import {
 } from "./docxE23";
 import { buildE23FormalView, evidenceLine } from "./e23/formalView";
 import { E23_NOTICE_LABELS } from "./e23/e23Text";
+import { adoptionLevelLabel } from "./adoptionLevel";
 
 /**
  * Copy for the "sections with no data" block. Duplicated in report-pdf.ejs
@@ -1046,7 +1047,14 @@ function createComplianceSection(
         );
 
         if (group.requirements.length > 0) {
-          const headers = ["Requirement", "Status", "Owner", "Due date", "Evidence"];
+          const headers = [
+            "Requirement",
+            ...(fw.adoptionLevels ? ["Adoption level"] : []),
+            "Status",
+            "Owner",
+            "Due date",
+            "Evidence",
+          ];
           const rows: TableCellInput[][] = [];
           group.requirements.forEach((req) => {
             [req, ...(req.children ?? [])].forEach((r) => {
@@ -1055,6 +1063,9 @@ function createComplianceSection(
                   main: `${r.level === 3 ? "    " : ""}${r.title}`,
                   secondary: evidenceLine(r),
                 },
+                ...(fw.adoptionLevels
+                  ? [r.level === 2 ? adoptionLevelLabel(r.adoptionLevel) : "—"]
+                  : []),
                 r.status,
                 r.owner || "—",
                 r.dueDate || "—",

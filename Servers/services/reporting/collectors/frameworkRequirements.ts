@@ -131,6 +131,9 @@ export async function collectFrameworkRequirements(
       evidenceCount: files.length,
       evidenceFiles: [...files].sort().slice(0, MAX_EVIDENCE_FILES),
       riskCount: risks.get(Number(r.impl_id)) ?? 0,
+      ...(structure.adoption_levels && level === 2
+        ? { adoptionLevel: r.adoption_level == null ? null : Number(r.adoption_level) }
+        : {}),
     };
   };
 
@@ -193,6 +196,7 @@ export async function collectFrameworkRequirements(
       {
         frameworkId: target.frameworkId,
         frameworkName: target.frameworkName,
+        ...(structure.adoption_levels ? { adoptionLevels: true } : {}),
         groups: orderedGroups,
         rollup,
       },

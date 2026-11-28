@@ -16,6 +16,7 @@ import {
   frameworkImplChanges,
   IMPL_RULES,
   iso42001SubclauseChanges,
+  levelChanged,
   ISO42001_ANNEX_RULES,
   ISO_NIST_RULES,
   normalizeText,
@@ -341,5 +342,35 @@ describe("restoring unchanged fields", () => {
     const snapshot = { control: null, subcontrols: new Map(), feedbackFileIds: new Set<number>() };
     restoreEuControlFields(body, snapshot, "edit");
     expect(body).toEqual({ owner: "9", subControls: [{ id: 1, feedback_description: "y" }] });
+  });
+});
+
+describe("adoption level changes", () => {
+  it("treats a new, changed or cleared level as an edit", () => {
+    expect(levelChanged("3", null)).toBe(true);
+    expect(levelChanged("4", 3)).toBe(true);
+    expect(levelChanged("", 3)).toBe(true);
+    expect(levelChanged(null, 3)).toBe(true);
+  });
+
+  it("ignores an absent or unchanged level", () => {
+    expect(levelChanged(undefined, 3)).toBe(false);
+    expect(levelChanged("3", 3)).toBe(false);
+    expect(levelChanged("", null)).toBe(false);
+  });
+
+  it("counts a level-only drawer save as an edit, not an audit", () => {
+    expect(
+      detectFlatChanges(
+        { adoption_level: "2" },
+        [],
+        { ...stored, adoption_level: null },
+        IMPL_RULES,
+      ),
+    ).toMatchObject({ edit: true, audit: false });
+    expect(
+      detectFlatChanges({ adoption_level: "2" }, [], { ...stored, adoption_level: 2 }, IMPL_RULES)
+        .edit,
+    ).toBe(false);
   });
 });
