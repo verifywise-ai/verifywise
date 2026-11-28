@@ -7,8 +7,10 @@ import asyncio
 import hashlib
 import json
 import logging
+import re
 from datetime import datetime, timezone
 from typing import Optional
+from urllib.parse import parse_qsl, urlsplit
 
 import httpx
 from fastapi import Request, HTTPException
@@ -168,14 +170,68 @@ class UpstreamToolError(ValueError):
         self.message = message
 
     @classmethod
-    def from_rpc(cls, error) -> "UpstreamToolError":
+    def from_rpc(cls, error, secrets: tuple[str, ...] = ()) -> "UpstreamToolError":
+        """Build from a JSON-RPC error object. Only the code and message are
+        kept, and every secret the gateway added to the request is masked."""
         if not isinstance(error, dict):
-            return cls(-32603, str(error)[:500])
+            return cls(-32603, _redact(str(error), secrets)[:500])
         code = error.get("code")
         return cls(
             code if isinstance(code, int) and not isinstance(code, bool) else -32603,
-            str(error.get("message") or "Unknown error")[:500],
+            _redact(str(error.get("message") or "Unknown error"), secrets)[:500],
         )
+
+
+# Headers the gateway sets that carry no secret.
+_PLAIN_HEADERS = frozenset({"content-type", "accept", "mcp-session-id"})
+_MIN_SECRET_CHARS = 6
+
+
+def _request_secrets(server_url: str, headers: dict) -> tuple[str, ...]:
+    """Values the gateway adds to a forwarded call that the agent never holds:
+    auth header values (and the token after a scheme such as Bearer) and the
+    server URL's query values. Longest first, so a value is masked whole."""
+    found = set()
+    for name, value in headers.items():
+        if name.lower() in _PLAIN_HEADERS or not isinstance(value, str):
+            continue
+        found.add(value)
+        scheme, _, token = value.partition(" ")
+        if token:
+            found.add(token)
+    found.update(v for _, v in parse_qsl(urlsplit(server_url).query))
+    return tuple(sorted((v for v in found if len(v) >= _MIN_SECRET_CHARS), key=len, reverse=True))
+
+
+def _redact(text_value: str, secrets: tuple[str, ...]) -> str:
+    for secret in secrets:
+        text_value = text_value.replace(secret, "[redacted]")
+    return text_value
+
+
+def _is_stale_session(resp: httpx.Response) -> bool:
+    """The upstream does not know the session id it was sent: 404 per the MCP
+    spec; some servers answer 400 and name the session in the body."""
+    if resp.status_code == 404:
+        return True
+    return resp.status_code == 400 and "session" in resp.text.lower()
+
+
+def _raise_rpc_error_from_4xx(resp: httpx.Response, secrets: tuple[str, ...]) -> None:
+    """A 4xx reply that carries a JSON-RPC error is the server's answer to the
+    call, not a transport failure. 401 and 403 are left to raise_for_status so
+    the token retry and the credentials message still apply."""
+    if not 400 <= resp.status_code < 500 or resp.status_code in (401, 403):
+        return
+    try:
+        data = _parse_response(resp)
+    except UpstreamResponseError:
+        return
+    if "error" in data:
+        raise UpstreamToolError.from_rpc(data["error"], secrets)
+
+
+_SSE_LINE_BREAK = re.compile(r"\r\n|\r|\n")
 
 
 def _sse_messages(text_body: str):
@@ -185,7 +241,9 @@ def _sse_messages(text_body: str):
     the space after the colon is optional. Events whose data is not JSON are
     skipped."""
     data_lines: list[str] = []
-    for raw in text_body.splitlines() + [""]:
+    # Only CR, LF and CRLF end an SSE line. str.splitlines() would also split
+    # at U+2028, U+2029 and U+0085, which may appear unescaped inside JSON.
+    for raw in _SSE_LINE_BREAK.split(text_body) + [""]:
         if raw == "":
             if data_lines:
                 try:
@@ -622,6 +680,7 @@ async def forward_tool_call(
             "method": "tools/call",
             "params": {"name": tool_name, "arguments": arguments},
         }
+        secrets = _request_secrets(url, headers)
         new_session = None
 
         async with httpx.AsyncClient(timeout=TOOL_CALL_TIMEOUT_SECONDS) as client:
@@ -631,17 +690,18 @@ async def forward_tool_call(
                 new_session = await _handshake(client, url, headers)
 
             resp = await client.post(url, json=call, headers=headers)
-            if resp.status_code == 404 and session_id:
+            if session_id and _is_stale_session(resp):
                 # The upstream no longer knows the cached session (it restarted
                 # or expired it), so it did not run the call. Open a new session
                 # and send the call once more, as the MCP spec asks of clients.
                 new_session = await _handshake(client, url, headers)
                 resp = await client.post(url, json=call, headers=headers)
+            _raise_rpc_error_from_4xx(resp, secrets)
             resp.raise_for_status()
             data = _parse_response(resp, request_id=1)
 
         if "error" in data:
-            raise UpstreamToolError.from_rpc(data["error"])
+            raise UpstreamToolError.from_rpc(data["error"], secrets)
 
         return data.get("result") or {}, new_session
 

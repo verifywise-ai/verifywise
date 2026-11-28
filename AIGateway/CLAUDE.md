@@ -1,6 +1,6 @@
 # AIGateway — LLM Gateway Service
 
-> **Last Updated:** 2026-11-23
+> **Last Updated:** 2026-11-27
 
 ---
 
@@ -65,6 +65,7 @@ DB_PASSWORD=...
 DB_NAME=verifywise
 AI_GATEWAY_INTERNAL_KEY=...    # Must match Express backend
 AI_GATEWAY_PORT=8100
+REDIS_URL=redis://localhost:6379/0   # MCP sessions, rate limits, breaker; every container deployment must set it (Compose: redis://redis:6379/0)
 GUARDRAILS_PRELOAD_PII=true    # Load Presidio + spaCy en_core_web_md in the background at startup (skipped if the model is not installed)
 ```
 
@@ -111,7 +112,7 @@ Config changes reach the Express backend through `utils/notifications.py`. Build
 - `tests/unit/` — unit suite: cost/guardrail/cache/proxy services, rate limiter, LiteLLM error mapping. DB = FakeSession, Redis = in-memory fake, LiteLLM = monkeypatched.
 - `tests/test_cache_service.py`, `tests/test_cost_service.py`, `tests/test_encryption.py` — pure-function unit tests.
 - `tests/test_proxy_tool_calling.py`, `tests/test_virtual_key_endpoint_names.py`, `tests/test_endpoint_delete_keeps_key_limits.py`, `tests/test_guardrail_test_route.py`, `tests/test_guardrail_logs_route.py`, `tests/test_guardrail_scan_offload.py`, `tests/test_spend_by_day_sql.py`, `tests/test_model_catalog_contract.py`, `tests/test_internal_completion_errors.py`, `tests/test_redaction.py`, `tests/test_agent_policy_scope.py`, `tests/test_retention.py`, `tests/test_agent_control_retention.py`, `tests/test_internal_key.py`, `tests/test_config_change_notifications.py`, `tests/test_endpoint_role_visibility.py`, `tests/test_invalid_unicode_body.py`, `tests/test_api_key_saved_verify.py`, `tests/test_endpoint_model_prefix.py`, `tests/test_change_history_columns.py`, `tests/test_proxy_auth.py` — mocked router/service tests (no live services).
-- `tests/test_18_mcp_credentials.py` through `tests/test_25_mcp_token_proxy.py`, plus `tests/test_mcp_hook_tool_acls.py`, `tests/test_mcp_hook_result_outcome.py`, and `tests/test_mcp_hook_request_validation.py` — mocked MCP/Agent Control suites.
+- `tests/test_18_mcp_credentials.py` through `tests/test_26_mcp_client_compat.py`, plus `tests/test_mcp_hook_tool_acls.py`, `tests/test_mcp_hook_result_outcome.py`, and `tests/test_mcp_hook_request_validation.py` — mocked MCP/Agent Control suites.
 
 **Needs live services (not in CI):**
 - `tests/test_01_api_keys.py` … `tests/test_17_mcp_runs.py` — numbered E2E suites; hit the real backend/gateway over httpx.

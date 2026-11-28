@@ -76,6 +76,10 @@ MONITORED_META_KEY = "verifywise.ai/monitored"
 # required, blocked by a guardrail, circuit breaker open.
 GATEWAY_ERROR_CODES = frozenset({-32001, -32003, -32004})
 
+# GET /v1/mcp keep-alive interval, and how many beats between agent key checks.
+SSE_KEEPALIVE_SECONDS = 30
+SSE_KEY_RECHECK_BEATS = 10
+
 
 def _stored_health(tool: dict) -> tuple:
     """The server's health as stored when the tool was resolved."""
@@ -114,14 +118,19 @@ async def mcp_jsonrpc(request: Request):
     if not isinstance(params, dict):
         params = {}
 
-    if body.get("jsonrpc") != "2.0":
-        return JSONResponse(content=_jsonrpc_error(msg_id, -32600, "Invalid JSON-RPC version"), status_code=200)
-
     # ── notifications and responses ─────────────────────────────────────
     # A message without an id (notifications/initialized, notifications/cancelled,
     # ...) or a client's response gets 202 and no body, as Streamable HTTP asks.
-    if "id" not in body or not isinstance(method, str):
+    # Nothing is ever answered to a notification, not even a version error.
+    is_response = "method" not in body and ("result" in body or "error" in body)
+    if "id" not in body or is_response:
         return Response(status_code=202)
+
+    if body.get("jsonrpc") != "2.0":
+        return JSONResponse(content=_jsonrpc_error(msg_id, -32600, "Invalid JSON-RPC version"), status_code=200)
+
+    if not isinstance(method, str):
+        return JSONResponse(content=_jsonrpc_error(msg_id, -32600, "Invalid Request"), status_code=200)
 
     # ── ping ────────────────────────────────────────────────────────────
     if method == "ping":
@@ -454,14 +463,24 @@ async def mcp_sse(request: Request):
     """SSE endpoint for server-initiated messages. Keep-alive for v1.
 
     Needs a valid agent key like POST, so the endpoint cannot be used to hold
-    connections open without one."""
+    connections open without one. The key is checked again every few minutes,
+    so a stream ends soon after its key is revoked or expires."""
     await extract_agent_key(request)
 
     async def event_stream():
+        beats = 0
         while True:
             if await request.is_disconnected():
                 break
+            if beats and beats % SSE_KEY_RECHECK_BEATS == 0:
+                try:
+                    await extract_agent_key(request)
+                except Exception:
+                    # Revoked, expired or not checkable: end the stream; a
+                    # client with a valid key reconnects.
+                    break
             yield ": keep-alive\n\n"
-            await asyncio.sleep(30)
+            beats += 1
+            await asyncio.sleep(SSE_KEEPALIVE_SECONDS)
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")

@@ -24,6 +24,7 @@ import routers.mcp_proxy as proxy
 import services.mcp_proxy_service as svc
 import services.mcp_session as sessions
 from services.guardrail_service import ScanResult
+from utils.mcp_credentials import normalize_auth_config
 
 SERVER_URL = "https://mcp.example.com/mcp"
 AGENT_KEY = {"id": 5, "organization_id": 1, "allowed_tools": [], "blocked_tools": [], "rate_limit_rpm": 0}
@@ -327,3 +328,109 @@ class TestUpstreamErrorsToAgent:
 
         assert error["message"] == "Upstream MCP server error: The server's reply was not a valid MCP response"
         assert "secret" in handler_fakes.audits[-1]["result_summary"]
+
+
+# ─── Review follow-ups ──────────────────────────────────────────────────────
+
+def test_sse_keeps_unicode_line_separators_inside_json():
+    text = "a b c\u0085d"
+    body = 'data: {"jsonrpc":"2.0","id":1,"result":{"text":"' + text + '"}}\n\n'
+    assert svc._parse_sse_response(body, request_id=1)["result"]["text"] == text
+
+
+def _rpc_upstream(call_response):
+    """initialize succeeds; tools/call gets call_response(request)."""
+    def handler(request):
+        method = json.loads(request.content).get("method")
+        if method == "tools/call":
+            return call_response(request)
+        if method == "initialize":
+            return httpx.Response(200, json={"jsonrpc": "2.0", "id": 0, "result": {}})
+        return httpx.Response(202)
+    return handler
+
+
+@pytest.mark.asyncio
+class TestReviewFollowUps:
+    async def test_upstream_error_masks_credentials_the_gateway_added(self, route_forward_through):
+        def call(request):
+            token = request.headers["authorization"].split(" ", 1)[1]
+            message = f"Request with token {token} to {request.url} failed"
+            return httpx.Response(200, json={"jsonrpc": "2.0", "id": 1, "error": {"code": -32000, "message": message}})
+
+        route_forward_through(_rpc_upstream(call))
+        cfg = {"token": "s3cr3t-bearer-token"}
+
+        with pytest.raises(svc.UpstreamToolError) as exc:
+            await svc.forward_tool_call(
+                f"{SERVER_URL}?api_key=query-secret-123", "bearer", normalize_auth_config("bearer", cfg, None), "search", {}
+            )
+        assert "s3cr3t-bearer-token" not in exc.value.message
+        assert "query-secret-123" not in exc.value.message
+        assert exc.value.message.count("[redacted]") == 2
+
+    async def test_4xx_with_a_json_rpc_error_is_the_servers_answer(self, route_forward_through):
+        route_forward_through(_rpc_upstream(lambda r: httpx.Response(
+            400, json={"jsonrpc": "2.0", "id": 1, "error": {"code": -32602, "message": "Missing argument: name"}})))
+
+        with pytest.raises(svc.UpstreamToolError) as exc:
+            await svc.forward_tool_call(SERVER_URL, "none", {}, "search", {})
+        assert (exc.value.code, exc.value.message) == (-32602, "Missing argument: name")
+
+    async def test_403_with_a_json_rpc_error_stays_an_http_error(self, route_forward_through):
+        route_forward_through(_rpc_upstream(lambda r: httpx.Response(
+            403, json={"jsonrpc": "2.0", "id": 1, "error": {"code": -32000, "message": "Forbidden"}})))
+
+        with pytest.raises(httpx.HTTPStatusError):
+            await svc.forward_tool_call(SERVER_URL, "none", {}, "search", {})
+
+    async def test_400_naming_the_session_on_a_cached_session_is_retried(self, route_forward_through):
+        seen = []
+
+        def call(request):
+            sid = request.headers.get("mcp-session-id")
+            seen.append(sid)
+            if sid == "stale":
+                return httpx.Response(400, text="Bad Request: No valid session ID provided")
+            return httpx.Response(200, json={"jsonrpc": "2.0", "id": 1, "result": {"content": []}})
+
+        route_forward_through(_rpc_upstream(call))
+        result, _ = await svc.forward_tool_call(SERVER_URL, "none", {}, "search", {}, session_id="stale")
+
+        assert result == {"content": []}
+        assert seen == ["stale", None]
+
+    async def test_an_id_without_a_method_is_an_invalid_request(self, handler_fakes):
+        response = await proxy.mcp_jsonrpc(_request({"jsonrpc": "2.0", "id": 3, "method": None}))
+
+        assert json.loads(response.body) == {"jsonrpc": "2.0", "id": 3, "error": {"code": -32600, "message": "Invalid Request"}}
+
+    async def test_a_notification_without_jsonrpc_gets_no_body(self, handler_fakes):
+        response = await proxy.mcp_jsonrpc(_request({"method": "notifications/initialized"}))
+
+        assert response.status_code == 202
+        assert response.body == b""
+
+
+def test_get_stream_ends_when_the_key_is_revoked(monkeypatch):
+    from fastapi import HTTPException
+
+    checks = {"n": 0}
+
+    async def extract(request):
+        checks["n"] += 1
+        if checks["n"] > 1:
+            raise HTTPException(status_code=401, detail="Agent key has been revoked")
+        return dict(AGENT_KEY)
+
+    monkeypatch.setattr(proxy, "extract_agent_key", extract)
+    monkeypatch.setattr(proxy, "SSE_KEEPALIVE_SECONDS", 0)
+    monkeypatch.setattr(proxy, "SSE_KEY_RECHECK_BEATS", 2)
+    app = FastAPI()
+    app.include_router(proxy.router)
+
+    response = TestClient(app).get("/v1/mcp")
+
+    assert response.status_code == 200
+    assert response.text == ": keep-alive\n\n" * 2
+    assert checks["n"] == 2
