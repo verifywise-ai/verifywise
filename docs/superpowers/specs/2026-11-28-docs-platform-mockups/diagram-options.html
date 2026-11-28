@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Diagram options</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --brand:#14715B; --brand-soft:#E8F3F0; --brand-line:#9CCBBE; --text:#1C2130; --text-2:#475467; --text-3:#667085; --line:#E4E6E6; --line-input:#D1D5D5; --ground:#F2F4F4; --r:4px; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family:Inter,system-ui,sans-serif; color:var(--text); background:#F7F8F8; padding:28px 32px 60px; }
+  h1 { font-size:20px; margin:0 0 4px; font-weight:600; }
+  .sub { color:var(--text-2); font-size:14px; margin:0 0 24px; }
+  .opt { background:#fff; border:1px solid var(--line); border-radius:var(--r); padding:20px 22px 24px; margin-bottom:22px; cursor:pointer; }
+  .opt.selected { border-color:var(--brand); box-shadow:0 0 0 1px var(--brand); }
+  .opt-h { display:flex; align-items:baseline; gap:10px; margin-bottom:4px; }
+  .opt-h .l { width:24px; height:24px; border-radius:50%; background:var(--text); color:#fff; display:grid; place-items:center; font-size:12px; font-weight:600; flex:none; align-self:center; }
+  .opt.selected .opt-h .l { background:var(--brand); }
+  .opt-h h2 { font-size:16px; margin:0; font-weight:600; }
+  .opt p.why { margin:0 0 16px 34px; color:var(--text-2); font-size:13px; line-height:1.5; }
+  .pair { display:grid; grid-template-columns: 680px 368px; gap:28px; align-items:start; }
+  .frame-l { font-size:12px; color:var(--text-3); margin-bottom:6px; }
+  .host { container-type:inline-size; }
+
+  /* ================= A: refined stacked cards ================= */
+  .A { background:var(--ground); border-radius:var(--r); padding:16px; }
+  .A .node { background:#fff; border:1px solid var(--line); border-radius:var(--r); }
+  .A .node.accent { border-color:var(--brand-line); }
+  .A .head { padding:12px 16px; display:flex; flex-wrap:wrap; align-items:baseline; column-gap:8px; row-gap:2px; }
+  .A .node.accent .head { background:var(--brand-soft); border-radius:var(--r) var(--r) 0 0; }
+  .A .head b { font-size:14px; font-weight:600; }
+  .A .head span { font-size:13px; color:var(--text-3); }
+  .A .rows { display:grid; grid-template-columns:repeat(var(--cols,1),1fr); border-top:1px solid var(--line); }
+  .A .row { padding:10px 16px; display:grid; gap:2px; }
+  .A .rows .row + .row { border-left:1px solid var(--line); }
+  .A .row b { font-size:13px; font-weight:500; }
+  .A .row span { font-size:13px; color:var(--text-2); line-height:1.45; }
+  .A .link { display:flex; align-items:center; gap:8px; height:36px; padding-left:20px; font-size:12px; color:var(--text-2); }
+  .A .link i { width:1px; height:100%; background:var(--line-input); position:relative; }
+  .A .link i::after { content:""; position:absolute; left:-3px; bottom:4px; width:6px; height:6px; border-right:1px solid var(--text-3); border-bottom:1px solid var(--text-3); transform:rotate(45deg); }
+  @container (max-width:480px) {
+    .A { padding:12px; } .A .head { padding:10px 12px; } .A .row { padding:9px 12px; }
+    .A .rows { grid-template-columns:1fr; } .A .rows .row + .row { border-left:0; border-top:1px solid var(--line); }
+    .A .head span { flex-basis:100%; }
+  }
+
+  /* ================= B: horizontal flow, stacks when narrow ================= */
+  .B { background:var(--ground); border-radius:var(--r); padding:16px; display:grid; grid-template-columns:1fr 92px 1fr 92px 1fr; align-items:stretch; }
+  .B .node { background:#fff; border:1px solid var(--line); border-radius:var(--r); padding:12px 14px; display:flex; flex-direction:column; gap:6px; }
+  .B .node.accent { border-color:var(--brand-line); box-shadow:inset 0 3px 0 var(--brand); }
+  .B .node b { font-size:14px; font-weight:600; } .B .node .tg { font-size:13px; color:var(--brand); font-weight:500; margin-top:-2px; }
+  .B .node .d { font-size:13px; color:var(--text-2); line-height:1.45; }
+  .B .chips { display:flex; flex-wrap:wrap; gap:4px; margin-top:auto; padding-top:4px; }
+  .B .chip { font-size:12px; color:var(--text-2); border:1px solid var(--line); border-radius:var(--r); padding:2px 6px; background:#FAFBFB; }
+  .B .arrow { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; font-size:12px; color:var(--text-3); text-align:center; line-height:1.3; padding:0 4px; }
+  .B .arrow i { width:100%; height:1px; background:var(--line-input); position:relative; }
+  .B .arrow i::after { content:""; position:absolute; right:0; top:-3px; width:6px; height:6px; border-right:1px solid var(--text-3); border-top:1px solid var(--text-3); transform:rotate(45deg); }
+  @container (max-width:480px) {
+    .B { grid-template-columns:1fr; padding:12px; }
+    .B .arrow { flex-direction:row; justify-content:flex-start; height:34px; padding-left:18px; gap:8px; }
+    .B .arrow i { width:1px; height:100%; }
+    .B .arrow i::after { right:-3px; top:auto; bottom:4px; transform:rotate(135deg); }
+  }
+
+  /* ================= C: rail / timeline ================= */
+  .C { position:relative; padding:4px 0 4px 0; }
+  .C .item { display:grid; grid-template-columns:28px 1fr; column-gap:14px; position:relative; }
+  .C .item::before { content:""; position:absolute; left:13.5px; top:28px; bottom:0; width:1px; background:var(--line-input); }
+  .C .item:last-child::before { display:none; }
+  .C .dot { width:28px; height:28px; border-radius:50%; border:1px solid var(--line-input); background:#fff; display:grid; place-items:center; color:var(--text-2); position:relative; z-index:1; }
+  .C .dot svg { width:14px; height:14px; }
+  .C .item.accent .dot { border-color:var(--brand); background:var(--brand); color:#fff; }
+  .C .body { padding:3px 0 0; }
+  .C .body .t { display:flex; flex-wrap:wrap; align-items:baseline; column-gap:8px; }
+  .C .body b { font-size:14px; font-weight:600; }
+  .C .body .tag { font-size:13px; color:var(--text-3); }
+  .C .body .d { font-size:13px; color:var(--text-2); line-height:1.5; margin-top:4px; }
+  .C .attrs { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:8px; margin-top:10px; }
+  .C .attr { border:1px solid var(--line); border-radius:var(--r); padding:8px 10px; background:#FAFBFB; display:grid; gap:2px; }
+  .C .attr b { font-size:12px; font-weight:600; }
+  .C .attr span { font-size:12px; color:var(--text-2); line-height:1.45; }
+  .C .via { font-size:12px; color:var(--text-3); padding:10px 0 14px; }
+  .C .item.accent .attr { border-color:var(--brand-line); background:var(--brand-soft); }
+</style>
+</head>
+<body>
+<h1>Diagram block: plainer wording</h1>
+<p class="sub">Same content in each, now matching how the vendor score really works: Vendor → Scorecard questions → Risk score. Left is the website column, right is the 400px in-app panel. Click the one you prefer, then tell me in the terminal.</p>
+
+<!-- A -->
+<div class="opt" data-choice="a" onclick="toggleSelect(this)">
+  <div class="opt-h"><span class="l">A</span><h2>Stacked cards, tidied</h2></div>
+  <p class="why">Today's shape with fixed spacing: the arrow sits in its own gap and never touches a card, title and description have a set 2px gap, side-by-side details split with a divider and stack cleanly when narrow. Best for "what contains what".</p>
+  <div class="pair">
+    <div><div class="frame-l">Website · 680px</div><div class="host" id="A1"></div></div>
+    <div><div class="frame-l">In-app panel · 368px content</div><div class="host" id="A2"></div></div>
+  </div>
+</div>
+
+<!-- B -->
+<div class="opt selected" data-choice="b" onclick="toggleSelect(this)">
+  <div class="opt-h"><span class="l">B</span><h2>Left-to-right flow (your pick)</h2></div>
+  <p class="why">Three equal cards in a row with labelled arrows between them; details become small tags. Reads at a glance on the website, turns into a vertical stack in the panel. Best for "this leads to that".</p>
+  <div class="pair">
+    <div><div class="frame-l">Website · 680px</div><div class="host" id="B1"></div></div>
+    <div><div class="frame-l">In-app panel · 368px content</div><div class="host" id="B2"></div></div>
+  </div>
+</div>
+
+<!-- C -->
+<div class="opt" data-choice="c" onclick="toggleSelect(this)">
+  <div class="opt-h"><span class="l">C</span><h2>Rail with icons</h2></div>
+  <p class="why">No boxes around each step: an icon on a vertical line, the relationship written on the line, details as small tiles. Lightest on the page and the same shape at every width. Best for sequences and lifecycles.</p>
+  <div class="pair">
+    <div><div class="frame-l">Website · 680px</div><div class="host" id="C1"></div></div>
+    <div><div class="frame-l">In-app panel · 368px content</div><div class="host" id="C2"></div></div>
+  </div>
+</div>
+
+<script>
+const N = [
+  { t: "Vendor", tag: "A company you buy AI from", d: "For example a model provider like OpenAI, or a company that supplies your training data.", attrs: [["It has an owner", "One person is responsible for keeping this vendor's information up to date."], ["It has a review date", "The date by which someone should check the vendor again."]], icon: '<path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1M9 13h1M14 9h1M14 13h1"/>' },
+  { via: "You answer four questions about the vendor" },
+  { t: "Scorecard", tag: "Four questions about the vendor", d: "How sensitive is the data you share with it? How much does your work depend on it? Has it caused problems before? Which rules apply because you use it?", attrs: [["Data and dependence count most", "The first two questions weigh more than the last two."]], icon: '<path d="M9 11l2 2 4-4M5 4h14v16H5z"/>' },
+  { via: "VerifyWise turns your answers into a score" },
+  { t: "Risk score", tag: "How risky the vendor is", d: "A number from 0 to 100, shown as a percentage in the vendor list. The higher the number, the riskier the vendor.", attrs: [["Shown in the vendor list", "Next to each vendor, so you can compare them."], ["Not assessed until answered", "A vendor with no answers shows Not assessed instead of a score."]], accent: true, icon: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>' },
+];
+const esc = s => s;
+function A() {
+  return '<div class="A">' + N.map(n => n.via
+    ? '<div class="link"><i></i>' + n.via + '</div>'
+    : '<div class="node' + (n.accent ? ' accent' : '') + '"><div class="head"><b>' + n.t + '</b><span>' + n.tag + '</span></div><div class="rows" style="--cols:' + n.attrs.length + '">' +
+      n.attrs.map(a => '<div class="row"><b>' + a[0] + '</b><span>' + a[1] + '</span></div>').join('') + '</div></div>').join('') + '</div>';
+}
+function B() {
+  return '<div class="B">' + N.map(n => n.via
+    ? '<div class="arrow"><i></i><span>' + n.via + '</span></div>'
+    : '<div class="node' + (n.accent ? ' accent' : '') + '"><b>' + n.t + '</b><div class="tg">' + n.tag + '</div><div class="d">' + n.d + '</div><div class="chips">' + n.attrs.map(a => '<span class="chip">' + a[0] + '</span>').join('') + '</div></div>').join('') + '</div>';
+}
+function C() {
+  let out = '<div class="C">', pending = '';
+  N.forEach(n => {
+    if (n.via) { pending = n.via; return; }
+    out += (pending ? '' : '');
+    out += '<div class="item' + (n.accent ? ' accent' : '') + '"><div class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">' + n.icon + '</svg></div><div class="body"><div class="t"><b>' + n.t + '</b><span class="tag">' + n.tag + '</span></div><div class="d">' + n.d + '</div><div class="attrs">' +
+      n.attrs.map(a => '<div class="attr"><b>' + a[0] + '</b><span>' + a[1] + '</span></div>').join('') + '</div>' +
+      (N[N.indexOf(n) + 1] && N[N.indexOf(n) + 1].via ? '<div class="via">' + N[N.indexOf(n) + 1].via + '</div>' : '<div style="height:4px"></div>') + '</div></div>';
+  });
+  return out + '</div>';
+}
+for (const [id, f] of [["A1", A], ["A2", A], ["B1", B], ["B2", B], ["C1", C], ["C2", C]]) document.getElementById(id).innerHTML = f();
+</script>
+</body>
+</html>

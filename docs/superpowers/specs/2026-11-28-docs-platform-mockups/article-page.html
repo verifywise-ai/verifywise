@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Docs article mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --brand: #14715B; --brand-soft: #E8F3F0; --brand-line: #9CCBBE;
+    --text: #1C2130; --text-2: #475467; --text-3: #667085;
+    --line: #E4E6E6; --line-input: #D1D5D5; --ground: #F2F4F4; --bg: #FFFFFF;
+    --warn-bg: #FFF8EB; --warn-line: #F5D9A8; --info-bg: #F0F6FF; --info-line: #C9DBF5;
+    --r: 4px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Inter, system-ui, sans-serif; color: var(--text); background: #F5F6F6; font-size: 14px; }
+  .switch { position: sticky; top: 0; z-index: 50; display: flex; gap: 8px; align-items: center; padding: 10px 16px; background: #fff; border-bottom: 1px solid var(--line); }
+  .switch .q { margin-left: auto; color: var(--text-3); font-size: 13px; }
+  .switch button { height: 30px; padding: 0 12px; border: 1px solid var(--line-input); background: #fff; border-radius: var(--r); font: inherit; font-size: 13px; cursor: pointer; color: var(--text-2); }
+  .switch button.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+
+  /* ---------- website chrome ---------- */
+  .site { background: var(--bg); min-height: 100vh; }
+  .topbar { height: 56px; display: flex; align-items: center; gap: 24px; padding: 0 24px; border-bottom: 1px solid var(--line); }
+  .logo { font-weight: 700; color: var(--brand); font-size: 16px; display: flex; align-items: center; gap: 8px; }
+  .logo i { width: 22px; height: 22px; background: var(--brand); border-radius: var(--r); display: inline-block; }
+  .search { flex: 0 0 360px; height: 34px; border: 1px solid var(--line-input); border-radius: var(--r); display: flex; align-items: center; padding: 0 10px; color: var(--text-3); font-size: 13px; gap: 8px; }
+  .search kbd { margin-left: auto; font: 11px Inter; border: 1px solid var(--line); border-radius: var(--r); padding: 1px 5px; }
+  .topnav { margin-left: auto; display: flex; gap: 20px; color: var(--text-2); font-size: 13px; }
+  .topnav b { color: var(--brand); font-weight: 600; }
+  .layout { display: grid; grid-template-columns: 248px minmax(0, 760px) 216px; gap: 40px; max-width: 1360px; margin: 0 auto; padding: 0 24px; }
+  .leftnav { padding: 24px 0; border-right: 1px solid var(--line); font-size: 13px; position: sticky; top: 50px; align-self: start; height: calc(100vh - 50px); overflow: auto; }
+  .leftnav h6 { margin: 18px 0 6px; font-size: 12px; color: var(--text-3); font-weight: 600; }
+  .leftnav a { display: block; padding: 5px 10px; color: var(--text-2); text-decoration: none; border-radius: var(--r); margin-right: 12px; }
+  .leftnav a.cur { background: var(--brand-soft); color: var(--brand); font-weight: 600; }
+  .toc { padding-top: 32px; font-size: 13px; position: sticky; top: 50px; align-self: start; }
+  .toc h6 { margin: 0 0 10px; font-size: 12px; color: var(--text-3); font-weight: 600; }
+  .toc a { display: block; padding: 4px 0 4px 10px; color: var(--text-2); text-decoration: none; border-left: 2px solid var(--line); }
+  .toc a.cur { color: var(--brand); border-color: var(--brand); font-weight: 500; }
+  .toc .actions { margin-top: 20px; display: grid; gap: 6px; }
+  .toc .actions span { color: var(--text-2); font-size: 12px; display: flex; gap: 6px; align-items: center; }
+
+  /* ---------- in-app drawer chrome ---------- */
+  .drawerwrap { display: none; background: #EEF0F0; min-height: 100vh; padding: 24px; }
+  .appfake { display: flex; gap: 0; max-width: 1200px; margin: 0 auto; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; background: #fff; height: calc(100vh - 100px); }
+  .appfake .appbody { flex: 1; background: #FAFAFA; padding: 24px; color: var(--text-3); font-size: 13px; }
+  .appfake .appbody .ph { height: 34px; background: #fff; border: 1px solid var(--line); border-radius: var(--r); margin-bottom: 12px; }
+  .drawer { width: 400px; border-left: 1px solid var(--line); background: #fff; display: flex; flex-direction: column; }
+  .drawer .dhead { height: 48px; display: flex; align-items: center; gap: 16px; padding: 0 16px; border-bottom: 1px solid var(--line); font-size: 13px; color: var(--text-2); }
+  .drawer .dhead b { color: var(--brand); border-bottom: 2px solid var(--brand); padding: 14px 0 12px; }
+  .drawer .dbody { overflow: auto; padding: 0 16px 24px; flex: 1; }
+
+  /* ---------- shared renderer (container-query driven) ---------- */
+  .doc { container-type: inline-size; padding: 28px 0 80px; }
+  .crumbs { font-size: 12px; color: var(--text-3); display: flex; gap: 6px; }
+  .doc h1 { font-size: 28px; line-height: 1.25; margin: 8px 0 8px; font-weight: 600; letter-spacing: -0.2px; }
+  .lede { font-size: 16px; color: var(--text-2); line-height: 1.6; margin: 0 0 12px; }
+  .meta { font-size: 12px; color: var(--text-3); margin-bottom: 24px; }
+  .doc h2 { font-size: 20px; font-weight: 600; margin: 36px 0 12px; scroll-margin-top: 70px; }
+  .doc h2 .anchor { color: var(--line-input); text-decoration: none; margin-left: 6px; opacity: 0; font-weight: 400; }
+  .doc h2:hover .anchor { opacity: 1; }
+  .doc p { line-height: 1.7; color: var(--text); margin: 0 0 12px; }
+  @container (max-width: 520px) {
+    .doc h1 { font-size: 20px; } .lede { font-size: 14px; } .doc h2 { font-size: 16px; margin-top: 28px; }
+  }
+
+  /* where-path */
+  .where { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r); background: #FAFBFB; }
+  .where .lbl { font-size: 12px; color: var(--text-3); margin-right: 6px; }
+  .where .seg { font-size: 13px; font-weight: 500; padding: 3px 8px; border: 1px solid var(--line); background: #fff; border-radius: var(--r); }
+  .where .chev { color: var(--text-3); font-size: 12px; }
+  .where .open { margin-left: auto; font-size: 12px; color: var(--brand); text-decoration: none; font-weight: 500; }
+
+  /* role matrix */
+  .matrix { width: 100%; border-collapse: collapse; font-size: 13px; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+  .matrix th, .matrix td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: center; }
+  .matrix th { background: #FAFBFB; font-weight: 600; color: var(--text-2); font-size: 12px; }
+  .matrix td:first-child, .matrix th:first-child { text-align: left; }
+  .yes { color: var(--brand); font-weight: 600; } .no { color: #B4BABA; }
+  .mx-wrap { overflow-x: auto; }
+  .note { font-size: 13px; color: var(--text-2); margin-top: 8px; }
+
+  /* structure diagram */
+  .structure { background: var(--ground); border-radius: var(--r); padding: 16px; }
+  .structure ul { list-style: none; margin: 0; padding: 0; }
+  .structure > ul > li.card { background: #fff; border: 1px solid var(--line); border-radius: var(--r); }
+  .structure > ul > li.card > .h { padding: 10px 14px; font-weight: 600; font-size: 14px; }
+  .structure > ul > li.card > .h em { font-style: normal; font-weight: 400; color: var(--text-3); margin-left: 8px; font-size: 13px; }
+  .structure > ul > li.card.accent { border-color: var(--brand-line); }
+  .structure > ul > li.card.accent > .h { background: var(--brand-soft); border-radius: var(--r) var(--r) 0 0; }
+  .structure li.card ul li { padding: 9px 14px; border-top: 1px solid var(--line); font-size: 13px; color: var(--text-2); }
+  .structure li.card ul li b { display: block; color: var(--text); font-weight: 500; font-size: 13px; }
+  .structure li.link { padding: 6px 0 6px 22px; position: relative; font-size: 12px; color: var(--text-2); }
+  .structure li.link::before { content: ""; position: absolute; left: 14px; top: 0; bottom: 0; width: 1px; background: var(--text-3); }
+  .structure li.link::after { content: ""; position: absolute; left: 11px; bottom: 0; width: 6px; height: 6px; border-right: 1px solid var(--text-3); border-bottom: 1px solid var(--text-3); transform: rotate(45deg); }
+  .twocol { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  @container (max-width: 520px) { .twocol { grid-template-columns: 1fr; } }
+
+
+  /* stacked flow diagram (chosen style) */
+  .flow { background: var(--ground); border-radius: var(--r); padding: 16px; display: grid; }
+  .flow .node { background:#fff; border:1px solid var(--line); border-radius:var(--r); padding:14px 16px; display:flex; flex-direction:column; gap:6px; }
+  .flow .node.accent { border-color:var(--brand-line); box-shadow: inset 0 3px 0 var(--brand); }
+  .flow .node b.t { font-size:15px; font-weight:600; }
+  .flow .node .tg { font-size:14px; color:var(--brand); font-weight:500; margin-top:-2px; }
+  .flow .node .d { font-size:14px; color:var(--text-2); line-height:1.55; }
+  .flow .chips { display:flex; flex-wrap:wrap; gap:6px; padding-top:4px; }
+  .flow .chip { font-size:12px; color:var(--text-2); border:1px solid var(--line); border-radius:var(--r); padding:2px 8px; background:#FAFBFB; }
+  .flow .arrow { display:flex; align-items:center; gap:10px; height:38px; padding-left:20px; font-size:13px; color:var(--text-3); }
+  .flow .arrow i { width:1px; height:100%; background:var(--line-input); position:relative; flex:none; }
+  .flow .arrow i::after { content:""; position:absolute; left:-3px; bottom:4px; width:6px; height:6px; border-right:1px solid var(--text-3); border-bottom:1px solid var(--text-3); transform:rotate(45deg); }
+  @container (max-width: 520px) { .flow { padding:12px; } .flow .node { padding:12px 14px; } .flow .node b.t { font-size:14px; } .flow .node .tg, .flow .node .d { font-size:13px; } }
+
+  /* steps rail */
+  .steps { list-style: none; counter-reset: s; margin: 0; padding: 0; }
+  .steps > li { counter-increment: s; position: relative; padding: 2px 0 18px 40px; line-height: 22px; min-height: 26px; }
+  .steps > li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 26px; height: 26px; border-radius: 50%; background: #fff; border: 1px solid var(--brand-line); color: var(--brand); font-weight: 600; font-size: 13px; display: grid; place-items: center; }
+  .steps > li::after { content: ""; position: absolute; left: 13px; top: 28px; bottom: 2px; width: 1px; background: var(--line); }
+  .steps > li:last-child::after { display: none; }
+  .steps b { font-weight: 600; }
+  .steps .done { display: block; font-size: 12px; line-height: 18px; color: var(--text-3); margin-top: 2px; }
+
+  /* annotated screenshot */
+  .shot { background: var(--ground); border-radius: var(--r); padding: 12px; margin: 14px 0 4px; }
+  @container (max-width: 520px) { .shot { padding: 6px; } }
+  .stage { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: var(--r); background: #fff; cursor: zoom-in; }
+  .inner { position: relative; transform-origin: 0 0; transition: transform .4s cubic-bezier(.2,.7,.2,1); --z: 1; }
+  .inner img { display: block; width: 100%; height: auto; }
+  .box { position: absolute; border-radius: calc(3px / var(--z)); box-shadow: inset 0 0 0 calc(1.5px / var(--z)) rgba(20,113,91,.0); transition: box-shadow .15s; pointer-events: none; }
+  .box.hot { box-shadow: inset 0 0 0 calc(2px / var(--z)) var(--brand); background: rgba(20,113,91,.06); }
+  .mark { position: absolute; width: calc(22px / var(--z)); height: calc(22px / var(--z)); margin: calc(-11px / var(--z)) 0 0 calc(-11px / var(--z)); border-radius: 50%; background: #1C2130; color: #fff; font-size: calc(12px / var(--z)); font-weight: 600; display: grid; place-items: center; box-shadow: 0 0 0 calc(2px / var(--z)) #fff, 0 2px 6px rgba(0,0,0,.25); transition: background .15s, transform .15s; }
+  .mark.hot { background: var(--brand); transform: scale(1.15); }
+  .showall { position: absolute; top: 10px; right: 10px; z-index: 5; display: none; height: 28px; padding: 0 12px; border: 0; border-radius: var(--r); background: rgba(28,33,48,.78); color: #fff; font: 500 12px Inter; cursor: pointer; }
+  .stage.zoomed .showall { display: block; }
+  .stage.zoomed { cursor: zoom-out; }
+  .cap { font-size: 13px; color: var(--text-2); margin: 10px 2px 8px; }
+  .notes { list-style: none; margin: 0; padding: 0; }
+  .notes li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; padding: 8px; border-radius: var(--r); cursor: pointer; outline: none; }
+  .notes li:hover, .notes li:focus-visible, .notes li.hot { background: #fff; box-shadow: 0 0 0 1px var(--line); }
+  .notes .n { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--line-input); display: grid; place-items: center; font-size: 12px; font-weight: 600; color: var(--text-2); background: #fff; }
+  .notes li.hot .n { background: var(--brand); color: #fff; border-color: var(--brand); }
+  .notes b { display: block; font-weight: 600; font-size: 13px; }
+  .notes span { font-size: 13px; color: var(--text-2); line-height: 1.5; }
+
+  /* callouts */
+  .callout { border: 1px solid var(--info-line); background: var(--info-bg); border-radius: var(--r); padding: 12px 14px; margin: 12px 0; font-size: 13px; line-height: 1.6; }
+  .callout b { display: block; margin-bottom: 2px; font-size: 13px; }
+  .callout.warn { border-color: var(--warn-line); background: var(--warn-bg); }
+  .callout.tip { border-color: var(--brand-line); background: var(--brand-soft); }
+
+  /* related */
+  .related { border: 1px solid var(--line); border-radius: var(--r); }
+  .related a { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-top: 1px solid var(--line); color: inherit; text-decoration: none; }
+  .related a:first-child { border-top: 0; }
+  .related a:hover { background: var(--brand-soft); }
+  .related a b { display: block; font-weight: 600; font-size: 14px; color: var(--text); }
+  .related a span { font-size: 13px; color: var(--text-2); }
+  .related a i { margin-left: auto; font-style: normal; color: var(--text-3); }
+
+  .helpful { margin-top: 36px; padding-top: 16px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--text-2); }
+  .helpful button { height: 30px; padding: 0 12px; border: 1px solid var(--line-input); background: #fff; border-radius: var(--r); font: inherit; cursor: pointer; }
+  .pager { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 20px; }
+  .pager a { border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; text-decoration: none; color: inherit; }
+  .pager a small { display: block; color: var(--text-3); font-size: 12px; }
+  .pager a b { font-weight: 600; color: var(--brand); }
+  @container (max-width: 520px) { .pager { grid-template-columns: 1fr; } }
+  .tag { display:inline-block; font-size: 11px; color: var(--text-3); border: 1px dashed var(--line-input); border-radius: var(--r); padding: 1px 6px; margin-left: 6px; vertical-align: middle; font-weight: 400; }
+</style>
+</head>
+<body>
+<div class="switch">
+  <button id="bWeb" class="on" onclick="mode('web')">Website · verifywise.ai/user-guide</button>
+  <button id="bApp" onclick="mode('app')">In-app help panel · 400px</button>
+  <span class="q">Same content and same renderer, two hosts. Try clicking the numbers or the screenshot.</span>
+</div>
+
+<div class="site" id="web">
+  <div class="topbar">
+    <span class="logo"><i></i>VerifyWise docs</span>
+    <div class="search">Search the docs <kbd>⌘K</kbd></div>
+    <nav class="topnav"><b>User guide</b><span>API reference</span><span>Release notes</span><span>verifywise.ai ↗</span></nav>
+  </div>
+  <div class="layout">
+    <aside class="leftnav">
+      <h6>Get started</h6><a>Welcome</a><a>Quick start</a><a>Guided paths by role</a>
+      <h6>AI governance</h6><a>Use cases</a><a>Model inventory</a><a>AI apps</a><a>Intake forms</a>
+      <h6>Risk management</h6><a>Risk register</a><a class="cur">Vendors</a><a>Vendor risk assessment</a><a>Quantitative risk</a>
+      <h6>Compliance</h6><a>EU AI Act</a><a>ISO 42001</a><a>Frameworks overview</a>
+      <h6>Help</h6><a>Troubleshooting</a><a>Glossary</a>
+    </aside>
+    <main><div class="doc" id="docWeb"></div></main>
+    <aside class="toc">
+      <h6>On this page</h6>
+      <a>What this is</a><a>Where in VerifyWise</a><a class="cur">Who can do what</a><a>How it works</a><a>How to add a vendor</a><a>Important considerations</a><a>Related pages</a>
+      <div class="actions"><h6>Page</h6><span>Copy page as Markdown</span><span>Open in Claude / ChatGPT</span><span>Last updated 28 Nov 2026</span></div>
+    </aside>
+  </div>
+</div>
+
+<div class="drawerwrap" id="app">
+  <div class="appfake">
+    <div class="appbody"><div class="ph" style="width:40%"></div><div class="ph"></div><div class="ph"></div><div class="ph" style="height:240px"></div>The app page stays visible on the left; help opens beside it.</div>
+    <div class="drawer">
+      <div class="dhead"><b>User guide</b><span>AI advisor</span><span>What's new</span></div>
+      <div class="dbody"><div class="doc" id="docApp"></div></div>
+    </div>
+  </div>
+</div>
+
+<template id="article">
+  <div class="crumbs">User guide <span>›</span> Risk management <span>›</span> Vendors</div>
+  <h1>Vendors</h1>
+  <p class="lede">Keep one list of the companies that supply your AI models, data and services, and track how risky each one is.</p>
+  <div class="meta">Last updated 28 Nov 2026 · 6 min read</div>
+
+  <h2 id="where">Where in VerifyWise<a class="anchor" href="#where">#</a></h2>
+  <div class="where"><span class="lbl">Go to</span><span class="seg">Vendors</span><span class="chev">›</span><span class="seg">Vendors tab</span><a class="open" href="#">Open in app ↗</a></div>
+
+  <h2 id="who">Who can do what<a class="anchor" href="#who">#</a><span class="tag">illustrative</span></h2>
+  <div class="mx-wrap"><table class="matrix">
+    <tr><th>Action</th><th>Admin</th><th>Editor</th><th>Reviewer</th><th>Auditor</th></tr>
+    <tr><td>See the vendor list</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td></tr>
+    <tr><td>Add or edit a vendor</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td></tr>
+    <tr><td>Delete a vendor</td><td class="yes">Yes</td><td class="no">No</td><td class="no">No</td><td class="no">No</td></tr>
+  </table></div>
+  <p class="note">Don't see <b>Add new vendor</b>? Your role can't create vendors. Ask an Admin to change your role.</p>
+
+  <h2 id="how">How it works<a class="anchor" href="#how">#</a></h2>
+  <p>You record each vendor once, answer four questions about it, and VerifyWise works out how risky it is. Risks you add to a vendor are rated separately and don't change this score.</p>
+  <div class="flow">
+    <div class="node"><b class="t">Vendor</b><div class="tg">A company you buy AI from</div><div class="d">For example a model provider like OpenAI, or a company that supplies your training data.</div><div class="chips"><span class="chip">It has an owner</span><span class="chip">It has a review date</span></div></div>
+    <div class="arrow"><i></i>You answer four questions about the vendor</div>
+    <div class="node"><b class="t">Scorecard</b><div class="tg">Four questions about the vendor</div><div class="d">How sensitive is the data you share with it? How much does your work depend on it? Has it caused problems before? Which rules apply because you use it?</div><div class="chips"><span class="chip">Data and dependence count most</span></div></div>
+    <div class="arrow"><i></i>VerifyWise turns your answers into a score</div>
+    <div class="node accent"><b class="t">Risk score</b><div class="tg">How risky the vendor is</div><div class="d">A number from 0 to 100, shown as a percentage in the vendor list. The higher the number, the riskier the vendor.</div><div class="chips"><span class="chip">Shown in the vendor list</span><span class="chip">Not assessed until answered</span></div></div>
+  </div>
+
+  <h2 id="steps">How to add a vendor<a class="anchor" href="#steps">#</a></h2>
+  <ol class="steps">
+    <li>Open <b>Vendors</b> and select <b>Add new vendor</b> (1).<span class="done">You're done when the vendor form opens.</span></li>
+    <li>Fill in the name, assignee and review date, then select <b>Save</b>.<span class="done">You're done when the vendor shows in the list with status Not started.</span></li>
+    <li>Open the vendor and answer the four scorecard questions.<span class="done">You're done when the list shows a percentage instead of Not assessed.</span></li>
+  </ol>
+
+  <figure class="shot" data-shot>
+    <div class="stage">
+      <button class="showall" type="button">Show all</button>
+      <div class="inner">
+        <img src="../../../../Clients/public/images/user-guide/vendor-list.png" alt="The vendor list with four vendors, their assignees, status, risk links, scorecard and review dates">
+      </div>
+    </div>
+    <p class="cap">The vendor list. Select a number to zoom into that part of the screen.</p>
+    <ol class="notes"></ol>
+  </figure>
+
+  <h2 id="consider">Important considerations<a class="anchor" href="#consider">#</a></h2>
+  <div class="callout warn"><b>Deleting a vendor also deletes its risks</b>The vendor, its scorecard answers and every risk recorded against it are removed together. Export a vendor report first if you need a record.</div>
+  <div class="callout tip"><b>Set a review date for every vendor</b>When a review comes due, the vendor shows on the Home page of its reviewer, or of its assignee if it has no reviewer, so reviews don't get forgotten.</div>
+
+  <h2 id="related">Related pages<a class="anchor" href="#related">#</a></h2>
+  <div class="related">
+    <a href="#"><div><b>Vendor risk assessment</b><span>Score a vendor's risks and build its scorecard</span></div><i>›</i></a>
+    <a href="#"><div><b>Risk register</b><span>See vendor risks next to use case and model risks</span></div><i>›</i></a>
+    <a href="#"><div><b>Generating reports</b><span>Export vendors and their scorecards</span></div><i>›</i></a>
+  </div>
+
+  <div class="helpful">Was this page helpful? <button>Yes</button><button>No</button></div>
+  <div class="pager"><a href="#"><small>Previous</small><b>‹ Risk register</b></a><a href="#" style="text-align:right"><small>Next</small><b>Vendor risk assessment ›</b></a></div>
+</template>
+
+<script>
+// marks: [x%, y%] badge position, box [l,t,w,h] in %, title, body
+const MARKS = [
+  { x: 86.4, y: 30.2, box: [87.2, 28.1, 11.3, 4.3], t: "Add new vendor", b: "Opens the vendor form. Only roles that can edit vendors see this button." },
+  { x: 17.2, y: 30.2, box: [17.9, 28.1, 23.9, 4.3], t: "Filter, group and search", b: "Narrow the list by status, assignee or name." },
+  { x: 17.2, y: 23.9, box: [17.9, 21.8, 15.6, 4.2], t: "Vendors and Risks tabs", b: "Switch between the vendors themselves and all vendor risks in one table." },
+  { x: 66.8, y: 36.5, box: [67.6, 34.7, 12.4, 34.5], t: "Scorecard", b: "How risky each vendor is overall, rolled up from its risk answers." },
+  { x: 96.8, y: 39.5, box: [93.5, 40.9, 3.3, 27.6], t: "Vendor settings", b: "Edit or delete a vendor." },
+];
+
+function mount(root) {
+  root.innerHTML = document.getElementById('article').innerHTML;
+  root.querySelectorAll('[data-shot]').forEach(setupShot);
+}
+
+function setupShot(fig) {
+  const stage = fig.querySelector('.stage'), inner = fig.querySelector('.inner'), img = inner.querySelector('img');
+  const notes = fig.querySelector('.notes'), showAll = fig.querySelector('.showall');
+  let active = -1;
+  const boxes = [], marks = [], items = [];
+  MARKS.forEach((m, i) => {
+    const bx = document.createElement('span'); bx.className = 'box';
+    Object.assign(bx.style, { left: m.box[0] + '%', top: m.box[1] + '%', width: m.box[2] + '%', height: m.box[3] + '%' });
+    const mk = document.createElement('span'); mk.className = 'mark'; mk.textContent = i + 1;
+    Object.assign(mk.style, { left: m.x + '%', top: m.y + '%' });
+    inner.append(bx, mk); boxes.push(bx); marks.push(mk);
+    const li = document.createElement('li'); li.tabIndex = 0;
+    li.innerHTML = '<span class="n">' + (i + 1) + '</span><div><b>' + m.t + '</b><span>' + m.b + '</span></div>';
+    li.addEventListener('mouseenter', () => hot(i, true)); li.addEventListener('mouseleave', () => hot(i, false));
+    li.addEventListener('focus', () => hot(i, true)); li.addEventListener('blur', () => hot(i, false));
+    li.addEventListener('click', () => toggle(i));
+    li.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(i); } if (e.key === 'Escape') reset(); });
+    notes.append(li); items.push(li);
+  });
+  function hot(i, on) { boxes[i].classList.toggle('hot', on || active === i); marks[i].classList.toggle('hot', on || active === i); items[i].classList.toggle('hot', on || active === i); }
+  function zoomTo(i) {
+    const [l, t, w, h] = MARKS[i].box;
+    const sw = stage.clientWidth;
+    const z = Math.min(3.5, Math.max(1, Math.min(img.naturalWidth / 1.5 / sw, 86 / w, 86 / h)));
+    const cx = l + w / 2, cy = t + h / 2;
+    let tx = 50 / z - cx, ty = 50 / z - cy; // in % of image
+    tx = Math.min(0, Math.max(tx, 100 / z - 100)); ty = Math.min(0, Math.max(ty, 100 / z - 100));
+    const ih = inner.clientHeight, iw = inner.clientWidth;
+    inner.style.setProperty('--z', z);
+    inner.style.transform = 'scale(' + z + ') translate(' + (tx * iw / 100) + 'px,' + (ty * ih / 100) + 'px)';
+    stage.classList.add('zoomed'); active = i;
+    MARKS.forEach((_, k) => hot(k, false));
+    stage.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  function reset() { inner.style.transform = ''; inner.style.setProperty('--z', 1); stage.classList.remove('zoomed'); const a = active; active = -1; if (a > -1) hot(a, false); }
+  function toggle(i) { active === i ? reset() : zoomTo(i); }
+  showAll.addEventListener('click', e => { e.stopPropagation(); reset(); });
+  stage.addEventListener('click', e => {
+    if (stage.classList.contains('zoomed')) return reset();
+    const r = inner.getBoundingClientRect(); const px = (e.clientX - r.left) / r.width * 100, py = (e.clientY - r.top) / r.height * 100;
+    let best = 0, bd = 1e9; MARKS.forEach((m, k) => { const d = (m.x - px) ** 2 + (m.y - py) ** 2; if (d < bd) { bd = d; best = k; } });
+    zoomTo(best);
+  });
+  fig.addEventListener('keydown', e => { if (e.key === 'Escape') reset(); });
+}
+
+function mode(m) {
+  document.getElementById('web').style.display = m === 'web' ? 'block' : 'none';
+  document.getElementById('app').style.display = m === 'app' ? 'block' : 'none';
+  document.getElementById('bWeb').classList.toggle('on', m === 'web');
+  document.getElementById('bApp').classList.toggle('on', m === 'app');
+}
+mount(document.getElementById('docWeb'));
+mount(document.getElementById('docApp'));
+</script>
+</body>
+</html>
