@@ -199,8 +199,19 @@ describe("GenericFramework source", () => {
               order_no: 2,
               children: [],
             },
+            {
+              // No impl row yet: cannot hold a level, so the roll-up skips it.
+              struct_id: 5,
+              impl_id: null,
+              title: "Unbackfilled",
+              status: null,
+              adoption_level: null,
+              order_no: 3,
+              children: [],
+            },
           ],
         },
+        { id: 2, title: "Empty sub-pillar", order_no: 2, children: [] },
       ],
     };
     server.use(http.get("/api/frameworks/30/tree/7", () => HttpResponse.json({ data: naiiTree })));
@@ -208,6 +219,8 @@ describe("GenericFramework source", () => {
 
     // Sub-pillar roll-up: counts assessed domains and shows their level, no average.
     expect(await screen.findByText("1 of 2 domains assessed · level 3")).toBeInTheDocument();
+    // A sub-pillar without domains shows no roll-up ("0 of 0").
+    expect(screen.getAllByText(/domains? assessed/)).toHaveLength(1);
 
     (await screen.findByText(/Directions: Strategy/)).click();
     expect(await screen.findByText("Level 3")).toBeInTheDocument();

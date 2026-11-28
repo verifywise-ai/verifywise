@@ -190,7 +190,7 @@ export async function collectFrameworkRequirements(
   const orderedGroups = [...groups.values()].sort((a, b) => a.orderNo - b.orderNo);
   for (const g of orderedGroups) {
     g.requirements.sort((a, b) => a.orderNo - b.orderNo);
-    if (structure.adoption_levels) {
+    if (structure.adoption_levels && g.requirements.length > 0) {
       g.adoptionSummary = summarizeAdoptionLevels(g.requirements.map((r) => r.adoptionLevel));
     }
   }

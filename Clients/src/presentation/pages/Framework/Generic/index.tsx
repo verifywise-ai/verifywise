@@ -376,9 +376,17 @@ const GenericFramework = ({
     return data.tree.filter((l1) => l1.title?.toLowerCase().includes(q));
   }, [data, searchTerm]);
 
-  /** "2 of 3 domains assessed · levels 2 to 4" for a sub-pillar heading. */
-  const adoptionSummaryText = (l1: L1Node): string => {
-    const s = summarizeAdoptionLevels(l1.children.map((l2) => l2.adoption_level));
+  /**
+   * "2 of 3 domains assessed · levels 2 to 4" for a sub-pillar heading, or null
+   * when it has no domains. Counts only domains with an impl row, as the report
+   * does (a domain without one cannot hold a level). Ignores the status filter
+   * on purpose: it describes the whole sub-pillar, not the visible rows.
+   */
+  const adoptionSummaryText = (l1: L1Node): string | null => {
+    const s = summarizeAdoptionLevels(
+      l1.children.filter((l2) => l2.impl_id != null).map((l2) => l2.adoption_level),
+    );
+    if (s.total === 0) return null;
     const count = fill(
       t(
         pluralKey(
@@ -396,6 +404,11 @@ const GenericFramework = ({
         ? fill(t("level {level}"), { level: s.min })
         : fill(t("levels {min} to {max}"), { min: s.min, max: s.max });
     return `${count} · ${range}`;
+  };
+
+  const renderAdoptionSummary = (l1: L1Node) => {
+    const summary = adoptionSummaryText(l1);
+    return summary ? <Typography sx={styles.adoptionSummary}>{summary}</Typography> : null;
   };
 
   const renderL2 = (l1: L1Node) => {
@@ -554,9 +567,7 @@ const GenericFramework = ({
                 {getPositionPrefix(data.framework.framework_type, l1.order_no)}
                 {l1.title}
               </Typography>
-              {showAdoptionSummary && (
-                <Typography sx={styles.adoptionSummary}>{adoptionSummaryText(l1)}</Typography>
-              )}
+              {showAdoptionSummary && renderAdoptionSummary(l1)}
             </AccordionSummary>
             {renderL2(l1)}
           </Accordion>

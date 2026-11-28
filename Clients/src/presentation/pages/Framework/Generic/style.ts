@@ -16,6 +16,8 @@ export const styles = {
   adoptionSummary: {
     marginLeft: "auto",
     paddingLeft: "16px",
+    flexShrink: 0,
+    whiteSpace: "nowrap",
     fontSize: fontSize.base,
     color: text.secondary,
   } as SxProps<Theme>,
