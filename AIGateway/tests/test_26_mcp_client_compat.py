@@ -434,3 +434,37 @@ def test_get_stream_ends_when_the_key_is_revoked(monkeypatch):
     assert response.status_code == 200
     assert response.text == ": keep-alive\n\n" * 2
     assert checks["n"] == 2
+
+
+@pytest.mark.asyncio
+async def test_400_answering_the_call_is_not_retried(route_forward_through):
+    calls = []
+
+    def call(request):
+        calls.append(request.headers.get("mcp-session-id"))
+        return httpx.Response(400, json={"jsonrpc": "2.0", "id": 1, "error": {"code": -32000, "message": "User session expired"}})
+
+    route_forward_through(_rpc_upstream(call))
+    with pytest.raises(svc.UpstreamToolError) as exc:
+        await svc.forward_tool_call(SERVER_URL, "none", {}, "search", {}, session_id="cached")
+
+    assert calls == ["cached"]
+    assert exc.value.message == "User session expired"
+
+
+@pytest.mark.asyncio
+async def test_400_session_error_without_the_call_id_is_retried(route_forward_through):
+    seen = []
+
+    def call(request):
+        sid = request.headers.get("mcp-session-id")
+        seen.append(sid)
+        if sid == "stale":
+            return httpx.Response(400, json={"jsonrpc": "2.0", "id": None, "error": {"code": -32600, "message": "No valid session ID provided"}})
+        return httpx.Response(200, json={"jsonrpc": "2.0", "id": 1, "result": {"content": []}})
+
+    route_forward_through(_rpc_upstream(call))
+    result, _ = await svc.forward_tool_call(SERVER_URL, "none", {}, "search", {}, session_id="stale")
+
+    assert result == {"content": []}
+    assert seen == ["stale", None]

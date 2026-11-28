@@ -209,12 +209,22 @@ def _redact(text_value: str, secrets: tuple[str, ...]) -> str:
     return text_value
 
 
-def _is_stale_session(resp: httpx.Response) -> bool:
-    """The upstream does not know the session id it was sent: 404 per the MCP
-    spec; some servers answer 400 and name the session in the body."""
+def _is_stale_session(resp: httpx.Response, request_id) -> bool:
+    """The upstream rejected the session id before running the call: 404 per
+    the MCP spec; some servers answer 400 and name the session in the body.
+
+    A 400 that is a JSON-RPC response to this call came from the tool after it
+    ran (say, "user session expired" from an API it called), so it is never
+    treated as stale: retrying it would run the tool twice."""
     if resp.status_code == 404:
         return True
-    return resp.status_code == 400 and "session" in resp.text.lower()
+    if resp.status_code != 400 or "session" not in resp.text.lower():
+        return False
+    try:
+        data = _parse_response(resp)
+    except UpstreamResponseError:
+        return True
+    return data.get("id") != request_id
 
 
 def _raise_rpc_error_from_4xx(resp: httpx.Response, secrets: tuple[str, ...]) -> None:
@@ -690,7 +700,7 @@ async def forward_tool_call(
                 new_session = await _handshake(client, url, headers)
 
             resp = await client.post(url, json=call, headers=headers)
-            if session_id and _is_stale_session(resp):
+            if session_id and _is_stale_session(resp, call["id"]):
                 # The upstream no longer knows the cached session (it restarted
                 # or expired it), so it did not run the call. Open a new session
                 # and send the call once more, as the MCP spec asks of clients.
