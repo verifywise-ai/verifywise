@@ -476,6 +476,10 @@ export const de: Record<string, string> = {
   "Level 3": "Stufe 3",
   "Level 4": "Stufe 4",
   "Level 5": "Stufe 5",
+  "{assessed} of {total} domain assessed": "{assessed} von {total} Domäne bewertet",
+  "{assessed} of {total} domains assessed": "{assessed} von {total} Domänen bewertet",
+  "level {level}": "Stufe {level}",
+  "levels {min} to {max}": "Stufen {min} bis {max}",
 };
 
 export const fr: Record<string, string> = {
@@ -957,6 +961,10 @@ export const fr: Record<string, string> = {
   "Level 3": "Niveau 3",
   "Level 4": "Niveau 4",
   "Level 5": "Niveau 5",
+  "{assessed} of {total} domain assessed": "{assessed} sur {total} domaine évalué",
+  "{assessed} of {total} domains assessed": "{assessed} sur {total} domaines évalués",
+  "level {level}": "niveau {level}",
+  "levels {min} to {max}": "niveaux {min} à {max}",
 };
 
 export const es: Record<string, string> = {
@@ -1429,4 +1437,8 @@ export const es: Record<string, string> = {
   "Level 3": "Nivel 3",
   "Level 4": "Nivel 4",
   "Level 5": "Nivel 5",
+  "{assessed} of {total} domain assessed": "{assessed} de {total} dominio evaluado",
+  "{assessed} of {total} domains assessed": "{assessed} de {total} dominios evaluados",
+  "level {level}": "nivel {level}",
+  "levels {min} to {max}": "niveles {min} a {max}",
 };

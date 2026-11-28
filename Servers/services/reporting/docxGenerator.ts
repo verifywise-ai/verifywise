@@ -47,7 +47,7 @@ import {
 } from "./docxE23";
 import { buildE23FormalView, evidenceLine } from "./e23/formalView";
 import { E23_NOTICE_LABELS } from "./e23/e23Text";
-import { adoptionLevelLabel } from "./adoptionLevel";
+import { adoptionLevelLabel, adoptionSummaryLabel } from "./adoptionLevel";
 
 /**
  * Copy for the "sections with no data" block. Duplicated in report-pdf.ejs
@@ -1042,6 +1042,15 @@ function createComplianceSection(
                 size: 22,
                 color: COLORS.textSecondary,
               }),
+              ...(group.adoptionSummary
+                ? [
+                    new TextRun({
+                      text: ` · ${adoptionSummaryLabel(group.adoptionSummary)}`,
+                      size: 22,
+                      color: COLORS.textSecondary,
+                    }),
+                  ]
+                : []),
             ],
           }),
         );

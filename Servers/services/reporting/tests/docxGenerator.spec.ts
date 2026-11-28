@@ -878,6 +878,19 @@ describe("DOCX Generator", () => {
       expect(text).toContain("4: Excellence");
     });
 
+    it("adds the group's adoption summary after its title", async () => {
+      expect(await docxText((await generateDOCX(frameworkData())).content)).not.toContain(
+        "domains assessed",
+      );
+      const data = frameworkData();
+      const fw = data.sections.frameworkRequirements!.frameworks[0];
+      fw.adoptionLevels = true;
+      fw.groups[0].adoptionSummary = { assessed: 0, total: 2, min: null, max: null };
+      const text = await docxText((await generateDOCX(data)).content);
+      expect(text).toContain(" · 0 of 2 domains assessed");
+      expect(text).not.toContain("0 of 2 domains assessed · level");
+    });
+
     it("includes frameworkRequirements in the compliance group guard", async () => {
       const result = await generateDOCX(frameworkData());
       const text = await docxText(result.content);

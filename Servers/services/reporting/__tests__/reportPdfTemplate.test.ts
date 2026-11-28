@@ -5,7 +5,7 @@
  * malformed EJS tag, or a block moved back inside the wrong guard, fails
  * this suite instead of breaking every PDF the product generates.
  */
-import { adoptionLevelLabel } from "../adoptionLevel";
+import { adoptionLevelLabel, adoptionSummaryLabel } from "../adoptionLevel";
 import * as ejs from "ejs";
 import * as fs from "fs";
 import * as path from "path";
@@ -76,6 +76,7 @@ function render(
     analysisLabels: ANALYSIS_LABELS,
     noticeText: NOTICE_TEXT,
     adoptionLevelLabel,
+    adoptionSummaryLabel,
     include: () => "",
     ...extra,
   } satisfies Omit<ReportData, "aiSummaries"> & {
@@ -809,6 +810,29 @@ describe("section notices", () => {
       });
       expect(html).toContain("<th>Adoption level</th>");
       expect(html).toContain("3: Managed");
+    });
+
+    it("adds the group's adoption summary after its title", () => {
+      const plain = render(undefined, { frameworkRequirements });
+      expect(plain).not.toContain("domains assessed");
+
+      const fw = frameworkRequirements.frameworks[0];
+      const html = render(undefined, {
+        frameworkRequirements: {
+          frameworks: [
+            {
+              ...fw,
+              adoptionLevels: true,
+              groups: [
+                { ...fw.groups[0], adoptionSummary: { assessed: 2, total: 3, min: 2, max: 4 } },
+              ],
+            },
+          ],
+        },
+      });
+      expect(html).toContain(
+        'Governance<span style="font-weight: 400;"> · 2 of 3 domains assessed · levels 2 to 4</span></h5>',
+      );
     });
 
     it("renders framework requirements block and TOC entry", () => {

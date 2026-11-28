@@ -108,7 +108,7 @@ export const addingFrameworksContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: "SDAIA scores each entity on 6 adoption levels. Record your own assessment of each domain in its drawer under Adoption level, next to the status. The level shows on the domain's row and in the framework requirements table of reports. It is your self-assessment, not SDAIA's result, and VerifyWise does not combine the domain levels into an overall NAII level, because SDAIA does not publish the weight of each domain. The index document and its question appendix name the same levels differently; VerifyWise uses the index document's names.",
+      text: "SDAIA scores each entity on 6 adoption levels. Record your own assessment of each domain in its drawer under Adoption level, next to the status. The level shows on the domain's row and in the framework requirements table of reports. Each sub-pillar heading, on the page and in reports, shows how many of its domains are assessed and the lowest and highest level among them, for example \"2 of 3 domains assessed · levels 2 to 4\". It is your self-assessment, not SDAIA's result, and VerifyWise does not combine the domain levels into an overall NAII level, because SDAIA does not publish the weight of each domain. The index document and its question appendix name the same levels differently; VerifyWise uses the index document's names.",
     },
     {
       type: 'table',

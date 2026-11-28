@@ -952,7 +952,7 @@ const isE23 = typeof e23 !== 'undefined' && !!e23;
       <% } %>
 
       <% fw.groups.forEach(function(group) { %>
-      <h5 style="font-size: 12px; margin: 12px 0 8px 0; page-break-after: avoid; break-after: avoid; color: var(--color-text-secondary);"><% if (group.useCase) { %><%= group.useCase %> · <% } %><%= group.title %></h5>
+      <h5 style="font-size: 12px; margin: 12px 0 8px 0; page-break-after: avoid; break-after: avoid; color: var(--color-text-secondary);"><% if (group.useCase) { %><%= group.useCase %> · <% } %><%= group.title %><% if (group.adoptionSummary) { %><span style="font-weight: 400;"> · <%= adoptionSummaryLabel(group.adoptionSummary) %></span><% } %></h5>
 
       <% if (group.requirements.length > 0) { %>
       <table class="data-table" style="font-size: 10px;">
