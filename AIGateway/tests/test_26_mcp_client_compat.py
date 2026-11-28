@@ -223,6 +223,8 @@ class TestForward:
         seen = []
 
         def handler(request):
+            if request.method == "DELETE":
+                return httpx.Response(200)
             method = json.loads(request.content).get("method")
             sid = request.headers.get("mcp-session-id")
             seen.append((method, sid))
@@ -345,6 +347,8 @@ def test_sse_keeps_unicode_line_separators_inside_json():
 def _rpc_upstream(call_response):
     """initialize succeeds; tools/call gets call_response(request)."""
     def handler(request):
+        if request.method == "DELETE":
+            return httpx.Response(200)
         method = json.loads(request.content).get("method")
         if method == "tools/call":
             return call_response(request)
@@ -446,7 +450,8 @@ async def test_400_answering_the_call_is_not_retried(route_forward_through):
 
     def call(request):
         calls.append(request.headers.get("mcp-session-id"))
-        return httpx.Response(400, json={"jsonrpc": "2.0", "id": 1, "error": {"code": -32000, "message": "User session expired"}})
+        call_id = json.loads(request.content)["id"]
+        return httpx.Response(400, json={"jsonrpc": "2.0", "id": call_id, "error": {"code": -32000, "message": "User session expired"}})
 
     route_forward_through(_rpc_upstream(call))
     with pytest.raises(svc.UpstreamToolError) as exc:
@@ -552,6 +557,8 @@ class TestRedisBackoff:
 
     async def test_a_successful_connect_clears_the_mark(self, fresh_redis_state, monkeypatch):
         class Base:
+            is_connected = False
+
             async def connect(self):
                 return None
 
@@ -607,7 +614,8 @@ class TestSecondReviewForward:
 
         def call(request):
             calls.append(request.headers.get("mcp-session-id"))
-            return httpx.Response(404, json={"jsonrpc": "2.0", "id": 1, "error": {"code": -32002, "message": "Record not found"}})
+            call_id = json.loads(request.content)["id"]
+            return httpx.Response(404, json={"jsonrpc": "2.0", "id": call_id, "error": {"code": -32002, "message": "Record not found"}})
 
         route_forward_through(_rpc_upstream(call))
         with pytest.raises(svc.UpstreamToolError) as exc:
@@ -672,6 +680,7 @@ class TestSecondReviewRouter:
         monkeypatch.setattr(proxy, "set_backend_session", stored)
 
         async def ok(**kwargs):
+            await kwargs["on_new_session"]("")
             return {"content": []}, ""
 
         handler_fakes.forward = ok
@@ -691,3 +700,118 @@ class TestSecondReviewRouter:
         summary = handler_fakes.audits[-1]["result_summary"]
         assert "sk_live_abcdef" not in summary
         assert summary == "The server returned HTTP 500 (HTTPStatusError)"
+
+
+# ─── Third review follow-ups ────────────────────────────────────────────────
+
+def _recording_upstream(seen, call_response=None, session="s-1"):
+    """Records (method, request id, session header); tools/call answers via call_response."""
+    def handler(request):
+        method = request.method if request.method == "DELETE" else json.loads(request.content).get("method")
+        body = {} if request.method == "DELETE" else json.loads(request.content)
+        seen.append((method, body.get("id"), request.headers.get("mcp-session-id")))
+        if method == "initialize":
+            return httpx.Response(200, json={"jsonrpc": "2.0", "id": 0, "result": {}}, headers={"mcp-session-id": session})
+        if method == "tools/call":
+            if call_response:
+                return call_response(request, body)
+            return httpx.Response(200, json={"jsonrpc": "2.0", "id": body["id"], "result": {"content": []}})
+        return httpx.Response(202 if method != "DELETE" else 200)
+    return handler
+
+
+@pytest.mark.asyncio
+class TestThirdReviewForward:
+    async def test_each_call_gets_its_own_json_rpc_id(self, route_forward_through):
+        seen = []
+        route_forward_through(_recording_upstream(seen))
+
+        await svc.forward_tool_call(SERVER_URL, "none", {}, "search", {}, session_id="s-1")
+        await svc.forward_tool_call(SERVER_URL, "none", {}, "search", {}, session_id="s-1")
+
+        ids = [i for m, i, _ in seen if m == "tools/call"]
+        assert len(set(ids)) == 2
+
+    async def test_a_400_server_not_initialized_on_a_cached_session_is_retried(self, route_forward_through):
+        seen = []
+
+        def call(request, body):
+            if request.headers.get("mcp-session-id") == "stale":
+                return httpx.Response(400, json={"jsonrpc": "2.0", "id": None, "error": {"code": -32000, "message": "Bad Request: Server not initialized"}})
+            return httpx.Response(200, json={"jsonrpc": "2.0", "id": body["id"], "result": {"content": []}})
+
+        route_forward_through(_recording_upstream(seen, call, session="fresh"))
+        result, _ = await svc.forward_tool_call(SERVER_URL, "none", {}, "search", {}, session_id="stale")
+
+        assert result == {"content": []}
+        assert [s for m, _, s in seen if m == "tools/call"] == ["stale", "fresh"]
+
+    async def test_new_session_is_reported_even_when_the_call_fails(self, route_forward_through):
+        reported = []
+
+        async def on_new_session(sid):
+            reported.append(sid)
+
+        def call(request, body):
+            return httpx.Response(200, json={"jsonrpc": "2.0", "id": body["id"], "error": {"code": -32602, "message": "Bad args"}})
+
+        seen = []
+        route_forward_through(_recording_upstream(seen, call, session="fresh"))
+        with pytest.raises(svc.UpstreamToolError):
+            await svc.forward_tool_call(SERVER_URL, "none", {}, "search", {}, on_new_session=on_new_session)
+
+        assert reported == ["fresh"]
+        assert "DELETE" not in [m for m, _, _ in seen]
+
+    async def test_an_unreused_session_is_closed(self, route_forward_through):
+        seen = []
+        route_forward_through(_recording_upstream(seen, session="one-off"))
+
+        await svc.forward_tool_call(SERVER_URL, "none", {}, "search", {})
+
+        assert seen[-1] == ("DELETE", None, "one-off")
+
+    async def test_an_unreadable_reply_is_masked(self, route_forward_through):
+        def call(request, body):
+            return httpx.Response(200, text="Bad gateway for " + str(request.url), headers={"content-type": "text/plain"})
+
+        route_forward_through(_recording_upstream([], call))
+        with pytest.raises(svc.UpstreamResponseError) as exc:
+            await svc.forward_tool_call(f"{SERVER_URL}?api_key=abcd1234efgh", "none", {}, "search", {}, session_id="s-1")
+
+        assert "abcd1234efgh" not in str(exc.value)
+
+
+def test_short_credentials_are_masked():
+    secrets = svc._request_secrets("https://bot:pw1@host/mcp", {})
+    assert "pw1" in secrets and "bot" in secrets
+
+
+@pytest.mark.asyncio
+class TestThirdReviewRouter:
+    async def test_input_schema_always_has_type_object(self, handler_fakes, monkeypatch):
+        monkeypatch.setattr(proxy, "get_all_tools", AsyncMock(return_value=[
+            {**TOOL, "description": "d", "input_schema": {"properties": {"q": {"type": "string"}}}}]))
+
+        tools = json.loads((await proxy.mcp_jsonrpc(_request(_rpc("tools/list", {})))).body)["result"]["tools"]
+
+        assert tools[0]["inputSchema"] == {"properties": {"q": {"type": "string"}}, "type": "object"}
+
+    async def test_a_notification_sent_with_an_id_still_gets_202(self, handler_fakes):
+        response = await proxy.mcp_jsonrpc(_request(_rpc("notifications/initialized", {}, id=2)))
+
+        assert response.status_code == 202
+
+
+@pytest.mark.asyncio
+async def test_a_pooled_open_connection_does_not_clear_the_down_mark(fresh_redis_state, monkeypatch):
+    class Base:
+        is_connected = True
+
+        async def connect(self):
+            return None
+
+    monkeypatch.setattr(redis_util, "_down_until", 123.0)
+    await redis_util._tracked(Base)().connect()
+
+    assert redis_util._down_until == 123.0

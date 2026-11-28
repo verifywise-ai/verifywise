@@ -56,12 +56,16 @@ def _tracked(base: type) -> type:
 
     class TrackedConnection(base):
         async def connect(self):
+            # connect() returns at once for a pooled connection that still
+            # looks open, which proves nothing: only a new connection counts.
+            was_connected = self.is_connected
             try:
                 await super().connect()
             except Exception:
                 _mark_down()
                 raise
-            _mark_up()
+            if not was_connected:
+                _mark_up()
 
     TrackedConnection.__name__ = f"Tracked{base.__name__}"
     return TrackedConnection

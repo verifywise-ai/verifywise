@@ -86,6 +86,14 @@ def _stored_health(tool: dict) -> tuple:
     return (tool.get("health_status"), tool.get("last_discovery_error"))
 
 
+def _input_schema(stored) -> dict:
+    """A tool's inputSchema as MCP requires it: an object schema with
+    type "object" (strict clients reject the whole list otherwise)."""
+    if not isinstance(stored, dict):
+        return {"type": "object"}
+    return {**stored, "type": "object"}
+
+
 def _jsonrpc_error(id, code: int, message: str, data: dict | None = None) -> dict:
     error = {"code": code, "message": message}
     if data:
@@ -123,7 +131,8 @@ async def mcp_jsonrpc(request: Request):
     # ...) or a client's response gets 202 and no body, as Streamable HTTP asks.
     # Nothing is ever answered to a notification, not even a version error.
     is_response = "method" not in body and ("result" in body or "error" in body)
-    if "id" not in body or is_response:
+    is_notification = isinstance(method, str) and method.startswith("notifications/")
+    if "id" not in body or is_response or is_notification:
         return Response(status_code=202)
 
     if body.get("jsonrpc") != "2.0":
@@ -171,7 +180,7 @@ async def mcp_jsonrpc(request: Request):
             {
                 "name": t["tool_name"],
                 "description": t.get("description") or "",
-                "inputSchema": t.get("input_schema") or {"type": "object"},
+                "inputSchema": _input_schema(t.get("input_schema")),
             }
             for t in filtered
         ]
@@ -326,14 +335,22 @@ async def mcp_jsonrpc(request: Request):
             if gateway_session:
                 backend_session = await get_backend_session(gateway_session, server_id)
 
+            async def cache_new_session(sid: str) -> None:
+                # Cached as soon as it opens, even if the call then fails;
+                # "" (now stateless) replaces a stale id.
+                await set_backend_session(gateway_session, server_id, sid)
+
             try:
-                result, new_backend_session = await forward_tool_call(
+                result, _ = await forward_tool_call(
                     server_url=tool["url"],
                     auth_type=tool.get("auth_type", "none"),
                     auth_config=tool.get("auth_config") or {},
                     tool_name=tool_name,
                     arguments=arguments,
                     session_id=backend_session,
+                    # Without a client session nobody reuses a backend
+                    # session, so forward_tool_call closes it instead.
+                    on_new_session=cache_new_session if gateway_session else None,
                 )
             except TokenError:
                 # No token, so nothing reached the upstream: not a transport
@@ -360,12 +377,6 @@ async def mcp_jsonrpc(request: Request):
                 stored_error = tool.get("last_discovery_error")
                 if not stored_error or is_token_error_message(stored_error):
                     await note_token_outcome(org_id, server_id, None, _stored_health(tool))
-
-            # Cache new backend session for next call
-            # "" means the upstream is now stateless: store it, so a stale
-            # cached id is not sent again.
-            if new_backend_session is not None and gateway_session:
-                await set_backend_session(gateway_session, server_id, new_backend_session)
 
             content_text = None
             content = result.get("content")

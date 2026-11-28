@@ -5,11 +5,12 @@ rate limiting, and tool call forwarding for the MCP Gateway.
 
 import asyncio
 import hashlib
+import itertools
 import json
 import logging
 import re
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Awaitable, Callable, Optional
 from urllib.parse import parse_qsl, quote, quote_plus, unquote, urlsplit
 
 import httpx
@@ -194,27 +195,37 @@ def _looks_like_path_secret(segment: str) -> bool:
     return len(segment) >= 16 or (len(segment) >= 8 and any(c.isdigit() for c in segment))
 
 
+_MIN_CREDENTIAL_CHARS = 3
+
+
 def _request_secrets(server_url: str, headers: dict) -> tuple[str, ...]:
     """Values the gateway adds to a forwarded call that the agent never holds:
     auth header values (and the token after a scheme such as Bearer), the
     server URL's user, password, query values and secret-looking path
     segments, each also in its percent-encoded forms. Longest first, so a
     value is masked whole."""
-    found = set()
+    # Credentials for certain (auth headers, URL user and password) are masked
+    # whatever their length; guessed ones (query values, path segments) only
+    # from _MIN_SECRET_CHARS, so short ordinary words survive.
+    credentials = set()
     for name, value in headers.items():
         if name.lower() in _PLAIN_HEADERS or not isinstance(value, str):
             continue
-        found.add(value)
+        credentials.add(value)
         _scheme, _, token = value.partition(" ")
         if token:
-            found.add(token)
+            credentials.add(token)
     parts = urlsplit(server_url)
-    found.update(v for v in (parts.username, parts.password) if v)
+    credentials.update(v for v in (parts.username, parts.password) if v)
+    credentials = {v for v in credentials if len(v) >= _MIN_CREDENTIAL_CHARS}
+
+    found = set()
     found.update(v for _, v in parse_qsl(parts.query))
     found.update(pair.partition("=")[2] for pair in parts.query.split("&"))  # as written in the URL
     found.update(unquote(seg) for seg in parts.path.split("/") if _looks_like_path_secret(unquote(seg)))
+    found = {v for v in found if len(v) >= _MIN_SECRET_CHARS} | credentials
     found |= {quote(v, safe="") for v in found} | {quote_plus(v) for v in found}
-    return tuple(sorted((v for v in found if len(v) >= _MIN_SECRET_CHARS), key=len, reverse=True))
+    return tuple(sorted(found, key=len, reverse=True))
 
 
 def _redact(text_value: str, secrets: tuple[str, ...]) -> str:
@@ -232,18 +243,15 @@ def _answers_call(resp: httpx.Response, request_id) -> bool:
 
 
 def _is_stale_session(resp: httpx.Response, request_id) -> bool:
-    """The upstream rejected the session id before running the call: 404 per
-    the MCP spec; some servers answer 400 and name the session in the body.
+    """On a cached session: the upstream rejected the session before running
+    the call. 404 per the MCP spec; some servers answer 400 ("Server not
+    initialized", "No valid session ID") with an error that has a null id.
 
     A reply that is a JSON-RPC response to this call came from the tool after
     it ran (say, a lookup that failed with 404, or "user session expired" from
     an API it called), so it is never treated as stale: retrying it would run
     the tool twice."""
-    if resp.status_code == 404:
-        return not _answers_call(resp, request_id)
-    if resp.status_code == 400 and "session" in resp.text.lower():
-        return not _answers_call(resp, request_id)
-    return False
+    return resp.status_code in (400, 404) and not _answers_call(resp, request_id)
 
 
 def _raise_rpc_error_from_4xx(resp: httpx.Response, request_id, secrets: tuple[str, ...]) -> None:
@@ -335,6 +343,8 @@ ON_SAVE_DISCOVERY_SECONDS = 10
 MANUAL_DISCOVERY_SECONDS = 25
 # How long a forwarded tools/call may take upstream.
 TOOL_CALL_TIMEOUT_SECONDS = 60
+# JSON-RPC ids for forwarded tool calls, unique within this process.
+_call_ids = itertools.count(1)
 MAX_TOOL_PAGES = 20
 MAX_DISCOVERY_ERROR_CHARS = 500
 _PROTOCOL_VERSION = "2025-03-26"
@@ -665,10 +675,16 @@ async def forward_tool_call(
     tool_name: str,
     arguments: dict,
     session_id: Optional[str] = None,
+    on_new_session: Optional[Callable[[str], Awaitable[None]]] = None,
 ) -> tuple[dict, Optional[str]]:
     """
     Forward a tools/call request to the backend MCP server.
     Initializes a session if no session_id is provided.
+
+    on_new_session is awaited with the id of every session opened here ("" for
+    a stateless server) as soon as it exists, so the caller can cache it even
+    if the call then fails. Without it nobody will reuse the session, so it is
+    closed (DELETE) once the call is done.
     Returns (result_dict, backend_session_id): the id is None when no new
     session was opened, "" when the upstream is stateless (so a cached id must
     be dropped), otherwise the new session's id.
@@ -710,31 +726,49 @@ async def forward_tool_call(
             "Accept": "application/json, text/event-stream",
             **(await auth_headers_for(auth_type, auth_config)),
         }
+        # A unique id per call: parallel calls of one client share the cached
+        # backend session, and the response is picked out by this id.
+        call_id = next(_call_ids)
         call = {
             "jsonrpc": "2.0",
-            "id": 1,
+            "id": call_id,
             "method": "tools/call",
             "params": {"name": tool_name, "arguments": arguments},
         }
         secrets = _request_secrets(url, headers)
         new_session = None
 
-        async with httpx.AsyncClient(timeout=TOOL_CALL_TIMEOUT_SECONDS) as client:
-            if session_id:
-                headers["Mcp-Session-Id"] = session_id
-            else:
-                new_session = await _handshake(client, url, headers)
+        async def open_session() -> str:
+            sid = await _handshake(client, url, headers)
+            if on_new_session is not None:
+                await on_new_session(sid)
+            return sid
 
-            resp = await client.post(url, json=call, headers=headers)
-            if session_id and _is_stale_session(resp, call["id"]):
-                # The upstream no longer knows the cached session (it restarted
-                # or expired it), so it did not run the call. Open a new session
-                # and send the call once more, as the MCP spec asks of clients.
-                new_session = await _handshake(client, url, headers)
+        async with httpx.AsyncClient(timeout=TOOL_CALL_TIMEOUT_SECONDS) as client:
+            try:
+                if session_id:
+                    headers["Mcp-Session-Id"] = session_id
+                else:
+                    new_session = await open_session()
+
                 resp = await client.post(url, json=call, headers=headers)
-            _raise_rpc_error_from_4xx(resp, call["id"], secrets)
-            resp.raise_for_status()
-            data = _parse_response(resp, request_id=1)
+                if session_id and _is_stale_session(resp, call_id):
+                    # The upstream no longer knows the cached session (it
+                    # restarted or expired it), so it did not run the call. Open
+                    # a new session and send the call once more, as the MCP spec
+                    # asks of clients.
+                    new_session = await open_session()
+                    resp = await client.post(url, json=call, headers=headers)
+                _raise_rpc_error_from_4xx(resp, call_id, secrets)
+                resp.raise_for_status()
+                try:
+                    data = _parse_response(resp, request_id=call_id)
+                except UpstreamResponseError as exc:
+                    # Its text quotes the reply, which may echo a credential.
+                    raise UpstreamResponseError(_redact(str(exc), secrets)) from None
+            finally:
+                if new_session and on_new_session is None:
+                    await _close_session(client, url, headers)
 
         if "error" in data:
             raise UpstreamToolError.from_rpc(data["error"], secrets)
@@ -745,3 +779,12 @@ async def forward_tool_call(
         return result, new_session
 
     return await _with_token_retry(auth_type, auth_config, _attempt)
+
+
+async def _close_session(client: httpx.AsyncClient, url: str, headers: dict) -> None:
+    """End a backend session nobody will reuse (best effort; a server may
+    answer 405 if it does not support explicit termination)."""
+    try:
+        await client.delete(url, headers=headers)
+    except httpx.HTTPError as exc:
+        logger.debug("MCP session close failed: %r", exc)

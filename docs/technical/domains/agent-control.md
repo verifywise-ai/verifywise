@@ -473,15 +473,20 @@ SDKs) depend on. Client setup for users is in the guide (`ai-gateway/mcp-agent-k
   message answering the request id, so log or progress notifications sent before it are skipped
   (the old parser returned the first `data:` line, which made the result empty). Multi-line data
   and `data:` without a space are handled.
-- **Stale backend session:** a 404 to `tools/call` on a cached session (or a 400 that names the
-  session) means the upstream forgot it and did not run the call; the gateway opens a new session
-  and sends the call once more. A reply that is a JSON-RPC response to the call's own id is never
-  retried, whatever its status: the tool ran, and a resend would run it twice. A re-handshake with
-  no session id (the upstream became stateless) replaces the cached id with "".
+- **Backend sessions:** each forwarded call gets a process-unique JSON-RPC id (parallel calls of
+  one client share the cached backend session, and the reply is matched by id). A session opened
+  for a call is cached at once through `on_new_session`, even if the call then fails; "" marks a
+  stateless upstream. Without a client session id nobody reuses it, so it is closed with DELETE.
+- **Stale backend session:** a 404 or 400 to `tools/call` on a cached session that is not a
+  JSON-RPC response to the call (no body, or an error with a null or other id, e.g. "Session not
+  found", "Server not initialized") means the upstream forgot the session and did not run the
+  call; the gateway opens a new session and sends the call once more. A reply that answers the
+  call's own id is never retried, whatever its status: the tool ran, and a resend would run it twice.
 - **Errors to the agent:** an upstream JSON-RPC error (`UpstreamToolError`) keeps its code and
   message, except the gateway's own codes (-32001, -32003, -32004) which become -32603. The message
   is masked with `_request_secrets` (auth header values, URL user, password, query values and
-  secret-looking path segments, raw and percent-encoded). A 4xx carries the tool's error only when
+  secret-looking path segments, raw and percent-encoded; auth tokens and the URL password at any
+  length). An unreadable reply's text is masked the same way before it is audited. A 4xx carries the tool's error only when
   it is 400/422 or answers the call's id; other 4xx replies count as upstream failures. HTTP,
   timeout, connection and unreadable-reply failures are -32603 "Upstream MCP server error: …"
   with the secret-free reason from `describe_discovery_error`; they count against the breaker.
