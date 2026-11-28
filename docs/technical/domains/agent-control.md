@@ -464,7 +464,10 @@ SDKs) depend on. Client setup for users is in the guide (`ai-gateway/mcp-agent-k
 - **Sessions and Redis:** `initialize` returns `Mcp-Session-Id`; the session maps to cached
   backend session ids in Redis (`services/mcp_session.py`). Everything Redis-backed on this path
   fails open (sessions, rate limit, breaker, anomaly), so a lost Redis degrades caching and limits
-  but never fails a client. The gateway needs `REDIS_URL`; Docker Compose sets it since the
+  but never fails a client. `utils/redis.py` keeps an outage cheap: 2 s connect and 5 s socket
+  timeouts, and after a failed connect Redis is marked down for 10 s, during which `get_redis()`
+  raises `RedisUnavailableError` at once (callers log it via `log_fail_open`, which stays quiet
+  while marked down; the down and up transitions are logged once each). The gateway needs `REDIS_URL`; Docker Compose sets it since the
   `initialize` 500 on Compose installs, where it had fallen back to `localhost`.
 - **Upstream replies:** `_parse_response` reads JSON or SSE. In SSE the response is the first
   message answering the request id, so log or progress notifications sent before it are skipped
@@ -477,6 +480,9 @@ SDKs) depend on. Client setup for users is in the guide (`ai-gateway/mcp-agent-k
   timeout, connection and unreadable-reply failures are -32603 "Upstream MCP server error: …"
   with the secret-free reason from `describe_discovery_error`; they count against the breaker.
   The full error is in the audit row.
+- **Tool-reported failures:** a result with `isError: true` is audited as `error` with
+  `is_error = true` (a monitor-only key keeps its would_* status and sets `is_error`). The
+  upstream is healthy, so the breaker still records a success.
 
 ## Not yet built (Phase 4+)
 

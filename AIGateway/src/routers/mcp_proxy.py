@@ -362,6 +362,10 @@ async def mcp_jsonrpc(request: Request):
             content_text = None
             if result.get("content"):
                 content_text = str(result["content"][0].get("text", ""))
+            # The tool ran but reported a failure (MCP's isError). The upstream
+            # is healthy, so the breaker counted a success above, but Activity
+            # must not show the call as successful.
+            tool_failed = result.get("isError") is True
             if outcomes:
                 # The summary stays the upstream result; what the call would
                 # have hit is recorded in the status, matched rule and events.
@@ -369,7 +373,7 @@ async def mcp_jsonrpc(request: Request):
                 await _audit(
                     chosen["status"],
                     content_text,
-                    False,
+                    tool_failed,
                     matched_rule_id=chosen["rule_id"],
                     matched_rule_name=chosen["rule_name"],
                 )
@@ -378,7 +382,7 @@ async def mcp_jsonrpc(request: Request):
                     "_meta": {**(result.get("_meta") or {}), MONITORED_META_KEY: monitored_payload(outcomes)},
                 }
             else:
-                await _audit("success", content_text, False)
+                await _audit("error" if tool_failed else "success", content_text, tool_failed)
 
             return JSONResponse(content=_jsonrpc_result(msg_id, result))
 

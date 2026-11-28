@@ -124,8 +124,8 @@ export const mcpAuditContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'success', text: 'The tool was called and returned a result.' },
-        { bold: 'error', text: 'The tool call failed (server error, invalid input, etc.).' },
+        { bold: 'success', text: 'The tool was called and returned a result without reporting an error.' },
+        { bold: 'error', text: 'The tool call failed: the MCP server could not be reached or answered with an error, or the tool ran and reported a failure in its result (for example, an unknown record). The result summary shows the message.' },
         { bold: 'blocked', text: 'A guardrail rule blocked the call before it reached the server.' },
         { bold: 'rate_limited', text: 'The agent key exceeded its requests-per-minute limit.' },
         { bold: 'approval_required', text: 'The tool requires approval. An approval request was created.' },

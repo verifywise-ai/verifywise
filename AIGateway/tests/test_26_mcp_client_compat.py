@@ -7,7 +7,9 @@ httpx.MockTransport for the upstream, fakes for the handler's collaborators."""
 
 import json
 import os
+import socket
 import sys
+import time as _time
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -23,6 +25,7 @@ from fastapi.testclient import TestClient
 import routers.mcp_proxy as proxy
 import services.mcp_proxy_service as svc
 import services.mcp_session as sessions
+import utils.redis as redis_util
 from services.guardrail_service import ScanResult
 from utils.mcp_credentials import normalize_auth_config
 
@@ -468,3 +471,108 @@ async def test_400_session_error_without_the_call_id_is_retried(route_forward_th
 
     assert result == {"content": []}
     assert seen == ["stale", None]
+
+
+# ─── Tool errors in Activity ────────────────────────────────────────────────
+
+@pytest.mark.asyncio
+class TestToolErrorAudit:
+    async def test_a_result_with_is_error_is_audited_as_error(self, handler_fakes):
+        async def tool_failed(**kwargs):
+            return {"content": [{"type": "text", "text": "Unknown table: missing"}], "isError": True}, None
+
+        handler_fakes.forward = tool_failed
+        response = await proxy.mcp_jsonrpc(_call())
+
+        assert json.loads(response.body)["result"]["isError"] is True
+        audit = handler_fakes.audits[-1]
+        assert (audit["result_status"], audit["is_error"]) == ("error", True)
+        assert audit["result_summary"] == "Unknown table: missing"
+        handler_fakes.breaker.record_success.assert_awaited_once()
+
+    async def test_a_normal_result_stays_success(self, handler_fakes):
+        async def ok(**kwargs):
+            return {"content": [{"type": "text", "text": "3 tables"}], "isError": False}, None
+
+        handler_fakes.forward = ok
+        await proxy.mcp_jsonrpc(_call())
+
+        audit = handler_fakes.audits[-1]
+        assert (audit["result_status"], audit["is_error"]) == ("success", False)
+
+    async def test_monitor_status_is_kept_and_the_error_flagged(self, handler_fakes, monkeypatch):
+        monkeypatch.setattr(proxy, "extract_agent_key", AsyncMock(return_value={
+            **AGENT_KEY, "enforcement_mode": "monitor", "blocked_tools": ["search"]}))
+
+        async def tool_failed(**kwargs):
+            return {"content": [{"type": "text", "text": "boom"}], "isError": True}, None
+
+        handler_fakes.forward = tool_failed
+        await proxy.mcp_jsonrpc(_call())
+
+        audit = handler_fakes.audits[-1]
+        assert (audit["result_status"], audit["is_error"]) == ("would_block", True)
+
+
+# ─── Redis outage backoff ───────────────────────────────────────────────────
+
+
+@pytest.fixture
+def fresh_redis_state(monkeypatch):
+    monkeypatch.setattr(redis_util, "_redis", None)
+    monkeypatch.setattr(redis_util, "_down_until", 0.0)
+
+
+def _closed_port() -> int:
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+@pytest.mark.asyncio
+class TestRedisBackoff:
+    async def test_a_failed_connect_makes_the_next_calls_fail_at_once(self, fresh_redis_state, monkeypatch):
+        monkeypatch.setattr(redis_util.settings, "redis_url", f"redis://127.0.0.1:{_closed_port()}/0")
+
+        r = await redis_util.get_redis()
+        with pytest.raises(Exception):
+            await r.get("k")
+
+        started = _time.monotonic()
+        with pytest.raises(redis_util.RedisUnavailableError):
+            await redis_util.get_redis()
+        assert _time.monotonic() - started < 0.05
+
+    async def test_it_tries_again_after_the_window(self, fresh_redis_state, monkeypatch):
+        monkeypatch.setattr(redis_util, "_down_until", _time.monotonic() - 1)
+        monkeypatch.setattr(redis_util.settings, "redis_url", f"redis://127.0.0.1:{_closed_port()}/0")
+
+        assert await redis_util.get_redis() is not None
+
+    async def test_a_successful_connect_clears_the_mark(self, fresh_redis_state, monkeypatch):
+        class Base:
+            async def connect(self):
+                return None
+
+        monkeypatch.setattr(redis_util, "_down_until", 123.0)
+        await redis_util._tracked(Base)().connect()
+
+        assert redis_util._down_until == 0.0
+
+    async def test_session_store_fails_open_during_the_window(self, fresh_redis_state, monkeypatch):
+        monkeypatch.setattr(redis_util, "_down_until", _time.monotonic() + 60)
+        monkeypatch.setattr(sessions, "get_redis", redis_util.get_redis)
+
+        assert len(await sessions.create_session()) == 36
+        assert await sessions.get_backend_session("gw-1", 9) is None
+
+
+def test_fail_open_is_logged_once_per_outage_not_per_call(caplog):
+    import logging
+
+    log = logging.getLogger("test-fail-open")
+    with caplog.at_level(logging.WARNING, logger="test-fail-open"):
+        redis_util.log_fail_open(log, "Rate limit check", ConnectionError("refused"))
+        redis_util.log_fail_open(log, "Rate limit check", redis_util.RedisUnavailableError("down"))
+
+    assert [r.getMessage() for r in caplog.records] == ["Rate limit check failed (fail-open): refused"]

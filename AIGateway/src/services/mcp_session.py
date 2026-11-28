@@ -11,7 +11,7 @@ import logging
 import uuid
 from typing import Optional
 
-from utils.redis import get_redis
+from utils.redis import get_redis, log_fail_open
 
 logger = logging.getLogger("uvicorn")
 
@@ -25,7 +25,7 @@ async def create_session() -> str:
         r = await get_redis()
         await r.set(f"gw:mcp:session:{session_id}", json.dumps({}), ex=SESSION_TTL)
     except Exception as e:
-        logger.warning(f"MCP session store unavailable (fail-open): {e}")
+        log_fail_open(logger, "MCP session create", e)
     return session_id
 
 
@@ -38,7 +38,7 @@ async def get_backend_session(session_id: str, server_id: int) -> Optional[str]:
             return None
         return json.loads(data).get(str(server_id))
     except Exception as e:
-        logger.warning(f"MCP session lookup failed (fail-open): {e}")
+        log_fail_open(logger, "MCP session lookup", e)
         return None
 
 
@@ -52,7 +52,7 @@ async def set_backend_session(session_id: str, server_id: int, backend_session_i
         sessions[str(server_id)] = backend_session_id
         await r.set(key, json.dumps(sessions), ex=SESSION_TTL)
     except Exception as e:
-        logger.warning(f"MCP session store failed (fail-open): {e}")
+        log_fail_open(logger, "MCP session store", e)
 
 
 async def destroy_session(session_id: str) -> None:
