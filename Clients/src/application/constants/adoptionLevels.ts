@@ -22,3 +22,25 @@ export function adoptionLevelRowLabel(level: number | null | undefined): string 
   if (level == null || !Number.isInteger(level)) return null;
   return ROW_LABELS[level] ?? null;
 }
+
+/** Assessed domains and level range of a sub-pillar. No average: SDAIA
+ *  publishes no domain weights. Mirrors Servers' summarizeAdoptionLevels. */
+export interface AdoptionLevelSummary {
+  assessed: number;
+  total: number;
+  /** Lowest and highest assessed level; null when no domain is assessed. */
+  min: number | null;
+  max: number | null;
+}
+
+export function summarizeAdoptionLevels(
+  levels: ReadonlyArray<number | null | undefined>,
+): AdoptionLevelSummary {
+  const assessed = levels.filter((l): l is number => adoptionLevelRowLabel(l) !== null);
+  return {
+    assessed: assessed.length,
+    total: levels.length,
+    min: assessed.length ? Math.min(...assessed) : null,
+    max: assessed.length ? Math.max(...assessed) : null,
+  };
+}

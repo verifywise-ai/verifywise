@@ -206,6 +206,9 @@ describe("GenericFramework source", () => {
     server.use(http.get("/api/frameworks/30/tree/7", () => HttpResponse.json({ data: naiiTree })));
     renderWithProviders(<GenericFramework projectId={7} frameworkId={30} />);
 
+    // Sub-pillar roll-up: counts assessed domains and shows their level, no average.
+    expect(await screen.findByText("1 of 2 domains assessed · level 3")).toBeInTheDocument();
+
     (await screen.findByText(/Directions: Strategy/)).click();
     expect(await screen.findByText("Level 3")).toBeInTheDocument();
     // Initiatives has no level, so only one badge shows.
@@ -231,5 +234,6 @@ describe("GenericFramework source", () => {
       expect.objectContaining({ adoptionLevels: false }),
     );
     expect(screen.queryByText(/^Level \d$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/domains? assessed/)).not.toBeInTheDocument();
   });
 });

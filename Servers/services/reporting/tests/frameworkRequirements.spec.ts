@@ -295,6 +295,7 @@ describe("collectFrameworkRequirements", () => {
     const fw = out.frameworks[0];
     expect(fw.adoptionLevels).toBe(true);
     expect(fw.groups[0].requirements.map((r) => r.adoptionLevel)).toEqual([3, null]);
+    expect(fw.groups[0].adoptionSummary).toEqual({ assessed: 1, total: 2, min: 3, max: 3 });
     expect(String(query.mock.calls[0][0])).toContain("i.adoption_level");
   });
 
@@ -308,6 +309,7 @@ describe("collectFrameworkRequirements", () => {
     );
     expect(out.frameworks[0]).not.toHaveProperty("adoptionLevels");
     expect(out.frameworks[0].groups[0].requirements[0]).not.toHaveProperty("adoptionLevel");
+    expect(out.frameworks[0].groups[0]).not.toHaveProperty("adoptionSummary");
     expect(String(query.mock.calls[0][0])).toContain("NULL::smallint AS adoption_level");
   });
 });

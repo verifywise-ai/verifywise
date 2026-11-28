@@ -570,6 +570,15 @@ export interface FrameworkRequirementRollup {
   statusBreakdown: Record<string, number>; // keyed by raw status
 }
 
+/** Assessed domains and level range of a group (Saudi NAII). No average. */
+export interface AdoptionLevelSummary {
+  assessed: number;
+  total: number;
+  /** Lowest and highest assessed level; null when no domain is assessed. */
+  min: number | null;
+  max: number | null;
+}
+
 export interface FrameworkRequirementGroup {
   title: string;
   orderNo: number;
@@ -577,6 +586,9 @@ export interface FrameworkRequirementGroup {
   useCase?: string;
   requirements: FrameworkRequirementRow[];
   rollup: FrameworkRequirementRollup;
+  /** Assessed domains and level range of the group's level 2 rows. Set only for
+   *  a framework with adoption levels (Saudi NAII). */
+  adoptionSummary?: AdoptionLevelSummary;
 }
 
 export interface FrameworkRequirementsSectionData {

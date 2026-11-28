@@ -12,6 +12,13 @@ export const styles = {
   title: commonStyles.title,
   accordion: commonStyles.accordion,
   accordionSummary: commonStyles.accordionSummary,
+  /** Sub-pillar roll-up on the heading's right (Saudi NAII). */
+  adoptionSummary: {
+    marginLeft: "auto",
+    paddingLeft: "16px",
+    fontSize: fontSize.base,
+    color: text.secondary,
+  } as SxProps<Theme>,
   expandIcon: commonStyles.expandIcon,
 
   subClauseRow: (isLast: boolean, isFlashing: boolean) =>

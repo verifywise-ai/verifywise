@@ -16,6 +16,7 @@ import type {
 import { isoDate } from "../dateUtils";
 import type { FrameworkTarget } from "../reportScope";
 import { addRow, emptyRollup, rollupFromGroups, UNKNOWN_USER } from "./frameworkRollup";
+import { summarizeAdoptionLevels } from "../adoptionLevel";
 import {
   EVIDENCE_SQL,
   l2RequirementsSql,
@@ -187,7 +188,12 @@ export async function collectFrameworkRequirements(
   }
 
   const orderedGroups = [...groups.values()].sort((a, b) => a.orderNo - b.orderNo);
-  for (const g of orderedGroups) g.requirements.sort((a, b) => a.orderNo - b.orderNo);
+  for (const g of orderedGroups) {
+    g.requirements.sort((a, b) => a.orderNo - b.orderNo);
+    if (structure.adoption_levels) {
+      g.adoptionSummary = summarizeAdoptionLevels(g.requirements.map((r) => r.adoptionLevel));
+    }
+  }
 
   const rollup = rollupFromGroups(orderedGroups);
 

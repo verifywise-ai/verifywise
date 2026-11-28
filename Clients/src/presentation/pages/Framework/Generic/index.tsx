@@ -44,7 +44,12 @@ import { isCompletedStatus } from "../../../../domain/types/Status";
 import { importedAssessmentPaths } from "../../../../application/repository/importedFrameworkAssessment.repository";
 import { styles } from "./style";
 import { getPositionPrefix } from "../../../../application/constants/frameworks";
-import { adoptionLevelRowLabel } from "../../../../application/constants/adoptionLevels";
+import {
+  adoptionLevelRowLabel,
+  summarizeAdoptionLevels,
+} from "../../../../application/constants/adoptionLevels";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
+import { fill, pluralKey } from "../../../../i18n/fill";
 import StatusBadge from "../../../components/StatusBadge";
 
 interface FrameworkMeta {
@@ -144,6 +149,7 @@ const GenericFramework = ({
   const fwIdNum = propFrameworkId ?? (params.frameworkId ? parseInt(params.frameworkId, 10) : NaN);
   const projectIdNum = propProjectId ?? (params.projectId ? parseInt(params.projectId, 10) : NaN);
   const isImported = source === "imported";
+  const { t, lang } = useTranslation();
   const linkIdNum = linkId ?? NaN;
   // Imported impl rows live under the link, not under a framework id.
   const implBaseUrl = isImported ? importedAssessmentPaths.impl(linkIdNum) : undefined;
@@ -370,6 +376,28 @@ const GenericFramework = ({
     return data.tree.filter((l1) => l1.title?.toLowerCase().includes(q));
   }, [data, searchTerm]);
 
+  /** "2 of 3 domains assessed · levels 2 to 4" for a sub-pillar heading. */
+  const adoptionSummaryText = (l1: L1Node): string => {
+    const s = summarizeAdoptionLevels(l1.children.map((l2) => l2.adoption_level));
+    const count = fill(
+      t(
+        pluralKey(
+          lang,
+          s.total,
+          "{assessed} of {total} domain assessed",
+          "{assessed} of {total} domains assessed",
+        ),
+      ),
+      { assessed: s.assessed, total: s.total },
+    );
+    if (s.min == null || s.max == null) return count;
+    const range =
+      s.min === s.max
+        ? fill(t("level {level}"), { level: s.min })
+        : fill(t("levels {min} to {max}"), { min: s.min, max: s.max });
+    return `${count} · ${range}`;
+  };
+
   const renderL2 = (l1: L1Node) => {
     const isThreeLevel = data?.framework.hierarchy_type === "three_level";
     type RenderRow =
@@ -489,6 +517,8 @@ const GenericFramework = ({
 
   if (!data) return null;
 
+  const showAdoptionSummary = !isImported && !!data.framework.adoption_levels;
+
   return (
     <Stack className={`generic-framework-${data.framework.key}`}>
       {alert && <Alert {...alert} isToast={true} onClick={() => setAlert(null)} />}
@@ -524,6 +554,9 @@ const GenericFramework = ({
                 {getPositionPrefix(data.framework.framework_type, l1.order_no)}
                 {l1.title}
               </Typography>
+              {showAdoptionSummary && (
+                <Typography sx={styles.adoptionSummary}>{adoptionSummaryText(l1)}</Typography>
+              )}
             </AccordionSummary>
             {renderL2(l1)}
           </Accordion>
